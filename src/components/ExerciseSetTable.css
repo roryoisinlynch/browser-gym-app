@@ -1,0 +1,103 @@
+.exercise-set-table-card {
+  margin: 0 14px 18px;
+  border-radius: 18px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+}
+
+.exercise-set-table-card__header {
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.exercise-set-table-card__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-strong);
+}
+
+.exercise-set-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.exercise-set-table__row {
+  display: grid;
+  grid-template-columns: minmax(84px, 1fr) minmax(70px, 0.9fr) minmax(58px, 0.7fr) minmax(70px, 0.9fr) 36px;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.exercise-set-table__head {
+  background: rgba(15, 19, 24, 0.3);
+}
+
+.exercise-set-table__head span {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.exercise-set-table__target,
+.exercise-set-table__e1rm {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.exercise-set-table__input {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--text-strong);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.exercise-set-table__input::placeholder {
+  color: var(--text-soft);
+}
+
+.exercise-set-table__input:focus {
+  outline: none;
+  border-color: rgba(216, 240, 106, 0.45);
+  box-shadow: 0 0 0 3px rgba(216, 240, 106, 0.10);
+}
+
+.exercise-set-table__remove {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill-muted-bg);
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.exercise-set-table-card__footer {
+  padding: 12px 14px 14px;
+}
+
+.exercise-set-table-card__add {
+  width: 100%;
+  min-height: 42px;
+  border: 1px dashed rgba(216, 240, 106, 0.28);
+  border-radius: 14px;
+  background: rgba(216, 240, 106, 0.04);
+  color: var(--accent);
+  font-size: 0.92rem;
+  font-weight: 800;
+  cursor: pointer;
+}

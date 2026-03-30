@@ -1,0 +1,250 @@
+:root {
+
+  /* page background (blue-tinted charcoal) */
+  --bg-top: #14181f;
+  --bg-bottom: #0f1318;
+
+  /* panels (headers, nav bars) */
+  --panel-bg: #1a1f26;
+  --panel-border: #2b313a;
+
+  /* cards */
+  --card-bg: #21262e;
+  --card-border: #343b45;
+
+  /* text */
+  --text-strong: #e8edf5;
+  --text-muted: #a7b0bd;
+  --text-soft: #7e8794;
+
+  /* accent (unchanged) */
+  --accent: #d8f06a;
+  --accent-soft: #2a3017;
+  --accent-strong: #c4e23c;
+
+  /* muted surfaces */
+  --pill-muted-bg: #262c35;
+  --pill-muted-text: #b0b9c6;
+
+  /* shadows */
+  --card-shadow: 0 8px 20px rgba(0,0,0,0.45);
+  --panel-shadow: 0 14px 36px rgba(0,0,0,0.55);
+
+  /* links */
+  --link: #7fb1ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.home-page {
+  min-height: 100vh;
+  padding: 12px 12px 20px;
+  background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+  color: var(--text-strong);
+}
+
+.home-shell {
+  max-width: 430px;
+  margin: 0 auto;
+  padding: 28px 24px 34px;
+}
+
+.home-header {
+  margin-bottom: 22px;
+}
+
+.home-eyebrow {
+  margin: 0 0 10px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-strong);
+}
+
+.home-title {
+  margin: 0;
+  font-size: 1.76rem;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.home-progress-label {
+  margin: 10px 0 10px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.progress-track {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-bottom: 0;
+}
+
+.progress-segment {
+  display: block;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--panel-border);
+}
+
+.progress-segment--completed {
+  background: var(--accent-strong);
+}
+
+.progress-segment--next {
+  background: var(--accent);
+}
+
+.progress-segment--upcoming {
+  background: var(--panel-border);
+}
+
+.day-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.day-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 76px;
+  padding: 14px 18px;
+  border-radius: 18px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
+  text-decoration: none;
+  color: inherit;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease;
+}
+
+.day-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--panel-shadow);
+}
+
+.day-card:active {
+  transform: scale(0.985);
+}
+
+.day-card__text {
+  min-width: 0;
+}
+
+.day-card__title {
+  margin: 0;
+  font-size: 1.08rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.day-card__subtitle {
+  margin: 6px 0 0;
+  font-size: 0.96rem;
+  color: var(--text-muted);
+}
+
+.day-card__action {
+  flex-shrink: 0;
+}
+
+.day-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.day-pill--done {
+  background: var(--pill-muted-bg);
+  color: var(--pill-muted-text);
+}
+
+.day-pill--start {
+  padding: 0 18px;
+  background: var(--accent);
+  color: #0f1113;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.35);
+}
+
+.day-pill--view {
+  background: var(--pill-muted-bg);
+  color: var(--pill-muted-text);
+}
+
+.day-pill__arrow {
+  margin-left: 6px;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.day-card--completed {
+  background: var(--card-bg);
+}
+
+.day-card--completed .day-card__subtitle {
+  color: var(--text-muted);
+}
+
+.day-card--next {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(216,240,106,0.10),
+      rgba(216,240,106,0.04)
+    ),
+    var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
+}
+
+.day-card--next .day-card__title {
+  color: var(--text-strong);
+}
+
+.day-card--next .day-card__subtitle {
+  color: var(--text-muted);
+}
+
+.day-card--upcoming {
+  background: var(--card-bg);
+}
+
+.home-footer {
+  margin-top: 18px;
+  padding-top: 0;
+  text-align: center;
+}
+
+.text-link {
+  color: var(--link);
+  font-size: 0.98rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.text-link:hover {
+  text-decoration: underline;
+}

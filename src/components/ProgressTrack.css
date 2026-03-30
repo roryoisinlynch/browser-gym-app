@@ -1,0 +1,25 @@
+.progress-track {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-bottom: 0;
+}
+
+.progress-segment {
+  display: block;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--panel-border);
+}
+
+.progress-segment--completed {
+  background: var(--accent-strong);
+}
+
+.progress-segment--next {
+  background: var(--accent);
+}
+
+.progress-segment--upcoming {
+  background: var(--panel-border);
+}
