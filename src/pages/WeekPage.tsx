@@ -3,9 +3,9 @@ import BottomNav from "../components/BottomNav";
 import DayCard, { type DayState } from "../components/DayCard";
 import ProgressTrack from "../components/ProgressTrack";
 import TopBar from "../components/TopBar";
-import type { SessionInstanceListItem } from "../repositories/programRepository";
+import type { WeekInstanceItemView } from "../repositories/programRepository";
 import {
-  getSessionInstanceListItemsForCurrentWeek,
+  getWeekInstanceItemsForCurrentWeek,
   getWeekTemplates,
 } from "../repositories/programRepository";
 import "./WeekPage.css";
@@ -19,15 +19,8 @@ function getDayState(
   return "upcoming";
 }
 
-function daysBetween(a: string, b: string) {
-  const aDate = new Date(a);
-  const bDate = new Date(b);
-  const diff = bDate.getTime() - aDate.getTime();
-  return Math.round(diff / (1000 * 60 * 60 * 24));
-}
-
 export default function WeekPage() {
-  const [items, setItems] = useState<SessionInstanceListItem[]>([]);
+  const [items, setItems] = useState<WeekInstanceItemView[]>([]);
   const [totalWeeks, setTotalWeeks] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -35,16 +28,12 @@ export default function WeekPage() {
   useEffect(() => {
     async function loadWeekPage() {
       try {
-        const [sessions, weeks] = await Promise.all([
-          getSessionInstanceListItemsForCurrentWeek(),
+        const [weekItems, weeks] = await Promise.all([
+          getWeekInstanceItemsForCurrentWeek(),
           getWeekTemplates(),
         ]);
 
-        const sorted = [...sessions].sort((a, b) =>
-          a.sessionInstance.date.localeCompare(b.sessionInstance.date)
-        );
-
-        setItems(sorted);
+        setItems(weekItems);
         setTotalWeeks(weeks.length);
       } catch (error) {
         console.error(error);
@@ -57,23 +46,29 @@ export default function WeekPage() {
     loadWeekPage();
   }, []);
 
+  const sessionItems = useMemo(
+    () => items.filter((item) => item.weekInstanceItem.type === "session"),
+    [items]
+  );
+
   const dayStates = useMemo<DayState[]>(() => {
     let hasSeenNext = false;
 
-    return items.map(({ sessionInstance }) => {
-      const state = getDayState(sessionInstance.status, hasSeenNext);
+    return sessionItems.map(({ sessionInstance }) => {
+      const status = sessionInstance?.status ?? "not_started";
+      const state = getDayState(status, hasSeenNext);
 
       if (state === "next") hasSeenNext = true;
 
       return state;
     });
-  }, [items]);
+  }, [sessionItems]);
 
   const completedCount = useMemo(() => {
-    return items.filter(
-      ({ sessionInstance }) => sessionInstance.status === "completed"
+    return sessionItems.filter(
+      ({ sessionInstance }) => sessionInstance?.status === "completed"
     ).length;
-  }, [items]);
+  }, [sessionItems]);
 
   const weekLabel = useMemo(() => {
     if (items.length === 0 || totalWeeks == null) return "Week";
@@ -106,6 +101,8 @@ export default function WeekPage() {
     );
   }
 
+  let sessionIndex = 0;
+
   return (
     <main className="week-page">
       <TopBar title="Week" />
@@ -114,39 +111,47 @@ export default function WeekPage() {
         <header className="week-page__header">
           <h1 className="week-page__title">{weekLabel}</h1>
           <p className="week-page__subtitle">
-            {completedCount} / {items.length} sessions completed
+            {completedCount} / {sessionItems.length} sessions completed
           </p>
 
           <ProgressTrack
             states={dayStates}
-            ariaLabel={`Week progress: ${completedCount} of ${items.length} sessions completed`}
+            ariaLabel={`Week progress: ${completedCount} of ${sessionItems.length} sessions completed`}
           />
         </header>
 
         <section className="week-page__content">
           <div className="week-page__list">
-            {items.map((item, index) => {
-              const prev = items[index - 1];
+            {items.map((item) => {
+              if (item.weekInstanceItem.type === "rest") {
+                return (
+                  <div
+                    key={item.weekInstanceItem.id}
+                    className="week-rest-divider"
+                  >
+                    {item.weekInstanceItem.label ?? "Rest Day"}
+                  </div>
+                );
+              }
 
-              const showRestDivider =
-                prev &&
-                daysBetween(prev.sessionInstance.date, item.sessionInstance.date) > 1;
+              const state = dayStates[sessionIndex];
+              const index = sessionIndex;
+              sessionIndex += 1;
+
+              if (!item.sessionInstance || !item.sessionTemplate) {
+                return null;
+              }
 
               return (
-                <div key={item.sessionInstance.id}>
-                  {showRestDivider && (
-                    <div className="week-rest-divider">Rest Day</div>
-                  )}
-
-                  <DayCard
-                    day={{
-                      id: item.sessionInstance.id,
-                      name: item.sessionTemplate.name,
-                      order: index + 1,
-                    }}
-                    state={dayStates[index]}
-                  />
-                </div>
+                <DayCard
+                  key={item.sessionInstance.id}
+                  day={{
+                    id: item.sessionInstance.id,
+                    name: item.sessionTemplate.name,
+                    order: index + 1,
+                  }}
+                  state={state}
+                />
               );
             })}
           </div>
