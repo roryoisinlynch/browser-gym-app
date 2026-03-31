@@ -8,21 +8,21 @@ import TopBar from "../components/TopBar";
 import type { SessionInstanceListItem } from "../repositories/programRepository";
 import {
   getCurrentWeekInstance,
+  getSeasonInstanceById,
   getSessionInstanceListItemsForCurrentWeek,
-  getWeekTemplateById,
 } from "../repositories/programRepository";
 import "./HomePage.css";
 
-const lastCompletedIndex = 1;
-
-function getDayState(index: number): DayState {
-  if (index <= lastCompletedIndex) return "completed";
-  if (index === lastCompletedIndex + 1) return "next";
+function getDayState(
+  status: SessionInstanceListItem["sessionInstance"]["status"]
+): DayState {
+  if (status === "completed") return "completed";
+  if (status === "in_progress") return "next";
   return "upcoming";
 }
 
 export default function HomePage() {
-  const [currentWeekLabel, setCurrentWeekLabel] = useState<string>("Current week");
+  const [seasonWeekLabel, setSeasonWeekLabel] = useState<string>("Season ? Week ?");
   const [sessionItems, setSessionItems] = useState<SessionInstanceListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -37,13 +37,14 @@ export default function HomePage() {
           return;
         }
 
-        const weekTemplate = await getWeekTemplateById(
-          currentWeekInstance.weekTemplateId
+        const seasonInstance = await getSeasonInstanceById(
+          currentWeekInstance.seasonInstanceId
         );
 
-        if (weekTemplate) {
-          setCurrentWeekLabel(weekTemplate.label ?? weekTemplate.name);
-        }
+        const seasonNumber = seasonInstance?.order ?? "?";
+        const weekNumber = currentWeekInstance.order ?? "?";
+
+        setSeasonWeekLabel(`Season ${seasonNumber} Week ${weekNumber}`);
 
         const items = await getSessionInstanceListItemsForCurrentWeek();
         setSessionItems(items);
@@ -82,7 +83,10 @@ export default function HomePage() {
     );
   }
 
-  const completedCount = Math.min(lastCompletedIndex + 1, sessionItems.length);
+  const completedCount = sessionItems.filter(
+    ({ sessionInstance }) => sessionInstance.status === "completed"
+  ).length;
+
   const totalCount = sessionItems.length;
 
   return (
@@ -91,19 +95,20 @@ export default function HomePage() {
 
       <section className="home-shell">
         <header className="home-header">
-          <p className="home-subtitle">{currentWeekLabel}</p>
-          <p className="home-progress-label">
-            {completedCount} / {totalCount} sessions completed
-          </p>
+        <p className="home-subtitle">{seasonWeekLabel}</p>
+        <p className="home-progress-label">
+          {completedCount} / {totalCount} sessions completed
+        </p>
 
-          <ProgressTrack
-            states={sessionItems.map((_, index) => getDayState(index))}
-            ariaLabel={`${completedCount} of ${totalCount} sessions completed`}
-          />
-        </header>
-
+        <ProgressTrack
+          states={sessionItems.map(({ sessionInstance }) =>
+            getDayState(sessionInstance.status)
+          )}
+          ariaLabel={`${completedCount} of ${totalCount} sessions completed`}
+        />
+      </header>
         <section className="day-list">
-          {sessionItems.map(({ sessionInstance, sessionTemplate }, index) => (
+          {sessionItems.map(({ sessionInstance, sessionTemplate }) => (
             <DayCard
               key={sessionInstance.id}
               day={{
@@ -111,7 +116,7 @@ export default function HomePage() {
                 name: sessionTemplate.name,
                 order: sessionTemplate.order,
               }}
-              state={getDayState(index)}
+              state={getDayState(sessionInstance.status)}
             />
           ))}
         </section>

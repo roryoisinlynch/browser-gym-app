@@ -1,6 +1,10 @@
 import BottomNav from "../components/BottomNav";
 import "./HomePage.css";
 
+import { resetDatabase } from "../db/db";
+
+
+
 export default function SettingsPage() {
   return (
     <main className="home-page">
@@ -10,10 +14,21 @@ export default function SettingsPage() {
           <h1 className="home-title">Settings</h1>
           <p className="home-progress-label">This page does not exist yet.</p>
         </header>
+
+        <button
+          onClick={async () => {
+            await resetDatabase();
+            window.location.reload();
+          }}
+        >
+          Reset Database
+        </button>
+
       </section>
 
       <BottomNav activeTab="settings" />
     </main>
   );
 }
+
 

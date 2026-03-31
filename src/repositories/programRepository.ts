@@ -12,17 +12,15 @@ import type {
   MovementType,
 } from "../domain/models";
 
-import { mockWeekTemplates } from "../data/mockWeekTemplates";
-import { mockSessionTemplates } from "../data/mockSessionTemplates";
-import { mockSessionTemplateMuscleGroups } from "../data/mockSessionTemplateMuscleGroups";
-import { mockExerciseTemplates } from "../data/mockExerciseTemplates";
-import { mockMuscleGroups } from "../data/mockMuscleGroups";
-import { mockMovementTypes } from "../data/mockMovementTypes";
-import { mockSeasonInstances } from "../data/mockSeasonInstances";
-import { mockWeekInstances } from "../data/mockWeekInstances";
-import { mockSessionInstances } from "../data/mockSessionInstances";
-import { mockExerciseInstances } from "../data/mockExerciseInstances";
-import { mockExerciseSets } from "../data/mockExerciseSets";
+import {
+  STORE_NAMES,
+  getAll,
+  getById,
+  getAllByIndex,
+  putItem,
+  deleteItem,
+} from "../db/db";
+
 import {
   analyzeSet,
   calculateEstimatedOneRepMax,
@@ -100,44 +98,57 @@ export interface ExerciseInstanceView {
   sets: AnalyzedExerciseSet[];
 }
 
+export interface SessionInstanceListItem {
+  sessionInstance: SessionInstance;
+  sessionTemplate: SessionTemplate;
+  weekInstance: WeekInstance;
+}
+
 export async function getWeekTemplates(): Promise<WeekTemplate[]> {
-  return [...mockWeekTemplates].sort((a, b) => a.order - b.order);
+  const weeks = await getAll<WeekTemplate>(STORE_NAMES.weekTemplates);
+  return weeks.sort((a, b) => a.order - b.order);
 }
 
 export async function getWeekTemplateById(
   weekTemplateId: string
 ): Promise<WeekTemplate | undefined> {
-  return mockWeekTemplates.find((week) => week.id === weekTemplateId);
+  return getById<WeekTemplate>(STORE_NAMES.weekTemplates, weekTemplateId);
 }
 
 export async function getSessionTemplatesForWeek(
   weekTemplateId: string
 ): Promise<SessionTemplate[]> {
-  return mockSessionTemplates
-    .filter((session) => session.weekTemplateId === weekTemplateId)
-    .sort((a, b) => a.order - b.order);
+  const sessions = await getAllByIndex<SessionTemplate>(
+    STORE_NAMES.sessionTemplates,
+    "byWeekTemplateId",
+    weekTemplateId
+  );
+
+  return sessions.sort((a, b) => a.order - b.order);
 }
 
 export async function getSessionTemplateById(
   sessionTemplateId: string
 ): Promise<SessionTemplate | undefined> {
-  return mockSessionTemplates.find(
-    (session) => session.id === sessionTemplateId
+  return getById<SessionTemplate>(
+    STORE_NAMES.sessionTemplates,
+    sessionTemplateId
   );
 }
 
 export async function getExerciseTemplateById(
   exerciseTemplateId: string
 ): Promise<ExerciseTemplate | undefined> {
-  return mockExerciseTemplates.find(
-    (exercise) => exercise.id === exerciseTemplateId
+  return getById<ExerciseTemplate>(
+    STORE_NAMES.exerciseTemplates,
+    exerciseTemplateId
   );
 }
 
 export async function getMovementTypeById(
   movementTypeId: string
 ): Promise<MovementType | undefined> {
-  return mockMovementTypes.find((movement) => movement.id === movementTypeId);
+  return getById<MovementType>(STORE_NAMES.movementTypes, movementTypeId);
 }
 
 export async function getSessionTemplateListItemsForWeek(
@@ -160,15 +171,19 @@ export async function getSessionTemplateListItemsForWeek(
 export async function getSessionTemplateMuscleGroups(
   sessionTemplateId: string
 ): Promise<SessionTemplateMuscleGroupWithMeta[]> {
-  const sections = mockSessionTemplateMuscleGroups
-    .filter((section) => section.sessionTemplateId === sessionTemplateId)
-    .sort((a, b) => a.order - b.order);
+  const sections = await getAllByIndex<SessionTemplateMuscleGroup>(
+    STORE_NAMES.sessionTemplateMuscleGroups,
+    "bySessionTemplateId",
+    sessionTemplateId
+  );
+
+  const muscleGroups = await getAll<MuscleGroup>(STORE_NAMES.muscleGroups);
+  const groupMap = new Map(muscleGroups.map((group) => [group.id, group]));
 
   return sections
+    .sort((a, b) => a.order - b.order)
     .map((section) => {
-      const muscleGroup = mockMuscleGroups.find(
-        (group) => group.id === section.muscleGroupId
-      );
+      const muscleGroup = groupMap.get(section.muscleGroupId);
 
       if (!muscleGroup) {
         return undefined;
@@ -189,21 +204,27 @@ export async function getSessionTemplateMuscleGroups(
 export async function getExerciseTemplatesForSessionTemplate(
   sessionTemplateId: string
 ): Promise<ExerciseTemplateWithMeta[]> {
-  const sections = mockSessionTemplateMuscleGroups.filter(
-    (section) => section.sessionTemplateId === sessionTemplateId
+  const sections = await getAllByIndex<SessionTemplateMuscleGroup>(
+    STORE_NAMES.sessionTemplateMuscleGroups,
+    "bySessionTemplateId",
+    sessionTemplateId
   );
 
   const sectionIds = new Set(sections.map((section) => section.id));
 
-  const exercises = mockExerciseTemplates.filter((exercise) =>
+  const exercises = await getAll<ExerciseTemplate>(STORE_NAMES.exerciseTemplates);
+  const filteredExercises = exercises.filter((exercise) =>
     sectionIds.has(exercise.sessionTemplateMuscleGroupId)
   );
 
-  return exercises
+  const movementTypes = await getAll<MovementType>(STORE_NAMES.movementTypes);
+  const movementTypeMap = new Map(
+    movementTypes.map((movementType) => [movementType.id, movementType])
+  );
+
+  return filteredExercises
     .map((exerciseTemplate) => {
-      const movementType = mockMovementTypes.find(
-        (movement) => movement.id === exerciseTemplate.movementTypeId
-      );
+      const movementType = movementTypeMap.get(exerciseTemplate.movementTypeId);
 
       if (!movementType) {
         return undefined;
@@ -239,40 +260,37 @@ export async function getSessionTemplateGroupsWithExercises(
 export async function getSeasonInstanceById(
   seasonInstanceId: string
 ): Promise<SeasonInstance | undefined> {
-  return mockSeasonInstances.find(
-    (seasonInstance) => seasonInstance.id === seasonInstanceId
-  );
+  return getById<SeasonInstance>(STORE_NAMES.seasonInstances, seasonInstanceId);
 }
 
 export async function getWeekInstanceById(
   weekInstanceId: string
 ): Promise<WeekInstance | undefined> {
-  return mockWeekInstances.find(
-    (weekInstance) => weekInstance.id === weekInstanceId
-  );
+  return getById<WeekInstance>(STORE_NAMES.weekInstances, weekInstanceId);
 }
 
 export async function getSessionInstanceById(
   sessionInstanceId: string
 ): Promise<SessionInstance | undefined> {
-  return mockSessionInstances.find(
-    (sessionInstance) => sessionInstance.id === sessionInstanceId
-  );
+  return getById<SessionInstance>(STORE_NAMES.sessionInstances, sessionInstanceId);
 }
 
 export async function getExerciseInstanceById(
   exerciseInstanceId: string
 ): Promise<ExerciseInstance | undefined> {
-  return mockExerciseInstances.find(
-    (exerciseInstance) => exerciseInstance.id === exerciseInstanceId
+  return getById<ExerciseInstance>(
+    STORE_NAMES.exerciseInstances,
+    exerciseInstanceId
   );
 }
 
 export async function getExerciseInstancesForSessionInstance(
   sessionInstanceId: string
 ): Promise<ExerciseInstance[]> {
-  return mockExerciseInstances.filter(
-    (exerciseInstance) => exerciseInstance.sessionInstanceId === sessionInstanceId
+  return getAllByIndex<ExerciseInstance>(
+    STORE_NAMES.exerciseInstances,
+    "bySessionInstanceId",
+    sessionInstanceId
   );
 }
 
@@ -283,39 +301,59 @@ export async function getExerciseSetsForSessionInstance(
     sessionInstanceId
   );
 
-  const exerciseInstanceIds = new Set(
-    exerciseInstances.map((exerciseInstance) => exerciseInstance.id)
+  const setsByInstance = await Promise.all(
+    exerciseInstances.map((exerciseInstance) =>
+      getExerciseSetsForExerciseInstance(exerciseInstance.id)
+    )
   );
 
-  return mockExerciseSets.filter((exerciseSet) =>
-    exerciseInstanceIds.has(exerciseSet.exerciseInstanceId)
-  );
+  return setsByInstance
+    .flat()
+    .sort((a, b) => {
+      if (a.exerciseInstanceId !== b.exerciseInstanceId) {
+        return a.exerciseInstanceId.localeCompare(b.exerciseInstanceId);
+      }
+
+      return a.setIndex - b.setIndex;
+    });
 }
 
 export async function getExerciseSetsForExerciseInstance(
   exerciseInstanceId: string
 ): Promise<ExerciseSet[]> {
-  return mockExerciseSets
-    .filter((exerciseSet) => exerciseSet.exerciseInstanceId === exerciseInstanceId)
-    .sort((a, b) => a.setIndex - b.setIndex);
+  const sets = await getAllByIndex<ExerciseSet>(
+    STORE_NAMES.exerciseSets,
+    "byExerciseInstanceId",
+    exerciseInstanceId
+  );
+
+  return sets.sort((a, b) => a.setIndex - b.setIndex);
 }
 
 export async function getExerciseSetsForExerciseTemplate(
   exerciseTemplateId: string
 ): Promise<ExerciseSet[]> {
-  const relevantExerciseInstances = mockExerciseInstances.filter(
-    (exerciseInstance) => exerciseInstance.exerciseTemplateId === exerciseTemplateId
+  const relevantExerciseInstances = await getAllByIndex<ExerciseInstance>(
+    STORE_NAMES.exerciseInstances,
+    "byExerciseTemplateId",
+    exerciseTemplateId
   );
 
-  const relevantExerciseInstanceIds = new Set(
-    relevantExerciseInstances.map((exerciseInstance) => exerciseInstance.id)
-  );
-
-  return mockExerciseSets
-    .filter((exerciseSet) =>
-      relevantExerciseInstanceIds.has(exerciseSet.exerciseInstanceId)
+  const setsByInstance = await Promise.all(
+    relevantExerciseInstances.map((exerciseInstance) =>
+      getExerciseSetsForExerciseInstance(exerciseInstance.id)
     )
-    .sort((a, b) => a.setIndex - b.setIndex);
+  );
+
+  return setsByInstance
+    .flat()
+    .sort((a, b) => {
+      if (a.exerciseInstanceId !== b.exerciseInstanceId) {
+        return a.exerciseInstanceId.localeCompare(b.exerciseInstanceId);
+      }
+
+      return a.setIndex - b.setIndex;
+    });
 }
 
 function buildAnalyzedSetList(
@@ -346,7 +384,9 @@ export async function getExerciseInstanceView(
     return undefined;
   }
 
-  const sessionInstance = await getSessionInstanceById(exerciseInstance.sessionInstanceId);
+  const sessionInstance = await getSessionInstanceById(
+    exerciseInstance.sessionInstanceId
+  );
   if (!sessionInstance) {
     return undefined;
   }
@@ -361,12 +401,16 @@ export async function getExerciseInstanceView(
     return undefined;
   }
 
-  const seasonInstance = await getSeasonInstanceById(sessionInstance.seasonInstanceId);
+  const seasonInstance = await getSeasonInstanceById(
+    sessionInstance.seasonInstanceId
+  );
   if (!seasonInstance) {
     return undefined;
   }
 
-  const sessionTemplate = await getSessionTemplateById(sessionInstance.sessionTemplateId);
+  const sessionTemplate = await getSessionTemplateById(
+    sessionInstance.sessionTemplateId
+  );
   if (!sessionTemplate) {
     return undefined;
   }
@@ -493,7 +537,9 @@ export async function getSessionInstanceView(
 
       const currentRawSets = exerciseInstance
         ? allHistoricalSets
-            .filter((exerciseSet) => exerciseSet.exerciseInstanceId === exerciseInstance.id)
+            .filter(
+              (exerciseSet) => exerciseSet.exerciseInstanceId === exerciseInstance.id
+            )
             .sort((a, b) => a.setIndex - b.setIndex)
         : [];
 
@@ -534,22 +580,26 @@ export async function getSessionInstanceView(
   };
 }
 
-export interface SessionInstanceListItem {
-  sessionInstance: SessionInstance;
-  sessionTemplate: SessionTemplate;
-  weekInstance: WeekInstance;
-}
-
 export async function getSessionInstancesForWeekInstance(
   weekInstanceId: string
 ): Promise<SessionInstance[]> {
-  return mockSessionInstances
-    .filter((sessionInstance) => sessionInstance.weekInstanceId === weekInstanceId)
-    .sort((a, b) => a.date.localeCompare(b.date));
+  const sessions = await getAllByIndex<SessionInstance>(
+    STORE_NAMES.sessionInstances,
+    "byWeekInstanceId",
+    weekInstanceId
+  );
+
+  return sessions.sort((a, b) => a.date.localeCompare(b.date));
 }
 
 export async function getCurrentWeekInstance(): Promise<WeekInstance | undefined> {
-  return mockWeekInstances.find((weekInstance) => weekInstance.status === "in_progress");
+  const weekInstances = await getAllByIndex<WeekInstance>(
+    STORE_NAMES.weekInstances,
+    "byStatus",
+    "in_progress"
+  );
+
+  return weekInstances.sort((a, b) => a.order - b.order)[0];
 }
 
 export async function getSessionInstanceListItemsForCurrentWeek(): Promise<
@@ -565,11 +615,15 @@ export async function getSessionInstanceListItemsForCurrentWeek(): Promise<
     currentWeekInstance.id
   );
 
+  const sessionTemplates = await Promise.all(
+    sessionInstances.map((sessionInstance) =>
+      getSessionTemplateById(sessionInstance.sessionTemplateId)
+    )
+  );
+
   return sessionInstances
-    .map((sessionInstance) => {
-      const sessionTemplate = mockSessionTemplates.find(
-        (template) => template.id === sessionInstance.sessionTemplateId
-      );
+    .map((sessionInstance, index) => {
+      const sessionTemplate = sessionTemplates[index];
 
       if (!sessionTemplate) {
         return undefined;
@@ -594,14 +648,14 @@ export async function ensureExerciseInstance(
   sessionInstanceId: string,
   exerciseTemplateId: string
 ): Promise<ExerciseInstance | undefined> {
-  const existing = mockExerciseInstances.find(
-    (exerciseInstance) =>
-      exerciseInstance.sessionInstanceId === sessionInstanceId &&
-      exerciseInstance.exerciseTemplateId === exerciseTemplateId
+  const existing = await getAllByIndex<ExerciseInstance>(
+    STORE_NAMES.exerciseInstances,
+    "bySessionAndTemplate",
+    [sessionInstanceId, exerciseTemplateId]
   );
 
-  if (existing) {
-    return existing;
+  if (existing[0]) {
+    return existing[0];
   }
 
   const sessionInstance = await getSessionInstanceById(sessionInstanceId);
@@ -631,7 +685,7 @@ export async function ensureExerciseInstance(
     prescribedRir: weekTemplate?.targetRir ?? null,
   };
 
-  mockExerciseInstances.push(exerciseInstance);
+  await putItem(STORE_NAMES.exerciseInstances, exerciseInstance);
   return exerciseInstance;
 }
 
@@ -655,7 +709,7 @@ export async function createExerciseSet(
     performedRir: null,
   };
 
-  mockExerciseSets.push(exerciseSet);
+  await putItem(STORE_NAMES.exerciseSets, exerciseSet);
   return exerciseSet;
 }
 
@@ -663,41 +717,50 @@ export async function updateExerciseSet(
   setId: string,
   changes: Pick<ExerciseSet, "performedWeight" | "performedReps" | "performedRir">
 ): Promise<ExerciseSet | undefined> {
-  const exerciseSet = mockExerciseSets.find((set) => set.id === setId);
+  const exerciseSet = await getById<ExerciseSet>(STORE_NAMES.exerciseSets, setId);
   if (!exerciseSet) {
     return undefined;
   }
 
-  if (Object.prototype.hasOwnProperty.call(changes, "performedWeight")) {
-    exerciseSet.performedWeight = changes.performedWeight ?? null;
-  }
+  const updatedSet: ExerciseSet = {
+    ...exerciseSet,
+    performedWeight: Object.prototype.hasOwnProperty.call(changes, "performedWeight")
+      ? (changes.performedWeight ?? null)
+      : exerciseSet.performedWeight,
+    performedReps: Object.prototype.hasOwnProperty.call(changes, "performedReps")
+      ? (changes.performedReps ?? null)
+      : exerciseSet.performedReps,
+    performedRir: Object.prototype.hasOwnProperty.call(changes, "performedRir")
+      ? (changes.performedRir ?? null)
+      : exerciseSet.performedRir,
+  };
 
-  if (Object.prototype.hasOwnProperty.call(changes, "performedReps")) {
-    exerciseSet.performedReps = changes.performedReps ?? null;
-  }
-
-  if (Object.prototype.hasOwnProperty.call(changes, "performedRir")) {
-    exerciseSet.performedRir = changes.performedRir ?? null;
-  }
-
-  return exerciseSet;
+  await putItem(STORE_NAMES.exerciseSets, updatedSet);
+  return updatedSet;
 }
 
 export async function deleteExerciseSet(setId: string): Promise<boolean> {
-  const index = mockExerciseSets.findIndex((set) => set.id === setId);
-  if (index < 0) {
+  const targetSet = await getById<ExerciseSet>(STORE_NAMES.exerciseSets, setId);
+  if (!targetSet) {
     return false;
   }
 
-  const [{ exerciseInstanceId }] = mockExerciseSets.splice(index, 1);
+  await deleteItem(STORE_NAMES.exerciseSets, setId);
 
-  const remainingSets = mockExerciseSets
-    .filter((set) => set.exerciseInstanceId === exerciseInstanceId)
-    .sort((a, b) => a.setIndex - b.setIndex);
+  const remainingSets = await getExerciseSetsForExerciseInstance(
+    targetSet.exerciseInstanceId
+  );
 
-  remainingSets.forEach((set, setIndex) => {
-    set.setIndex = setIndex + 1;
-  });
+  for (let index = 0; index < remainingSets.length; index += 1) {
+    const set = remainingSets[index]!;
+
+    if (set.setIndex !== index + 1) {
+      await putItem(STORE_NAMES.exerciseSets, {
+        ...set,
+        setIndex: index + 1,
+      });
+    }
+  }
 
   return true;
 }
@@ -705,54 +768,104 @@ export async function deleteExerciseSet(setId: string): Promise<boolean> {
 export async function startSessionInstance(
   sessionInstanceId: string
 ): Promise<SessionInstance | undefined> {
-  const sessionInstance = mockSessionInstances.find(
-    (session) => session.id === sessionInstanceId
-  );
+  const sessionInstance = await getSessionInstanceById(sessionInstanceId);
 
   if (!sessionInstance) {
     return undefined;
   }
 
-  if (!sessionInstance.startedAt) {
-    sessionInstance.startedAt = new Date().toISOString();
-  }
+  const updatedSession: SessionInstance = {
+    ...sessionInstance,
+    startedAt: sessionInstance.startedAt ?? new Date().toISOString(),
+    status:
+      sessionInstance.status === "not_started"
+        ? "in_progress"
+        : sessionInstance.status,
+  };
 
-  if (sessionInstance.status === "not_started") {
-    sessionInstance.status = "in_progress";
-  }
-
-  return sessionInstance;
+  await putItem(STORE_NAMES.sessionInstances, updatedSession);
+  return updatedSession;
 }
 
 export async function stopSessionInstance(
   sessionInstanceId: string
 ): Promise<SessionInstance | undefined> {
-  const sessionInstance = mockSessionInstances.find(
-    (session) => session.id === sessionInstanceId
-  );
+  const sessionInstance = await getSessionInstanceById(sessionInstanceId);
 
   if (!sessionInstance) {
     return undefined;
   }
 
-  if (!sessionInstance.startedAt) {
-    sessionInstance.startedAt = new Date().toISOString();
+  const startedAt = sessionInstance.startedAt ?? new Date().toISOString();
+  const completedAt = sessionInstance.completedAt ?? new Date().toISOString();
+
+  let durationSeconds = sessionInstance.durationSeconds ?? null;
+
+  const startedMs = new Date(startedAt).getTime();
+  const completedMs = new Date(completedAt).getTime();
+
+  if (
+    !Number.isNaN(startedMs) &&
+    !Number.isNaN(completedMs) &&
+    completedMs >= startedMs
+  ) {
+    durationSeconds = Math.round((completedMs - startedMs) / 1000);
   }
 
-  if (!sessionInstance.completedAt) {
-    sessionInstance.completedAt = new Date().toISOString();
-  }
+  const updatedSession: SessionInstance = {
+    ...sessionInstance,
+    startedAt,
+    completedAt,
+    durationSeconds,
+    status: "completed",
+  };
 
-  sessionInstance.status = "completed";
+  await putItem(STORE_NAMES.sessionInstances, updatedSession);
 
-  if (sessionInstance.startedAt && sessionInstance.completedAt) {
-    const startedMs = new Date(sessionInstance.startedAt).getTime();
-    const completedMs = new Date(sessionInstance.completedAt).getTime();
+  const weekSessions = await getSessionInstancesForWeekInstance(
+    sessionInstance.weekInstanceId
+  );
 
-    if (!Number.isNaN(startedMs) && !Number.isNaN(completedMs) && completedMs >= startedMs) {
-      sessionInstance.durationSeconds = Math.round((completedMs - startedMs) / 1000);
+  const allSessionsCompleted = weekSessions.every(
+    (session) =>
+      session.id === updatedSession.id
+        ? true
+        : session.status === "completed"
+  );
+
+  if (allSessionsCompleted) {
+    const weekInstance = await getWeekInstanceById(sessionInstance.weekInstanceId);
+
+    if (weekInstance) {
+      const completedWeek: WeekInstance = {
+        ...weekInstance,
+        status: "completed",
+        completedAt: weekInstance.completedAt ?? new Date().toISOString(),
+      };
+
+      await putItem(STORE_NAMES.weekInstances, completedWeek);
+
+      const allWeeks = await getAllByIndex<WeekInstance>(
+        STORE_NAMES.weekInstances,
+        "bySeasonInstanceId",
+        weekInstance.seasonInstanceId
+      );
+
+      const nextWeek = allWeeks
+        .filter((candidate) => candidate.order > completedWeek.order)
+        .sort((a, b) => a.order - b.order)[0];
+
+      if (nextWeek && nextWeek.status === "not_started") {
+        const activatedNextWeek: WeekInstance = {
+          ...nextWeek,
+          status: "in_progress",
+          startedAt: nextWeek.startedAt ?? new Date().toISOString(),
+        };
+
+        await putItem(STORE_NAMES.weekInstances, activatedNextWeek);
+      }
     }
   }
 
-  return sessionInstance;
+  return updatedSession;
 }
