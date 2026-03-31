@@ -2,6 +2,7 @@ export type ID = string;
 
 export type InstanceStatus = "not_started" | "in_progress" | "completed";
 export type WeightMode = "increment" | "explicit_list" | "bodyweight";
+export type WeekItemType = "session" | "rest";
 
 /**
  * Reusable definition of a muscle group.
@@ -24,13 +25,6 @@ export interface MuscleGroup {
  * - aggregate stats consistently
  * - avoid duplicate near-equivalent categories
  * - validate exercise categorisation
- *
- * Examples:
- * - Chest -> Flat
- * - Chest -> Incline
- * - Chest -> Fly
- * - Back -> Vertical Pull
- * - Back -> Horizontal Row
  */
 export interface MovementType {
   id: ID;
@@ -41,13 +35,6 @@ export interface MovementType {
 
 /**
  * Reusable template for an entire training block.
- *
- * This is the structural parent of the template hierarchy.
- * A SeasonTemplate defines the intended block design:
- * - how many weeks it contains
- * - the reusable week/session/exercise structure beneath it
- *
- * A user can run this template multiple times as separate SeasonInstances.
  */
 export interface SeasonTemplate {
   id: ID;
@@ -58,14 +45,6 @@ export interface SeasonTemplate {
 
 /**
  * Reusable template for a week within a season template.
- *
- * Examples:
- * - Week 1
- * - Week 2
- * - Week 3 "3 RIR week"
- *
- * Concrete week-level progression targets live here so the structure remains
- * explicit rather than being generated indirectly.
  */
 export interface WeekTemplate {
   id: ID;
@@ -77,14 +56,23 @@ export interface WeekTemplate {
 }
 
 /**
+ * Ordered structural item inside a week template.
+ *
+ * A week can contain either:
+ * - a session slot
+ * - a rest slot
+ */
+export interface WeekTemplateItem {
+  id: ID;
+  weekTemplateId: ID;
+  order: number;
+  type: WeekItemType;
+  sessionTemplateId?: ID;
+  label?: string;
+}
+
+/**
  * Reusable template for a session/day within a week template.
- *
- * Examples:
- * - Push 1
- * - Pull 1
- * - Legs 1
- *
- * This is the template equivalent of a SessionInstance.
  */
 export interface SessionTemplate {
   id: ID;
@@ -95,15 +83,6 @@ export interface SessionTemplate {
 
 /**
  * Places a muscle-group section inside a specific session template.
- *
- * This lets a session template be structured into ordered muscle-group boxes
- * in the UI, rather than treating muscle group as just a flat tag on exercises.
- *
- * Example:
- * SessionTemplate "Push 1"
- *   -> Chest
- *   -> Delts
- *   -> Triceps
  */
 export interface SessionTemplateMuscleGroup {
   id: ID;
@@ -115,14 +94,6 @@ export interface SessionTemplateMuscleGroup {
 
 /**
  * Reusable template definition of an exercise.
- *
- * Exercises belong to a specific muscle-group section within a session template
- * and also reference a reusable movement type.
- *
- * Notes:
- * - movementTypeId is used for grouping, prioritisation, and aggregate stats
- * - weightMode and related fields are backend/config logic and may not be shown
- *   directly in the UI
  */
 export interface ExerciseTemplate {
   id: ID;
@@ -142,14 +113,6 @@ export interface ExerciseTemplate {
 
 /**
  * A real user-facing run through a season template.
- *
- * Examples:
- * - Season 1
- * - Season 2
- * - Jan 24 block
- *
- * A SeasonInstance is the top-level runtime container for performed weeks,
- * sessions, exercises, and sets.
  */
 export interface SeasonInstance {
   id: ID;
@@ -166,12 +129,6 @@ export interface SeasonInstance {
 
 /**
  * A performed occurrence of a week inside a season instance.
- *
- * This exists because weeks have their own runtime meaning in the app:
- * - summaries
- * - grading/evaluation
- * - progress charting
- * - started/completed state
  */
 export interface WeekInstance {
   id: ID;
@@ -189,14 +146,20 @@ export interface WeekInstance {
 }
 
 /**
+ * Runtime ordered structural item inside a week instance.
+ */
+export interface WeekInstanceItem {
+  id: ID;
+  weekInstanceId: ID;
+  weekTemplateItemId: ID;
+  order: number;
+  type: WeekItemType;
+  sessionInstanceId?: ID;
+  label?: string | null;
+}
+
+/**
  * A performed occurrence of a session template.
- *
- * Example:
- * SessionTemplate: "Legs 1"
- * SessionInstance: "Legs 1 performed on 2026-03-18"
- *
- * Session duration is tracked explicitly so it can be calculated automatically
- * and edited later if needed.
  */
 export interface SessionInstance {
   id: ID;
@@ -215,13 +178,6 @@ export interface SessionInstance {
 
 /**
  * A performed occurrence of an exercise template inside a session instance.
- *
- * Completion is explicit and matches the intended UX:
- * - user starts an exercise
- * - records one or more sets
- * - explicitly marks the exercise as done
- *
- * We do not currently infer exercise completion from a prescribed set count.
  */
 export interface ExerciseInstance {
   id: ID;
@@ -240,9 +196,6 @@ export interface ExerciseInstance {
 
 /**
  * A single performed set within an exercise instance.
- *
- * Users can create as many set records as needed for an exercise instance.
- * A set is effectively "filled in" when the performed fields are populated.
  */
 export interface ExerciseSet {
   id: ID;

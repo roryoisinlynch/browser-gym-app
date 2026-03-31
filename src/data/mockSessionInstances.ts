@@ -8,204 +8,153 @@ const week3Instance = mockWeekInstances.find((week) => week.id === "week-instanc
 const week4Instance = mockWeekInstances.find((week) => week.id === "week-instance-4")!;
 const week5Instance = mockWeekInstances.find((week) => week.id === "week-instance-5")!;
 
-const push1 = mockSessionTemplates.find((session) => session.id === "push-1")!;
-const pull1 = mockSessionTemplates.find((session) => session.id === "pull-1")!;
+const chestBack1 = mockSessionTemplates.find((session) => session.id === "chest-back-1")!;
+const armsShoulder1 = mockSessionTemplates.find(
+  (session) => session.id === "arms-shoulder-1"
+)!;
 const legs1 = mockSessionTemplates.find((session) => session.id === "legs-1")!;
+const chestBack2 = mockSessionTemplates.find((session) => session.id === "chest-back-2")!;
+const armsShoulder2 = mockSessionTemplates.find(
+  (session) => session.id === "arms-shoulder-2"
+)!;
+const legs2 = mockSessionTemplates.find((session) => session.id === "legs-2")!;
+
+const DAY_OFFSETS = {
+  "chest-back-1": 0,
+  "arms-shoulder-1": 1,
+  "legs-1": 3,
+  "chest-back-2": 4,
+  "arms-shoulder-2": 6,
+  "legs-2": 7,
+} as const;
+
+function isoDate(baseDate: string, offsetDays: number) {
+  const date = new Date(baseDate);
+  date.setUTCDate(date.getUTCDate() + offsetDays);
+  return date.toISOString().slice(0, 10);
+}
+
+function completedTimes(baseDate: string, offsetDays: number) {
+  const started = new Date(`${isoDate(baseDate, offsetDays)}T18:00:00.000Z`);
+  const completed = new Date(started);
+  completed.setUTCMinutes(started.getUTCMinutes() + 68);
+  return {
+    startedAt: started.toISOString(),
+    completedAt: completed.toISOString(),
+    durationSeconds: Math.round((completed.getTime() - started.getTime()) / 1000),
+  };
+}
 
 function makeWeekSessionInstances(
   weekInstanceId: string,
   seasonInstanceId: string,
-  prefix: string,
-  dates: {
-    push: string;
-    pull: string;
-    legs: string;
-  },
-  statuses?: {
-    push?: SessionInstance["status"];
-    pull?: SessionInstance["status"];
-    legs?: SessionInstance["status"];
-  }
+  weekNumber: number,
+  baseDate: string,
+  statuses?: Partial<Record<string, SessionInstance["status"]>>
 ): SessionInstance[] {
-  return [
-    {
-      id: `session-instance-${prefix}-push-1`,
-      seasonInstanceId,
-      weekInstanceId,
-      sessionTemplateId: push1.id,
-      date: dates.push,
-      status: statuses?.push ?? "not_started",
-      startedAt: null,
-      completedAt: null,
-      durationSeconds: null,
-    },
-    {
-      id: `session-instance-${prefix}-pull-1`,
-      seasonInstanceId,
-      weekInstanceId,
-      sessionTemplateId: pull1.id,
-      date: dates.pull,
-      status: statuses?.pull ?? "not_started",
-      startedAt: null,
-      completedAt: null,
-      durationSeconds: null,
-    },
-    {
-      id: `session-instance-${prefix}-legs-1`,
-      seasonInstanceId,
-      weekInstanceId,
-      sessionTemplateId: legs1.id,
-      date: dates.legs,
-      status: statuses?.legs ?? "not_started",
-      startedAt: null,
-      completedAt: null,
-      durationSeconds: null,
-    },
+  const templateMap = [
+    chestBack1,
+    armsShoulder1,
+    legs1,
+    chestBack2,
+    armsShoulder2,
+    legs2,
   ];
+
+  return templateMap.map((template) => {
+    const offset = DAY_OFFSETS[template.id as keyof typeof DAY_OFFSETS];
+    const status = statuses?.[template.id] ?? "not_started";
+
+    const session: SessionInstance = {
+      id: `session-instance-w${weekNumber}-${template.id}`,
+      seasonInstanceId,
+      weekInstanceId,
+      sessionTemplateId: template.id,
+      date: isoDate(baseDate, offset),
+      status,
+      startedAt: null,
+      completedAt: null,
+      durationSeconds: null,
+    };
+
+    if (status === "completed") {
+      const { startedAt, completedAt, durationSeconds } = completedTimes(
+        baseDate,
+        offset
+      );
+
+      return {
+        ...session,
+        startedAt,
+        completedAt,
+        durationSeconds,
+      };
+    }
+
+    if (status === "in_progress") {
+      return {
+        ...session,
+        startedAt: `${isoDate(baseDate, offset)}T18:15:00.000Z`,
+      };
+    }
+
+    return session;
+  });
 }
 
 export const mockSessionInstances: SessionInstance[] = [
   ...makeWeekSessionInstances(
     week1Instance.id,
     week1Instance.seasonInstanceId,
-    "week-1",
+    1,
+    "2026-01-24T00:00:00.000Z",
     {
-      push: "2026-01-25",
-      pull: "2026-01-27",
-      legs: "2026-01-29",
-    },
-    {
-      push: "completed",
-      pull: "completed",
-      legs: "completed",
+      "chest-back-1": "completed",
+      "arms-shoulder-1": "completed",
+      "legs-1": "completed",
+      "chest-back-2": "completed",
+      "arms-shoulder-2": "completed",
+      "legs-2": "completed",
     }
-  ).map((session) => {
-    if (session.status !== "completed") {
-      return session;
-    }
-
-    const startedAt =
-      session.sessionTemplateId === push1.id
-        ? "2026-01-25T18:00:00.000Z"
-        : session.sessionTemplateId === pull1.id
-          ? "2026-01-27T18:00:00.000Z"
-          : "2026-01-29T18:00:00.000Z";
-
-    const completedAt =
-      session.sessionTemplateId === push1.id
-        ? "2026-01-25T19:05:00.000Z"
-        : session.sessionTemplateId === pull1.id
-          ? "2026-01-27T19:08:00.000Z"
-          : "2026-01-29T19:10:00.000Z";
-
-    return {
-      ...session,
-      startedAt,
-      completedAt,
-      durationSeconds:
-        Math.round(
-          (new Date(completedAt).getTime() - new Date(startedAt).getTime()) / 1000
-        ),
-    };
-  }),
-
+  ),
   ...makeWeekSessionInstances(
     week2Instance.id,
     week2Instance.seasonInstanceId,
-    "week-2",
+    2,
+    "2026-02-02T00:00:00.000Z",
     {
-      push: "2026-02-01",
-      pull: "2026-02-03",
-      legs: "2026-02-05",
-    },
+      "chest-back-1": "completed",
+      "arms-shoulder-1": "completed",
+      "legs-1": "completed",
+      "chest-back-2": "completed",
+      "arms-shoulder-2": "completed",
+      "legs-2": "completed",
+    }
+  ),
+  ...makeWeekSessionInstances(
+    week3Instance.id,
+    week3Instance.seasonInstanceId,
+    3,
+    "2026-02-11T00:00:00.000Z",
     {
-      push: "completed",
-      pull: "completed",
-      legs: "completed",
+      "chest-back-1": "completed",
+      "arms-shoulder-1": "completed",
+      "legs-1": "completed",
+      "chest-back-2": "completed",
+      "arms-shoulder-2": "completed",
+      "legs-2": "in_progress",
     }
-  ).map((session) => {
-    if (session.status !== "completed") {
-      return session;
-    }
-
-    const startedAt =
-      session.sessionTemplateId === push1.id
-        ? "2026-02-01T18:00:00.000Z"
-        : session.sessionTemplateId === pull1.id
-          ? "2026-02-03T18:00:00.000Z"
-          : "2026-02-05T18:00:00.000Z";
-
-    const completedAt =
-      session.sessionTemplateId === push1.id
-        ? "2026-02-01T19:07:00.000Z"
-        : session.sessionTemplateId === pull1.id
-          ? "2026-02-03T19:04:00.000Z"
-          : "2026-02-05T19:12:00.000Z";
-
-    return {
-      ...session,
-      startedAt,
-      completedAt,
-      durationSeconds:
-        Math.round(
-          (new Date(completedAt).getTime() - new Date(startedAt).getTime()) / 1000
-        ),
-    };
-  }),
-
-  {
-    id: "session-instance-push-1",
-    seasonInstanceId: week3Instance.seasonInstanceId,
-    weekInstanceId: week3Instance.id,
-    sessionTemplateId: push1.id,
-    date: "2026-02-08",
-    status: "completed",
-    startedAt: "2026-02-08T18:00:00.000Z",
-    completedAt: "2026-02-08T19:12:00.000Z",
-    durationSeconds: 4320,
-  },
-  {
-    id: "session-instance-pull-1",
-    seasonInstanceId: week3Instance.seasonInstanceId,
-    weekInstanceId: week3Instance.id,
-    sessionTemplateId: pull1.id,
-    date: "2026-02-10",
-    status: "not_started",
-    startedAt: null,
-    completedAt: null,
-    durationSeconds: null,
-  },
-  {
-    id: "session-instance-legs-1",
-    seasonInstanceId: week3Instance.seasonInstanceId,
-    weekInstanceId: week3Instance.id,
-    sessionTemplateId: legs1.id,
-    date: "2026-02-12",
-    status: "in_progress",
-    startedAt: "2026-02-12T18:15:00.000Z",
-    completedAt: null,
-    durationSeconds: null,
-  },
-
+  ),
   ...makeWeekSessionInstances(
     week4Instance.id,
     week4Instance.seasonInstanceId,
-    "week-4",
-    {
-      push: "2026-02-15",
-      pull: "2026-02-17",
-      legs: "2026-02-19",
-    }
+    4,
+    "2026-02-20T00:00:00.000Z"
   ),
-
   ...makeWeekSessionInstances(
     week5Instance.id,
     week5Instance.seasonInstanceId,
-    "week-5",
-    {
-      push: "2026-02-22",
-      pull: "2026-02-24",
-      legs: "2026-02-26",
-    }
+    5,
+    "2026-03-01T00:00:00.000Z"
   ),
 ];

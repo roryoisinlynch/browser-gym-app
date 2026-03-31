@@ -1,16 +1,18 @@
 const DB_NAME = "browser-gym-app";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export const STORE_NAMES = {
   muscleGroups: "muscleGroups",
   movementTypes: "movementTypes",
   seasonTemplates: "seasonTemplates",
   weekTemplates: "weekTemplates",
+  weekTemplateItems: "weekTemplateItems",
   sessionTemplates: "sessionTemplates",
   sessionTemplateMuscleGroups: "sessionTemplateMuscleGroups",
   exerciseTemplates: "exerciseTemplates",
   seasonInstances: "seasonInstances",
   weekInstances: "weekInstances",
+  weekInstanceItems: "weekInstanceItems",
   sessionInstances: "sessionInstances",
   exerciseInstances: "exerciseInstances",
   exerciseSets: "exerciseSets",
@@ -54,6 +56,16 @@ export function openDatabase(): Promise<IDBDatabase> {
           keyPath: "id",
         });
         store.createIndex("bySeasonTemplateId", "seasonTemplateId", { unique: false });
+      }
+
+      if (!db.objectStoreNames.contains(STORE_NAMES.weekTemplateItems)) {
+        const store = db.createObjectStore(STORE_NAMES.weekTemplateItems, {
+          keyPath: "id",
+        });
+        store.createIndex("byWeekTemplateId", "weekTemplateId", { unique: false });
+        store.createIndex("bySessionTemplateId", "sessionTemplateId", {
+          unique: false,
+        });
       }
 
       if (!db.objectStoreNames.contains(STORE_NAMES.sessionTemplates)) {
@@ -102,6 +114,19 @@ export function openDatabase(): Promise<IDBDatabase> {
         store.createIndex("bySeasonInstanceId", "seasonInstanceId", { unique: false });
         store.createIndex("byWeekTemplateId", "weekTemplateId", { unique: false });
         store.createIndex("byStatus", "status", { unique: false });
+      }
+
+      if (!db.objectStoreNames.contains(STORE_NAMES.weekInstanceItems)) {
+        const store = db.createObjectStore(STORE_NAMES.weekInstanceItems, {
+          keyPath: "id",
+        });
+        store.createIndex("byWeekInstanceId", "weekInstanceId", { unique: false });
+        store.createIndex("byWeekTemplateItemId", "weekTemplateItemId", {
+          unique: false,
+        });
+        store.createIndex("bySessionInstanceId", "sessionInstanceId", {
+          unique: false,
+        });
       }
 
       if (!db.objectStoreNames.contains(STORE_NAMES.sessionInstances)) {

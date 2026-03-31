@@ -4,16 +4,18 @@ import { mockMuscleGroups } from "../data/mockMuscleGroups";
 import { mockMovementTypes } from "../data/mockMovementTypes";
 import { mockSeasonTemplates } from "../data/mockSeasonTemplates";
 import { mockWeekTemplates } from "../data/mockWeekTemplates";
+import { mockWeekTemplateItems } from "../data/mockWeekTemplateItems";
 import { mockSessionTemplates } from "../data/mockSessionTemplates";
 import { mockSessionTemplateMuscleGroups } from "../data/mockSessionTemplateMuscleGroups";
 import { mockExerciseTemplates } from "../data/mockExerciseTemplates";
 import { mockSeasonInstances } from "../data/mockSeasonInstances";
 import { mockWeekInstances } from "../data/mockWeekInstances";
+import { mockWeekInstanceItems } from "../data/mockWeekInstanceItems";
 import { mockSessionInstances } from "../data/mockSessionInstances";
 import { mockExerciseInstances } from "../data/mockExerciseInstances";
 import { mockExerciseSets } from "../data/mockExerciseSets";
 
-const SEED_KEY = "seed-v1";
+const SEED_KEY = "seed-v2";
 
 export async function seedDatabaseIfNeeded(): Promise<void> {
   const db = await openDatabase();
@@ -33,42 +35,58 @@ export async function seedDatabaseIfNeeded(): Promise<void> {
 
   const tx = db.transaction(Object.values(STORE_NAMES), "readwrite");
 
-  tx.objectStore(STORE_NAMES.muscleGroups).put.bind(
-    tx.objectStore(STORE_NAMES.muscleGroups)
-  );
   mockMuscleGroups.forEach((item) =>
     tx.objectStore(STORE_NAMES.muscleGroups).put(item)
   );
+
   mockMovementTypes.forEach((item) =>
     tx.objectStore(STORE_NAMES.movementTypes).put(item)
   );
+
   mockSeasonTemplates.forEach((item) =>
     tx.objectStore(STORE_NAMES.seasonTemplates).put(item)
   );
+
   mockWeekTemplates.forEach((item) =>
     tx.objectStore(STORE_NAMES.weekTemplates).put(item)
   );
+
+  mockWeekTemplateItems.forEach((item) =>
+    tx.objectStore(STORE_NAMES.weekTemplateItems).put(item)
+  );
+
   mockSessionTemplates.forEach((item) =>
     tx.objectStore(STORE_NAMES.sessionTemplates).put(item)
   );
+
   mockSessionTemplateMuscleGroups.forEach((item) =>
     tx.objectStore(STORE_NAMES.sessionTemplateMuscleGroups).put(item)
   );
+
   mockExerciseTemplates.forEach((item) =>
     tx.objectStore(STORE_NAMES.exerciseTemplates).put(item)
   );
+
   mockSeasonInstances.forEach((item) =>
     tx.objectStore(STORE_NAMES.seasonInstances).put(item)
   );
+
   mockWeekInstances.forEach((item) =>
     tx.objectStore(STORE_NAMES.weekInstances).put(item)
   );
+
+  mockWeekInstanceItems.forEach((item) =>
+    tx.objectStore(STORE_NAMES.weekInstanceItems).put(item)
+  );
+
   mockSessionInstances.forEach((item) =>
     tx.objectStore(STORE_NAMES.sessionInstances).put(item)
   );
+
   mockExerciseInstances.forEach((item) =>
     tx.objectStore(STORE_NAMES.exerciseInstances).put(item)
   );
+
   mockExerciseSets.forEach((item) =>
     tx.objectStore(STORE_NAMES.exerciseSets).put(item)
   );

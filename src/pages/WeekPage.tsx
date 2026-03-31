@@ -14,15 +14,16 @@ function getDayState(
   status: "not_started" | "in_progress" | "completed",
   hasSeenNext: boolean
 ): DayState {
-  if (status === "completed") {
-    return "completed";
-  }
-
-  if (!hasSeenNext) {
-    return "next";
-  }
-
+  if (status === "completed") return "completed";
+  if (!hasSeenNext) return "next";
   return "upcoming";
+}
+
+function daysBetween(a: string, b: string) {
+  const aDate = new Date(a);
+  const bDate = new Date(b);
+  const diff = bDate.getTime() - aDate.getTime();
+  return Math.round(diff / (1000 * 60 * 60 * 24));
 }
 
 export default function WeekPage() {
@@ -34,17 +35,19 @@ export default function WeekPage() {
   useEffect(() => {
     async function loadWeekPage() {
       try {
-        setErrorMessage(null);
-
-        const [nextItems, weekTemplates] = await Promise.all([
+        const [sessions, weeks] = await Promise.all([
           getSessionInstanceListItemsForCurrentWeek(),
           getWeekTemplates(),
         ]);
 
-        setItems(nextItems);
-        setTotalWeeks(weekTemplates.length);
+        const sorted = [...sessions].sort((a, b) =>
+          a.sessionInstance.date.localeCompare(b.sessionInstance.date)
+        );
+
+        setItems(sorted);
+        setTotalWeeks(weeks.length);
       } catch (error) {
-        console.error("Failed to load current week:", error);
+        console.error(error);
         setErrorMessage("Could not load the current week.");
       } finally {
         setIsLoading(false);
@@ -60,9 +63,7 @@ export default function WeekPage() {
     return items.map(({ sessionInstance }) => {
       const state = getDayState(sessionInstance.status, hasSeenNext);
 
-      if (state === "next") {
-        hasSeenNext = true;
-      }
+      if (state === "next") hasSeenNext = true;
 
       return state;
     });
@@ -75,12 +76,10 @@ export default function WeekPage() {
   }, [items]);
 
   const weekLabel = useMemo(() => {
-    if (items.length === 0 || totalWeeks == null) {
-      return "Week";
-    }
+    if (items.length === 0 || totalWeeks == null) return "Week";
 
-    const currentWeekNumber = items[0].weekInstance.order;
-    return `Week ${currentWeekNumber} of ${totalWeeks}`;
+    const weekNumber = items[0].weekInstance.order;
+    return `Week ${weekNumber} of ${totalWeeks}`;
   }, [items, totalWeeks]);
 
   if (isLoading) {
@@ -88,7 +87,7 @@ export default function WeekPage() {
       <main className="week-page">
         <TopBar title="Week" />
         <section className="week-shell">
-          <p className="week-page__message">Loading week...</p>
+          <p>Loading week...</p>
         </section>
         <BottomNav activeTab="session" />
       </main>
@@ -100,7 +99,7 @@ export default function WeekPage() {
       <main className="week-page">
         <TopBar title="Week" />
         <section className="week-shell">
-          <p className="week-page__message">{errorMessage}</p>
+          <p>{errorMessage}</p>
         </section>
         <BottomNav activeTab="session" />
       </main>
@@ -118,41 +117,39 @@ export default function WeekPage() {
             {completedCount} / {items.length} sessions completed
           </p>
 
-          {items.length > 0 && (
-            <div className="week-page__progress">
-              <div className="week-page__progress-row">
-                <span className="week-page__progress-label">Progress</span>
-                <span className="week-page__progress-value">
-                  {completedCount} / {items.length}
-                </span>
-              </div>
-
-              <ProgressTrack
-                states={dayStates}
-                ariaLabel={`Week progress: ${completedCount} of ${items.length} sessions completed`}
-              />
-            </div>
-          )}
+          <ProgressTrack
+            states={dayStates}
+            ariaLabel={`Week progress: ${completedCount} of ${items.length} sessions completed`}
+          />
         </header>
 
         <section className="week-page__content">
-          {items.length === 0 ? (
-            <p className="week-page__message">No sessions found for this week.</p>
-          ) : (
-            <div className="week-page__list">
-              {items.map(({ sessionInstance, sessionTemplate }, index) => (
-                <DayCard
-                  key={sessionInstance.id}
-                  day={{
-                    id: sessionInstance.id,
-                    name: sessionTemplate.name,
-                    order: index + 1,
-                  }}
-                  state={dayStates[index]}
-                />
-              ))}
-            </div>
-          )}
+          <div className="week-page__list">
+            {items.map((item, index) => {
+              const prev = items[index - 1];
+
+              const showRestDivider =
+                prev &&
+                daysBetween(prev.sessionInstance.date, item.sessionInstance.date) > 1;
+
+              return (
+                <div key={item.sessionInstance.id}>
+                  {showRestDivider && (
+                    <div className="week-rest-divider">Rest Day</div>
+                  )}
+
+                  <DayCard
+                    day={{
+                      id: item.sessionInstance.id,
+                      name: item.sessionTemplate.name,
+                      order: index + 1,
+                    }}
+                    state={dayStates[index]}
+                  />
+                </div>
+              );
+            })}
+          </div>
         </section>
       </section>
 
