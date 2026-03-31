@@ -354,7 +354,18 @@ export default function SessionPage() {
       }
     }
 
-    await runSessionAction(stopSessionInstance, "Could not finish session.");
+    try {
+      setIsSaving(true);
+      setErrorMessage(null);
+
+      await stopSessionInstance(sessionView.sessionInstance.id);
+      navigate("/week");
+    } catch (error) {
+      console.error("Could not finish session.", error);
+      setErrorMessage("Could not finish session.");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   async function handleOpenExercise(

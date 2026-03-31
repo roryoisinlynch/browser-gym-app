@@ -384,6 +384,8 @@ export async function getExerciseInstanceView(
     return undefined;
   }
 
+
+  
   const sessionInstance = await getSessionInstanceById(
     exerciseInstance.sessionInstanceId
   );
@@ -736,6 +738,32 @@ export async function updateExerciseSet(
   };
 
   await putItem(STORE_NAMES.exerciseSets, updatedSet);
+
+  const exerciseInstance = await getExerciseInstanceById(
+    updatedSet.exerciseInstanceId
+  );
+
+  if (exerciseInstance) {
+    const hasMeaningfulInput =
+      updatedSet.performedWeight != null ||
+      updatedSet.performedReps != null ||
+      updatedSet.performedRir != null;
+
+    if (hasMeaningfulInput) {
+      if (exerciseInstance.status === "not_started") {
+        await startExerciseInstance(exerciseInstance.id);
+      } else if (exerciseInstance.status === "completed") {
+        const reopenedExerciseInstance: ExerciseInstance = {
+          ...exerciseInstance,
+          status: "in_progress",
+          completedAt: null,
+        };
+
+        await putItem(STORE_NAMES.exerciseInstances, reopenedExerciseInstance);
+      }
+    }
+  }
+
   return updatedSet;
 }
 
@@ -763,6 +791,51 @@ export async function deleteExerciseSet(setId: string): Promise<boolean> {
   }
 
   return true;
+}
+
+export async function startExerciseInstance(
+  exerciseInstanceId: string
+): Promise<ExerciseInstance | undefined> {
+  const exerciseInstance = await getExerciseInstanceById(exerciseInstanceId);
+
+  if (!exerciseInstance) {
+    return undefined;
+  }
+
+  if (exerciseInstance.status === "completed") {
+    return exerciseInstance;
+  }
+
+  const updatedExerciseInstance: ExerciseInstance = {
+    ...exerciseInstance,
+    status: "in_progress",
+    startedAt: exerciseInstance.startedAt ?? new Date().toISOString(),
+  };
+
+  await putItem(STORE_NAMES.exerciseInstances, updatedExerciseInstance);
+  return updatedExerciseInstance;
+}
+
+export async function completeExerciseInstance(
+  exerciseInstanceId: string
+): Promise<ExerciseInstance | undefined> {
+  const exerciseInstance = await getExerciseInstanceById(exerciseInstanceId);
+
+  if (!exerciseInstance) {
+    return undefined;
+  }
+
+  const nowIso = new Date().toISOString();
+
+  const updatedExerciseInstance: ExerciseInstance = {
+    ...exerciseInstance,
+    status: "completed",
+    startedAt: exerciseInstance.startedAt ?? nowIso,
+    completedAt: exerciseInstance.completedAt ?? nowIso,
+  };
+
+  await putItem(STORE_NAMES.exerciseInstances, updatedExerciseInstance);
+  return updatedExerciseInstance;
 }
 
 export async function startSessionInstance(
@@ -796,8 +869,9 @@ export async function stopSessionInstance(
     return undefined;
   }
 
-  const startedAt = sessionInstance.startedAt ?? new Date().toISOString();
-  const completedAt = sessionInstance.completedAt ?? new Date().toISOString();
+  const nowIso = new Date().toISOString();
+  const startedAt = sessionInstance.startedAt ?? nowIso;
+  const completedAt = sessionInstance.completedAt ?? nowIso;
 
   let durationSeconds = sessionInstance.durationSeconds ?? null;
 
@@ -826,44 +900,144 @@ export async function stopSessionInstance(
     sessionInstance.weekInstanceId
   );
 
-  const allSessionsCompleted = weekSessions.every(
-    (session) =>
-      session.id === updatedSession.id
-        ? true
-        : session.status === "completed"
+  const allSessionsCompleted = weekSessions.every((session) =>
+    session.id === updatedSession.id ? true : session.status === "completed"
   );
 
-  if (allSessionsCompleted) {
-    const weekInstance = await getWeekInstanceById(sessionInstance.weekInstanceId);
+  if (!allSessionsCompleted) {
+    return updatedSession;
+  }
 
-    if (weekInstance) {
-      const completedWeek: WeekInstance = {
-        ...weekInstance,
-        status: "completed",
-        completedAt: weekInstance.completedAt ?? new Date().toISOString(),
-      };
+  const weekInstance = await getWeekInstanceById(sessionInstance.weekInstanceId);
 
-      await putItem(STORE_NAMES.weekInstances, completedWeek);
+  if (!weekInstance) {
+    return updatedSession;
+  }
 
-      const allWeeks = await getAllByIndex<WeekInstance>(
-        STORE_NAMES.weekInstances,
-        "bySeasonInstanceId",
-        weekInstance.seasonInstanceId
+  const completedWeek: WeekInstance = {
+    ...weekInstance,
+    status: "completed",
+    completedAt: weekInstance.completedAt ?? nowIso,
+  };
+
+  await putItem(STORE_NAMES.weekInstances, completedWeek);
+
+  const allWeeks = await getAllByIndex<WeekInstance>(
+    STORE_NAMES.weekInstances,
+    "bySeasonInstanceId",
+    weekInstance.seasonInstanceId
+  );
+
+  const nextWeek = allWeeks
+    .filter((candidate) => candidate.order > completedWeek.order)
+    .sort((a, b) => a.order - b.order)[0];
+
+  if (nextWeek && nextWeek.status === "not_started") {
+    const activatedNextWeek: WeekInstance = {
+      ...nextWeek,
+      status: "in_progress",
+      startedAt: nextWeek.startedAt ?? nowIso,
+    };
+
+    await putItem(STORE_NAMES.weekInstances, activatedNextWeek);
+    return updatedSession;
+  }
+
+  const currentSeasonInstance = await getSeasonInstanceById(
+    weekInstance.seasonInstanceId
+  );
+
+  if (!currentSeasonInstance) {
+    return updatedSession;
+  }
+
+  const completedSeasonInstance: SeasonInstance = {
+    ...currentSeasonInstance,
+    status: "completed",
+    completedAt: currentSeasonInstance.completedAt ?? nowIso,
+  };
+
+  await putItem(STORE_NAMES.seasonInstances, completedSeasonInstance);
+
+  const allSeasonInstances = await getAll<SeasonInstance>(
+    STORE_NAMES.seasonInstances
+  );
+
+  const nextSeasonOrder =
+    allSeasonInstances
+      .filter(
+        (candidate) =>
+          candidate.seasonTemplateId === currentSeasonInstance.seasonTemplateId
+      )
+      .reduce((maxOrder, candidate) => Math.max(maxOrder, candidate.order), 0) + 1;
+
+  const newSeasonStartedAt = nowIso;
+  const newSeasonInstanceId = `season-instance-${currentSeasonInstance.seasonTemplateId}-${Date.now()}`;
+
+  const newSeasonInstance: SeasonInstance = {
+    id: newSeasonInstanceId,
+    seasonTemplateId: currentSeasonInstance.seasonTemplateId,
+    name: `Season ${nextSeasonOrder}`,
+    order: nextSeasonOrder,
+    label: currentSeasonInstance.label,
+    status: "in_progress",
+    startedAt: newSeasonStartedAt,
+    completedAt: null,
+  };
+
+  await putItem(STORE_NAMES.seasonInstances, newSeasonInstance);
+
+  const allWeekTemplates = await getAll<WeekTemplate>(STORE_NAMES.weekTemplates);
+
+  const seasonWeekTemplates = allWeekTemplates
+    .filter(
+      (weekTemplate) =>
+        weekTemplate.seasonTemplateId === currentSeasonInstance.seasonTemplateId
+    )
+    .sort((a, b) => a.order - b.order);
+
+  const baseDate = new Date(newSeasonStartedAt);
+
+  for (const weekTemplate of seasonWeekTemplates) {
+    const weekStartedAt = weekTemplate.order === 1 ? newSeasonStartedAt : null;
+
+    const newWeekInstance: WeekInstance = {
+      id: `week-instance-${newSeasonInstanceId}-${weekTemplate.id}`,
+      seasonInstanceId: newSeasonInstanceId,
+      weekTemplateId: weekTemplate.id,
+      order: weekTemplate.order,
+      status: weekTemplate.order === 1 ? "in_progress" : "not_started",
+      startedAt: weekStartedAt,
+      completedAt: null,
+      summary: null,
+      grade: null,
+    };
+
+    await putItem(STORE_NAMES.weekInstances, newWeekInstance);
+
+    const sessionTemplates = await getSessionTemplatesForWeek(weekTemplate.id);
+
+    for (const sessionTemplate of sessionTemplates) {
+      const sessionDate = new Date(baseDate);
+      sessionDate.setDate(
+        baseDate.getDate() +
+          (weekTemplate.order - 1) * 7 +
+          (sessionTemplate.order - 1)
       );
 
-      const nextWeek = allWeeks
-        .filter((candidate) => candidate.order > completedWeek.order)
-        .sort((a, b) => a.order - b.order)[0];
+      const newSessionInstance: SessionInstance = {
+        id: `session-instance-${newSeasonInstanceId}-${weekTemplate.id}-${sessionTemplate.id}`,
+        seasonInstanceId: newSeasonInstanceId,
+        weekInstanceId: newWeekInstance.id,
+        sessionTemplateId: sessionTemplate.id,
+        date: sessionDate.toISOString(),
+        status: "not_started",
+        startedAt: null,
+        completedAt: null,
+        durationSeconds: null,
+      };
 
-      if (nextWeek && nextWeek.status === "not_started") {
-        const activatedNextWeek: WeekInstance = {
-          ...nextWeek,
-          status: "in_progress",
-          startedAt: nextWeek.startedAt ?? new Date().toISOString(),
-        };
-
-        await putItem(STORE_NAMES.weekInstances, activatedNextWeek);
-      }
+      await putItem(STORE_NAMES.sessionInstances, newSessionInstance);
     }
   }
 

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import type { ExerciseInstanceView } from "../repositories/programRepository";
 import {
+  completeExerciseInstance,
   createExerciseSet,
   deleteExerciseSet,
   getExerciseInstanceView,
@@ -62,8 +63,17 @@ function withCalculatedEstimatedOneRepMax(row: EditableRow): EditableRow {
   };
 }
 
+function getExerciseStatusLabel(
+  status: "not_started" | "in_progress" | "completed"
+) {
+  if (status === "completed") return "Completed";
+  if (status === "in_progress") return "In progress";
+  return "Not started";
+}
+
 export default function ExercisePage() {
   const { exerciseInstanceId } = useParams<{ exerciseInstanceId: string }>();
+  const navigate = useNavigate();
   const [exerciseView, setExerciseView] = useState<ExerciseInstanceView | null>(null);
   const [rows, setRows] = useState<EditableRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -130,6 +140,19 @@ export default function ExercisePage() {
     );
   }
 
+  async function reloadExerciseView() {
+    if (!exerciseInstanceId) {
+      return;
+    }
+
+    const view = await getExerciseInstanceView(exerciseInstanceId);
+
+    if (view) {
+      setExerciseView(view);
+      setRows(hydrateRows(view));
+    }
+  }
+
   async function handleRowBlur(rowId: string) {
     const row = rows.find((candidate) => candidate.id === rowId);
 
@@ -147,6 +170,7 @@ export default function ExercisePage() {
 
     try {
       setIsSaving(true);
+      setErrorMessage(null);
 
       let persistedSetId = row.persistedSetId;
 
@@ -177,6 +201,8 @@ export default function ExercisePage() {
             : candidate
         )
       );
+
+      await reloadExerciseView();
     } catch (error) {
       console.error("Failed to save set row:", error);
       setErrorMessage("Could not save the set.");
@@ -193,6 +219,7 @@ export default function ExercisePage() {
 
     try {
       setIsSaving(true);
+      setErrorMessage(null);
 
       if (row.persistedSetId) {
         await deleteExerciseSet(row.persistedSetId);
@@ -202,6 +229,8 @@ export default function ExercisePage() {
         const nextRows = currentRows.filter((candidate) => candidate.id !== rowId);
         return nextRows.length > 0 ? nextRows : [createDraftRow(draftCounterRef.current++)];
       });
+
+      await reloadExerciseView();
     } catch (error) {
       console.error("Failed to remove set row:", error);
       setErrorMessage("Could not remove the set.");
@@ -213,6 +242,43 @@ export default function ExercisePage() {
   function handleAddRow() {
     setRows((currentRows) => [...currentRows, createDraftRow(draftCounterRef.current++)]);
   }
+
+async function handleFinishExercise() {
+  if (!exerciseView) {
+    return;
+  }
+
+  const populatedSetCount = rows.filter((row) => {
+    const weight = parseNullableNumber(row.weight);
+    const reps = parseNullableNumber(row.reps);
+    return weight != null || reps != null;
+  }).length;
+
+  if (populatedSetCount < 3) {
+    const confirmed = window.confirm(
+      `Only ${populatedSetCount} populated ${
+        populatedSetCount === 1 ? "set is" : "sets are"
+      } recorded. Finish exercise anyway?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+  }
+
+  try {
+    setIsSaving(true);
+    setErrorMessage(null);
+
+    await completeExerciseInstance(exerciseView.exerciseInstance.id);
+    navigate(`/session/${exerciseView.sessionInstance.id}`);
+  } catch (error) {
+    console.error("Failed to finish exercise:", error);
+    setErrorMessage("Could not finish exercise.");
+  } finally {
+    setIsSaving(false);
+  }
+}
 
   if (isLoading) {
     return (
@@ -242,6 +308,9 @@ export default function ExercisePage() {
     return null;
   }
 
+  const exerciseStatus = exerciseView.exerciseInstance.status;
+  const isCompleted = exerciseStatus === "completed";
+
   return (
     <main className="exercise-page">
       <TopBar
@@ -257,6 +326,9 @@ export default function ExercisePage() {
           </h1>
           <p className="exercise-page__subtitle">
             {exerciseView.sessionTemplate.name} · {exerciseView.weekTemplate.label ?? exerciseView.weekTemplate.name}
+          </p>
+          <p className="exercise-page__subtitle">
+            Status: {getExerciseStatusLabel(exerciseStatus)}
           </p>
           {errorMessage && <p className="exercise-page__message">{errorMessage}</p>}
           {isSaving && <p className="exercise-page__message">Saving changes…</p>}
@@ -282,6 +354,27 @@ export default function ExercisePage() {
           onRemoveRow={handleRemoveRow}
           onAddRow={handleAddRow}
         />
+
+        <div style={{ margin: "0 14px 16px" }}>
+          <button
+            type="button"
+            onClick={handleFinishExercise}
+            disabled={isSaving || isCompleted}
+            style={{
+              width: "100%",
+              minHeight: "42px",
+              borderRadius: "14px",
+              border: "1px solid rgba(216, 240, 106, 0.32)",
+              background: isCompleted ? "var(--panel-bg)" : "rgba(216, 240, 106, 0.08)",
+              color: isCompleted ? "var(--text-muted)" : "var(--accent)",
+              fontSize: "0.92rem",
+              fontWeight: 800,
+              cursor: isSaving || isCompleted ? "default" : "pointer",
+            }}
+          >
+            {isCompleted ? "Exercise finished" : "Finish exercise"}
+          </button>
+        </div>
       </section>
 
       <BottomNav activeTab="session" />

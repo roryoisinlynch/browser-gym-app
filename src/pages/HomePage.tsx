@@ -22,7 +22,8 @@ function getDayState(
 }
 
 export default function HomePage() {
-  const [seasonWeekLabel, setSeasonWeekLabel] = useState<string>("Season ? Week ?");
+  const [weekTitle, setWeekTitle] = useState<string>("Week");
+  const [seasonLabel, setSeasonLabel] = useState<string>("Season ?");
   const [sessionItems, setSessionItems] = useState<SessionInstanceListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -41,10 +42,8 @@ export default function HomePage() {
           currentWeekInstance.seasonInstanceId
         );
 
-        const seasonNumber = seasonInstance?.order ?? "?";
-        const weekNumber = currentWeekInstance.order ?? "?";
-
-        setSeasonWeekLabel(`Season ${seasonNumber} Week ${weekNumber}`);
+        setWeekTitle(`Week ${currentWeekInstance.order ?? "?"}`);
+        setSeasonLabel(`Season ${seasonInstance?.order ?? "?"}`);
 
         const items = await getSessionInstanceListItemsForCurrentWeek();
         setSessionItems(items);
@@ -95,18 +94,21 @@ export default function HomePage() {
 
       <section className="home-shell">
         <header className="home-header">
-        <p className="home-subtitle">{seasonWeekLabel}</p>
-        <p className="home-progress-label">
-          {completedCount} / {totalCount} sessions completed
-        </p>
+          <h1 className="home-title">{weekTitle}</h1>
+          <p className="home-subtitle">{seasonLabel}</p>
 
-        <ProgressTrack
-          states={sessionItems.map(({ sessionInstance }) =>
-            getDayState(sessionInstance.status)
-          )}
-          ariaLabel={`${completedCount} of ${totalCount} sessions completed`}
-        />
-      </header>
+          <p className="home-progress-label">
+            {completedCount} / {totalCount} sessions completed
+          </p>
+
+          <ProgressTrack
+            states={sessionItems.map(({ sessionInstance }) =>
+              getDayState(sessionInstance.status)
+            )}
+            ariaLabel={`${completedCount} of ${totalCount} sessions completed`}
+          />
+        </header>
+
         <section className="day-list">
           {sessionItems.map(({ sessionInstance, sessionTemplate }) => (
             <DayCard
