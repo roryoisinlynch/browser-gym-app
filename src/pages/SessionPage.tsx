@@ -44,18 +44,6 @@ function getExerciseStatusLabel(
   return "Not started";
 }
 
-function getSessionStateLabel(started: boolean, finished: boolean) {
-  if (finished) return "Completed";
-  if (started) return "Active";
-  return "Start";
-}
-
-function getSessionStateClass(started: boolean, finished: boolean) {
-  if (finished) return "completed";
-  if (started) return "active";
-  return "start";
-}
-
 type MovementTone = {
   bg: string;
   text: string;
@@ -147,28 +135,26 @@ function getMovementToneStyle(tone: MovementTone): MovementToneStyle {
   };
 }
 
-type FinishButtonStyle = CSSProperties & {
-  "--finish-bg": string;
-  "--finish-text": string;
-  "--finish-shadow": string;
-  "--finish-border": string;
-};
+type SessionActionState = "locked" | "available" | "ready";
 
-function getFinishButtonStyle(percentage: number): FinishButtonStyle {
-  const progress = clampPercentage(percentage) / 100;
-  const eased = Math.pow(progress, 2.2);
+function getFinishActionState(
+  started: boolean,
+  finished: boolean,
+  percentage: number
+): SessionActionState {
+  if (!started || finished) {
+    return "locked";
+  }
 
-  const bgLightness = 20 + eased * 44;
-  const shadowAlpha = 0.05 + eased * 0.22;
-  const borderAlpha = 0.10 + eased * 0.24;
-  const textColor = eased > 0.55 ? "#101317" : "#e8edf5";
+  if (percentage >= 100) {
+    return "ready";
+  }
 
-  return {
-    "--finish-bg": `hsl(71 82% ${bgLightness}%)`,
-    "--finish-text": textColor,
-    "--finish-border": `rgba(216, 240, 106, ${borderAlpha})`,
-    "--finish-shadow": `0 10px 24px rgba(216, 240, 106, ${shadowAlpha})`,
-  };
+  if (percentage >= 50) {
+    return "available";
+  }
+
+  return "locked";
 }
 
 export default function SessionPage() {
@@ -328,6 +314,7 @@ export default function SessionPage() {
 
     try {
       setIsSaving(true);
+      setErrorMessage(null);
       await action(sessionInstanceId);
       await reloadSessionView();
     } catch (error) {
@@ -343,6 +330,30 @@ export default function SessionPage() {
   }
 
   async function handleFinishSession() {
+    if (!sessionView) {
+      return;
+    }
+
+    const started = Boolean(sessionView.sessionInstance.startedAt);
+    const finished = Boolean(sessionView.sessionInstance.completedAt);
+
+    if (!started || finished) {
+      return;
+    }
+
+    const percentage = sessionWorkingSetProgress.percentage;
+    const requiresConfirmation = percentage < 50;
+
+    if (requiresConfirmation) {
+      const confirmed = window.confirm(
+        "You are below 50% of the session volume target. Finish session anyway?"
+      );
+
+      if (!confirmed) {
+        return;
+      }
+    }
+
     await runSessionAction(stopSessionInstance, "Could not finish session.");
   }
 
@@ -387,7 +398,7 @@ export default function SessionPage() {
     );
   }
 
-  if (errorMessage) {
+  if (errorMessage && !sessionView) {
     return (
       <main className="session-page">
         <TopBar title="Session" backTo="/week" backLabel="Back to week" />
@@ -405,9 +416,32 @@ export default function SessionPage() {
 
   const sessionStarted = Boolean(sessionView.sessionInstance.startedAt);
   const sessionFinished = Boolean(sessionView.sessionInstance.completedAt);
-  const finishButtonStyle = getFinishButtonStyle(
+  const finishActionState = getFinishActionState(
+    sessionStarted,
+    sessionFinished,
     sessionWorkingSetProgress.percentage
   );
+
+  const startButtonLabel = !sessionStarted
+    ? isSaving
+      ? "Starting..."
+      : "Start"
+    : "Started";
+
+  const finishButtonLabel = sessionFinished
+    ? "Finished"
+    : isSaving && sessionStarted
+      ? "Finishing..."
+      : "Finish";
+
+  const finishButtonTitle =
+    !sessionStarted
+      ? "Start the session first"
+      : finishActionState === "locked"
+        ? "Finish early"
+        : finishActionState === "available"
+          ? "Volume target progressing"
+          : "Volume target reached";
 
   return (
     <main className="session-page">
@@ -420,29 +454,46 @@ export default function SessionPage() {
               <h1 className="session-title">
                 Program day: {sessionView.sessionTemplate.name}
               </h1>
-
-              <button
-                type="button"
-                className={`session-state-pill session-state-pill--${getSessionStateClass(
-                  sessionStarted,
-                  sessionFinished
-                )}`}
-                onClick={!sessionStarted ? handleStartSession : undefined}
-                disabled={isSaving || sessionStarted}
-              >
-                {!sessionStarted && isSaving
-                  ? "Starting..."
-                  : getSessionStateLabel(sessionStarted, sessionFinished)}
-              </button>
             </div>
 
             <p className="session-context">
               Target RIR: {sessionView.weekTemplate.targetRir ?? "—"}
             </p>
 
+            <div className="session-controls" aria-label="Session controls">
+              <button
+                type="button"
+                className="session-control-button session-control-button--start"
+                onClick={handleStartSession}
+                disabled={isSaving || sessionStarted}
+              >
+                {startButtonLabel}
+              </button>
+
+              <button
+                type="button"
+                className={[
+                  "session-control-button",
+                  "session-control-button--finish",
+                  `session-control-button--finish-${finishActionState}`,
+                  sessionFinished ? "session-control-button--done" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                onClick={handleFinishSession}
+                disabled={isSaving || !sessionStarted || sessionFinished}
+                title={finishButtonTitle}
+              >
+                {finishButtonLabel}
+              </button>
+            </div>
+
             <div className="session-progress-block">
               <div className="session-progress-row">
                 <span className="session-progress-label">Volume target</span>
+                <span className="session-progress-value">
+                  {sessionWorkingSetProgress.completed} / {sessionWorkingSetProgress.target}
+                </span>
               </div>
 
               <div
@@ -459,6 +510,8 @@ export default function SessionPage() {
                 />
               </div>
             </div>
+
+            {errorMessage && <p className="session-inline-message">{errorMessage}</p>}
           </div>
         </header>
 
@@ -600,20 +653,6 @@ export default function SessionPage() {
             </div>
           )}
         </section>
-
-        {sessionStarted && !sessionFinished && (
-          <footer className="session-footer session-footer--action">
-            <button
-              type="button"
-              className="session-action-button session-action-button--finish"
-              onClick={handleFinishSession}
-              disabled={isSaving}
-              style={finishButtonStyle}
-            >
-              {isSaving ? "Finishing..." : "Finish Session"}
-            </button>
-          </footer>
-        )}
 
         {sessionFinished && (
           <footer className="session-footer session-footer--summary">
