@@ -202,7 +202,7 @@ export default function ExercisePage() {
         )
       );
 
-      await reloadExerciseView();
+
     } catch (error) {
       console.error("Failed to save set row:", error);
       setErrorMessage("Could not save the set.");
