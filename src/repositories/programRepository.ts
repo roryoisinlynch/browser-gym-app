@@ -28,6 +28,8 @@ import {
   calculateEstimatedOneRepMax,
 } from "../services/setAnalysis";
 
+import { mergeWithImportedSets } from "../services/importMerge";
+
 export interface SessionTemplateListItem {
   sessionTemplate: SessionTemplate;
   weekTemplate: WeekTemplate;
@@ -438,8 +440,9 @@ export async function getExerciseInstanceView(
     return undefined;
   }
 
-  const allHistoricalSets = await getExerciseSetsForExerciseTemplate(
-    exerciseTemplate.id
+  const allHistoricalSets = await mergeWithImportedSets(
+    exerciseTemplate.exerciseName,
+    await getExerciseSetsForExerciseTemplate(exerciseTemplate.id)
   );
 
   const currentSets = allHistoricalSets.filter(
@@ -542,8 +545,9 @@ export async function getSessionInstanceView(
           (instance) => instance.exerciseTemplateId === exerciseTemplate.id
         ) ?? null;
 
-      const allHistoricalSets = await getExerciseSetsForExerciseTemplate(
-        exerciseTemplate.id
+      const allHistoricalSets = await mergeWithImportedSets(
+        exerciseTemplate.exerciseName,
+        await getExerciseSetsForExerciseTemplate(exerciseTemplate.id)
       );
 
       const currentRawSets = exerciseInstance

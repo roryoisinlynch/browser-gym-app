@@ -1,36 +1,64 @@
-import type { CsvImportRow } from "./csvParser";
+import type { ExerciseSet } from "../domain/models";
+import {
+  STORE_NAMES,
+  getAllByIndex,
+  putItem,
+  clearStore,
+  openDatabase,
+  transactionDone,
+} from "../db/db";
 
-const STORAGE_KEY = "imported_sets_v1";
+// We store imported sets in a dedicated object store.
+// Add this to db.ts — see instructions below.
+export const IMPORTED_SETS_STORE = "importedSets" as const;
 
-export interface StoredImportedSet {
-  id: string;           // synthetic ID, e.g. "imp-1234"
-  exerciseName: string; // matched case-insensitively against ExerciseTemplate.exerciseName
+export interface ImportedSet {
+  id: string;
+  exerciseName: string;
   weight: number;
   reps: number;
   date: string;
 }
 
-export function saveImportedSets(rows: CsvImportRow[]): void {
-  const sets: StoredImportedSet[] = rows.map((row, i) => ({
-    id: `imp-${Date.now()}-${i}`,
-    exerciseName: row.exerciseName,
-    weight: row.weight,
-    reps: row.reps,
-    date: row.date,
-  }));
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(sets));
-}
-
-export function loadImportedSets(): StoredImportedSet[] {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return [];
-  try {
-    return JSON.parse(raw) as StoredImportedSet[];
-  } catch {
-    return [];
+export async function saveImportedSets(sets: ImportedSet[]): Promise<void> {
+  const db = await openDatabase();
+  const tx = db.transaction(IMPORTED_SETS_STORE, "readwrite");
+  const store = tx.objectStore(IMPORTED_SETS_STORE);
+  store.clear();
+  for (const set of sets) {
+    store.put(set);
   }
+  await transactionDone(tx);
 }
 
-export function clearImportedSets(): void {
-  localStorage.removeItem(STORAGE_KEY);
+export async function loadImportedSetsForExercise(
+  exerciseName: string
+): Promise<ExerciseSet[]> {
+  const db = await openDatabase();
+  const tx = db.transaction(IMPORTED_SETS_STORE, "readonly");
+  const all = await new Promise<ImportedSet[]>((resolve, reject) => {
+    const req = tx.objectStore(IMPORTED_SETS_STORE).getAll();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+
+  const normalised = exerciseName.trim().toLowerCase();
+
+  return all
+    .filter((s) => s.exerciseName.trim().toLowerCase() === normalised)
+    .map((s) => ({
+      id: s.id,
+      exerciseInstanceId: "__imported__",
+      setIndex: 0,
+      performedWeight: s.weight,
+      performedReps: s.reps,
+      performedRir: null,
+    }));
+}
+
+export async function clearImportedSets(): Promise<void> {
+  const db = await openDatabase();
+  const tx = db.transaction(IMPORTED_SETS_STORE, "readwrite");
+  tx.objectStore(IMPORTED_SETS_STORE).clear();
+  await transactionDone(tx);
 }

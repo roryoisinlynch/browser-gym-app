@@ -17,6 +17,7 @@ export const STORE_NAMES = {
   exerciseInstances: "exerciseInstances",
   exerciseSets: "exerciseSets",
   meta: "meta",
+  importedSets: "importedSets"
 } as const;
 
 export type StoreName = (typeof STORE_NAMES)[keyof typeof STORE_NAMES];
@@ -38,6 +39,10 @@ export function openDatabase(): Promise<IDBDatabase> {
 
       if (!db.objectStoreNames.contains(STORE_NAMES.muscleGroups)) {
         db.createObjectStore(STORE_NAMES.muscleGroups, { keyPath: "id" });
+      }
+
+      if (!db.objectStoreNames.contains("importedSets")) {
+        db.createObjectStore("importedSets", { keyPath: "id" });
       }
 
       if (!db.objectStoreNames.contains(STORE_NAMES.movementTypes)) {
