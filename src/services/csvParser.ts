@@ -5,6 +5,15 @@ export interface CsvParseResult {
   errors: string[];
 }
 
+// Parses DD/MM/YYYY or DD-MM-YYYY into YYYY-MM-DD, returns null if invalid.
+function parseUkDate(str: string): string | null {
+  const match = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (!match) return null;
+  const [, d, m, y] = match.map(Number);
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
 export function parseCsv(text: string): CsvParseResult {
   const lines = text.trim().split(/\r?\n/);
   const rows: ImportedSet[] = [];
@@ -42,7 +51,8 @@ export function parseCsv(text: string): CsvParseResult {
       continue;
     }
 
-    if (!dateStr || isNaN(Date.parse(dateStr))) {
+    const isoDate = parseUkDate(dateStr);
+    if (!isoDate) {
       errors.push(`Row ${i}: invalid date "${dateStr}".`);
       continue;
     }
@@ -52,7 +62,7 @@ export function parseCsv(text: string): CsvParseResult {
       exerciseName,
       weight,
       reps,
-      date: new Date(dateStr).toISOString().slice(0, 10),
+      date: isoDate,
     });
   }
 
