@@ -8,12 +8,6 @@ import { mockWeekTemplateItems } from "../data/mockWeekTemplateItems";
 import { mockSessionTemplates } from "../data/mockSessionTemplates";
 import { mockSessionTemplateMuscleGroups } from "../data/mockSessionTemplateMuscleGroups";
 import { mockExerciseTemplates } from "../data/mockExerciseTemplates";
-import { mockSeasonInstances } from "../data/mockSeasonInstances";
-import { mockWeekInstances } from "../data/mockWeekInstances";
-import { mockWeekInstanceItems } from "../data/mockWeekInstanceItems";
-import { mockSessionInstances } from "../data/mockSessionInstances";
-import { mockExerciseInstances } from "../data/mockExerciseInstances";
-import { mockExerciseSets } from "../data/mockExerciseSets";
 
 const SEED_KEY = "seed-v2";
 
@@ -65,30 +59,6 @@ export async function seedDatabaseIfNeeded(): Promise<void> {
 
   mockExerciseTemplates.forEach((item) =>
     tx.objectStore(STORE_NAMES.exerciseTemplates).put(item)
-  );
-
-  mockSeasonInstances.forEach((item) =>
-    tx.objectStore(STORE_NAMES.seasonInstances).put(item)
-  );
-
-  mockWeekInstances.forEach((item) =>
-    tx.objectStore(STORE_NAMES.weekInstances).put(item)
-  );
-
-  mockWeekInstanceItems.forEach((item) =>
-    tx.objectStore(STORE_NAMES.weekInstanceItems).put(item)
-  );
-
-  mockSessionInstances.forEach((item) =>
-    tx.objectStore(STORE_NAMES.sessionInstances).put(item)
-  );
-
-  mockExerciseInstances.forEach((item) =>
-    tx.objectStore(STORE_NAMES.exerciseInstances).put(item)
-  );
-
-  mockExerciseSets.forEach((item) =>
-    tx.objectStore(STORE_NAMES.exerciseSets).put(item)
   );
 
   tx.objectStore(STORE_NAMES.meta).put({
