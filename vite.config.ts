@@ -1,10 +1,8 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import basicSsl from "@vitejs/plugin-basic-ssl";
+// vite.config.ts
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  plugins: [react(), basicSsl()],
-  server: {
-    host: true,
-  },
-});
+  plugins: [react()],
+  base: '/browser-gym-app/',
+})
