@@ -1,9 +1,5 @@
 import type { ExerciseSet } from "../domain/models";
 import {
-  STORE_NAMES,
-  getAllByIndex,
-  putItem,
-  clearStore,
   openDatabase,
   transactionDone,
 } from "../db/db";
