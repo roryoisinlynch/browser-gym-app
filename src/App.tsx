@@ -4,6 +4,7 @@ import ExercisePage from "./pages/ExercisePage";
 import WeekPage from "./pages/WeekPage";
 import SessionPage from "./pages/SessionPage";
 import SettingsPage from "./pages/SettingsPage";
+import ImportPage from "./pages/ImportPage";
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
         <Route path="/exercise/:exerciseInstanceId" element={<ExercisePage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/import" element={<ImportPage />} />
       </Routes>
     </BrowserRouter>
   );

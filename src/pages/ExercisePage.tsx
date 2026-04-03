@@ -15,6 +15,8 @@ import ExerciseSummaryCard from "../components/ExerciseSummaryCard.tsx";
 import TopBar from "../components/TopBar";
 import "./ExercisePage.css";
 import BottomNav from "../components/BottomNav";
+import { getMergedPriorSets } from "../services/importMerge";
+
 
 type EditableRow = ExerciseSetTableRow & {
   persistedSetId: string | null;

@@ -530,3 +530,11 @@ cloudflared tunnel --url https://localhost:5173 --no-tls-verify
 ```
 
 Open the generated Cloudflare URL on your phone and launch the installed app.
+
+# To do:
+ - Local vs Historical Max Logic
+ - Summary pages
+ - Config pages
+ - Historical data import
+ - CRUD UI 
+ - Support for bodyweight exercises (how will this work with the hist import)

@@ -2,7 +2,9 @@ import BottomNav from "../components/BottomNav";
 import "./HomePage.css";
 
 import { resetDatabase } from "../db/db";
+import { useNavigate } from "react-router-dom";
 
+const navigate = useNavigate();
 
 
 export default function SettingsPage() {
@@ -14,7 +16,7 @@ export default function SettingsPage() {
           <h1 className="home-title">Settings</h1>
           <p className="home-progress-label">This page does not exist yet.</p>
         </header>
-
+        <button onClick={() => navigate("/import")}>Import past sets</button>
         <button
           onClick={async () => {
             await resetDatabase();
