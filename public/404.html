@@ -1,0 +1,10 @@
+<!-- public/404.html -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <script>
+      const path = window.location.pathname.replace('/browser-gym-app', '');
+      window.location.replace('/browser-gym-app/?redirect=' + encodeURIComponent(path));
+    </script>
+  </head>
+</html>
