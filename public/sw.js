@@ -1,4 +1,4 @@
-const CACHE_NAME = "browser-gym-app-v2";
+const CACHE_NAME = "browser-gym-app-v3";
 const BASE = "/browser-gym-app/";
 
 self.addEventListener("install", (event) => {

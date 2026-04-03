@@ -273,6 +273,6 @@ export async function resetDatabase(): Promise<void> {
     const request = indexedDB.deleteDatabase(DB_NAME);
     request.onsuccess = () => resolve();
     request.onerror = () => reject(request.error);
-    request.onblocked = () => reject(new Error("Database deletion blocked"));
+    request.onblocked = () => resolve();
   });
 }
