@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import { parseCsv } from "../services/csvParser";
-import { saveImportedSets } from "../services/importedSetStore";
-import type { CsvImportRow } from "../services/csvParser";
+import { saveImportedSets, clearImportedSets } from "../services/importedSetStore";
+import type { ImportedSet } from "../services/importedSetStore";
 import "./ImportPage.css";
 
 type Step = "idle" | "preview" | "done";
@@ -13,7 +13,7 @@ export default function ImportPage() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<Step>("idle");
-  const [parsedRows, setParsedRows] = useState<CsvImportRow[]>([]);
+  const [parsedRows, setParsedRows] = useState<ImportedSet[]>([]);
   const [parseErrors, setParseErrors] = useState<string[]>([]);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -24,7 +24,6 @@ export default function ImportPage() {
     reader.onload = (event) => {
       const text = event.target?.result;
       if (typeof text !== "string") return;
-
       const result = parseCsv(text);
       setParsedRows(result.rows);
       setParseErrors(result.errors);
@@ -33,8 +32,8 @@ export default function ImportPage() {
     reader.readAsText(file);
   }
 
-  function handleConfirm() {
-    saveImportedSets(parsedRows);
+  async function handleConfirm() {
+    await saveImportedSets(parsedRows);
     setStep("done");
   }
 
@@ -43,6 +42,11 @@ export default function ImportPage() {
     setParseErrors([]);
     setStep("idle");
     if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  async function handleClear() {
+    await clearImportedSets();
+    handleReset();
   }
 
   return (
@@ -58,16 +62,29 @@ export default function ImportPage() {
         </header>
 
         {step === "idle" && (
-          <div className="import-drop-zone" onClick={() => fileInputRef.current?.click()}>
-            <p className="import-drop-label">Tap to choose a CSV file</p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv,text/csv"
-              onChange={handleFileChange}
-              style={{ display: "none" }}
-            />
-          </div>
+          <>
+            <div
+              className="import-drop-zone"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <p className="import-drop-label">Tap to choose a CSV file</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,text/csv"
+                onChange={handleFileChange}
+                style={{ display: "none" }}
+              />
+            </div>
+            <button
+              type="button"
+              className="import-btn import-btn--cancel"
+              style={{ marginTop: "12px" }}
+              onClick={handleClear}
+            >
+              Clear all imported sets
+            </button>
+          </>
         )}
 
         {step === "preview" && (
@@ -75,7 +92,7 @@ export default function ImportPage() {
             {parseErrors.length > 0 && (
               <div className="import-errors">
                 <p className="import-errors__title">
-                  {parseErrors.length} row{parseErrors.length > 1 ? "s" : ""} skipped
+                  {parseErrors.length} row{parseErrors.length !== 1 ? "s" : ""} skipped
                 </p>
                 {parseErrors.map((err, i) => (
                   <p key={i} className="import-errors__item">{err}</p>
@@ -133,8 +150,8 @@ export default function ImportPage() {
           <div className="import-success">
             <p className="import-success__title">Import saved</p>
             <p className="import-success__body">
-              {parsedRows.length} sets will now be used as historical e1RM context.
-              They won't affect volume or consistency.
+              {parsedRows.length} sets will now be used as historical e1RM
+              context. They won't affect volume or consistency.
             </p>
             <button
               type="button"

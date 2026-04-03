@@ -1,25 +1,19 @@
-export interface CsvImportRow {
-  exerciseName: string;
-  weight: number;
-  reps: number;
-  date: string; // ISO date string, e.g. "2025-11-03"
-}
+import type { ImportedSet } from "./importedSetStore";
 
 export interface CsvParseResult {
-  rows: CsvImportRow[];
+  rows: ImportedSet[];
   errors: string[];
 }
 
 export function parseCsv(text: string): CsvParseResult {
-  const lines = text.trim().split("\n");
-  const rows: CsvImportRow[] = [];
+  const lines = text.trim().split(/\r?\n/);
+  const rows: ImportedSet[] = [];
   const errors: string[] = [];
 
   if (lines.length < 2) {
-    return { rows: [], errors: ["File appears to be empty or has no data rows."] };
+    return { rows: [], errors: ["File has no data rows."] };
   }
 
-  // Skip header row (index 0)
   for (let i = 1; i < lines.length; i++) {
     const cols = lines[i].split(",").map((c) => c.trim());
 
@@ -54,6 +48,7 @@ export function parseCsv(text: string): CsvParseResult {
     }
 
     rows.push({
+      id: `imp-${Date.now()}-${i}`,
       exerciseName,
       weight,
       reps,
