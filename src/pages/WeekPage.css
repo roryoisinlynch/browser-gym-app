@@ -65,3 +65,34 @@
   color: var(--text-muted);
   opacity: 0.75;
 }
+
+.week-start-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 76px;
+  padding: 14px 18px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(216,240,106,0.10), rgba(216,240,106,0.04)),
+    var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
+  color: inherit;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.week-start-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--panel-shadow);
+}
+
+.week-start-card:active {
+  transform: scale(0.985);
+}

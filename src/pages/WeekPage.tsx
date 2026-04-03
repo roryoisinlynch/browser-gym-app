@@ -1,12 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import BottomNav from "../components/BottomNav";
 import DayCard, { type DayState } from "../components/DayCard";
 import ProgressTrack from "../components/ProgressTrack";
 import TopBar from "../components/TopBar";
+import type { SeasonTemplate } from "../domain/models";
 import type { WeekInstanceItemView } from "../repositories/programRepository";
 import {
+  getSeasonTemplates,
   getWeekInstanceItemsForCurrentWeek,
   getWeekTemplates,
+  startSeasonFromTemplate,
 } from "../repositories/programRepository";
 import "./WeekPage.css";
 
@@ -21,30 +24,45 @@ function getDayState(
 
 export default function WeekPage() {
   const [items, setItems] = useState<WeekInstanceItemView[]>([]);
+  const [seasonTemplates, setSeasonTemplates] = useState<SeasonTemplate[]>([]);
   const [totalWeeks, setTotalWeeks] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function loadWeekPage() {
-      try {
-        const [weekItems, weeks] = await Promise.all([
-          getWeekInstanceItemsForCurrentWeek(),
-          getWeekTemplates(),
-        ]);
+  const loadWeekPage = useCallback(async () => {
+    setIsLoading(true);
+    setErrorMessage(null);
+    try {
+      const [weekItems, weeks, templates] = await Promise.all([
+        getWeekInstanceItemsForCurrentWeek(),
+        getWeekTemplates(),
+        getSeasonTemplates(),
+      ]);
 
-        setItems(weekItems);
-        setTotalWeeks(weeks.length);
-      } catch (error) {
-        console.error(error);
-        setErrorMessage("Could not load the current week.");
-      } finally {
-        setIsLoading(false);
-      }
+      setItems(weekItems);
+      setTotalWeeks(weeks.length);
+      setSeasonTemplates(templates);
+    } catch (error) {
+      console.error(error);
+      setErrorMessage("Could not load the current week.");
+    } finally {
+      setIsLoading(false);
     }
-
-    loadWeekPage();
   }, []);
+
+  useEffect(() => {
+    loadWeekPage();
+  }, [loadWeekPage]);
+
+  async function handleStartSeason(seasonTemplateId: string) {
+    try {
+      await startSeasonFromTemplate(seasonTemplateId);
+      await loadWeekPage();
+    } catch (error) {
+      console.error(error);
+      setErrorMessage("Could not start program.");
+    }
+  }
 
   const sessionItems = useMemo(
     () => items.filter((item) => item.weekInstanceItem.type === "session"),
@@ -95,6 +113,48 @@ export default function WeekPage() {
         <TopBar title="Week" />
         <section className="week-shell">
           <p>{errorMessage}</p>
+        </section>
+        <BottomNav activeTab="session" />
+      </main>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <main className="week-page">
+        <TopBar title="Week" />
+        <section className="week-shell">
+          <header className="week-page__header">
+            <h1 className="week-page__title">No active program</h1>
+            <p className="week-page__subtitle">
+              Start a program to begin tracking your sessions.
+            </p>
+          </header>
+          {seasonTemplates.length > 0 && (
+            <section className="week-page__content">
+              <div className="week-page__list">
+                {seasonTemplates.map((template) => (
+                  <button
+                    key={template.id}
+                    className="week-start-card"
+                    onClick={() => handleStartSeason(template.id)}
+                  >
+                    <span className="day-card__text">
+                      <span className="day-card__title">{template.name}</span>
+                      {template.description && (
+                        <span className="day-card__subtitle">
+                          {template.description}
+                        </span>
+                      )}
+                    </span>
+                    <span className="day-card__action">
+                      <span className="day-pill day-pill--start">Start →</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
         </section>
         <BottomNav activeTab="session" />
       </main>
