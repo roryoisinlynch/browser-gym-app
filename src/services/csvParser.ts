@@ -14,9 +14,7 @@ function parseUkDate(str: string): string | null {
   return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
-// Parses weight field: numeric value, or "Bodyweight"/"bodyweight" -> 0.
 function parseWeight(str: string): number | null {
-  if (str.toLowerCase() === "bodyweight") return 0;
   const n = Number(str);
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
@@ -45,6 +43,8 @@ export function parseCsv(text: string): CsvParseResult {
       continue;
     }
 
+    if (weightStr.toLowerCase() === "bodyweight") continue;
+
     const weight = parseWeight(weightStr);
     const reps = Number(repsStr);
 
@@ -57,6 +57,8 @@ export function parseCsv(text: string): CsvParseResult {
       errors.push(`Row ${i}: invalid reps "${repsStr}".`);
       continue;
     }
+
+    if (reps === 0) continue;
 
     const isoDate = parseUkDate(dateStr);
     if (!isoDate) {
