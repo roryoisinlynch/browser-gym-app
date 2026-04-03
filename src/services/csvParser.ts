@@ -5,13 +5,20 @@ export interface CsvParseResult {
   errors: string[];
 }
 
-// Parses DD/MM/YYYY or DD-MM-YYYY into YYYY-MM-DD, returns null if invalid.
+// Parses DD/MM/YYYY or DD-MM-YYYY (with optional trailing time) into YYYY-MM-DD, returns null if invalid.
 function parseUkDate(str: string): string | null {
-  const match = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  const match = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
   if (!match) return null;
   const [, d, m, y] = match.map(Number);
   if (m < 1 || m > 12 || d < 1 || d > 31) return null;
   return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+// Parses weight field: numeric value, or "Bodyweight"/"bodyweight" -> 0.
+function parseWeight(str: string): number | null {
+  if (str.toLowerCase() === "bodyweight") return 0;
+  const n = Number(str);
+  return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
 export function parseCsv(text: string): CsvParseResult {
@@ -38,15 +45,15 @@ export function parseCsv(text: string): CsvParseResult {
       continue;
     }
 
-    const weight = Number(weightStr);
+    const weight = parseWeight(weightStr);
     const reps = Number(repsStr);
 
-    if (!Number.isFinite(weight) || weight <= 0) {
+    if (weight === null) {
       errors.push(`Row ${i}: invalid weight "${weightStr}".`);
       continue;
     }
 
-    if (!Number.isFinite(reps) || reps <= 0) {
+    if (!Number.isFinite(reps) || reps < 0) {
       errors.push(`Row ${i}: invalid reps "${repsStr}".`);
       continue;
     }
