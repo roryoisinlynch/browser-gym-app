@@ -1,4 +1,4 @@
-const CACHE_NAME = "browser-gym-app-v3";
+const CACHE_NAME = "browser-gym-app-v4";
 const BASE = "/browser-gym-app/";
 
 self.addEventListener("install", (event) => {
@@ -20,7 +20,13 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.mode === "navigate") {
     event.respondWith(
-      caches.match(BASE).then((cached) => cached || fetch(event.request))
+      fetch(event.request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(BASE, clone));
+          return response;
+        })
+        .catch(() => caches.match(BASE))
     );
     return;
   }
