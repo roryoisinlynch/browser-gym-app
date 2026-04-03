@@ -539,3 +539,4 @@ Open the generated Cloudflare URL on your phone and launch the installed app.
  - Config pages
  - CRUD UI 
  - Support for bodyweight exercises (how will this work with the hist import)
+ - add support for first-time exercises with no e1RM (AMRAP for first two attempts?) 
