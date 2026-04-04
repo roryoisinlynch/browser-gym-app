@@ -150,8 +150,15 @@ function E1RMChart({
   const yMin = Math.max(0, minVal - yPadding);
   const yMax = maxVal + yPadding;
 
+  const timestamps = chartPoints.map((d) => new Date(d.date).getTime());
+  const minDate = timestamps[0];
+  const maxDate = timestamps[n - 1];
+  const dateRange = maxDate - minDate || 1;
+
   const xScale = (i: number) =>
-    PAD.left + (n > 1 ? (i / (n - 1)) * PLOT_W : PLOT_W / 2);
+    n > 1
+      ? PAD.left + ((timestamps[i] - minDate) / dateRange) * PLOT_W
+      : PAD.left + PLOT_W / 2;
   const yScale = (v: number) =>
     PAD.top + PLOT_H - ((v - yMin) / (yMax - yMin)) * PLOT_H;
 
