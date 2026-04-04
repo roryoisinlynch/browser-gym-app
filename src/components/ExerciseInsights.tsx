@@ -108,22 +108,29 @@ const PAD = { top: 14, right: 10, bottom: 28, left: 38 };
 const PLOT_W = CHART_W - PAD.left - PAD.right;
 const PLOT_H = CHART_H - PAD.top - PAD.bottom;
 const DOT_THRESHOLD = 30;
-const GAP_BREAK_THRESHOLD = 0.10; // break line if gap > 10% of total date span
 
-// Returns arrays of point indices grouped into continuous segments.
+// Splits points into continuous segments. A segment break occurs when the gap
+// between two consecutive points exceeds the median gap across all points.
 function buildSegments(chartPoints: ChartPoint[]): number[][] {
   const n = chartPoints.length;
   if (n === 0) return [];
+  if (n === 1) return [[0]];
 
   const dates = chartPoints.map((d) => new Date(d.date).getTime());
-  const totalRange = dates[n - 1] - dates[0];
+
+  const gaps = [];
+  for (let i = 1; i < n; i++) {
+    gaps.push(dates[i] - dates[i - 1]);
+  }
+
+  const sorted = [...gaps].sort((a, b) => a - b);
+  const medianGap = sorted[Math.floor(sorted.length / 2)];
 
   const segments: number[][] = [];
   let current: number[] = [0];
 
   for (let i = 1; i < n; i++) {
-    const gap = dates[i] - dates[i - 1];
-    if (totalRange > 0 && gap / totalRange > GAP_BREAK_THRESHOLD) {
+    if (gaps[i - 1] > medianGap) {
       segments.push(current);
       current = [i];
     } else {
