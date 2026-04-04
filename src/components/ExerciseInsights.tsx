@@ -9,7 +9,7 @@ interface ExerciseInsightsProps {
   currentExerciseInstanceId: string;
 }
 
-type BinType = "session" | "week" | "month";
+type BinType = "session" | "week" | "season";
 
 interface ChartPoint {
   key: string;
@@ -70,11 +70,9 @@ function binDataPoints(
 
   for (const d of dataPoints) {
     const key =
-      binType === "month"
-        ? d.date.slice(0, 7)
-        : d.weekInstanceId != null
-        ? d.weekInstanceId
-        : getMondayKey(d.date);
+      binType === "season"
+        ? d.seasonInstanceId ?? d.date.slice(0, 7)
+        : d.weekInstanceId ?? getMondayKey(d.date);
 
     const group = groups.get(key) ?? { points: [], containsCurrent: false };
     group.points.push(d);
@@ -239,27 +237,38 @@ function E1RMChart({
         );
       })}
 
-      {chartPoints.map((d, i) =>
-        showDots ? (
-          <circle
-            key={d.key}
-            cx={xScale(i)}
-            cy={yScale(d.topEstimatedOneRepMax)}
-            r={d.containsCurrentSession ? 4.5 : 3}
-            fill={d.containsCurrentSession ? "#d8f06a" : "#1a1f26"}
-            stroke={d.containsCurrentSession ? "#d8f06a" : "#c4e23c"}
-            strokeWidth="2"
-          />
-        ) : (
-          <circle
-            key={d.key}
-            cx={xScale(i)}
-            cy={yScale(d.topEstimatedOneRepMax)}
-            r={d.containsCurrentSession ? 3 : 1.5}
-            fill={d.containsCurrentSession ? "#d8f06a" : "#c4e23c"}
-          />
-        )
-      )}
+      {(() => {
+        const isolatedIndices = new Set(
+          segments.filter((seg) => seg.length === 1).map((seg) => seg[0])
+        );
+        return chartPoints.map((d, i) => {
+          if (showDots) {
+            return (
+              <circle
+                key={d.key}
+                cx={xScale(i)}
+                cy={yScale(d.topEstimatedOneRepMax)}
+                r={d.containsCurrentSession ? 4.5 : 3}
+                fill={d.containsCurrentSession ? "#d8f06a" : "#1a1f26"}
+                stroke={d.containsCurrentSession ? "#d8f06a" : "#c4e23c"}
+                strokeWidth="2"
+              />
+            );
+          }
+          if (isolatedIndices.has(i) || d.containsCurrentSession) {
+            return (
+              <circle
+                key={d.key}
+                cx={xScale(i)}
+                cy={yScale(d.topEstimatedOneRepMax)}
+                r={d.containsCurrentSession ? 3 : 1.5}
+                fill={d.containsCurrentSession ? "#d8f06a" : "#c4e23c"}
+              />
+            );
+          }
+          return null;
+        });
+      })()}
 
       {xLabelIndices.map((idx) => {
         const d = chartPoints[idx];
@@ -316,7 +325,7 @@ export default function ExerciseInsights({
         <p className="exercise-insights__eyebrow">Insights</p>
         {hasChartData && (
           <div className="exercise-insights__bin-toggle">
-            {(["session", "week", "month"] as BinType[]).map((b) => (
+            {(["session", "week", "season"] as BinType[]).map((b) => (
               <button
                 key={b}
                 type="button"

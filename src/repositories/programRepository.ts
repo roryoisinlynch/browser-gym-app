@@ -546,6 +546,7 @@ export async function getExerciseSetsForExerciseTemplate(
 export interface ExerciseSessionDataPoint {
   exerciseInstanceId: string;
   weekInstanceId: string | null;
+  seasonInstanceId: string | null;
   date: string;
   topWeight: number;
   topReps: number;
@@ -592,6 +593,7 @@ export async function getExerciseSessionHistory(
       dataPoints.push({
         exerciseInstanceId: exerciseInstance.id,
         weekInstanceId: sessionInstance.weekInstanceId,
+        seasonInstanceId: sessionInstance.seasonInstanceId,
         date: sessionInstance.date,
         topWeight,
         topReps,
@@ -620,6 +622,7 @@ export async function getExerciseSessionHistory(
     dataPoints.push({
       exerciseInstanceId: "__imported__",
       weekInstanceId: null,
+      seasonInstanceId: null,
       date,
       topWeight: topSet.weight,
       topReps: topSet.reps,
