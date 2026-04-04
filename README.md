@@ -532,7 +532,6 @@ cloudflared tunnel --url https://localhost:5173 --no-tls-verify
 Open the generated Cloudflare URL on your phone and launch the installed app.
 
 # To do:
- - CSV import expects USA dates
  - e1RM doesn't seem to display on the exercise page even if hist data exists
  - Local vs Historical Max Logic
  - Summary pages
@@ -540,3 +539,4 @@ Open the generated Cloudflare URL on your phone and launch the installed app.
  - CRUD UI 
  - Support for bodyweight exercises (how will this work with the hist import)
  - add support for first-time exercises with no e1RM (AMRAP for first two attempts?) 
+ - check that new PRs affect the e1RM for the next session, not just the next week or next season
