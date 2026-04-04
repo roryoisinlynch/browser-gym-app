@@ -769,26 +769,51 @@ export async function getExerciseInstanceView(
     return best == null || set.performedReps > best ? set.performedReps : best;
   }, null);
 
-  let resolvedExerciseInstance = exerciseInstance;
+  // Rep offset encodes the weekly progression: week with RIR 4 = -3 reps,
+  // RIR 3 = -2, RIR 2 = -1, RIR 1 = 0, RIR 0 = +1 (matches spreadsheet e-3…e+1).
+  const weekRir = weekTemplate.targetRir ?? exerciseInstance.prescribedRir ?? 0;
+  const repOffset = 1 - weekRir;
 
-  if (
-    exerciseTemplate.weightMode !== "bodyweight" &&
-    exerciseTemplate.targetReps > 0 &&
-    historicalBestEstimatedOneRepMax != null
-  ) {
-    const targetRir = exerciseInstance.prescribedRir ?? 0;
-    const rawWeight =
-      historicalBestEstimatedOneRepMax /
-      (1 + (exerciseTemplate.targetReps + targetRir) / 30);
-    const increment =
-      exerciseTemplate.weightIncrement && exerciseTemplate.weightIncrement > 0
-        ? exerciseTemplate.weightIncrement
-        : 2.5;
-    const prescribedWeight = Math.floor(rawWeight / increment) * increment;
-    if (prescribedWeight !== exerciseInstance.prescribedWeight) {
-      resolvedExerciseInstance = { ...exerciseInstance, prescribedWeight };
-      await putItem(STORE_NAMES.exerciseInstances, resolvedExerciseInstance);
+  let prescribedWeight = exerciseInstance.prescribedWeight ?? null;
+  let prescribedRepTarget = exerciseInstance.prescribedRepTarget ?? null;
+
+  if (exerciseTemplate.weightMode === "bodyweight") {
+    if (historicalBestReps != null) {
+      prescribedRepTarget = Math.max(1, historicalBestReps + repOffset);
     }
+  } else if (historicalBestEstimatedOneRepMax != null && exerciseTemplate.targetReps > 0) {
+    // Prescribed weight: calibrate to targetReps at failure (no RIR in denominator —
+    // RIR is reflected through the rep progression, not the weight selection).
+    const rawWeight = historicalBestEstimatedOneRepMax / (1 + exerciseTemplate.targetReps / 30);
+
+    if (
+      exerciseTemplate.weightMode === "explicit_list" &&
+      exerciseTemplate.availableWeights &&
+      exerciseTemplate.availableWeights.length > 0
+    ) {
+      const sorted = [...exerciseTemplate.availableWeights].sort((a, b) => a - b);
+      prescribedWeight = sorted.filter((w) => w <= rawWeight).at(-1) ?? sorted[0]!;
+    } else {
+      const increment =
+        exerciseTemplate.weightIncrement && exerciseTemplate.weightIncrement > 0
+          ? exerciseTemplate.weightIncrement
+          : 2.5;
+      prescribedWeight = Math.floor(rawWeight / increment) * increment;
+    }
+
+    if (prescribedWeight > 0) {
+      const expectedReps = (historicalBestEstimatedOneRepMax / prescribedWeight - 1) / 0.0333;
+      prescribedRepTarget = Math.max(1, Math.floor(expectedReps) + repOffset);
+    }
+  }
+
+  let resolvedExerciseInstance = exerciseInstance;
+  if (
+    prescribedWeight !== (exerciseInstance.prescribedWeight ?? null) ||
+    prescribedRepTarget !== (exerciseInstance.prescribedRepTarget ?? null)
+  ) {
+    resolvedExerciseInstance = { ...exerciseInstance, prescribedWeight, prescribedRepTarget };
+    await putItem(STORE_NAMES.exerciseInstances, resolvedExerciseInstance);
   }
 
   const targetEstimatedOneRepMax = calculateEstimatedOneRepMax(
