@@ -99,10 +99,7 @@ export default function ConfigExercisePage() {
       }
 
       if (template.weightMode !== "bodyweight") {
-        const history = await getExerciseSessionHistory(
-          exerciseTemplateId,
-          template.exerciseName
-        );
+        const history = await getExerciseSessionHistory(template.exerciseName);
         const best = history.reduce<number | null>((max, d) => {
           if (d.topEstimatedOneRepMax == null) return max;
           return max == null || d.topEstimatedOneRepMax > max

@@ -322,7 +322,7 @@ export default function ExerciseInsights({
   const [binType, setBinType] = useState<BinType>("week");
 
   useEffect(() => {
-    getExerciseSessionHistory(exerciseTemplateId, exerciseName).then(setHistory);
+    getExerciseSessionHistory(exerciseName).then(setHistory);
   }, [exerciseTemplateId, exerciseName]);
 
   if (history === null) {

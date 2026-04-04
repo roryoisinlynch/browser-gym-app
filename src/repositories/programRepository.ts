@@ -556,7 +556,6 @@ export interface ExerciseSessionDataPoint {
 }
 
 export async function getExerciseSessionHistory(
-  exerciseTemplateId: string,
   exerciseName: string
 ): Promise<ExerciseSessionDataPoint[]> {
   // History is matched by exercise name so that:
@@ -615,7 +614,6 @@ export async function getExerciseSessionHistory(
   }
 
   const importedSets = await loadAllImportedSets();
-  const normalizedName = exerciseName.trim().toLowerCase();
   const matchingImported = importedSets.filter(
     (s) => s.exerciseName.trim().toLowerCase() === normalizedName
   );
