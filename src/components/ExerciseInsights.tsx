@@ -9,7 +9,7 @@ interface ExerciseInsightsProps {
   currentExerciseInstanceId: string;
 }
 
-type BinType = "session" | "week" | "season";
+type BinType = "week" | "season" | "quarter" | "year";
 
 interface ChartPoint {
   key: string;
@@ -42,9 +42,19 @@ function formatDateShort(iso: string): string {
 // Returns the ISO date string of the Monday of the week containing `date`.
 function getMondayKey(iso: string): string {
   const d = new Date(iso);
-  const day = d.getUTCDay(); // 0=Sun
+  const day = d.getUTCDay();
   d.setUTCDate(d.getUTCDate() - ((day + 6) % 7));
   return d.toISOString().slice(0, 10);
+}
+
+function getQuarterKey(iso: string): string {
+  const d = new Date(iso);
+  const q = Math.floor(d.getUTCMonth() / 3) + 1;
+  return `${d.getUTCFullYear()}-Q${q}`;
+}
+
+function getYearKey(iso: string): string {
+  return String(new Date(iso).getUTCFullYear());
 }
 
 function binDataPoints(
@@ -52,17 +62,6 @@ function binDataPoints(
   binType: BinType,
   currentExerciseInstanceId: string
 ): ChartPoint[] {
-  if (binType === "session") {
-    return dataPoints.map((d) => ({
-      key: d.exerciseInstanceId,
-      date: d.date,
-      topEstimatedOneRepMax: d.topEstimatedOneRepMax,
-      topWeight: d.topWeight,
-      topReps: d.topReps,
-      containsCurrentSession: d.exerciseInstanceId === currentExerciseInstanceId,
-    }));
-  }
-
   const groups = new Map<
     string,
     { points: ExerciseSessionDataPoint[]; containsCurrent: boolean }
@@ -70,9 +69,13 @@ function binDataPoints(
 
   for (const d of dataPoints) {
     const key =
-      binType === "season"
+      binType === "week"
+        ? d.weekInstanceId ?? getMondayKey(d.date)
+        : binType === "season"
         ? d.seasonInstanceId ?? d.date.slice(0, 7)
-        : d.weekInstanceId ?? getMondayKey(d.date);
+        : binType === "quarter"
+        ? getQuarterKey(d.date)
+        : getYearKey(d.date);
 
     const group = groups.get(key) ?? { points: [], containsCurrent: false };
     group.points.push(d);
@@ -290,7 +293,7 @@ export default function ExerciseInsights({
   currentExerciseInstanceId,
 }: ExerciseInsightsProps) {
   const [history, setHistory] = useState<ExerciseSessionDataPoint[] | null>(null);
-  const [binType, setBinType] = useState<BinType>("session");
+  const [binType, setBinType] = useState<BinType>("week");
 
   useEffect(() => {
     getExerciseSessionHistory(exerciseTemplateId, exerciseName).then(setHistory);
@@ -325,7 +328,7 @@ export default function ExerciseInsights({
         <p className="exercise-insights__eyebrow">Insights</p>
         {hasChartData && (
           <div className="exercise-insights__bin-toggle">
-            {(["session", "week", "season"] as BinType[]).map((b) => (
+            {(["week", "season", "quarter", "year"] as BinType[]).map((b) => (
               <button
                 key={b}
                 type="button"
