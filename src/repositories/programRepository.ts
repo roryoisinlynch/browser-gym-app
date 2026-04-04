@@ -1500,3 +1500,84 @@ export async function stopSessionInstance(
 
   return updatedSession;
 }
+
+// ─── Config: template reads ───────────────────────────────────────────────────
+
+export async function getAllMuscleGroups(): Promise<MuscleGroup[]> {
+  const all = await getAll<MuscleGroup>(STORE_NAMES.muscleGroups);
+  return all.sort((a, b) => a.order - b.order);
+}
+
+export async function getAllMovementTypes(): Promise<MovementType[]> {
+  return getAll<MovementType>(STORE_NAMES.movementTypes);
+}
+
+export async function getMovementTypesByMuscleGroupId(
+  muscleGroupId: string
+): Promise<MovementType[]> {
+  return getAllByIndex<MovementType>(
+    STORE_NAMES.movementTypes,
+    "byMuscleGroupId",
+    muscleGroupId
+  );
+}
+
+export async function getAllSessionTemplateListItems(): Promise<
+  SessionTemplateListItem[]
+> {
+  const weekTemplates = (
+    await getAll<WeekTemplate>(STORE_NAMES.weekTemplates)
+  ).sort((a, b) => a.order - b.order);
+  const results: SessionTemplateListItem[] = [];
+  for (const weekTemplate of weekTemplates) {
+    const sessions = (
+      await getSessionTemplatesForWeek(weekTemplate.id)
+    ).sort((a, b) => a.order - b.order);
+    for (const sessionTemplate of sessions) {
+      results.push({ sessionTemplate, weekTemplate });
+    }
+  }
+  return results;
+}
+
+// ─── Config: template writes ──────────────────────────────────────────────────
+
+export async function saveMuscleGroup(muscleGroup: MuscleGroup): Promise<void> {
+  await putItem(STORE_NAMES.muscleGroups, muscleGroup);
+}
+
+export async function saveMovementType(
+  movementType: MovementType
+): Promise<void> {
+  await putItem(STORE_NAMES.movementTypes, movementType);
+}
+
+export async function saveSessionTemplateMuscleGroup(
+  stmg: SessionTemplateMuscleGroup
+): Promise<void> {
+  await putItem(STORE_NAMES.sessionTemplateMuscleGroups, stmg);
+}
+
+export async function deleteSessionTemplateMuscleGroupById(
+  id: string
+): Promise<void> {
+  const exercises = await getAllByIndex<ExerciseTemplate>(
+    STORE_NAMES.exerciseTemplates,
+    "bySessionTemplateMuscleGroupId",
+    id
+  );
+  for (const exercise of exercises) {
+    await deleteItem(STORE_NAMES.exerciseTemplates, exercise.id);
+  }
+  await deleteItem(STORE_NAMES.sessionTemplateMuscleGroups, id);
+}
+
+export async function saveExerciseTemplate(
+  template: ExerciseTemplate
+): Promise<void> {
+  await putItem(STORE_NAMES.exerciseTemplates, template);
+}
+
+export async function deleteExerciseTemplateById(id: string): Promise<void> {
+  await deleteItem(STORE_NAMES.exerciseTemplates, id);
+}

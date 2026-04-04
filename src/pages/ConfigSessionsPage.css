@@ -1,0 +1,97 @@
+.config-sessions-page {
+  min-height: 100vh;
+  padding: 64px 0 100px;
+  background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+}
+
+.config-sessions-shell {
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 16px 0 28px;
+}
+
+.config-sessions-header {
+  padding: 20px 20px 8px;
+}
+
+.config-sessions-eyebrow {
+  margin: 0 0 4px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.config-sessions-title {
+  margin: 0 0 6px;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text-strong);
+}
+
+.config-sessions-subtitle {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--text-soft);
+}
+
+.config-sessions__week-group {
+  padding: 20px 20px 4px;
+}
+
+.config-sessions__week-label {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.config-sessions__week-rir {
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.config-sessions__session-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.config-sessions__session-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.12s;
+  text-align: left;
+}
+
+.config-sessions__session-card:hover {
+  background: #262c35;
+  transform: translateY(-1px);
+}
+
+.config-sessions__session-card:active {
+  transform: scale(0.985);
+}
+
+.config-sessions__session-name {
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.config-sessions__session-chevron {
+  font-size: 1.2rem;
+  color: var(--text-soft);
+  line-height: 1;
+}

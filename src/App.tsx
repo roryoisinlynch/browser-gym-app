@@ -6,6 +6,9 @@ import SessionPage from "./pages/SessionPage";
 import SettingsPage from "./pages/SettingsPage";
 import ImportPage from "./pages/ImportPage";
 import SetsPage from "./pages/SetsPage";
+import ConfigSessionsPage from "./pages/ConfigSessionsPage";
+import ConfigSessionDetailPage from "./pages/ConfigSessionDetailPage";
+import ConfigExercisePage from "./pages/ConfigExercisePage";
 
 export default function App() {
   return (
@@ -16,9 +19,13 @@ export default function App() {
         <Route path="/session/:sessionInstanceId" element={<SessionPage />} />
         <Route path="/exercise/:exerciseInstanceId" element={<ExercisePage />} />
         <Route path="/settings" element={<SettingsPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
         <Route path="/import" element={<ImportPage />} />
         <Route path="/sets" element={<SetsPage />} />
+        <Route path="/config/sessions" element={<ConfigSessionsPage />} />
+        <Route path="/config/sessions/:sessionTemplateId" element={<ConfigSessionDetailPage />} />
+        <Route path="/config/exercises/new" element={<ConfigExercisePage />} />
+        <Route path="/config/exercises/:exerciseTemplateId" element={<ConfigExercisePage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
