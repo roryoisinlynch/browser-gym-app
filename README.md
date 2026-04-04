@@ -404,6 +404,7 @@ Some exercises do not lend themselves to weight-based intensity tracking:
 
 - **True bodyweight exercises** (e.g. pull-ups) where no external load is recorded
 - **High-rep fixed-load exercises** (e.g. lateral raises at 25+ reps) where the Epley formula becomes unreliable and e1RM is not a meaningful metric
+- - These fixed-load exerciseds are named accordingly, e.g. instead of **Lateral Raise** there would be an exsercise called **2.5kg Lateral Raise** and another called **5kg Lateral Raise**  
 
 These are handled under the `weightMode: "bodyweight"` flag on `ExerciseTemplate`. The label "bodyweight" is used broadly to mean *rep-only tracking*, regardless of whether the exercise is literally unloaded.
 
