@@ -559,28 +559,19 @@ export async function getExerciseSessionHistory(
   exerciseTemplateId: string,
   exerciseName: string
 ): Promise<ExerciseSessionDataPoint[]> {
-  // Find all templates sharing this exercise name (case-insensitive) so that
-  // e.g. "Bench Press" in Chest Back 1 and Chest Back 2 share a common history.
+  // History is matched by exercise name so that:
+  // - Templates with the same name (e.g. Bench Press in two sessions) share history
+  // - Hard-deleted templates don't lose history (instances carry the name themselves)
   const normalizedName = exerciseName.trim().toLowerCase();
-  const allTemplates = await getAll<ExerciseTemplate>(STORE_NAMES.exerciseTemplates);
-  const siblingTemplateIds = new Set(
-    allTemplates
-      .filter((t) => t.exerciseName.trim().toLowerCase() === normalizedName)
-      .map((t) => t.id)
-  );
-  // Always include the calling template even if the name changed since seeding.
-  siblingTemplateIds.add(exerciseTemplateId);
-
-  const allInstances: ExerciseInstance[] = [];
-  for (const tid of siblingTemplateIds) {
-    const instances = await getAllByIndex<ExerciseInstance>(
-      STORE_NAMES.exerciseInstances,
-      "byExerciseTemplateId",
-      tid
-    );
-    allInstances.push(...instances);
-  }
-  const exerciseInstances = allInstances;
+  const allInstances = await getAll<ExerciseInstance>(STORE_NAMES.exerciseInstances);
+  const exerciseInstances = allInstances.filter((inst) => {
+    // Prefer the denormalized name on the instance (works after template deletion).
+    // Fall back to matching by templateId for legacy instances without a name.
+    if (inst.exerciseName != null) {
+      return inst.exerciseName.trim().toLowerCase() === normalizedName;
+    }
+    return inst.exerciseTemplateId === exerciseTemplateId;
+  });
 
   const dataPoints: ExerciseSessionDataPoint[] = [];
 
@@ -1106,6 +1097,7 @@ export async function ensureExerciseInstance(
     id: createExerciseInstanceId(exerciseTemplateId),
     sessionInstanceId,
     exerciseTemplateId,
+    exerciseName: exerciseTemplate.exerciseName,
     status: "not_started",
     startedAt: null,
     completedAt: null,

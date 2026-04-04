@@ -189,6 +189,7 @@ export interface ExerciseInstance {
   id: ID;
   sessionInstanceId: ID;
   exerciseTemplateId: ID;
+  exerciseName?: string; // denormalized at creation; enables history lookup after template deletion
 
   status: InstanceStatus;
 
