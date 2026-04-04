@@ -1,17 +1,25 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type { ExerciseTemplate, MovementType, WeightMode } from "../domain/models";
 import {
   deleteExerciseTemplateById,
+  getExerciseSessionHistory,
   getExerciseTemplateById,
   getMovementTypeById,
   getMovementTypesByMuscleGroupId,
+  getWeekTemplates,
   saveExerciseTemplate,
   saveMovementType,
 } from "../repositories/programRepository";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import "./ConfigExercisePage.css";
+
+interface WeightOption {
+  weight: number;
+  targetReps: number; // floor(expectedReps) — stored in ExerciseTemplate
+  repRange: number[]; // one entry per week, sorted RIR high→low
+}
 
 export default function ConfigExercisePage() {
   const { exerciseTemplateId } = useParams<{ exerciseTemplateId: string }>();
@@ -22,16 +30,21 @@ export default function ConfigExercisePage() {
   const stmgId = searchParams.get("stmgId") ?? "";
   const muscleGroupId = searchParams.get("muscleGroupId") ?? "";
 
-  // Form state
+  // Core form state
   const [exerciseName, setExerciseName] = useState("");
   const [movementTypeId, setMovementTypeId] = useState("");
-  const [targetReps, setTargetReps] = useState("8");
-  const [repMin, setRepMin] = useState("6");
-  const [repMax, setRepMax] = useState("12");
   const [weightMode, setWeightMode] = useState<WeightMode>("increment");
   const [weightIncrement, setWeightIncrement] = useState("2.5");
   const [availableWeights, setAvailableWeights] = useState<number[]>([]);
   const [newWeightInput, setNewWeightInput] = useState("");
+
+  // Rep option selection (replaces manual targetReps/repMin/repMax)
+  const [selectedTargetReps, setSelectedTargetReps] = useState<number | null>(null);
+  const [provisionalE1RM, setProvisionalE1RM] = useState("");
+  const [historicalE1RM, setHistoricalE1RM] = useState<number | null>(null);
+  const [rirScheme, setRirScheme] = useState<number[]>([]);
+  const [minRepsFilter, setMinRepsFilter] = useState(1);
+  const [maxRepsFilter, setMaxRepsFilter] = useState(30);
 
   // Movement type options
   const [movementTypes, setMovementTypes] = useState<MovementType[]>([]);
@@ -43,6 +56,13 @@ export default function ConfigExercisePage() {
 
   useEffect(() => {
     async function load() {
+      // Load week templates → RIR scheme (sorted week 1 → last)
+      const weeks = await getWeekTemplates();
+      const scheme = weeks
+        .map((w) => w.targetRir)
+        .filter((r): r is number => r != null);
+      setRirScheme(scheme);
+
       if (isNew) {
         if (muscleGroupId) {
           const mts = await getMovementTypesByMuscleGroupId(muscleGroupId);
@@ -59,12 +79,10 @@ export default function ConfigExercisePage() {
 
       setExerciseName(template.exerciseName);
       setMovementTypeId(template.movementTypeId);
-      setTargetReps(String(template.targetReps));
-      setRepMin(String(template.repMin));
-      setRepMax(String(template.repMax));
       setWeightMode(template.weightMode);
       setWeightIncrement(String(template.weightIncrement ?? 2.5));
       setAvailableWeights(template.availableWeights ?? []);
+      setSelectedTargetReps(template.targetReps ?? null);
 
       const mt = await getMovementTypeById(template.movementTypeId);
       if (mt) {
@@ -73,9 +91,77 @@ export default function ConfigExercisePage() {
         const mts = await getMovementTypesByMuscleGroupId(mgId);
         setMovementTypes(mts.sort((a, b) => a.order - b.order));
       }
+
+      // Load historical best e1RM
+      if (template.weightMode !== "bodyweight") {
+        const history = await getExerciseSessionHistory(
+          exerciseTemplateId,
+          template.exerciseName
+        );
+        const best = history.reduce<number | null>((max, d) => {
+          if (d.topEstimatedOneRepMax == null) return max;
+          return max == null || d.topEstimatedOneRepMax > max
+            ? d.topEstimatedOneRepMax
+            : max;
+        }, null);
+        setHistoricalE1RM(best);
+      }
     }
     load();
   }, [exerciseTemplateId, isNew, muscleGroupId]);
+
+  // Effective e1RM: prefer historical, fall back to provisional input
+  const effectiveE1RM = useMemo(() => {
+    if (historicalE1RM != null) return historicalE1RM;
+    const p = parseFloat(provisionalE1RM);
+    return Number.isFinite(p) && p > 0 ? p : null;
+  }, [historicalE1RM, provisionalE1RM]);
+
+  // Generate weight options
+  const weightOptions = useMemo<WeightOption[]>(() => {
+    if (!effectiveE1RM || rirScheme.length === 0) return [];
+    if (weightMode === "bodyweight") return [];
+
+    const inc = parseFloat(weightIncrement) || 2.5;
+    const sortedRir = [...rirScheme].sort((a, b) => b - a); // high RIR first
+
+    let candidates: number[];
+    if (weightMode === "explicit_list") {
+      candidates = [...availableWeights].sort((a, b) => a - b);
+    } else {
+      // Generate from 1 increment up to just below e1RM
+      candidates = [];
+      for (let w = inc; w < effectiveE1RM; w = Math.round((w + inc) * 1000) / 1000) {
+        candidates.push(w);
+      }
+    }
+
+    const options: WeightOption[] = [];
+    for (const weight of candidates) {
+      const expectedReps = (effectiveE1RM / weight - 1) * 30;
+      const floorReps = Math.floor(expectedReps);
+      const repRange = sortedRir.map((rir) => floorReps + (1 - rir));
+
+      const minRep = Math.min(...repRange);
+      const maxRep = Math.max(...repRange);
+
+      if (minRep < 1) continue;
+      if (maxRep < minRepsFilter || minRep > maxRepsFilter) continue;
+
+      options.push({ weight, targetReps: floorReps, repRange });
+    }
+
+    // Show heaviest weights first (fewest reps = highest intensity)
+    return options.reverse();
+  }, [
+    effectiveE1RM,
+    weightMode,
+    weightIncrement,
+    availableWeights,
+    rirScheme,
+    minRepsFilter,
+    maxRepsFilter,
+  ]);
 
   function addWeight() {
     const val = parseFloat(newWeightInput);
@@ -113,21 +199,33 @@ export default function ConfigExercisePage() {
       return;
     }
 
+    if (weightMode !== "bodyweight" && selectedTargetReps === null) {
+      setError("Please select a weight option.");
+      return;
+    }
+
     setIsSaving(true);
     setError(null);
 
     try {
+      const tReps = weightMode === "bodyweight" ? 0 : selectedTargetReps!;
+      const maxRir = rirScheme.length ? Math.max(...rirScheme) : 4;
+      const minRir = rirScheme.length ? Math.min(...rirScheme) : 0;
+
+      let existingStmgId = stmgId;
+      if (!isNew) {
+        const existing = await getExerciseTemplateById(exerciseTemplateId!);
+        existingStmgId = existing?.sessionTemplateMuscleGroupId ?? stmgId;
+      }
+
       const template: ExerciseTemplate = {
         id: isNew ? crypto.randomUUID() : exerciseTemplateId!,
-        sessionTemplateMuscleGroupId: isNew
-          ? stmgId
-          : (await getExerciseTemplateById(exerciseTemplateId!))
-              ?.sessionTemplateMuscleGroupId ?? stmgId,
+        sessionTemplateMuscleGroupId: existingStmgId,
         movementTypeId: resolvedMovementTypeId,
         exerciseName: name,
-        targetReps: Math.max(1, parseInt(targetReps) || 1),
-        repMin: Math.max(1, parseInt(repMin) || 1),
-        repMax: Math.max(1, parseInt(repMax) || 1),
+        targetReps: tReps,
+        repMin: Math.max(1, tReps + (1 - maxRir)),
+        repMax: Math.max(1, tReps + (1 - minRir)),
         rirSequence: [],
         weightMode,
         ...(weightMode === "increment"
@@ -156,6 +254,10 @@ export default function ConfigExercisePage() {
     await deleteExerciseTemplateById(exerciseTemplateId);
     navigate(-1);
   }
+
+  const selectedOption = weightOptions.find(
+    (o) => o.targetReps === selectedTargetReps
+  );
 
   return (
     <main className="config-exercise-page">
@@ -211,43 +313,6 @@ export default function ConfigExercisePage() {
           )}
         </div>
 
-        {/* Rep targets */}
-        <div className="config-exercise__field-group">
-          <label className="config-exercise__label">Rep targets</label>
-          <div className="config-exercise__rep-row">
-            <div className="config-exercise__rep-field">
-              <span className="config-exercise__rep-label">Target</span>
-              <input
-                className="config-exercise__input config-exercise__input--number"
-                type="number"
-                min="1"
-                value={targetReps}
-                onChange={(e) => setTargetReps(e.target.value)}
-              />
-            </div>
-            <div className="config-exercise__rep-field">
-              <span className="config-exercise__rep-label">Min</span>
-              <input
-                className="config-exercise__input config-exercise__input--number"
-                type="number"
-                min="1"
-                value={repMin}
-                onChange={(e) => setRepMin(e.target.value)}
-              />
-            </div>
-            <div className="config-exercise__rep-field">
-              <span className="config-exercise__rep-label">Max</span>
-              <input
-                className="config-exercise__input config-exercise__input--number"
-                type="number"
-                min="1"
-                value={repMax}
-                onChange={(e) => setRepMax(e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-
         {/* Weight mode */}
         <div className="config-exercise__field-group">
           <label className="config-exercise__label">Weight mode</label>
@@ -260,7 +325,10 @@ export default function ConfigExercisePage() {
                     name="weightMode"
                     value={mode}
                     checked={weightMode === mode}
-                    onChange={() => setWeightMode(mode)}
+                    onChange={() => {
+                      setWeightMode(mode);
+                      setSelectedTargetReps(null);
+                    }}
                     className="config-exercise__radio"
                   />
                   <span className="config-exercise__radio-text">
@@ -286,7 +354,10 @@ export default function ConfigExercisePage() {
                 min="0.25"
                 step="0.25"
                 value={weightIncrement}
-                onChange={(e) => setWeightIncrement(e.target.value)}
+                onChange={(e) => {
+                  setWeightIncrement(e.target.value);
+                  setSelectedTargetReps(null);
+                }}
               />
             </div>
           )}
@@ -303,7 +374,10 @@ export default function ConfigExercisePage() {
                     <button
                       type="button"
                       className="config-exercise__weight-tag-remove"
-                      onClick={() => removeWeight(w)}
+                      onClick={() => {
+                        removeWeight(w);
+                        setSelectedTargetReps(null);
+                      }}
                       aria-label={`Remove ${w}kg`}
                     >
                       ×
@@ -333,6 +407,116 @@ export default function ConfigExercisePage() {
             </div>
           )}
         </div>
+
+        {/* Rep options — only for weighted exercises */}
+        {weightMode === "bodyweight" ? (
+          <div className="config-exercise__field-group">
+            <div className="config-exercise__bw-note">
+              Rep targets are calculated automatically from your historical best
+              minus the week's RIR.
+            </div>
+          </div>
+        ) : (
+          <div className="config-exercise__field-group">
+            <label className="config-exercise__label">
+              Rep range
+              {selectedOption && (
+                <span className="config-exercise__label-selected">
+                  {" "}
+                  · {selectedOption.weight}kg selected
+                </span>
+              )}
+            </label>
+
+            {/* e1RM source */}
+            {historicalE1RM != null ? (
+              <p className="config-exercise__e1rm-note">
+                Based on historical e1RM of{" "}
+                <strong>
+                  {Number.isInteger(historicalE1RM)
+                    ? historicalE1RM
+                    : historicalE1RM.toFixed(1)}
+                  kg
+                </strong>
+              </p>
+            ) : (
+              <div className="config-exercise__provisional-row">
+                <span className="config-exercise__provisional-label">
+                  No history yet — enter a reference e1RM:
+                </span>
+                <input
+                  className="config-exercise__input config-exercise__input--number"
+                  type="number"
+                  min="1"
+                  step="0.5"
+                  placeholder="kg"
+                  value={provisionalE1RM}
+                  onChange={(e) => setProvisionalE1RM(e.target.value)}
+                />
+              </div>
+            )}
+
+            {/* Filter */}
+            {effectiveE1RM && (
+              <div className="config-exercise__rep-filter">
+                <span className="config-exercise__rep-filter-label">
+                  Show reps
+                </span>
+                <input
+                  className="config-exercise__input config-exercise__input--number"
+                  type="number"
+                  min="1"
+                  value={minRepsFilter}
+                  onChange={(e) =>
+                    setMinRepsFilter(Math.max(1, parseInt(e.target.value) || 1))
+                  }
+                />
+                <span className="config-exercise__rep-filter-label">to</span>
+                <input
+                  className="config-exercise__input config-exercise__input--number"
+                  type="number"
+                  min="1"
+                  value={maxRepsFilter}
+                  onChange={(e) =>
+                    setMaxRepsFilter(Math.max(1, parseInt(e.target.value) || 1))
+                  }
+                />
+              </div>
+            )}
+
+            {/* Option list */}
+            {effectiveE1RM ? (
+              weightOptions.length === 0 ? (
+                <p className="config-exercise__no-options">
+                  No options in this rep range. Try adjusting the filter.
+                </p>
+              ) : (
+                <div className="config-exercise__option-list">
+                  {weightOptions.map((opt) => {
+                    const isSelected = opt.targetReps === selectedTargetReps;
+                    return (
+                      <button
+                        key={opt.weight}
+                        type="button"
+                        className={`config-exercise__option${
+                          isSelected ? " config-exercise__option--selected" : ""
+                        }`}
+                        onClick={() => setSelectedTargetReps(opt.targetReps)}
+                      >
+                        <span className="config-exercise__option-weight">
+                          {opt.weight}kg
+                        </span>
+                        <span className="config-exercise__option-reps">
+                          {opt.repRange.join(" · ")}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )
+            ) : null}
+          </div>
+        )}
 
         {/* Actions */}
         <div className="config-exercise__actions">
