@@ -239,8 +239,8 @@ function E1RMChart({
         );
       })}
 
-      {showDots &&
-        chartPoints.map((d, i) => (
+      {chartPoints.map((d, i) =>
+        showDots ? (
           <circle
             key={d.key}
             cx={xScale(i)}
@@ -250,7 +250,16 @@ function E1RMChart({
             stroke={d.containsCurrentSession ? "#d8f06a" : "#c4e23c"}
             strokeWidth="2"
           />
-        ))}
+        ) : (
+          <circle
+            key={d.key}
+            cx={xScale(i)}
+            cy={yScale(d.topEstimatedOneRepMax)}
+            r={d.containsCurrentSession ? 3 : 1.5}
+            fill={d.containsCurrentSession ? "#d8f06a" : "#c4e23c"}
+          />
+        )
+      )}
 
       {xLabelIndices.map((idx) => {
         const d = chartPoints[idx];
