@@ -400,6 +400,7 @@ Intensity → Did the performed sets reach the intended effort level?
 
 # To do:
  - add weight increment support for exercises
+ - add optimiser function to select best weight / rep range for a season (which re-runs when PR is hit)
  - Local vs Historical Max Logic
  - Summary pages
  - Config pages
