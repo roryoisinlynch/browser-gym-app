@@ -1,17 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type {
-  ExerciseTemplate,
   MuscleGroup,
-  MovementType,
   SessionTemplate,
   SessionTemplateMuscleGroup,
 } from "../domain/models";
+import type { SessionTemplateGroupWithExercises } from "../repositories/programRepository";
 import {
   getAllMuscleGroups,
-  getExerciseTemplatesForSessionTemplate,
   getSessionTemplateById,
-  getSessionTemplateMuscleGroups,
+  getSessionTemplateGroupsWithExercises,
   saveMuscleGroup,
   saveSessionTemplateMuscleGroup,
   deleteSessionTemplateMuscleGroupById,
@@ -19,17 +17,6 @@ import {
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import "./ConfigSessionDetailPage.css";
-
-interface ExerciseRow {
-  exerciseTemplate: ExerciseTemplate;
-  movementType: MovementType;
-}
-
-interface MuscleGroupSection {
-  stmg: SessionTemplateMuscleGroup;
-  muscleGroup: MuscleGroup;
-  exercises: ExerciseRow[];
-}
 
 function weightModeLabel(mode: string): string {
   if (mode === "bodyweight") return "BW";
@@ -43,7 +30,7 @@ export default function ConfigSessionDetailPage() {
 
   const [sessionTemplate, setSessionTemplate] =
     useState<SessionTemplate | null>(null);
-  const [sections, setSections] = useState<MuscleGroupSection[]>([]);
+  const [sections, setSections] = useState<SessionTemplateGroupWithExercises[]>([]);
   const [allMuscleGroups, setAllMuscleGroups] = useState<MuscleGroup[]>([]);
 
   // Add-section form state
@@ -55,34 +42,16 @@ export default function ConfigSessionDetailPage() {
   async function loadData() {
     if (!sessionTemplateId) return;
 
-    const [tmpl, stmgs, muscleGroups] = await Promise.all([
+    const [tmpl, groups, muscleGroups] = await Promise.all([
       getSessionTemplateById(sessionTemplateId),
-      getSessionTemplateMuscleGroups(sessionTemplateId),
+      getSessionTemplateGroupsWithExercises(sessionTemplateId),
       getAllMuscleGroups(),
     ]);
 
     if (!tmpl) return;
     setSessionTemplate(tmpl);
     setAllMuscleGroups(muscleGroups);
-
-    const loaded: MuscleGroupSection[] = await Promise.all(
-      stmgs.map(async ({ sessionTemplateMuscleGroup: stmg, muscleGroup }) => {
-        const exercises = await getExerciseTemplatesForSessionTemplate(stmg.id);
-        return {
-          stmg,
-          muscleGroup,
-          exercises: exercises.sort(
-            (a, b) =>
-              (a.exerciseTemplate as { order?: number }).order ?? 0 -
-              ((b.exerciseTemplate as { order?: number }).order ?? 0)
-          ),
-        };
-      })
-    );
-
-    setSections(
-      loaded.sort((a, b) => a.stmg.order - b.stmg.order)
-    );
+    setSections(groups.sort((a, b) => a.sessionTemplateMuscleGroup.order - b.sessionTemplateMuscleGroup.order));
   }
 
   useEffect(() => {
@@ -151,74 +120,77 @@ export default function ConfigSessionDetailPage() {
           <h1 className="config-session-detail-title">{sessionTemplate.name}</h1>
         </header>
 
-        {sections.map((section) => (
-          <div key={section.stmg.id} className="config-session-detail__section">
-            <div className="config-session-detail__section-header">
-              <p className="config-session-detail__section-name">
-                {section.muscleGroup.name}
-              </p>
+        {sections.map((section) => {
+          const stmg = section.sessionTemplateMuscleGroup;
+          return (
+            <div key={stmg.id} className="config-session-detail__section">
+              <div className="config-session-detail__section-header">
+                <p className="config-session-detail__section-name">
+                  {section.muscleGroup.name}
+                </p>
+                <button
+                  type="button"
+                  className="config-session-detail__section-delete"
+                  onClick={() => handleDeleteSection(stmg.id)}
+                  aria-label={`Remove ${section.muscleGroup.name} section`}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {section.exercises.length === 0 ? (
+                <p className="config-session-detail__empty">No exercises yet.</p>
+              ) : (
+                <div className="config-session-detail__exercise-list">
+                  {section.exercises.map(({ exerciseTemplate, movementType }) => (
+                    <button
+                      key={exerciseTemplate.id}
+                      type="button"
+                      className="config-session-detail__exercise-row"
+                      onClick={() =>
+                        navigate(
+                          `/config/exercises/${exerciseTemplate.id}?stmgId=${stmg.id}&muscleGroupId=${stmg.muscleGroupId}`
+                        )
+                      }
+                    >
+                      <div className="config-session-detail__exercise-info">
+                        <span className="config-session-detail__exercise-name">
+                          {exerciseTemplate.exerciseName}
+                        </span>
+                        <span className="config-session-detail__exercise-meta">
+                          {movementType.name}
+                        </span>
+                      </div>
+                      <div className="config-session-detail__exercise-right">
+                        <span className="config-session-detail__mode-badge">
+                          {weightModeLabel(exerciseTemplate.weightMode)}
+                        </span>
+                        <span className="config-session-detail__reps">
+                          {exerciseTemplate.targetReps} reps
+                        </span>
+                        <span className="config-session-detail__exercise-chevron">
+                          ›
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <button
                 type="button"
-                className="config-session-detail__section-delete"
-                onClick={() => handleDeleteSection(section.stmg.id)}
-                aria-label={`Remove ${section.muscleGroup.name} section`}
+                className="config-session-detail__add-exercise-btn"
+                onClick={() =>
+                  navigate(
+                    `/config/exercises/new?stmgId=${stmg.id}&muscleGroupId=${stmg.muscleGroupId}`
+                  )
+                }
               >
-                ✕
+                + Add exercise
               </button>
             </div>
-
-            {section.exercises.length === 0 ? (
-              <p className="config-session-detail__empty">No exercises yet.</p>
-            ) : (
-              <div className="config-session-detail__exercise-list">
-                {section.exercises.map(({ exerciseTemplate, movementType }) => (
-                  <button
-                    key={exerciseTemplate.id}
-                    type="button"
-                    className="config-session-detail__exercise-row"
-                    onClick={() =>
-                      navigate(
-                        `/config/exercises/${exerciseTemplate.id}?stmgId=${section.stmg.id}&muscleGroupId=${section.stmg.muscleGroupId}`
-                      )
-                    }
-                  >
-                    <div className="config-session-detail__exercise-info">
-                      <span className="config-session-detail__exercise-name">
-                        {exerciseTemplate.exerciseName}
-                      </span>
-                      <span className="config-session-detail__exercise-meta">
-                        {movementType.name}
-                      </span>
-                    </div>
-                    <div className="config-session-detail__exercise-right">
-                      <span className="config-session-detail__mode-badge">
-                        {weightModeLabel(exerciseTemplate.weightMode)}
-                      </span>
-                      <span className="config-session-detail__reps">
-                        {exerciseTemplate.targetReps} reps
-                      </span>
-                      <span className="config-session-detail__exercise-chevron">
-                        ›
-                      </span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <button
-              type="button"
-              className="config-session-detail__add-exercise-btn"
-              onClick={() =>
-                navigate(
-                  `/config/exercises/new?stmgId=${section.stmg.id}&muscleGroupId=${section.stmg.muscleGroupId}`
-                )
-              }
-            >
-              + Add exercise
-            </button>
-          </div>
-        ))}
+          );
+        })}
 
         {showAddSection ? (
           <div className="config-session-detail__add-section-form">

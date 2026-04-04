@@ -1,31 +1,20 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { SessionTemplateListItem } from "../repositories/programRepository";
+import type { SessionTemplate } from "../domain/models";
 import { getAllSessionTemplateListItems } from "../repositories/programRepository";
-import type { WeekTemplate } from "../domain/models";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import "./ConfigSessionsPage.css";
 
 export default function ConfigSessionsPage() {
   const navigate = useNavigate();
-  const [items, setItems] = useState<SessionTemplateListItem[]>([]);
+  const [sessions, setSessions] = useState<SessionTemplate[]>([]);
 
   useEffect(() => {
-    getAllSessionTemplateListItems().then(setItems);
+    getAllSessionTemplateListItems().then((items) =>
+      setSessions(items.map((i) => i.sessionTemplate))
+    );
   }, []);
-
-  const byWeek = new Map<
-    string,
-    { weekTemplate: WeekTemplate; sessions: SessionTemplateListItem[] }
-  >();
-  for (const item of items) {
-    const key = item.weekTemplate.id;
-    if (!byWeek.has(key)) {
-      byWeek.set(key, { weekTemplate: item.weekTemplate, sessions: [] });
-    }
-    byWeek.get(key)!.sessions.push(item);
-  }
 
   return (
     <main className="config-sessions-page">
@@ -39,35 +28,21 @@ export default function ConfigSessionsPage() {
           </p>
         </header>
 
-        {Array.from(byWeek.values()).map(({ weekTemplate, sessions }) => (
-          <div key={weekTemplate.id} className="config-sessions__week-group">
-            <p className="config-sessions__week-label">
-              {weekTemplate.label ?? weekTemplate.name}
-              {weekTemplate.targetRir != null && (
-                <span className="config-sessions__week-rir">
-                  {" "}· RIR {weekTemplate.targetRir}
-                </span>
-              )}
-            </p>
-            <div className="config-sessions__session-list">
-              {sessions.map(({ sessionTemplate }) => (
-                <button
-                  key={sessionTemplate.id}
-                  type="button"
-                  className="config-sessions__session-card"
-                  onClick={() =>
-                    navigate(`/config/sessions/${sessionTemplate.id}`)
-                  }
-                >
-                  <span className="config-sessions__session-name">
-                    {sessionTemplate.name}
-                  </span>
-                  <span className="config-sessions__session-chevron">›</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
+        <div className="config-sessions__session-list">
+          {sessions.map((session) => (
+            <button
+              key={session.id}
+              type="button"
+              className="config-sessions__session-card"
+              onClick={() => navigate(`/config/sessions/${session.id}`)}
+            >
+              <span className="config-sessions__session-name">
+                {session.name}
+              </span>
+              <span className="config-sessions__session-chevron">›</span>
+            </button>
+          ))}
+        </div>
       </section>
       <BottomNav activeTab="settings" />
     </main>
