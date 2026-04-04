@@ -7,13 +7,44 @@
   box-shadow: var(--card-shadow);
 }
 
+.exercise-insights__header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
 .exercise-insights__eyebrow {
-  margin: 0 0 12px;
+  margin: 0;
   font-size: 0.74rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-soft);
+}
+
+.exercise-insights__bin-toggle {
+  display: flex;
+  gap: 4px;
+}
+
+.exercise-insights__bin-btn {
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+
+.exercise-insights__bin-btn--active {
+  border-color: rgba(216, 240, 106, 0.32);
+  background: rgba(216, 240, 106, 0.08);
+  color: var(--accent);
 }
 
 .exercise-insights__chart {

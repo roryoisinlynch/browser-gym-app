@@ -9,6 +9,17 @@ interface ExerciseInsightsProps {
   currentExerciseInstanceId: string;
 }
 
+type BinType = "session" | "week" | "month";
+
+interface ChartPoint {
+  key: string;
+  date: string;
+  topEstimatedOneRepMax: number;
+  topWeight: number;
+  topReps: number;
+  containsCurrentSession: boolean;
+}
+
 function formatMetricValue(value: number | null, suffix = ""): string {
   if (value == null || Number.isNaN(value)) return "—";
   return `${Number.isInteger(value) ? value : value.toFixed(1)}${suffix}`;
@@ -17,7 +28,8 @@ function formatMetricValue(value: number | null, suffix = ""): string {
 function formatDate(iso: string): string {
   const d = new Date(iso);
   const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  return `${d.getDate()} ${months[d.getMonth()]}`;
+  const year = String(d.getFullYear()).slice(2);
+  return `${d.getDate()} ${months[d.getMonth()]} '${year}`;
 }
 
 function formatDateShort(iso: string): string {
@@ -27,23 +39,85 @@ function formatDateShort(iso: string): string {
   return `${months[d.getMonth()]} '${year}`;
 }
 
+// Returns the ISO date string of the Monday of the week containing `date`.
+function getMondayKey(iso: string): string {
+  const d = new Date(iso);
+  const day = d.getUTCDay(); // 0=Sun
+  d.setUTCDate(d.getUTCDate() - ((day + 6) % 7));
+  return d.toISOString().slice(0, 10);
+}
+
+function binDataPoints(
+  dataPoints: ExerciseSessionDataPoint[],
+  binType: BinType,
+  currentExerciseInstanceId: string
+): ChartPoint[] {
+  if (binType === "session") {
+    return dataPoints.map((d) => ({
+      key: d.exerciseInstanceId,
+      date: d.date,
+      topEstimatedOneRepMax: d.topEstimatedOneRepMax,
+      topWeight: d.topWeight,
+      topReps: d.topReps,
+      containsCurrentSession: d.exerciseInstanceId === currentExerciseInstanceId,
+    }));
+  }
+
+  const groups = new Map<
+    string,
+    { points: ExerciseSessionDataPoint[]; containsCurrent: boolean }
+  >();
+
+  for (const d of dataPoints) {
+    const key =
+      binType === "month"
+        ? d.date.slice(0, 7)
+        : d.weekInstanceId != null
+        ? d.weekInstanceId
+        : getMondayKey(d.date);
+
+    const group = groups.get(key) ?? { points: [], containsCurrent: false };
+    group.points.push(d);
+    if (d.exerciseInstanceId === currentExerciseInstanceId) {
+      group.containsCurrent = true;
+    }
+    groups.set(key, group);
+  }
+
+  return Array.from(groups.values())
+    .map(({ points, containsCurrent }) => {
+      const best = points.reduce((b, d) =>
+        d.topEstimatedOneRepMax > b.topEstimatedOneRepMax ? d : b
+      );
+      const earliestDate = points.map((p) => p.date).sort()[0];
+      return {
+        key: earliestDate,
+        date: earliestDate,
+        topEstimatedOneRepMax: best.topEstimatedOneRepMax,
+        topWeight: best.topWeight,
+        topReps: best.topReps,
+        containsCurrentSession: containsCurrent,
+      };
+    })
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
 const CHART_W = 300;
 const CHART_H = 128;
 const PAD = { top: 14, right: 10, bottom: 28, left: 38 };
 const PLOT_W = CHART_W - PAD.left - PAD.right;
 const PLOT_H = CHART_H - PAD.top - PAD.bottom;
+const DOT_THRESHOLD = 30;
 
 function E1RMChart({
-  dataPoints,
-  currentExerciseInstanceId,
+  chartPoints,
 }: {
-  dataPoints: ExerciseSessionDataPoint[];
-  currentExerciseInstanceId: string;
+  chartPoints: ChartPoint[];
 }) {
-  const n = dataPoints.length;
+  const n = chartPoints.length;
   if (n === 0) return null;
 
-  const e1RMs = dataPoints.map((d) => d.topEstimatedOneRepMax);
+  const e1RMs = chartPoints.map((d) => d.topEstimatedOneRepMax);
   const minVal = Math.min(...e1RMs);
   const maxVal = Math.max(...e1RMs);
   const range = maxVal - minVal || 10;
@@ -56,14 +130,14 @@ function E1RMChart({
   const yScale = (v: number) =>
     PAD.top + PLOT_H - ((v - yMin) / (yMax - yMin)) * PLOT_H;
 
-  const linePoints = dataPoints
+  const linePoints = chartPoints
     .map((d, i) => `${xScale(i)},${yScale(d.topEstimatedOneRepMax)}`)
     .join(" ");
 
   const areaPath =
     n > 1
-      ? `M ${xScale(0)},${yScale(dataPoints[0].topEstimatedOneRepMax)} ` +
-        dataPoints
+      ? `M ${xScale(0)},${yScale(chartPoints[0].topEstimatedOneRepMax)} ` +
+        chartPoints
           .slice(1)
           .map((d, i) => `L ${xScale(i + 1)},${yScale(d.topEstimatedOneRepMax)}`)
           .join(" ") +
@@ -77,6 +151,8 @@ function E1RMChart({
 
   const xLabelIndices =
     n === 1 ? [0] : n > 6 ? [0, Math.floor(n / 2), n - 1] : [0, n - 1];
+
+  const showDots = n <= DOT_THRESHOLD;
 
   return (
     <svg
@@ -118,34 +194,25 @@ function E1RMChart({
         strokeLinecap="round"
       />
 
-      {dataPoints.map((d, i) => {
-        const isCurrent = d.exerciseInstanceId === currentExerciseInstanceId;
-        return (
+      {showDots &&
+        chartPoints.map((d, i) => (
           <circle
-            key={i}
+            key={d.key}
             cx={xScale(i)}
             cy={yScale(d.topEstimatedOneRepMax)}
-            r={isCurrent ? 4.5 : 3}
-            fill={isCurrent ? "#d8f06a" : "#1a1f26"}
-            stroke={isCurrent ? "#d8f06a" : "#c4e23c"}
+            r={d.containsCurrentSession ? 4.5 : 3}
+            fill={d.containsCurrentSession ? "#d8f06a" : "#1a1f26"}
+            stroke={d.containsCurrentSession ? "#d8f06a" : "#c4e23c"}
             strokeWidth="2"
           />
-        );
-      })}
+        ))}
 
       {xLabelIndices.map((idx) => {
-        const d = dataPoints[idx];
+        const d = chartPoints[idx];
         const x = xScale(idx);
         const anchor = idx === 0 ? "start" : idx === n - 1 ? "end" : "middle";
         return (
-          <text
-            key={idx}
-            x={x}
-            y={CHART_H - 4}
-            textAnchor={anchor}
-            fontSize="9"
-            fill="#7e8794"
-          >
+          <text key={idx} x={x} y={CHART_H - 4} textAnchor={anchor} fontSize="9" fill="#7e8794">
             {formatDateShort(d.date)}
           </text>
         );
@@ -160,6 +227,7 @@ export default function ExerciseInsights({
   currentExerciseInstanceId,
 }: ExerciseInsightsProps) {
   const [history, setHistory] = useState<ExerciseSessionDataPoint[] | null>(null);
+  const [binType, setBinType] = useState<BinType>("session");
 
   useEffect(() => {
     getExerciseSessionHistory(exerciseTemplateId, exerciseName).then(setHistory);
@@ -168,6 +236,8 @@ export default function ExerciseInsights({
   if (history === null) {
     return null;
   }
+
+  const chartPoints = binDataPoints(history, binType, currentExerciseInstanceId);
 
   const historicalSessions = history.filter(
     (d) => d.exerciseInstanceId !== currentExerciseInstanceId
@@ -188,15 +258,28 @@ export default function ExerciseInsights({
 
   return (
     <section className="exercise-insights">
-      <p className="exercise-insights__eyebrow">Insights</p>
+      <div className="exercise-insights__header-row">
+        <p className="exercise-insights__eyebrow">Insights</p>
+        {hasChartData && (
+          <div className="exercise-insights__bin-toggle">
+            {(["session", "week", "month"] as BinType[]).map((b) => (
+              <button
+                key={b}
+                type="button"
+                className={`exercise-insights__bin-btn${binType === b ? " exercise-insights__bin-btn--active" : ""}`}
+                onClick={() => setBinType(b)}
+              >
+                {b.charAt(0).toUpperCase() + b.slice(1)}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {hasChartData ? (
         <div className="exercise-insights__chart">
           <p className="exercise-insights__chart-label">e1RM over time (kg)</p>
-          <E1RMChart
-            dataPoints={history}
-            currentExerciseInstanceId={currentExerciseInstanceId}
-          />
+          <E1RMChart chartPoints={chartPoints} />
         </div>
       ) : (
         <p className="exercise-insights__empty">No data recorded yet.</p>
