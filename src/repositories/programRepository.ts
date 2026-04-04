@@ -781,31 +781,18 @@ export async function getExerciseInstanceView(
     if (historicalBestReps != null) {
       prescribedRepTarget = Math.max(1, historicalBestReps - weekRir);
     }
-  } else if (historicalBestEstimatedOneRepMax != null && exerciseTemplate.targetReps > 0) {
-    // Prescribed weight: calibrate to targetReps at failure (no RIR in denominator —
-    // RIR is reflected through the rep progression, not the weight selection).
-    const rawWeight = historicalBestEstimatedOneRepMax / (1 + exerciseTemplate.targetReps / 30);
-
-    if (
-      exerciseTemplate.weightMode === "explicit_list" &&
-      exerciseTemplate.availableWeights &&
-      exerciseTemplate.availableWeights.length > 0
-    ) {
-      const sorted = [...exerciseTemplate.availableWeights].sort((a, b) => a - b);
-      prescribedWeight = sorted.filter((w) => w <= rawWeight).at(-1) ?? sorted[0]!;
-    } else {
-      const increment =
-        exerciseTemplate.weightIncrement && exerciseTemplate.weightIncrement > 0
-          ? exerciseTemplate.weightIncrement
-          : 2.5;
-      prescribedWeight = Math.floor(rawWeight / increment) * increment;
-    }
-
-    if (prescribedWeight > 0) {
-      // Rep progression: e-3, e-2, e-1, e, e+1 across weeks with RIR 4→0.
-      const expectedReps = (historicalBestEstimatedOneRepMax / prescribedWeight - 1) / 0.0333;
-      prescribedRepTarget = Math.max(1, Math.floor(expectedReps) + (1 - weekRir));
-    }
+  } else if (
+    historicalBestEstimatedOneRepMax != null &&
+    exerciseTemplate.prescribedWeight != null &&
+    exerciseTemplate.prescribedWeight > 0
+  ) {
+    // Weight is fixed by the user's settings choice.
+    // Reps float: 0 RIR = max reps at this weight without exceeding e1RM.
+    prescribedWeight = exerciseTemplate.prescribedWeight;
+    const zeroRirReps = Math.floor(
+      (historicalBestEstimatedOneRepMax / prescribedWeight - 1) * 30
+    );
+    prescribedRepTarget = Math.max(1, zeroRirReps + (1 - weekRir));
   }
 
   let resolvedExerciseInstance = exerciseInstance;
@@ -1106,7 +1093,7 @@ export async function ensureExerciseInstance(
     startedAt: null,
     completedAt: null,
     prescribedWeight: null,
-    prescribedRepTarget: exerciseTemplate.targetReps,
+    prescribedRepTarget: null,
     prescribedRir: weekTemplate?.targetRir ?? null,
   };
 

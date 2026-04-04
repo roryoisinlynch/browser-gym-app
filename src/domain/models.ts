@@ -101,10 +101,16 @@ export interface ExerciseTemplate {
   movementTypeId: ID;
   exerciseName: string;
 
-  targetReps: number;
-  repMin: number;
-  repMax: number;
-  rirSequence: number[];
+  // prescribedWeight is the fixed weight anchor chosen in settings.
+  // Reps are derived dynamically from e1RM each session.
+  prescribedWeight?: number | null;
+
+  // Legacy fields retained for backward-compat with stored records;
+  // no longer written or used by the prescription logic.
+  targetReps?: number;
+  repMin?: number;
+  repMax?: number;
+  rirSequence?: number[];
 
   weightMode: WeightMode;
   weightIncrement?: number;

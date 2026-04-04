@@ -166,7 +166,11 @@ export default function ConfigSessionDetailPage() {
                           {weightModeLabel(exerciseTemplate.weightMode)}
                         </span>
                         <span className="config-session-detail__reps">
-                          {exerciseTemplate.targetReps} reps
+                          {exerciseTemplate.weightMode === "bodyweight"
+                            ? "BW reps"
+                            : exerciseTemplate.prescribedWeight != null
+                            ? `${exerciseTemplate.prescribedWeight}kg`
+                            : "AMRAP"}
                         </span>
                         <span className="config-session-detail__exercise-chevron">
                           ›

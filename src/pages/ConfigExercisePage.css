@@ -307,10 +307,19 @@
   font-weight: 800;
   color: var(--text-strong);
   flex-shrink: 0;
+  min-width: 52px;
 }
 
 .config-exercise__option--selected .config-exercise__option-weight {
   color: var(--accent);
+}
+
+.config-exercise__option-middle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
 }
 
 .config-exercise__option-reps {
@@ -318,10 +327,41 @@
   font-weight: 600;
   color: var(--text-soft);
   letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .config-exercise__option--selected .config-exercise__option-reps {
   color: var(--text-muted);
+}
+
+.config-exercise__option-zero-rir {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-soft);
+  opacity: 0.7;
+}
+
+.config-exercise__option--selected .config-exercise__option-zero-rir {
+  color: var(--accent);
+  opacity: 0.8;
+}
+
+.config-exercise__option-remainder {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-soft);
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.config-exercise__option--selected .config-exercise__option-remainder {
+  color: var(--text-muted);
+}
+
+.config-exercise__e1rm-scheme {
+  color: var(--text-soft);
 }
 
 /* ── Action buttons ── */

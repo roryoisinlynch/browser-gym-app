@@ -17,8 +17,9 @@ import "./ConfigExercisePage.css";
 
 interface WeightOption {
   weight: number;
-  targetReps: number; // floor(expectedReps) — stored in ExerciseTemplate
-  repRange: number[]; // one entry per week, sorted RIR high→low
+  zeroRirReps: number;   // floor((e1RM / weight - 1) * 30) — the 0 RIR rep count
+  remainder: number;     // e1RM − implied e1RM at zeroRirReps (accuracy gap)
+  repRange: number[];    // one rep count per week, sorted RIR high→low (fewest first)
 }
 
 export default function ConfigExercisePage() {
@@ -38,8 +39,8 @@ export default function ConfigExercisePage() {
   const [availableWeights, setAvailableWeights] = useState<number[]>([]);
   const [newWeightInput, setNewWeightInput] = useState("");
 
-  // Rep option selection (replaces manual targetReps/repMin/repMax)
-  const [selectedTargetReps, setSelectedTargetReps] = useState<number | null>(null);
+  // Weight selection (the anchor stored on the template)
+  const [selectedWeight, setSelectedWeight] = useState<number | null>(null);
   const [historicalE1RM, setHistoricalE1RM] = useState<number | null>(null);
   const [rirScheme, setRirScheme] = useState<number[]>([]);
   const [minRepsFilter, setMinRepsFilter] = useState(1);
@@ -55,7 +56,6 @@ export default function ConfigExercisePage() {
 
   useEffect(() => {
     async function load() {
-      // Load week templates → RIR scheme (sorted week 1 → last)
       const weeks = await getWeekTemplates();
       const scheme = weeks
         .map((w) => w.targetRir)
@@ -81,7 +81,7 @@ export default function ConfigExercisePage() {
       setWeightMode(template.weightMode);
       setWeightIncrement(String(template.weightIncrement ?? 2.5));
       setAvailableWeights(template.availableWeights ?? []);
-      setSelectedTargetReps(template.targetReps ?? null);
+      setSelectedWeight(template.prescribedWeight ?? null);
 
       const mt = await getMovementTypeById(template.movementTypeId);
       if (mt) {
@@ -91,7 +91,6 @@ export default function ConfigExercisePage() {
         setMovementTypes(mts.sort((a, b) => a.order - b.order));
       }
 
-      // Load historical best e1RM
       if (template.weightMode !== "bodyweight") {
         const history = await getExerciseSessionHistory(
           exerciseTemplateId,
@@ -109,46 +108,45 @@ export default function ConfigExercisePage() {
     load();
   }, [exerciseTemplateId, isNew, muscleGroupId]);
 
-  const effectiveE1RM = historicalE1RM;
-
-  // Generate weight options
   const weightOptions = useMemo<WeightOption[]>(() => {
-    if (!effectiveE1RM || rirScheme.length === 0) return [];
+    if (!historicalE1RM || rirScheme.length === 0) return [];
     if (weightMode === "bodyweight") return [];
 
     const inc = parseFloat(weightIncrement) || 2.5;
-    const sortedRir = [...rirScheme].sort((a, b) => b - a); // high RIR first
+    const sortedRir = [...rirScheme].sort((a, b) => b - a); // high RIR first → fewest reps first
 
     let candidates: number[];
     if (weightMode === "explicit_list") {
       candidates = [...availableWeights].sort((a, b) => a - b);
     } else {
-      // Generate from 1 increment up to just below e1RM
       candidates = [];
-      for (let w = inc; w < effectiveE1RM; w = Math.round((w + inc) * 1000) / 1000) {
+      for (let w = inc; w < historicalE1RM; w = Math.round((w + inc) * 1000) / 1000) {
         candidates.push(w);
       }
     }
 
     const options: WeightOption[] = [];
     for (const weight of candidates) {
-      const expectedReps = (effectiveE1RM / weight - 1) * 30;
-      const floorReps = Math.floor(expectedReps);
-      const repRange = sortedRir.map((rir) => floorReps + (1 - rir));
+      const zeroRirReps = Math.floor((historicalE1RM / weight - 1) * 30);
+      if (zeroRirReps < 1) continue;
 
+      const repRange = sortedRir.map((rir) => zeroRirReps + (1 - rir));
       const minRep = Math.min(...repRange);
       const maxRep = Math.max(...repRange);
 
       if (minRep < 1) continue;
       if (maxRep < minRepsFilter || minRep > maxRepsFilter) continue;
 
-      options.push({ weight, targetReps: floorReps, repRange });
+      // Remainder: the e1RM gap that the floor'd rep count doesn't account for
+      const impliedE1RM = weight * (1 + zeroRirReps / 30);
+      const remainder = historicalE1RM - impliedE1RM;
+
+      options.push({ weight, zeroRirReps, remainder, repRange });
     }
 
-    // Show heaviest weights first (fewest reps = highest intensity)
-    return options.reverse();
+    return options.reverse(); // heaviest first
   }, [
-    effectiveE1RM,
+    historicalE1RM,
     weightMode,
     weightIncrement,
     availableWeights,
@@ -193,7 +191,7 @@ export default function ConfigExercisePage() {
       return;
     }
 
-    if (weightMode !== "bodyweight" && selectedTargetReps === null) {
+    if (weightMode !== "bodyweight" && selectedWeight === null) {
       setError("Please select a weight option.");
       return;
     }
@@ -202,10 +200,6 @@ export default function ConfigExercisePage() {
     setError(null);
 
     try {
-      const tReps = weightMode === "bodyweight" ? 0 : selectedTargetReps!;
-      const maxRir = rirScheme.length ? Math.max(...rirScheme) : 4;
-      const minRir = rirScheme.length ? Math.min(...rirScheme) : 0;
-
       let existingStmgId = stmgId;
       if (!isNew) {
         const existing = await getExerciseTemplateById(exerciseTemplateId!);
@@ -217,11 +211,8 @@ export default function ConfigExercisePage() {
         sessionTemplateMuscleGroupId: existingStmgId,
         movementTypeId: resolvedMovementTypeId,
         exerciseName: name,
-        targetReps: tReps,
-        repMin: Math.max(1, tReps + (1 - maxRir)),
-        repMax: Math.max(1, tReps + (1 - minRir)),
-        rirSequence: [],
         weightMode,
+        prescribedWeight: weightMode === "bodyweight" ? null : selectedWeight,
         ...(weightMode === "increment"
           ? { weightIncrement: parseFloat(weightIncrement) || 2.5 }
           : {}),
@@ -249,9 +240,7 @@ export default function ConfigExercisePage() {
     navigate(-1);
   }
 
-  const selectedOption = weightOptions.find(
-    (o) => o.targetReps === selectedTargetReps
-  );
+  const selectedOption = weightOptions.find((o) => o.weight === selectedWeight);
 
   return (
     <main className="config-exercise-page">
@@ -321,7 +310,7 @@ export default function ConfigExercisePage() {
                     checked={weightMode === mode}
                     onChange={() => {
                       setWeightMode(mode);
-                      setSelectedTargetReps(null);
+                      setSelectedWeight(null);
                     }}
                     className="config-exercise__radio"
                   />
@@ -350,7 +339,7 @@ export default function ConfigExercisePage() {
                 value={weightIncrement}
                 onChange={(e) => {
                   setWeightIncrement(e.target.value);
-                  setSelectedTargetReps(null);
+                  setSelectedWeight(null);
                 }}
               />
             </div>
@@ -370,7 +359,7 @@ export default function ConfigExercisePage() {
                       className="config-exercise__weight-tag-remove"
                       onClick={() => {
                         removeWeight(w);
-                        setSelectedTargetReps(null);
+                        setSelectedWeight(null);
                       }}
                       aria-label={`Remove ${w}kg`}
                     >
@@ -413,92 +402,101 @@ export default function ConfigExercisePage() {
         ) : (
           <div className="config-exercise__field-group">
             <label className="config-exercise__label">
-              Rep range
+              Working weight
               {selectedOption && (
                 <span className="config-exercise__label-selected">
-                  {" "}
-                  · {selectedOption.weight}kg selected
+                  {" "}· {selectedOption.weight}kg · 0 RIR: {selectedOption.zeroRirReps} reps
                 </span>
               )}
             </label>
 
-            {/* e1RM source */}
             {historicalE1RM != null ? (
-              <p className="config-exercise__e1rm-note">
-                Based on historical e1RM of{" "}
-                <strong>
-                  {Number.isInteger(historicalE1RM)
-                    ? historicalE1RM
-                    : historicalE1RM.toFixed(1)}
-                  kg
-                </strong>
-              </p>
+              <>
+                <p className="config-exercise__e1rm-note">
+                  Historical e1RM:{" "}
+                  <strong>
+                    {Number.isInteger(historicalE1RM)
+                      ? historicalE1RM
+                      : historicalE1RM.toFixed(1)}
+                    kg
+                  </strong>
+                  {"  ·  "}
+                  <span className="config-exercise__e1rm-scheme">
+                    RIR scheme: {[...rirScheme].sort((a, b) => b - a).join(", ")}
+                  </span>
+                </p>
+
+                {/* Filter */}
+                <div className="config-exercise__rep-filter">
+                  <span className="config-exercise__rep-filter-label">
+                    Show 0 RIR reps
+                  </span>
+                  <input
+                    className="config-exercise__input config-exercise__input--number"
+                    type="number"
+                    min="1"
+                    value={minRepsFilter}
+                    onChange={(e) =>
+                      setMinRepsFilter(Math.max(1, parseInt(e.target.value) || 1))
+                    }
+                  />
+                  <span className="config-exercise__rep-filter-label">to</span>
+                  <input
+                    className="config-exercise__input config-exercise__input--number"
+                    type="number"
+                    min="1"
+                    value={maxRepsFilter}
+                    onChange={(e) =>
+                      setMaxRepsFilter(Math.max(1, parseInt(e.target.value) || 1))
+                    }
+                  />
+                </div>
+
+                {weightOptions.length === 0 ? (
+                  <p className="config-exercise__no-options">
+                    No options in this rep range. Try adjusting the filter.
+                  </p>
+                ) : (
+                  <div className="config-exercise__option-list">
+                    {weightOptions.map((opt) => {
+                      const isSelected = opt.weight === selectedWeight;
+                      return (
+                        <button
+                          key={opt.weight}
+                          type="button"
+                          className={`config-exercise__option${
+                            isSelected
+                              ? " config-exercise__option--selected"
+                              : ""
+                          }`}
+                          onClick={() => setSelectedWeight(opt.weight)}
+                        >
+                          <span className="config-exercise__option-weight">
+                            {opt.weight}kg
+                          </span>
+                          <span className="config-exercise__option-middle">
+                            <span className="config-exercise__option-reps">
+                              {opt.repRange.join(" · ")}
+                            </span>
+                            <span className="config-exercise__option-zero-rir">
+                              0 RIR: {opt.zeroRirReps} reps
+                            </span>
+                          </span>
+                          <span className="config-exercise__option-remainder">
+                            +{opt.remainder.toFixed(1)}kg
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             ) : (
               <p className="config-exercise__no-history-note">
                 No history yet. Options will appear after the first session
                 (AMRAP to establish a baseline).
               </p>
             )}
-
-            {/* Filter */}
-            {historicalE1RM != null && (
-              <div className="config-exercise__rep-filter">
-                <span className="config-exercise__rep-filter-label">
-                  Show reps
-                </span>
-                <input
-                  className="config-exercise__input config-exercise__input--number"
-                  type="number"
-                  min="1"
-                  value={minRepsFilter}
-                  onChange={(e) =>
-                    setMinRepsFilter(Math.max(1, parseInt(e.target.value) || 1))
-                  }
-                />
-                <span className="config-exercise__rep-filter-label">to</span>
-                <input
-                  className="config-exercise__input config-exercise__input--number"
-                  type="number"
-                  min="1"
-                  value={maxRepsFilter}
-                  onChange={(e) =>
-                    setMaxRepsFilter(Math.max(1, parseInt(e.target.value) || 1))
-                  }
-                />
-              </div>
-            )}
-
-            {/* Option list */}
-            {historicalE1RM != null ? (
-              weightOptions.length === 0 ? (
-                <p className="config-exercise__no-options">
-                  No options in this rep range. Try adjusting the filter.
-                </p>
-              ) : (
-                <div className="config-exercise__option-list">
-                  {weightOptions.map((opt) => {
-                    const isSelected = opt.targetReps === selectedTargetReps;
-                    return (
-                      <button
-                        key={opt.weight}
-                        type="button"
-                        className={`config-exercise__option${
-                          isSelected ? " config-exercise__option--selected" : ""
-                        }`}
-                        onClick={() => setSelectedTargetReps(opt.targetReps)}
-                      >
-                        <span className="config-exercise__option-weight">
-                          {opt.weight}kg
-                        </span>
-                        <span className="config-exercise__option-reps">
-                          {opt.repRange.join(" · ")}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )
-            ) : null}
           </div>
         )}
 
