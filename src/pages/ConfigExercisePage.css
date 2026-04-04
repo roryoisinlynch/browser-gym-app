@@ -237,17 +237,11 @@
   color: var(--text-muted);
 }
 
-.config-exercise__provisional-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.config-exercise__provisional-label {
+.config-exercise__no-history-note {
+  margin: 0 0 10px;
   font-size: 0.82rem;
   color: var(--text-soft);
-  flex: 1;
+  line-height: 1.5;
 }
 
 .config-exercise__rep-filter {

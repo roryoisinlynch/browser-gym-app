@@ -11,6 +11,7 @@ interface ExerciseSummaryCardProps {
   isBodyweight?: boolean;
   historicalBestReps?: number | null;
   topSetReps?: number | null;
+  noBaseline?: boolean;
 }
 
 function formatMetricValue(
@@ -52,6 +53,7 @@ export default function ExerciseSummaryCard({
   isBodyweight = false,
   historicalBestReps = null,
   topSetReps = null,
+  noBaseline = false,
 }: ExerciseSummaryCardProps) {
   const scaleMax = isBodyweight
     ? Math.max(historicalBestReps ?? 0, targetReps ?? 0, topSetReps ?? 0, 1)
@@ -72,6 +74,32 @@ export default function ExerciseSummaryCard({
       ? ((targetReps ?? 0) / scaleMax) * 100
       : ((targetEstimatedOneRepMax ?? 0) / scaleMax) * 100
   );
+
+  if (noBaseline) {
+    return (
+      <section className="exercise-summary-card">
+        <div className="exercise-summary-card__header-row">
+          <div>
+            <p className="exercise-summary-card__eyebrow">Exercise</p>
+            <p className="exercise-summary-card__movement">{movementTypeName}</p>
+          </div>
+          <div className="exercise-summary-card__rir-pill">
+            Target RIR: {targetRir ?? "—"}
+          </div>
+        </div>
+        <div className="exercise-summary-card__amrap-banner">
+          <p className="exercise-summary-card__amrap-heading">
+            No baseline yet
+          </p>
+          <p className="exercise-summary-card__amrap-body">
+            Choose a challenging weight and lift for as many reps as possible
+            (AMRAP). Your e1RM will be calculated from this session and used to
+            prescribe future sessions.
+          </p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="exercise-summary-card">

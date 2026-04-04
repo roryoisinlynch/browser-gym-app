@@ -40,7 +40,6 @@ export default function ConfigExercisePage() {
 
   // Rep option selection (replaces manual targetReps/repMin/repMax)
   const [selectedTargetReps, setSelectedTargetReps] = useState<number | null>(null);
-  const [provisionalE1RM, setProvisionalE1RM] = useState("");
   const [historicalE1RM, setHistoricalE1RM] = useState<number | null>(null);
   const [rirScheme, setRirScheme] = useState<number[]>([]);
   const [minRepsFilter, setMinRepsFilter] = useState(1);
@@ -110,12 +109,7 @@ export default function ConfigExercisePage() {
     load();
   }, [exerciseTemplateId, isNew, muscleGroupId]);
 
-  // Effective e1RM: prefer historical, fall back to provisional input
-  const effectiveE1RM = useMemo(() => {
-    if (historicalE1RM != null) return historicalE1RM;
-    const p = parseFloat(provisionalE1RM);
-    return Number.isFinite(p) && p > 0 ? p : null;
-  }, [historicalE1RM, provisionalE1RM]);
+  const effectiveE1RM = historicalE1RM;
 
   // Generate weight options
   const weightOptions = useMemo<WeightOption[]>(() => {
@@ -440,24 +434,14 @@ export default function ConfigExercisePage() {
                 </strong>
               </p>
             ) : (
-              <div className="config-exercise__provisional-row">
-                <span className="config-exercise__provisional-label">
-                  No history yet — enter a reference e1RM:
-                </span>
-                <input
-                  className="config-exercise__input config-exercise__input--number"
-                  type="number"
-                  min="1"
-                  step="0.5"
-                  placeholder="kg"
-                  value={provisionalE1RM}
-                  onChange={(e) => setProvisionalE1RM(e.target.value)}
-                />
-              </div>
+              <p className="config-exercise__no-history-note">
+                No history yet. Options will appear after the first session
+                (AMRAP to establish a baseline).
+              </p>
             )}
 
             {/* Filter */}
-            {effectiveE1RM && (
+            {historicalE1RM != null && (
               <div className="config-exercise__rep-filter">
                 <span className="config-exercise__rep-filter-label">
                   Show reps
@@ -485,7 +469,7 @@ export default function ConfigExercisePage() {
             )}
 
             {/* Option list */}
-            {effectiveE1RM ? (
+            {historicalE1RM != null ? (
               weightOptions.length === 0 ? (
                 <p className="config-exercise__no-options">
                   No options in this rep range. Try adjusting the filter.

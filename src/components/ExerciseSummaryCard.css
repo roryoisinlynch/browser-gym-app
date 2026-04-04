@@ -113,6 +113,27 @@
   background: linear-gradient(90deg, var(--accent-strong), var(--accent));
 }
 
+.exercise-summary-card__amrap-banner {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(216, 240, 106, 0.2);
+  background: rgba(216, 240, 106, 0.05);
+}
+
+.exercise-summary-card__amrap-heading {
+  margin: 0 0 4px;
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.exercise-summary-card__amrap-body {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
 .exercise-summary-card__bar-target {
   position: absolute;
   top: -3px;

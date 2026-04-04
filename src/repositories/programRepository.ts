@@ -771,8 +771,10 @@ export async function getExerciseInstanceView(
 
   const weekRir = weekTemplate.targetRir ?? exerciseInstance.prescribedRir ?? 0;
 
-  let prescribedWeight = exerciseInstance.prescribedWeight ?? null;
-  let prescribedRepTarget = exerciseInstance.prescribedRepTarget ?? null;
+  // Always recompute from history — never carry over stale stored values.
+  // No history → both remain null → AMRAP prompt shown to user.
+  let prescribedWeight: number | null = null;
+  let prescribedRepTarget: number | null = null;
 
   if (exerciseTemplate.weightMode === "bodyweight") {
     // Historical best is a 0 RIR effort, so prescription = best - weekRir.

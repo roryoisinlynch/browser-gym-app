@@ -114,6 +114,12 @@ export default function ExercisePage() {
 
   const isBodyweight = exerciseView?.exerciseTemplate.weightMode === "bodyweight";
 
+  const isNoBaseline =
+    exerciseView != null &&
+    exerciseView.exerciseInstance.prescribedWeight == null &&
+    exerciseView.exerciseInstance.prescribedRepTarget == null &&
+    !isBodyweight;
+
   const topSetEstimatedOneRepMax = useMemo(() => {
     if (isBodyweight) return null;
     return rows.reduce<number | null>((best, row) => {
@@ -353,6 +359,7 @@ async function handleFinishExercise() {
           isBodyweight={isBodyweight}
           historicalBestReps={exerciseView.historicalBestReps}
           topSetReps={topSetReps}
+          noBaseline={isNoBaseline}
         />
 
         <ExerciseSetTable
