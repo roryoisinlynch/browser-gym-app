@@ -769,17 +769,15 @@ export async function getExerciseInstanceView(
     return best == null || set.performedReps > best ? set.performedReps : best;
   }, null);
 
-  // Rep offset encodes the weekly progression: week with RIR 4 = -3 reps,
-  // RIR 3 = -2, RIR 2 = -1, RIR 1 = 0, RIR 0 = +1 (matches spreadsheet e-3…e+1).
   const weekRir = weekTemplate.targetRir ?? exerciseInstance.prescribedRir ?? 0;
-  const repOffset = 1 - weekRir;
 
   let prescribedWeight = exerciseInstance.prescribedWeight ?? null;
   let prescribedRepTarget = exerciseInstance.prescribedRepTarget ?? null;
 
   if (exerciseTemplate.weightMode === "bodyweight") {
+    // Historical best is a 0 RIR effort, so prescription = best - weekRir.
     if (historicalBestReps != null) {
-      prescribedRepTarget = Math.max(1, historicalBestReps + repOffset);
+      prescribedRepTarget = Math.max(1, historicalBestReps - weekRir);
     }
   } else if (historicalBestEstimatedOneRepMax != null && exerciseTemplate.targetReps > 0) {
     // Prescribed weight: calibrate to targetReps at failure (no RIR in denominator —
@@ -802,8 +800,9 @@ export async function getExerciseInstanceView(
     }
 
     if (prescribedWeight > 0) {
+      // Rep progression: e-3, e-2, e-1, e, e+1 across weeks with RIR 4→0.
       const expectedReps = (historicalBestEstimatedOneRepMax / prescribedWeight - 1) / 0.0333;
-      prescribedRepTarget = Math.max(1, Math.floor(expectedReps) + repOffset);
+      prescribedRepTarget = Math.max(1, Math.floor(expectedReps) + (1 - weekRir));
     }
   }
 
