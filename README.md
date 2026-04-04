@@ -515,22 +515,6 @@ Normal UI or logic changes do not require reinstalling.
 
 ---
 
-# Typical Workflow
-
-Start development environment:
-
-```bash
-# Terminal 1
-npm run dev -- --host
-```
-
-```bash
-# Terminal 2
-cloudflared tunnel --url https://localhost:5173 --no-tls-verify
-```
-
-Open the generated Cloudflare URL on your phone and launch the installed app.
-
 # To do:
  - add weight increment support for exercises
  - Local vs Historical Max Logic

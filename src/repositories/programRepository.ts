@@ -543,6 +543,90 @@ export async function getExerciseSetsForExerciseTemplate(
     });
 }
 
+export interface ExerciseSessionDataPoint {
+  exerciseInstanceId: string;
+  date: string;
+  topWeight: number;
+  topReps: number;
+  topEstimatedOneRepMax: number;
+}
+
+export async function getExerciseSessionHistory(
+  exerciseTemplateId: string,
+  exerciseName: string
+): Promise<ExerciseSessionDataPoint[]> {
+  const exerciseInstances = await getAllByIndex<ExerciseInstance>(
+    STORE_NAMES.exerciseInstances,
+    "byExerciseTemplateId",
+    exerciseTemplateId
+  );
+
+  const dataPoints: ExerciseSessionDataPoint[] = [];
+
+  for (const exerciseInstance of exerciseInstances) {
+    const sessionInstance = await getById<SessionInstance>(
+      STORE_NAMES.sessionInstances,
+      exerciseInstance.sessionInstanceId
+    );
+    if (!sessionInstance) continue;
+
+    const sets = await getExerciseSetsForExerciseInstance(exerciseInstance.id);
+
+    let topWeight: number | null = null;
+    let topReps: number | null = null;
+    let topE1RM: number | null = null;
+
+    for (const set of sets) {
+      if (set.performedWeight == null || set.performedReps == null) continue;
+      const e1RM = calculateEstimatedOneRepMax(set.performedWeight, set.performedReps);
+      if (e1RM == null) continue;
+      if (topE1RM == null || e1RM > topE1RM) {
+        topWeight = set.performedWeight;
+        topReps = set.performedReps;
+        topE1RM = e1RM;
+      }
+    }
+
+    if (topWeight != null && topReps != null && topE1RM != null) {
+      dataPoints.push({
+        exerciseInstanceId: exerciseInstance.id,
+        date: sessionInstance.date,
+        topWeight,
+        topReps,
+        topEstimatedOneRepMax: topE1RM,
+      });
+    }
+  }
+
+  const importedSets = await loadAllImportedSets();
+  const normalizedName = exerciseName.trim().toLowerCase();
+  const matchingImported = importedSets.filter(
+    (s) => s.exerciseName.trim().toLowerCase() === normalizedName
+  );
+
+  const importedByDate = new Map<string, { weight: number; reps: number; e1RM: number }>();
+  for (const s of matchingImported) {
+    const e1RM = calculateEstimatedOneRepMax(s.weight, s.reps);
+    if (e1RM == null) continue;
+    const existing = importedByDate.get(s.date);
+    if (existing == null || e1RM > existing.e1RM) {
+      importedByDate.set(s.date, { weight: s.weight, reps: s.reps, e1RM });
+    }
+  }
+
+  for (const [date, topSet] of importedByDate) {
+    dataPoints.push({
+      exerciseInstanceId: "__imported__",
+      date,
+      topWeight: topSet.weight,
+      topReps: topSet.reps,
+      topEstimatedOneRepMax: topSet.e1RM,
+    });
+  }
+
+  return dataPoints.sort((a, b) => a.date.localeCompare(b.date));
+}
+
 function buildAnalyzedSetList(
   currentSets: ExerciseSet[],
   allHistoricalSets: ExerciseSet[]

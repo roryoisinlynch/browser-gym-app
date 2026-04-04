@@ -12,6 +12,7 @@ import { calculateEstimatedOneRepMax } from "../services/setAnalysis";
 import type { ExerciseSetTableRow } from "../components/ExerciseSetTable.tsx";
 import ExerciseSetTable from "../components/ExerciseSetTable.tsx";
 import ExerciseSummaryCard from "../components/ExerciseSummaryCard.tsx";
+import ExerciseInsights from "../components/ExerciseInsights.tsx";
 import TopBar from "../components/TopBar";
 import "./ExercisePage.css";
 import BottomNav from "../components/BottomNav";
@@ -354,6 +355,12 @@ async function handleFinishExercise() {
           onRowBlur={handleRowBlur}
           onRemoveRow={handleRemoveRow}
           onAddRow={handleAddRow}
+        />
+
+        <ExerciseInsights
+          exerciseTemplateId={exerciseView.exerciseTemplate.id}
+          exerciseName={exerciseView.exerciseTemplate.exerciseName}
+          currentExerciseInstanceId={exerciseView.exerciseInstance.id}
         />
 
         <div style={{ margin: "0 14px 16px" }}>

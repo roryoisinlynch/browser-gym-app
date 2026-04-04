@@ -1,0 +1,78 @@
+.exercise-insights {
+  margin: 0 14px 16px;
+  padding: 14px;
+  border: 1px solid var(--panel-border);
+  border-radius: 18px;
+  background: var(--panel-bg);
+  box-shadow: var(--card-shadow);
+}
+
+.exercise-insights__eyebrow {
+  margin: 0 0 12px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.exercise-insights__chart {
+  margin-bottom: 14px;
+}
+
+.exercise-insights__chart-label {
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-soft);
+}
+
+.exercise-insights__empty {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-soft);
+}
+
+.exercise-insights__metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.exercise-insights__metric {
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(15, 19, 24, 0.36);
+  border: 1px solid var(--panel-border);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.exercise-insights__metric-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-soft);
+}
+
+.exercise-insights__metric-date {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.exercise-insights__metric-value {
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: var(--text-strong);
+}
+
+.exercise-insights__metric-e1rm {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--accent);
+}
