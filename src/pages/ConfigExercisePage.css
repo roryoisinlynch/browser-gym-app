@@ -237,6 +237,13 @@
   color: var(--text-muted);
 }
 
+.config-exercise__duplicate-warning {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  color: #fbbf24;
+  line-height: 1.5;
+}
+
 .config-exercise__no-history-note {
   margin: 0 0 10px;
   font-size: 0.82rem;

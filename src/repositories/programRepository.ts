@@ -1492,6 +1492,10 @@ export async function stopSessionInstance(
 
 // ─── Config: template reads ───────────────────────────────────────────────────
 
+export async function getAllExerciseTemplates(): Promise<ExerciseTemplate[]> {
+  return getAll<ExerciseTemplate>(STORE_NAMES.exerciseTemplates);
+}
+
 export async function getAllMuscleGroups(): Promise<MuscleGroup[]> {
   const all = await getAll<MuscleGroup>(STORE_NAMES.muscleGroups);
   return all.sort((a, b) => a.order - b.order);

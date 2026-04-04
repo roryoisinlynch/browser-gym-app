@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type { ExerciseTemplate, MovementType, WeightMode } from "../domain/models";
 import {
   deleteExerciseTemplateById,
+  getAllExerciseTemplates,
   getExerciseSessionHistory,
   getExerciseTemplateById,
   getMovementTypeById,
@@ -51,11 +52,17 @@ export default function ConfigExercisePage() {
   const [newMovementTypeName, setNewMovementTypeName] = useState("");
   const [resolvedMuscleGroupId, setResolvedMuscleGroupId] = useState(muscleGroupId);
 
+  const [allExerciseNames, setAllExerciseNames] = useState<string[]>([]);
+
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
+      const allTemplates = await getAllExerciseTemplates();
+      const uniqueNames = [...new Set(allTemplates.map((t) => t.exerciseName))].sort();
+      setAllExerciseNames(uniqueNames);
+
       const weeks = await getWeekTemplates();
       const scheme = weeks
         .map((w) => w.targetRir)
@@ -242,6 +249,13 @@ export default function ConfigExercisePage() {
 
   const selectedOption = weightOptions.find((o) => o.weight === selectedWeight);
 
+  const isDuplicateName =
+    isNew &&
+    exerciseName.trim() !== "" &&
+    allExerciseNames.some(
+      (n) => n.toLowerCase() === exerciseName.trim().toLowerCase()
+    );
+
   return (
     <main className="config-exercise-page">
       <TopBar
@@ -262,10 +276,22 @@ export default function ConfigExercisePage() {
           <input
             className="config-exercise__input"
             type="text"
+            list="exercise-name-suggestions"
             value={exerciseName}
             onChange={(e) => setExerciseName(e.target.value)}
             placeholder="e.g. Bench Press"
           />
+          <datalist id="exercise-name-suggestions">
+            {allExerciseNames.map((name) => (
+              <option key={name} value={name} />
+            ))}
+          </datalist>
+          {isDuplicateName && (
+            <p className="config-exercise__duplicate-warning">
+              An exercise with this name already exists. History is matched by
+              name for imported sets — consider making the name unique.
+            </p>
+          )}
         </div>
 
         {/* Movement type */}
