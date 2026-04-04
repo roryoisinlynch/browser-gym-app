@@ -128,7 +128,7 @@ function buildSegments(chartPoints: ChartPoint[]): number[][] {
   let current: number[] = [0];
 
   for (let i = 1; i < n; i++) {
-    if (gaps[i - 1] > medianGap) {
+    if (gaps[i - 1] > medianGap * 2) {
       segments.push(current);
       current = [i];
     } else {
