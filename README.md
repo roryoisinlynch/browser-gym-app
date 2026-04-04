@@ -404,7 +404,7 @@ Intensity → Did the performed sets reach the intended effort level?
  - Local vs Historical Max Logic
  - Summary pages
  - Config pages
- - CRUD UI 
  - Support for bodyweight exercises (how will this work with the hist import)
  - add support for first-time exercises with no e1RM (AMRAP for first two attempts?) 
  - check that new PRs affect the e1RM for the next session, not just the next week or next season
+ 
