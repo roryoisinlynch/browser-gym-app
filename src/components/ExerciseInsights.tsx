@@ -109,7 +109,7 @@ function binDataPoints(
       const best = points.reduce((b, d) =>
         d.topEstimatedOneRepMax > b.topEstimatedOneRepMax ? d : b
       );
-      const date = canonicalDate ?? points.map((p) => p.date).sort()[0];
+      const date = canonicalDate ?? points.map((p) => p.date).sort().at(-1)!;
       return {
         key: date,
         date,
@@ -150,7 +150,7 @@ function buildSegments(chartPoints: ChartPoint[]): number[][] {
   let current: number[] = [0];
 
   for (let i = 1; i < n; i++) {
-    if (gaps[i - 1] > medianGap * 2) {
+    if (gaps[i - 1] > medianGap * 3) {
       segments.push(current);
       current = [i];
     } else {
