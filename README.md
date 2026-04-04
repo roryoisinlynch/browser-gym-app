@@ -443,13 +443,9 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
 ---
 
 # To do:
- - add weight increment support for exercises
  - tighten up the flow between starting sessions and exercises (can edit sets before session starts presently)
- - add optimiser function to select best weight / rep range for a season (which re-runs when PR is hit)
+ - add prompt to select working weight when new PR is hit
  - Local vs Historical Max Logic
  - Summary pages
- - Config pages
- - Implement bodyweight / rep-only exercise support (see section above for design)
- - add support for first-time exercises with no e1RM (AMRAP for first two attempts?) 
  - check that new PRs affect the e1RM for the next session, not just the next week or next season
  
