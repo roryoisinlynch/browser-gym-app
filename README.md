@@ -448,4 +448,15 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
  - Local vs Historical Max Logic
  - Summary pages
  - check that new PRs affect the e1RM for the next session, not just the next week or next season
- 
+ - test program hopping, delete a full program and see if exercise history persists (test both as a new user and a user with csv imports)
+ - add back button on edit exercise config screen
+ - on db reset, figure out where the "**Base Hypertrophy**Default training block" label comes from
+ - update readme to explain how working weight is set in config and its relation to RIR schemes, the philosophy behind consistent weights week to week
+ - have 'Target' read as AMRAP instead of emdash for AMRAP sets
+ - you still have to click everything twice on the exercise sets interface
+ - add a set volume target on the session config screen and test that it doesnt count warmup sets
+ - how are warmup sets classified for bodyweight exercises?
+ - add an RIR scheme setting to the 'programme' page (and rename it to program)
+ - add the ability to add rest days in the 'programme' config page
+ - fix the intensity target bar so that it's clear when the target is met
+ - consider starting the target bar from the warmup threshold instead of at 0
