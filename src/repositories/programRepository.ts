@@ -564,14 +564,9 @@ export async function getExerciseSessionHistory(
   // - Hard-deleted templates don't lose history (instances carry the name themselves)
   const normalizedName = exerciseName.trim().toLowerCase();
   const allInstances = await getAll<ExerciseInstance>(STORE_NAMES.exerciseInstances);
-  const exerciseInstances = allInstances.filter((inst) => {
-    // Prefer the denormalized name on the instance (works after template deletion).
-    // Fall back to matching by templateId for legacy instances without a name.
-    if (inst.exerciseName != null) {
-      return inst.exerciseName.trim().toLowerCase() === normalizedName;
-    }
-    return inst.exerciseTemplateId === exerciseTemplateId;
-  });
+  const exerciseInstances = allInstances.filter(
+    (inst) => inst.exerciseName?.trim().toLowerCase() === normalizedName
+  );
 
   const dataPoints: ExerciseSessionDataPoint[] = [];
 
