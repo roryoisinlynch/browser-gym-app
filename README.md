@@ -444,6 +444,7 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
 
 # To do:
  - add weight increment support for exercises
+ - tighten up the flow between starting sessions and exercises (can edit sets before session starts presently)
  - add optimiser function to select best weight / rep range for a season (which re-runs when PR is hit)
  - Local vs Historical Max Logic
  - Summary pages
