@@ -11,7 +11,8 @@ interface ExerciseSummaryCardProps {
   isBodyweight?: boolean;
   historicalBestReps?: number | null;
   topSetReps?: number | null;
-  noBaseline?: boolean;
+  isAmrap?: boolean;
+  needsWeightConfig?: boolean;
 }
 
 function formatMetricValue(
@@ -53,7 +54,8 @@ export default function ExerciseSummaryCard({
   isBodyweight = false,
   historicalBestReps = null,
   topSetReps = null,
-  noBaseline = false,
+  isAmrap = false,
+  needsWeightConfig = false,
 }: ExerciseSummaryCardProps) {
   const scaleMax = isBodyweight
     ? Math.max(historicalBestReps ?? 0, targetReps ?? 0, topSetReps ?? 0, 1)
@@ -75,7 +77,7 @@ export default function ExerciseSummaryCard({
       : ((targetEstimatedOneRepMax ?? 0) / scaleMax) * 100
   );
 
-  if (noBaseline) {
+  if (isAmrap || needsWeightConfig) {
     return (
       <section className="exercise-summary-card">
         <div className="exercise-summary-card__header-row">
@@ -88,14 +90,28 @@ export default function ExerciseSummaryCard({
           </div>
         </div>
         <div className="exercise-summary-card__amrap-banner">
-          <p className="exercise-summary-card__amrap-heading">
-            No baseline yet
-          </p>
-          <p className="exercise-summary-card__amrap-body">
-            Choose a challenging weight and lift for as many reps as possible
-            (AMRAP). Your e1RM will be calculated from this session and used to
-            prescribe future sessions.
-          </p>
+          {isAmrap ? (
+            <>
+              <p className="exercise-summary-card__amrap-heading">
+                No baseline yet
+              </p>
+              <p className="exercise-summary-card__amrap-body">
+                Choose a challenging weight and lift for as many reps as
+                possible (AMRAP). Your e1RM will be calculated from this
+                session and used to prescribe future sessions.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="exercise-summary-card__amrap-heading">
+                Working weight not set
+              </p>
+              <p className="exercise-summary-card__amrap-body">
+                You have session history for this exercise. Go to Settings →
+                Configure sessions to select a working weight.
+              </p>
+            </>
+          )}
         </div>
       </section>
     );

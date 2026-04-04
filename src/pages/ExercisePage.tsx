@@ -114,11 +114,18 @@ export default function ExercisePage() {
 
   const isBodyweight = exerciseView?.exerciseTemplate.weightMode === "bodyweight";
 
-  const isNoBaseline =
+  // True AMRAP: no session history at all — user needs to establish an e1RM.
+  const isAmrap =
     exerciseView != null &&
-    exerciseView.exerciseInstance.prescribedWeight == null &&
-    exerciseView.exerciseInstance.prescribedRepTarget == null &&
-    !isBodyweight;
+    !isBodyweight &&
+    exerciseView.historicalBestEstimatedOneRepMax == null;
+
+  // Has history but no working weight configured in settings yet.
+  const needsWeightConfig =
+    exerciseView != null &&
+    !isBodyweight &&
+    exerciseView.historicalBestEstimatedOneRepMax != null &&
+    exerciseView.exerciseInstance.prescribedWeight == null;
 
   const topSetEstimatedOneRepMax = useMemo(() => {
     if (isBodyweight) return null;
@@ -359,7 +366,8 @@ async function handleFinishExercise() {
           isBodyweight={isBodyweight}
           historicalBestReps={exerciseView.historicalBestReps}
           topSetReps={topSetReps}
-          noBaseline={isNoBaseline}
+          isAmrap={isAmrap}
+          needsWeightConfig={needsWeightConfig}
         />
 
         <ExerciseSetTable
