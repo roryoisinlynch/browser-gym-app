@@ -112,21 +112,27 @@ export default function ExercisePage() {
     loadExercisePage();
   }, [exerciseInstanceId]);
 
+  const isBodyweight = exerciseView?.exerciseTemplate.weightMode === "bodyweight";
+
   const topSetEstimatedOneRepMax = useMemo(() => {
+    if (isBodyweight) return null;
     return rows.reduce<number | null>((best, row) => {
       const value = row.estimatedOneRepMax;
-
-      if (value == null) {
-        return best;
-      }
-
-      if (best == null || value > best) {
-        return value;
-      }
-
+      if (value == null) return best;
+      if (best == null || value > best) return value;
       return best;
     }, null);
-  }, [rows]);
+  }, [rows, isBodyweight]);
+
+  const topSetReps = useMemo(() => {
+    if (!isBodyweight) return null;
+    return rows.reduce<number | null>((best, row) => {
+      const value = parseNullableNumber(row.reps);
+      if (value == null) return best;
+      if (best == null || value > best) return value;
+      return best;
+    }, null);
+  }, [rows, isBodyweight]);
 
   function updateRowValue(
     rowId: string,
@@ -344,6 +350,9 @@ async function handleFinishExercise() {
           targetEstimatedOneRepMax={exerciseView.targetEstimatedOneRepMax}
           topSetEstimatedOneRepMax={topSetEstimatedOneRepMax}
           historicalBestEstimatedOneRepMax={exerciseView.historicalBestEstimatedOneRepMax}
+          isBodyweight={isBodyweight}
+          historicalBestReps={exerciseView.historicalBestReps}
+          topSetReps={topSetReps}
         />
 
         <ExerciseSetTable
@@ -355,12 +364,14 @@ async function handleFinishExercise() {
           onRowBlur={handleRowBlur}
           onRemoveRow={handleRemoveRow}
           onAddRow={handleAddRow}
+          isBodyweight={isBodyweight}
         />
 
         <ExerciseInsights
           exerciseTemplateId={exerciseView.exerciseTemplate.id}
           exerciseName={exerciseView.exerciseTemplate.exerciseName}
           currentExerciseInstanceId={exerciseView.exerciseInstance.id}
+          isBodyweight={isBodyweight}
         />
 
         <div style={{ margin: "0 14px 16px" }}>

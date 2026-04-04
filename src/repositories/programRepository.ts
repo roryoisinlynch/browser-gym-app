@@ -100,6 +100,7 @@ export interface ExerciseInstanceView {
   exerciseTemplate: ExerciseTemplate;
   movementType: MovementType;
   historicalBestEstimatedOneRepMax: number | null;
+  historicalBestReps: number | null;
   targetEstimatedOneRepMax: number | null;
   sets: AnalyzedExerciseSet[];
 }
@@ -548,9 +549,10 @@ export interface ExerciseSessionDataPoint {
   weekInstanceId: string | null;
   seasonInstanceId: string | null;
   date: string;
-  topWeight: number;
-  topReps: number;
-  topEstimatedOneRepMax: number;
+  topWeight: number | null;
+  topReps: number | null;
+  topEstimatedOneRepMax: number | null;
+  topRepCount: number | null; // raw max reps in session, used for bodyweight exercises
 }
 
 export async function getExerciseSessionHistory(
@@ -577,27 +579,34 @@ export async function getExerciseSessionHistory(
     let topWeight: number | null = null;
     let topReps: number | null = null;
     let topE1RM: number | null = null;
+    let topRepCount: number | null = null;
 
     for (const set of sets) {
-      if (set.performedWeight == null || set.performedReps == null) continue;
-      const e1RM = calculateEstimatedOneRepMax(set.performedWeight, set.performedReps);
-      if (e1RM == null) continue;
-      if (topE1RM == null || e1RM > topE1RM) {
-        topWeight = set.performedWeight;
-        topReps = set.performedReps;
-        topE1RM = e1RM;
+      if (set.performedReps != null && set.performedReps > 0) {
+        if (topRepCount == null || set.performedReps > topRepCount) {
+          topRepCount = set.performedReps;
+        }
+      }
+      if (set.performedWeight != null && set.performedWeight > 0 && set.performedReps != null) {
+        const e1RM = calculateEstimatedOneRepMax(set.performedWeight, set.performedReps);
+        if (e1RM != null && (topE1RM == null || e1RM > topE1RM)) {
+          topWeight = set.performedWeight;
+          topReps = set.performedReps;
+          topE1RM = e1RM;
+        }
       }
     }
 
-    if (topWeight != null && topReps != null && topE1RM != null) {
+    if (topRepCount != null || topE1RM != null) {
       dataPoints.push({
         exerciseInstanceId: exerciseInstance.id,
         weekInstanceId: sessionInstance.weekInstanceId,
         seasonInstanceId: sessionInstance.seasonInstanceId,
         date: sessionInstance.date,
         topWeight,
-        topReps,
+        topReps: topReps ?? topRepCount,
         topEstimatedOneRepMax: topE1RM,
+        topRepCount,
       });
     }
   }
@@ -608,13 +617,25 @@ export async function getExerciseSessionHistory(
     (s) => s.exerciseName.trim().toLowerCase() === normalizedName
   );
 
-  const importedByDate = new Map<string, { weight: number; reps: number; e1RM: number }>();
+  const importedByDate = new Map<string, {
+    weight: number | null; reps: number; e1RM: number | null; topRepCount: number;
+  }>();
   for (const s of matchingImported) {
-    const e1RM = calculateEstimatedOneRepMax(s.weight, s.reps);
-    if (e1RM == null) continue;
+    if (s.reps <= 0) continue;
+    const e1RM = s.weight > 0 ? calculateEstimatedOneRepMax(s.weight, s.reps) : null;
     const existing = importedByDate.get(s.date);
-    if (existing == null || e1RM > existing.e1RM) {
-      importedByDate.set(s.date, { weight: s.weight, reps: s.reps, e1RM });
+    const isBetter = existing == null ||
+      (e1RM != null && (existing.e1RM == null || e1RM > existing.e1RM)) ||
+      (e1RM == null && existing.e1RM == null && s.reps > existing.reps);
+    if (isBetter) {
+      importedByDate.set(s.date, {
+        weight: s.weight > 0 ? s.weight : null,
+        reps: s.reps,
+        e1RM,
+        topRepCount: existing == null ? s.reps : Math.max(existing.topRepCount, s.reps),
+      });
+    } else if (existing != null) {
+      existing.topRepCount = Math.max(existing.topRepCount, s.reps);
     }
   }
 
@@ -627,6 +648,7 @@ export async function getExerciseSessionHistory(
       topWeight: topSet.weight,
       topReps: topSet.reps,
       topEstimatedOneRepMax: topSet.e1RM,
+      topRepCount: topSet.topRepCount,
     });
   }
 
@@ -706,9 +728,12 @@ export async function getExerciseInstanceView(
     return undefined;
   }
 
+  const isBodyweight = exerciseTemplate.weightMode === "bodyweight";
+
   const allHistoricalSets = await mergeWithImportedSets(
     exerciseTemplate.exerciseName,
-    await getExerciseSetsForExerciseTemplate(exerciseTemplate.id)
+    await getExerciseSetsForExerciseTemplate(exerciseTemplate.id),
+    isBodyweight
   );
 
   const currentSets = allHistoricalSets.filter(
@@ -738,6 +763,11 @@ export async function getExerciseInstanceView(
     },
     null
   );
+
+  const historicalBestReps = priorHistoricalSets.reduce<number | null>((best, set) => {
+    if (set.performedReps == null || set.performedReps <= 0) return best;
+    return best == null || set.performedReps > best ? set.performedReps : best;
+  }, null);
 
   let resolvedExerciseInstance = exerciseInstance;
 
@@ -776,6 +806,7 @@ export async function getExerciseInstanceView(
     exerciseTemplate,
     movementType,
     historicalBestEstimatedOneRepMax,
+    historicalBestReps,
     targetEstimatedOneRepMax,
     sets: buildAnalyzedSetList(currentSets, allHistoricalSets),
   };

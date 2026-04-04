@@ -8,6 +8,9 @@ interface ExerciseSummaryCardProps {
   targetEstimatedOneRepMax: number | null;
   topSetEstimatedOneRepMax: number | null;
   historicalBestEstimatedOneRepMax: number | null;
+  isBodyweight?: boolean;
+  historicalBestReps?: number | null;
+  topSetReps?: number | null;
 }
 
 function formatMetricValue(
@@ -46,19 +49,28 @@ export default function ExerciseSummaryCard({
   targetEstimatedOneRepMax,
   topSetEstimatedOneRepMax,
   historicalBestEstimatedOneRepMax,
+  isBodyweight = false,
+  historicalBestReps = null,
+  topSetReps = null,
 }: ExerciseSummaryCardProps) {
-  const scaleMax = getScaleMax(
-    historicalBestEstimatedOneRepMax,
-    targetEstimatedOneRepMax,
-    topSetEstimatedOneRepMax
-  );
+  const scaleMax = isBodyweight
+    ? Math.max(historicalBestReps ?? 0, targetReps ?? 0, topSetReps ?? 0, 1)
+    : getScaleMax(
+        historicalBestEstimatedOneRepMax,
+        targetEstimatedOneRepMax,
+        topSetEstimatedOneRepMax
+      );
 
   const fillPercentage = clampPercentage(
-    ((topSetEstimatedOneRepMax ?? 0) / scaleMax) * 100
+    isBodyweight
+      ? ((topSetReps ?? 0) / scaleMax) * 100
+      : ((topSetEstimatedOneRepMax ?? 0) / scaleMax) * 100
   );
 
   const targetPercentage = clampPercentage(
-    ((targetEstimatedOneRepMax ?? 0) / scaleMax) * 100
+    isBodyweight
+      ? ((targetReps ?? 0) / scaleMax) * 100
+      : ((targetEstimatedOneRepMax ?? 0) / scaleMax) * 100
   );
 
   return (
@@ -78,18 +90,22 @@ export default function ExerciseSummaryCard({
         <div className="exercise-summary-card__metric">
           <span className="exercise-summary-card__metric-label">Target</span>
           <strong className="exercise-summary-card__metric-value">
-            {targetWeight == null || targetReps == null
+            {isBodyweight
+              ? targetReps == null ? "—" : `${targetReps} reps`
+              : targetWeight == null || targetReps == null
               ? "—"
-              : `${formatMetricValue(targetWeight, "kg")} × ${formatMetricValue(
-                  targetReps
-                )}`}
+              : `${formatMetricValue(targetWeight, "kg")} × ${formatMetricValue(targetReps)}`}
           </strong>
         </div>
 
         <div className="exercise-summary-card__metric">
-          <span className="exercise-summary-card__metric-label">Target e1RM</span>
+          <span className="exercise-summary-card__metric-label">
+            {isBodyweight ? "Best reps" : "Target e1RM"}
+          </span>
           <strong className="exercise-summary-card__metric-value">
-            {formatMetricValue(targetEstimatedOneRepMax, "kg")}
+            {isBodyweight
+              ? formatMetricValue(historicalBestReps)
+              : formatMetricValue(targetEstimatedOneRepMax, "kg")}
           </strong>
         </div>
       </div>
@@ -98,13 +114,15 @@ export default function ExerciseSummaryCard({
         <div className="exercise-summary-card__bar-label-row">
           <span className="exercise-summary-card__bar-label">Top set progress</span>
           <span className="exercise-summary-card__bar-value">
-            Historical best {formatMetricValue(historicalBestEstimatedOneRepMax, "kg")}
+            {isBodyweight
+              ? `Historical best ${formatMetricValue(historicalBestReps, " reps")}`
+              : `Historical best ${formatMetricValue(historicalBestEstimatedOneRepMax, "kg")}`}
           </span>
         </div>
 
         <div
           className="exercise-summary-card__bar"
-          aria-label="Top set estimated one rep max progress"
+          aria-label={isBodyweight ? "Top set rep count progress" : "Top set estimated one rep max progress"}
         >
           <span
             className="exercise-summary-card__bar-fill"
@@ -118,7 +136,11 @@ export default function ExerciseSummaryCard({
         </div>
 
         <div className="exercise-summary-card__bar-foot">
-          <span>Top set {formatMetricValue(topSetEstimatedOneRepMax, "kg")}</span>
+          <span>
+            {isBodyweight
+              ? `Top set ${formatMetricValue(topSetReps, " reps")}`
+              : `Top set ${formatMetricValue(topSetEstimatedOneRepMax, "kg")}`}
+          </span>
           <span>Target marker</span>
         </div>
       </div>

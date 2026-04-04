@@ -28,7 +28,8 @@ export async function saveImportedSets(sets: ImportedSet[]): Promise<void> {
 }
 
 export async function loadImportedSetsForExercise(
-  exerciseName: string
+  exerciseName: string,
+  isBodyweightByTemplate = false
 ): Promise<ExerciseSet[]> {
   const db = await openDatabase();
   const tx = db.transaction(IMPORTED_SETS_STORE, "readonly");
@@ -39,17 +40,23 @@ export async function loadImportedSetsForExercise(
   });
 
   const normalised = exerciseName.trim().toLowerCase();
+  const matching = all.filter((s) => s.exerciseName.trim().toLowerCase() === normalised);
 
-  return all
-    .filter((s) => s.exerciseName.trim().toLowerCase() === normalised)
-    .map((s) => ({
-      id: s.id,
-      exerciseInstanceId: "__imported__",
-      setIndex: 0,
-      performedWeight: s.weight,
-      performedReps: s.reps,
-      performedRir: null,
-    }));
+  // Heuristic: if the template doesn't declare bodyweight but >80% of imported
+  // rows have zero weight, treat this exercise as rep-only.
+  const zeroWeightCount = matching.filter((s) => s.weight === 0).length;
+  const isBodyweight =
+    isBodyweightByTemplate ||
+    (matching.length > 0 && zeroWeightCount / matching.length > 0.8);
+
+  return matching.map((s) => ({
+    id: s.id,
+    exerciseInstanceId: "__imported__",
+    setIndex: 0,
+    performedWeight: isBodyweight ? null : s.weight,
+    performedReps: s.reps,
+    performedRir: null,
+  }));
 }
 
 export async function clearImportedSets(): Promise<void> {

@@ -7,6 +7,7 @@ interface ExerciseInsightsProps {
   exerciseTemplateId: string;
   exerciseName: string;
   currentExerciseInstanceId: string;
+  isBodyweight?: boolean;
 }
 
 type BinType = "week" | "season" | "quarter" | "year";
@@ -77,7 +78,8 @@ function calendarCanonicalDate(key: string, binType: BinType): string | null {
 function binDataPoints(
   dataPoints: ExerciseSessionDataPoint[],
   binType: BinType,
-  currentExerciseInstanceId: string
+  currentExerciseInstanceId: string,
+  isBodyweight: boolean
 ): ChartPoint[] {
   const groups = new Map<
     string,
@@ -106,14 +108,18 @@ function binDataPoints(
 
   return Array.from(groups.values())
     .map(({ points, containsCurrent, canonicalDate }) => {
-      const best = points.reduce((b, d) =>
-        d.topEstimatedOneRepMax > b.topEstimatedOneRepMax ? d : b
-      );
+      const best = isBodyweight
+        ? points.reduce((b, d) => ((d.topRepCount ?? 0) > (b.topRepCount ?? 0) ? d : b))
+        : points.reduce((b, d) =>
+            (d.topEstimatedOneRepMax ?? 0) > (b.topEstimatedOneRepMax ?? 0) ? d : b
+          );
       const date = canonicalDate ?? points.map((p) => p.date).sort().at(-1)!;
       return {
         key: date,
         date,
-        topEstimatedOneRepMax: best.topEstimatedOneRepMax,
+        topEstimatedOneRepMax: isBodyweight
+          ? (best.topRepCount ?? 0)
+          : (best.topEstimatedOneRepMax ?? 0),
         topWeight: best.topWeight,
         topReps: best.topReps,
         containsCurrentSession: containsCurrent,
@@ -310,6 +316,7 @@ export default function ExerciseInsights({
   exerciseTemplateId,
   exerciseName,
   currentExerciseInstanceId,
+  isBodyweight = false,
 }: ExerciseInsightsProps) {
   const [history, setHistory] = useState<ExerciseSessionDataPoint[] | null>(null);
   const [binType, setBinType] = useState<BinType>("week");
@@ -322,7 +329,7 @@ export default function ExerciseInsights({
     return null;
   }
 
-  const chartPoints = binDataPoints(history, binType, currentExerciseInstanceId);
+  const chartPoints = binDataPoints(history, binType, currentExerciseInstanceId, isBodyweight);
 
   const historicalSessions = history.filter(
     (d) => d.exerciseInstanceId !== currentExerciseInstanceId
@@ -333,10 +340,15 @@ export default function ExerciseInsights({
       ? historicalSessions[historicalSessions.length - 1]
       : null;
 
-  const bestLift = historicalSessions.reduce<ExerciseSessionDataPoint | null>((best, d) => {
-    if (best == null || d.topEstimatedOneRepMax > best.topEstimatedOneRepMax) return d;
-    return best;
-  }, null);
+  const bestLift = isBodyweight
+    ? historicalSessions.reduce<ExerciseSessionDataPoint | null>((best, d) => {
+        if (best == null || (d.topRepCount ?? 0) > (best.topRepCount ?? 0)) return d;
+        return best;
+      }, null)
+    : historicalSessions.reduce<ExerciseSessionDataPoint | null>((best, d) => {
+        if (best == null || (d.topEstimatedOneRepMax ?? 0) > (best.topEstimatedOneRepMax ?? 0)) return d;
+        return best;
+      }, null);
 
   const hasChartData = history.length > 0;
   const hasHistory = historicalSessions.length > 0;
@@ -363,7 +375,9 @@ export default function ExerciseInsights({
 
       {hasChartData ? (
         <div className="exercise-insights__chart">
-          <p className="exercise-insights__chart-label">e1RM over time (kg)</p>
+          <p className="exercise-insights__chart-label">
+            {isBodyweight ? "Max reps over time" : "e1RM over time (kg)"}
+          </p>
           <E1RMChart key={binType} chartPoints={chartPoints} />
         </div>
       ) : (
@@ -379,13 +393,21 @@ export default function ExerciseInsights({
                 <span className="exercise-insights__metric-date">
                   {formatDate(previousLift.date)}
                 </span>
-                <strong className="exercise-insights__metric-value">
-                  {formatMetricValue(previousLift.topWeight, "kg")} ×{" "}
-                  {previousLift.topReps}
-                </strong>
-                <span className="exercise-insights__metric-e1rm">
-                  {formatMetricValue(previousLift.topEstimatedOneRepMax, "kg")} e1RM
-                </span>
+                {isBodyweight ? (
+                  <strong className="exercise-insights__metric-value">
+                    {previousLift.topRepCount ?? "—"} reps
+                  </strong>
+                ) : (
+                  <>
+                    <strong className="exercise-insights__metric-value">
+                      {formatMetricValue(previousLift.topWeight, "kg")} ×{" "}
+                      {previousLift.topReps}
+                    </strong>
+                    <span className="exercise-insights__metric-e1rm">
+                      {formatMetricValue(previousLift.topEstimatedOneRepMax, "kg")} e1RM
+                    </span>
+                  </>
+                )}
               </>
             ) : (
               <strong className="exercise-insights__metric-value">—</strong>
@@ -399,13 +421,21 @@ export default function ExerciseInsights({
                 <span className="exercise-insights__metric-date">
                   {formatDate(bestLift.date)}
                 </span>
-                <strong className="exercise-insights__metric-value">
-                  {formatMetricValue(bestLift.topWeight, "kg")} ×{" "}
-                  {bestLift.topReps}
-                </strong>
-                <span className="exercise-insights__metric-e1rm">
-                  {formatMetricValue(bestLift.topEstimatedOneRepMax, "kg")} e1RM
-                </span>
+                {isBodyweight ? (
+                  <strong className="exercise-insights__metric-value">
+                    {bestLift.topRepCount ?? "—"} reps
+                  </strong>
+                ) : (
+                  <>
+                    <strong className="exercise-insights__metric-value">
+                      {formatMetricValue(bestLift.topWeight, "kg")} ×{" "}
+                      {bestLift.topReps}
+                    </strong>
+                    <span className="exercise-insights__metric-e1rm">
+                      {formatMetricValue(bestLift.topEstimatedOneRepMax, "kg")} e1RM
+                    </span>
+                  </>
+                )}
               </>
             ) : (
               <strong className="exercise-insights__metric-value">—</strong>

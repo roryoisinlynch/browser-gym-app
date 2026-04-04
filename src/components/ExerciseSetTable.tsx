@@ -16,6 +16,7 @@ interface ExerciseSetTableProps {
   onRowBlur: (rowId: string) => void;
   onRemoveRow: (rowId: string) => void;
   onAddRow: () => void;
+  isBodyweight?: boolean;
 }
 
 function formatEstimatedOneRepMax(value: number | null) {
@@ -26,11 +27,14 @@ function formatEstimatedOneRepMax(value: number | null) {
   return `${value.toFixed(1)}kg`;
 }
 
-function getTargetLabel(targetWeight: number | null, targetReps: number | null) {
-  if (targetWeight == null || targetReps == null) {
-    return "—";
-  }
-
+function getTargetLabel(
+  targetWeight: number | null,
+  targetReps: number | null,
+  isBodyweight: boolean
+) {
+  if (targetReps == null) return "—";
+  if (isBodyweight) return `${targetReps} reps`;
+  if (targetWeight == null) return "—";
   return `${targetWeight}kg × ${targetReps}`;
 }
 
@@ -43,8 +47,10 @@ export default function ExerciseSetTable({
   onRowBlur,
   onRemoveRow,
   onAddRow,
+  isBodyweight = false,
 }: ExerciseSetTableProps) {
-  const targetLabel = getTargetLabel(targetWeight, targetReps);
+  const targetLabel = getTargetLabel(targetWeight, targetReps, isBodyweight);
+  const rowClass = `exercise-set-table__row${isBodyweight ? " exercise-set-table__row--bw" : ""}`;
 
   return (
     <section className="exercise-set-table-card">
@@ -53,28 +59,30 @@ export default function ExerciseSetTable({
       </div>
 
       <div className="exercise-set-table">
-        <div className="exercise-set-table__head exercise-set-table__row">
+        <div className={`exercise-set-table__head ${rowClass}`}>
           <span>Target</span>
-          <span>Weight</span>
+          {!isBodyweight && <span>Weight</span>}
           <span>Reps</span>
-          <span>e1RM</span>
+          {!isBodyweight && <span>e1RM</span>}
           <span aria-hidden="true" />
         </div>
 
         {rows.map((row) => (
-          <div key={row.id} className="exercise-set-table__row">
+          <div key={row.id} className={rowClass}>
             <span className="exercise-set-table__target">{targetLabel}</span>
 
-            <input
-              inputMode="decimal"
-              type="number"
-              className="exercise-set-table__input"
-              placeholder={targetWeight == null ? "Weight" : `${targetWeight}`}
-              value={row.weight}
-              onChange={(event) => onWeightChange(row.id, event.target.value)}
-              onBlur={() => onRowBlur(row.id)}
-              aria-label="Weight"
-            />
+            {!isBodyweight && (
+              <input
+                inputMode="decimal"
+                type="number"
+                className="exercise-set-table__input"
+                placeholder={targetWeight == null ? "Weight" : `${targetWeight}`}
+                value={row.weight}
+                onChange={(event) => onWeightChange(row.id, event.target.value)}
+                onBlur={() => onRowBlur(row.id)}
+                aria-label="Weight"
+              />
+            )}
 
             <input
               inputMode="numeric"
@@ -87,9 +95,11 @@ export default function ExerciseSetTable({
               aria-label="Reps"
             />
 
-            <span className="exercise-set-table__e1rm">
-              {formatEstimatedOneRepMax(row.estimatedOneRepMax)}
-            </span>
+            {!isBodyweight && (
+              <span className="exercise-set-table__e1rm">
+                {formatEstimatedOneRepMax(row.estimatedOneRepMax)}
+              </span>
+            )}
 
             <button
               type="button"

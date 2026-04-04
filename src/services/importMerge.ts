@@ -13,8 +13,9 @@ import { loadImportedSetsForExercise } from "./importedSetStore";
  */
 export async function mergeWithImportedSets(
   exerciseName: string,
-  realSets: ExerciseSet[]
+  realSets: ExerciseSet[],
+  isBodyweight = false
 ): Promise<ExerciseSet[]> {
-  const importedSets = await loadImportedSetsForExercise(exerciseName);
+  const importedSets = await loadImportedSetsForExercise(exerciseName, isBodyweight);
   return [...realSets, ...importedSets];
 }

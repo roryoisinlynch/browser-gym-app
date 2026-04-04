@@ -33,6 +33,10 @@
   border-bottom: 1px solid var(--panel-border);
 }
 
+.exercise-set-table__row--bw {
+  grid-template-columns: minmax(84px, 1fr) minmax(70px, 0.9fr) 36px;
+}
+
 .exercise-set-table__head {
   background: rgba(15, 19, 24, 0.3);
 }
