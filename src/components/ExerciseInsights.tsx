@@ -169,6 +169,10 @@ function E1RMChart({
 
   const segments = buildSegments(chartPoints);
 
+  const isolatedIndices = new Set(
+    segments.filter((seg) => seg.length === 1).map((seg) => seg[0])
+  );
+
   const yTickValues = [0, 1, 2].map((i) => {
     const v = yMin + (i / 2) * (yMax - yMin);
     return { label: Math.round(v), y: yScale(v) };
@@ -237,38 +241,33 @@ function E1RMChart({
         );
       })}
 
-      {(() => {
-        const isolatedIndices = new Set(
-          segments.filter((seg) => seg.length === 1).map((seg) => seg[0])
-        );
-        return chartPoints.map((d, i) => {
-          if (showDots) {
-            return (
-              <circle
-                key={d.key}
-                cx={xScale(i)}
-                cy={yScale(d.topEstimatedOneRepMax)}
-                r={d.containsCurrentSession ? 4.5 : 3}
-                fill={d.containsCurrentSession ? "#d8f06a" : "#1a1f26"}
-                stroke={d.containsCurrentSession ? "#d8f06a" : "#c4e23c"}
-                strokeWidth="2"
-              />
-            );
-          }
-          if (isolatedIndices.has(i) || d.containsCurrentSession) {
-            return (
-              <circle
-                key={d.key}
-                cx={xScale(i)}
-                cy={yScale(d.topEstimatedOneRepMax)}
-                r={d.containsCurrentSession ? 3 : 1.5}
-                fill={d.containsCurrentSession ? "#d8f06a" : "#c4e23c"}
-              />
-            );
-          }
-          return null;
-        });
-      })()}
+      {chartPoints.map((d, i) => {
+        if (showDots) {
+          return (
+            <circle
+              key={d.key}
+              cx={xScale(i)}
+              cy={yScale(d.topEstimatedOneRepMax)}
+              r={d.containsCurrentSession ? 4.5 : 3}
+              fill={d.containsCurrentSession ? "#d8f06a" : "#1a1f26"}
+              stroke={d.containsCurrentSession ? "#d8f06a" : "#c4e23c"}
+              strokeWidth="2"
+            />
+          );
+        }
+        if (isolatedIndices.has(i) || d.containsCurrentSession) {
+          return (
+            <circle
+              key={d.key}
+              cx={xScale(i)}
+              cy={yScale(d.topEstimatedOneRepMax)}
+              r={d.containsCurrentSession ? 3 : 1.5}
+              fill={d.containsCurrentSession ? "#d8f06a" : "#c4e23c"}
+            />
+          );
+        }
+        return null;
+      })}
 
       {xLabelIndices.map((idx) => {
         const d = chartPoints[idx];
@@ -342,7 +341,7 @@ export default function ExerciseInsights({
       {hasChartData ? (
         <div className="exercise-insights__chart">
           <p className="exercise-insights__chart-label">e1RM over time (kg)</p>
-          <E1RMChart chartPoints={chartPoints} />
+          <E1RMChart key={binType} chartPoints={chartPoints} />
         </div>
       ) : (
         <p className="exercise-insights__empty">No data recorded yet.</p>
