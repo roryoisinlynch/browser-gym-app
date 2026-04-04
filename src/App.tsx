@@ -5,6 +5,7 @@ import WeekPage from "./pages/WeekPage";
 import SessionPage from "./pages/SessionPage";
 import SettingsPage from "./pages/SettingsPage";
 import ImportPage from "./pages/ImportPage";
+import SetsPage from "./pages/SetsPage";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
         <Route path="/import" element={<ImportPage />} />
+        <Route path="/sets" element={<SetsPage />} />
       </Routes>
     </BrowserRouter>
   );

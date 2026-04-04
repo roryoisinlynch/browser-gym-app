@@ -30,6 +30,7 @@ import {
 } from "../services/setAnalysis";
 
 import { mergeWithImportedSets } from "../services/importMerge";
+import { loadAllImportedSets } from "../services/importedSetStore";
 
 export interface SessionTemplateListItem {
   sessionTemplate: SessionTemplate;
@@ -114,6 +115,62 @@ export interface WeekInstanceItemView {
   sessionInstance: SessionInstance | null;
   sessionTemplate: SessionTemplate | null;
   weekInstance: WeekInstance;
+}
+
+export interface SetRecord {
+  id: string;
+  source: "native" | "imported";
+  exerciseName: string;
+  weight: number | null;
+  reps: number | null;
+  date: string;
+}
+
+export async function getAllSetRecords(): Promise<SetRecord[]> {
+  const [exerciseSets, exerciseInstances, exerciseTemplates, sessionInstances, importedSets] =
+    await Promise.all([
+      getAll<ExerciseSet>(STORE_NAMES.exerciseSets),
+      getAll<ExerciseInstance>(STORE_NAMES.exerciseInstances),
+      getAll<ExerciseTemplate>(STORE_NAMES.exerciseTemplates),
+      getAll<SessionInstance>(STORE_NAMES.sessionInstances),
+      loadAllImportedSets(),
+    ]);
+
+  const exerciseInstanceMap = new Map(exerciseInstances.map((i) => [i.id, i]));
+  const exerciseTemplateMap = new Map(exerciseTemplates.map((t) => [t.id, t]));
+  const sessionInstanceMap = new Map(sessionInstances.map((s) => [s.id, s]));
+
+  const nativeRecords: SetRecord[] = exerciseSets
+    .map((set) => {
+      const instance = exerciseInstanceMap.get(set.exerciseInstanceId);
+      if (!instance) return null;
+      const template = exerciseTemplateMap.get(instance.exerciseTemplateId);
+      if (!template) return null;
+      const session = sessionInstanceMap.get(instance.sessionInstanceId);
+      if (!session) return null;
+      return {
+        id: set.id,
+        source: "native" as const,
+        exerciseName: template.exerciseName,
+        weight: set.performedWeight ?? null,
+        reps: set.performedReps ?? null,
+        date: session.date,
+      };
+    })
+    .filter((r): r is SetRecord => r !== null);
+
+  const importedRecords: SetRecord[] = importedSets.map((s) => ({
+    id: s.id,
+    source: "imported" as const,
+    exerciseName: s.exerciseName,
+    weight: s.weight,
+    reps: s.reps,
+    date: s.date,
+  }));
+
+  return [...nativeRecords, ...importedRecords].sort((a, b) =>
+    b.date.localeCompare(a.date)
+  );
 }
 
 export async function getSeasonTemplates(): Promise<SeasonTemplate[]> {

@@ -16,6 +16,7 @@ export default function SettingsPage() {
         </header>
 
         <button onClick={() => navigate("/import")}>Import past sets</button>
+        <button onClick={() => navigate("/sets")}>View set records</button>
 
         <button
           onClick={async () => {

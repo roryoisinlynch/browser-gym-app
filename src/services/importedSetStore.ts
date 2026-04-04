@@ -58,3 +58,38 @@ export async function clearImportedSets(): Promise<void> {
   tx.objectStore(IMPORTED_SETS_STORE).clear();
   await transactionDone(tx);
 }
+
+export async function loadAllImportedSets(): Promise<ImportedSet[]> {
+  const db = await openDatabase();
+  const tx = db.transaction(IMPORTED_SETS_STORE, "readonly");
+  return new Promise<ImportedSet[]>((resolve, reject) => {
+    const req = tx.objectStore(IMPORTED_SETS_STORE).getAll();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function updateImportedSet(
+  id: string,
+  changes: Pick<ImportedSet, "weight" | "reps">
+): Promise<void> {
+  const db = await openDatabase();
+  const tx = db.transaction(IMPORTED_SETS_STORE, "readwrite");
+  const store = tx.objectStore(IMPORTED_SETS_STORE);
+  const existing = await new Promise<ImportedSet | undefined>((resolve, reject) => {
+    const req = store.get(id);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  if (existing) {
+    store.put({ ...existing, ...changes });
+  }
+  await transactionDone(tx);
+}
+
+export async function deleteImportedSet(id: string): Promise<void> {
+  const db = await openDatabase();
+  const tx = db.transaction(IMPORTED_SETS_STORE, "readwrite");
+  tx.objectStore(IMPORTED_SETS_STORE).delete(id);
+  await transactionDone(tx);
+}
