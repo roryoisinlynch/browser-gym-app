@@ -141,7 +141,7 @@ export async function getAllSetRecords(): Promise<SetRecord[]> {
   const sessionInstanceMap = new Map(sessionInstances.map((s) => [s.id, s]));
 
   const nativeRecords: SetRecord[] = exerciseSets
-    .map((set) => {
+    .map((set): SetRecord | null => {
       const instance = exerciseInstanceMap.get(set.exerciseInstanceId);
       if (!instance) return null;
       const template = exerciseTemplateMap.get(instance.exerciseTemplateId);

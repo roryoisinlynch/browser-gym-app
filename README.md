@@ -532,7 +532,7 @@ cloudflared tunnel --url https://localhost:5173 --no-tls-verify
 Open the generated Cloudflare URL on your phone and launch the installed app.
 
 # To do:
- - e1RM doesn't seem to display on the exercise page even if hist data exists
+ - add weight increment support for exercises
  - Local vs Historical Max Logic
  - Summary pages
  - Config pages
