@@ -592,9 +592,28 @@ export async function getExerciseInstanceView(
     null
   );
 
+  let resolvedExerciseInstance = exerciseInstance;
+
+  if (
+    exerciseInstance.prescribedWeight == null &&
+    exerciseTemplate.weightMode !== "bodyweight" &&
+    exerciseTemplate.targetReps > 0 &&
+    historicalBestEstimatedOneRepMax != null
+  ) {
+    const rawWeight =
+      historicalBestEstimatedOneRepMax / (1 + exerciseTemplate.targetReps / 30);
+    const increment =
+      exerciseTemplate.weightIncrement && exerciseTemplate.weightIncrement > 0
+        ? exerciseTemplate.weightIncrement
+        : 2.5;
+    const prescribedWeight = Math.floor(rawWeight / increment) * increment;
+    resolvedExerciseInstance = { ...exerciseInstance, prescribedWeight };
+    await putItem(STORE_NAMES.exerciseInstances, resolvedExerciseInstance);
+  }
+
   const targetEstimatedOneRepMax = calculateEstimatedOneRepMax(
-    exerciseInstance.prescribedWeight,
-    exerciseInstance.prescribedRepTarget
+    resolvedExerciseInstance.prescribedWeight,
+    resolvedExerciseInstance.prescribedRepTarget
   );
 
   return {
@@ -603,7 +622,7 @@ export async function getExerciseInstanceView(
     weekTemplate,
     sessionInstance,
     sessionTemplate,
-    exerciseInstance,
+    exerciseInstance: resolvedExerciseInstance,
     exerciseTemplate,
     movementType,
     historicalBestEstimatedOneRepMax,
