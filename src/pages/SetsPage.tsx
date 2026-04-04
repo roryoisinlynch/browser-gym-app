@@ -93,49 +93,38 @@ export default function SetsPage() {
     }
   }
 
-  const groups = records.reduce<Record<string, SetRecord[]>>((acc, r) => {
-    (acc[r.exerciseName] ??= []).push(r);
-    return acc;
-  }, {});
-  const sortedNames = Object.keys(groups).sort();
-
-  if (isLoading) {
-    return (
-      <main className="sets-page">
-        <TopBar title="Set Records" backTo="/settings" backLabel="Settings" />
-        <section className="sets-shell"><p className="sets-message">Loading…</p></section>
-        <BottomNav activeTab="settings" />
-      </main>
-    );
+  function buildGroups(source: "native" | "imported") {
+    const groups = records
+      .filter((r) => r.source === source)
+      .reduce<Record<string, SetRecord[]>>((acc, r) => {
+        (acc[r.exerciseName] ??= []).push(r);
+        return acc;
+      }, {});
+    return Object.keys(groups)
+      .sort()
+      .map((name) => ({ name, sets: groups[name]! }));
   }
 
-  if (error) {
+  const nativeGroups = buildGroups("native");
+  const importedGroups = buildGroups("imported");
+
+  function renderSection(
+    title: string,
+    groups: { name: string; sets: SetRecord[] }[],
+    ns: string
+  ) {
+    if (groups.length === 0) return null;
     return (
-      <main className="sets-page">
-        <TopBar title="Set Records" backTo="/settings" backLabel="Settings" />
-        <section className="sets-shell"><p className="sets-message">{error}</p></section>
-        <BottomNav activeTab="settings" />
-      </main>
-    );
-  }
-
-  return (
-    <main className="sets-page">
-      <TopBar title="Set Records" backTo="/settings" backLabel="Settings" />
-
-      <section className="sets-shell">
-        {sortedNames.length === 0 && (
-          <p className="sets-message">No set records yet.</p>
-        )}
-
-        {sortedNames.map((name) => {
-          const sets = groups[name]!;
-          const isOpen = expandedGroups.has(name);
+      <div className="sets-section">
+        <h2 className="sets-section__title">{title}</h2>
+        {groups.map(({ name, sets }) => {
+          const key = `${ns}:${name}`;
+          const isOpen = expandedGroups.has(key);
           return (
-            <div key={name} className="sets-group">
+            <div key={key} className="sets-group">
               <button
                 className="sets-group__header"
-                onClick={() => toggleGroup(name)}
+                onClick={() => toggleGroup(key)}
                 aria-expanded={isOpen}
               >
                 <span className="sets-group__name">{name}</span>
@@ -175,16 +164,10 @@ export default function SetsPage() {
                               />
                             </span>
                             <span className="sets-row__actions">
-                              <button
-                                className="sets-row__btn sets-row__btn--save"
-                                onClick={() => saveEdit(record)}
-                              >
+                              <button className="sets-row__btn sets-row__btn--save" onClick={() => saveEdit(record)}>
                                 Save
                               </button>
-                              <button
-                                className="sets-row__btn sets-row__btn--cancel"
-                                onClick={() => setEditing(null)}
-                              >
+                              <button className="sets-row__btn sets-row__btn--cancel" onClick={() => setEditing(null)}>
                                 Cancel
                               </button>
                             </span>
@@ -193,21 +176,12 @@ export default function SetsPage() {
                           <>
                             <span className="sets-row__value">
                               {record.weight ?? "—"}kg × {record.reps ?? "—"}
-                              {record.source === "imported" && (
-                                <span className="sets-row__tag">csv</span>
-                              )}
                             </span>
                             <span className="sets-row__actions">
-                              <button
-                                className="sets-row__btn sets-row__btn--edit"
-                                onClick={() => startEdit(record)}
-                              >
+                              <button className="sets-row__btn sets-row__btn--edit" onClick={() => startEdit(record)}>
                                 Edit
                               </button>
-                              <button
-                                className="sets-row__btn sets-row__btn--delete"
-                                onClick={() => handleDelete(record)}
-                              >
+                              <button className="sets-row__btn sets-row__btn--delete" onClick={() => handleDelete(record)}>
                                 Delete
                               </button>
                             </span>
@@ -221,6 +195,41 @@ export default function SetsPage() {
             </div>
           );
         })}
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <main className="sets-page">
+        <TopBar title="Set Records" backTo="/settings" backLabel="Settings" />
+        <section className="sets-shell"><p className="sets-message">Loading…</p></section>
+        <BottomNav activeTab="settings" />
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="sets-page">
+        <TopBar title="Set Records" backTo="/settings" backLabel="Settings" />
+        <section className="sets-shell"><p className="sets-message">{error}</p></section>
+        <BottomNav activeTab="settings" />
+      </main>
+    );
+  }
+
+  return (
+    <main className="sets-page">
+      <TopBar title="Set Records" backTo="/settings" backLabel="Settings" />
+
+      <section className="sets-shell">
+        {nativeGroups.length === 0 && importedGroups.length === 0 && (
+          <p className="sets-message">No set records yet.</p>
+        )}
+
+        {renderSection("App Records", nativeGroups, "native")}
+        {renderSection("CSV Imports", importedGroups, "imported")}
       </section>
 
       <BottomNav activeTab="settings" />

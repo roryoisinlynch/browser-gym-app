@@ -17,6 +17,25 @@
   color: var(--text-muted);
 }
 
+.sets-section {
+  margin-bottom: 8px;
+}
+
+.sets-section__title {
+  margin: 0;
+  padding: 16px 14px 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-strong);
+  border-top: 1px solid var(--panel-border);
+}
+
+.sets-section:first-of-type .sets-section__title {
+  border-top: none;
+}
+
 .sets-group {
   border-bottom: 1px solid var(--panel-border);
 }
