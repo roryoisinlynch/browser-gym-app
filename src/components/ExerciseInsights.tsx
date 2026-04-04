@@ -16,8 +16,8 @@ interface ChartPoint {
   key: string;
   date: string;
   topEstimatedOneRepMax: number;
-  topWeight: number;
-  topReps: number;
+  topWeight: number | null;
+  topReps: number | null;
   containsCurrentSession: boolean;
 }
 
