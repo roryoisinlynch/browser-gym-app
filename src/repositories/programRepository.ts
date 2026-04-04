@@ -559,11 +559,28 @@ export async function getExerciseSessionHistory(
   exerciseTemplateId: string,
   exerciseName: string
 ): Promise<ExerciseSessionDataPoint[]> {
-  const exerciseInstances = await getAllByIndex<ExerciseInstance>(
-    STORE_NAMES.exerciseInstances,
-    "byExerciseTemplateId",
-    exerciseTemplateId
+  // Find all templates sharing this exercise name (case-insensitive) so that
+  // e.g. "Bench Press" in Chest Back 1 and Chest Back 2 share a common history.
+  const normalizedName = exerciseName.trim().toLowerCase();
+  const allTemplates = await getAll<ExerciseTemplate>(STORE_NAMES.exerciseTemplates);
+  const siblingTemplateIds = new Set(
+    allTemplates
+      .filter((t) => t.exerciseName.trim().toLowerCase() === normalizedName)
+      .map((t) => t.id)
   );
+  // Always include the calling template even if the name changed since seeding.
+  siblingTemplateIds.add(exerciseTemplateId);
+
+  const allInstances: ExerciseInstance[] = [];
+  for (const tid of siblingTemplateIds) {
+    const instances = await getAllByIndex<ExerciseInstance>(
+      STORE_NAMES.exerciseInstances,
+      "byExerciseTemplateId",
+      tid
+    );
+    allInstances.push(...instances);
+  }
+  const exerciseInstances = allInstances;
 
   const dataPoints: ExerciseSessionDataPoint[] = [];
 

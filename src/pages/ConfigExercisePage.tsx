@@ -249,12 +249,6 @@ export default function ConfigExercisePage() {
 
   const selectedOption = weightOptions.find((o) => o.weight === selectedWeight);
 
-  const isDuplicateName =
-    isNew &&
-    exerciseName.trim() !== "" &&
-    allExerciseNames.some(
-      (n) => n.toLowerCase() === exerciseName.trim().toLowerCase()
-    );
 
   return (
     <main className="config-exercise-page">
@@ -286,12 +280,6 @@ export default function ConfigExercisePage() {
               <option key={name} value={name} />
             ))}
           </datalist>
-          {isDuplicateName && (
-            <p className="config-exercise__duplicate-warning">
-              An exercise with this name already exists. History is matched by
-              name for imported sets — consider making the name unique.
-            </p>
-          )}
         </div>
 
         {/* Movement type */}
