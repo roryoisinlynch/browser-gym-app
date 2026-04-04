@@ -70,9 +70,12 @@ export default function ConfigExercisePage() {
       setRirScheme(scheme);
 
       if (isNew) {
+        const allMts = await getAllMovementTypes();
+        console.log("[ConfigExercisePage] muscleGroupId param:", JSON.stringify(muscleGroupId));
+        console.log("[ConfigExercisePage] all movement types:", allMts);
         if (muscleGroupId) {
-          const allMts = await getAllMovementTypes();
           const mts = allMts.filter((mt) => mt.muscleGroupId === muscleGroupId);
+          console.log("[ConfigExercisePage] filtered mts:", mts);
           setMovementTypes(mts.sort((a, b) => a.order - b.order));
           setResolvedMuscleGroupId(muscleGroupId);
         }
