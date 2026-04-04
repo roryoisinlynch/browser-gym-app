@@ -595,20 +595,23 @@ export async function getExerciseInstanceView(
   let resolvedExerciseInstance = exerciseInstance;
 
   if (
-    exerciseInstance.prescribedWeight == null &&
     exerciseTemplate.weightMode !== "bodyweight" &&
     exerciseTemplate.targetReps > 0 &&
     historicalBestEstimatedOneRepMax != null
   ) {
+    const targetRir = exerciseInstance.prescribedRir ?? 0;
     const rawWeight =
-      historicalBestEstimatedOneRepMax / (1 + exerciseTemplate.targetReps / 30);
+      historicalBestEstimatedOneRepMax /
+      (1 + (exerciseTemplate.targetReps + targetRir) / 30);
     const increment =
       exerciseTemplate.weightIncrement && exerciseTemplate.weightIncrement > 0
         ? exerciseTemplate.weightIncrement
         : 2.5;
     const prescribedWeight = Math.floor(rawWeight / increment) * increment;
-    resolvedExerciseInstance = { ...exerciseInstance, prescribedWeight };
-    await putItem(STORE_NAMES.exerciseInstances, resolvedExerciseInstance);
+    if (prescribedWeight !== exerciseInstance.prescribedWeight) {
+      resolvedExerciseInstance = { ...exerciseInstance, prescribedWeight };
+      await putItem(STORE_NAMES.exerciseInstances, resolvedExerciseInstance);
+    }
   }
 
   const targetEstimatedOneRepMax = calculateEstimatedOneRepMax(
