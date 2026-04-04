@@ -216,6 +216,7 @@ function E1RMChart({
         if (seg.length < 2) return null;
         const first = seg[0];
         const last = seg[seg.length - 1];
+        if (xScale(last) - xScale(first) < 4) return null;
         const areaD =
           `M ${xScale(first)},${yScale(chartPoints[first].topEstimatedOneRepMax)} ` +
           seg.slice(1).map((i) => `L ${xScale(i)},${yScale(chartPoints[i].topEstimatedOneRepMax)}`).join(" ") +
