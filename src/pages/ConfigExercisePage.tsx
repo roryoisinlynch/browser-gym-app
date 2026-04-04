@@ -4,10 +4,10 @@ import type { ExerciseTemplate, MovementType, WeightMode } from "../domain/model
 import {
   deleteExerciseTemplateById,
   getAllExerciseTemplates,
+  getAllMovementTypes,
   getExerciseSessionHistory,
   getExerciseTemplateById,
   getMovementTypeById,
-  getMovementTypesByMuscleGroupId,
   getWeekTemplates,
   saveExerciseTemplate,
   saveMovementType,
@@ -71,7 +71,8 @@ export default function ConfigExercisePage() {
 
       if (isNew) {
         if (muscleGroupId) {
-          const mts = await getMovementTypesByMuscleGroupId(muscleGroupId);
+          const allMts = await getAllMovementTypes();
+          const mts = allMts.filter((mt) => mt.muscleGroupId === muscleGroupId);
           setMovementTypes(mts.sort((a, b) => a.order - b.order));
           setResolvedMuscleGroupId(muscleGroupId);
         }
@@ -94,7 +95,8 @@ export default function ConfigExercisePage() {
       if (mt) {
         const mgId = mt.muscleGroupId;
         setResolvedMuscleGroupId(mgId);
-        const mts = await getMovementTypesByMuscleGroupId(mgId);
+        const allMts = await getAllMovementTypes();
+        const mts = allMts.filter((m) => m.muscleGroupId === mgId);
         setMovementTypes(mts.sort((a, b) => a.order - b.order));
       }
 
