@@ -398,13 +398,56 @@ Volume → Did the user perform enough working sets for each muscle group?
 Intensity → Did the performed sets reach the intended effort level?
 ```
 
+# Bodyweight / Rep-Only Exercises
+
+Some exercises do not lend themselves to weight-based intensity tracking:
+
+- **True bodyweight exercises** (e.g. pull-ups) where no external load is recorded
+- **High-rep fixed-load exercises** (e.g. lateral raises at 25+ reps) where the Epley formula becomes unreliable and e1RM is not a meaningful metric
+
+These are handled under the `weightMode: "bodyweight"` flag on `ExerciseTemplate`. The label "bodyweight" is used broadly to mean *rep-only tracking*, regardless of whether the exercise is literally unloaded.
+
+## How they differ from weighted exercises
+
+| | Weighted | Bodyweight / Rep-only |
+|---|---|---|
+| Set logging | weight + reps | reps only |
+| Intensity metric | e1RM (Epley) | max reps |
+| Historical best | highest e1RM | highest rep count |
+| Working set threshold | 60% of best e1RM | always counted as working |
+| Season prescription | weight + rep target | rep target only |
+| Progress chart y-axis | e1RM over time | max reps over time |
+
+## RIR and rep targets
+
+The RIR progression still applies. The prescribed rep target for a given week is derived directly from the historical max rep count:
+
+```
+prescribed_reps = historical_max_reps - target_RIR
+```
+
+For example, if the user's best set of pull-ups is 12 reps and the week prescribes 4 RIR:
+
+```
+prescribed_reps = 12 - 4 = 8 reps
+```
+
+## CSV import handling
+
+Imported sets for bodyweight exercises frequently appear as `0kg × n reps` since the source spreadsheet had no weight column. The import pipeline handles this in two stages:
+
+1. **Template match**: if the exercise name matches a template marked `weightMode: "bodyweight"`, the weight column is ignored entirely and the set is treated as rep-only regardless of what the CSV contains.
+2. **Heuristic fallback**: if no matching template exists, an exercise where the majority of imported rows have zero weight is automatically classified as rep-only. Stray non-zero weight rows in an otherwise zero-weight exercise are discarded.
+
+---
+
 # To do:
  - add weight increment support for exercises
  - add optimiser function to select best weight / rep range for a season (which re-runs when PR is hit)
  - Local vs Historical Max Logic
  - Summary pages
  - Config pages
- - Support for bodyweight exercises (how will this work with the hist import)
+ - Implement bodyweight / rep-only exercise support (see section above for design)
  - add support for first-time exercises with no e1RM (AMRAP for first two attempts?) 
  - check that new PRs affect the e1RM for the next session, not just the next week or next season
  
