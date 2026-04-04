@@ -108,6 +108,31 @@ const PAD = { top: 14, right: 10, bottom: 28, left: 38 };
 const PLOT_W = CHART_W - PAD.left - PAD.right;
 const PLOT_H = CHART_H - PAD.top - PAD.bottom;
 const DOT_THRESHOLD = 30;
+const GAP_BREAK_THRESHOLD = 0.10; // break line if gap > 10% of total date span
+
+// Returns arrays of point indices grouped into continuous segments.
+function buildSegments(chartPoints: ChartPoint[]): number[][] {
+  const n = chartPoints.length;
+  if (n === 0) return [];
+
+  const dates = chartPoints.map((d) => new Date(d.date).getTime());
+  const totalRange = dates[n - 1] - dates[0];
+
+  const segments: number[][] = [];
+  let current: number[] = [0];
+
+  for (let i = 1; i < n; i++) {
+    const gap = dates[i] - dates[i - 1];
+    if (totalRange > 0 && gap / totalRange > GAP_BREAK_THRESHOLD) {
+      segments.push(current);
+      current = [i];
+    } else {
+      current.push(i);
+    }
+  }
+  segments.push(current);
+  return segments;
+}
 
 function E1RMChart({
   chartPoints,
@@ -130,19 +155,7 @@ function E1RMChart({
   const yScale = (v: number) =>
     PAD.top + PLOT_H - ((v - yMin) / (yMax - yMin)) * PLOT_H;
 
-  const linePoints = chartPoints
-    .map((d, i) => `${xScale(i)},${yScale(d.topEstimatedOneRepMax)}`)
-    .join(" ");
-
-  const areaPath =
-    n > 1
-      ? `M ${xScale(0)},${yScale(chartPoints[0].topEstimatedOneRepMax)} ` +
-        chartPoints
-          .slice(1)
-          .map((d, i) => `L ${xScale(i + 1)},${yScale(d.topEstimatedOneRepMax)}`)
-          .join(" ") +
-        ` L ${xScale(n - 1)},${PAD.top + PLOT_H} L ${xScale(0)},${PAD.top + PLOT_H} Z`
-      : "";
+  const segments = buildSegments(chartPoints);
 
   const yTickValues = [0, 1, 2].map((i) => {
     const v = yMin + (i / 2) * (yMax - yMin);
@@ -183,16 +196,34 @@ function E1RMChart({
         </g>
       ))}
 
-      {areaPath && <path d={areaPath} fill="url(#exercise-insights-fill)" />}
+      {segments.map((seg, si) => {
+        if (seg.length < 2) return null;
+        const first = seg[0];
+        const last = seg[seg.length - 1];
+        const areaD =
+          `M ${xScale(first)},${yScale(chartPoints[first].topEstimatedOneRepMax)} ` +
+          seg.slice(1).map((i) => `L ${xScale(i)},${yScale(chartPoints[i].topEstimatedOneRepMax)}`).join(" ") +
+          ` L ${xScale(last)},${PAD.top + PLOT_H} L ${xScale(first)},${PAD.top + PLOT_H} Z`;
+        return <path key={si} d={areaD} fill="url(#exercise-insights-fill)" />;
+      })}
 
-      <polyline
-        points={linePoints}
-        fill="none"
-        stroke="#c4e23c"
-        strokeWidth="2"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
+      {segments.map((seg, si) => {
+        if (seg.length < 2) return null;
+        const points = seg
+          .map((i) => `${xScale(i)},${yScale(chartPoints[i].topEstimatedOneRepMax)}`)
+          .join(" ");
+        return (
+          <polyline
+            key={si}
+            points={points}
+            fill="none"
+            stroke="#c4e23c"
+            strokeWidth="2"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        );
+      })}
 
       {showDots &&
         chartPoints.map((d, i) => (
