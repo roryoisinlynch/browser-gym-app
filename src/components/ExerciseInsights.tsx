@@ -57,6 +57,23 @@ function getYearKey(iso: string): string {
   return String(new Date(iso).getUTCFullYear());
 }
 
+// For calendar-derived keys, returns a stable canonical date (1st of the
+// period) so the time-proportional x-axis spaces bins evenly regardless of
+// when within the period sessions actually occurred.
+// Returns null for program-instance keys (weekInstanceId / seasonInstanceId),
+// which fall back to the earliest session date in the group.
+function calendarCanonicalDate(key: string, binType: BinType): string | null {
+  if (binType === "year") return `${key}-01-01`;
+  if (binType === "quarter") {
+    const [year, q] = key.split("-Q");
+    const month = (parseInt(q) - 1) * 3 + 1;
+    return `${year}-${String(month).padStart(2, "0")}-01`;
+  }
+  if (binType === "season" && /^\d{4}-\d{2}$/.test(key)) return `${key}-01`;
+  if (binType === "week" && /^\d{4}-\d{2}-\d{2}$/.test(key)) return key;
+  return null;
+}
+
 function binDataPoints(
   dataPoints: ExerciseSessionDataPoint[],
   binType: BinType,
@@ -64,7 +81,7 @@ function binDataPoints(
 ): ChartPoint[] {
   const groups = new Map<
     string,
-    { points: ExerciseSessionDataPoint[]; containsCurrent: boolean }
+    { points: ExerciseSessionDataPoint[]; containsCurrent: boolean; canonicalDate: string | null }
   >();
 
   for (const d of dataPoints) {
@@ -77,23 +94,25 @@ function binDataPoints(
         ? getQuarterKey(d.date)
         : getYearKey(d.date);
 
-    const group = groups.get(key) ?? { points: [], containsCurrent: false };
+    if (!groups.has(key)) {
+      groups.set(key, { points: [], containsCurrent: false, canonicalDate: calendarCanonicalDate(key, binType) });
+    }
+    const group = groups.get(key)!;
     group.points.push(d);
     if (d.exerciseInstanceId === currentExerciseInstanceId) {
       group.containsCurrent = true;
     }
-    groups.set(key, group);
   }
 
   return Array.from(groups.values())
-    .map(({ points, containsCurrent }) => {
+    .map(({ points, containsCurrent, canonicalDate }) => {
       const best = points.reduce((b, d) =>
         d.topEstimatedOneRepMax > b.topEstimatedOneRepMax ? d : b
       );
-      const earliestDate = points.map((p) => p.date).sort()[0];
+      const date = canonicalDate ?? points.map((p) => p.date).sort()[0];
       return {
-        key: earliestDate,
-        date: earliestDate,
+        key: date,
+        date,
         topEstimatedOneRepMax: best.topEstimatedOneRepMax,
         topWeight: best.topWeight,
         topReps: best.topReps,
