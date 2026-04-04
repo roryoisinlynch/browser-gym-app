@@ -130,7 +130,7 @@ export default function ConfigExercisePage() {
       const zeroRirReps = Math.floor((historicalE1RM / weight - 1) * 30);
       if (zeroRirReps < 1) continue;
 
-      const repRange = sortedRir.map((rir) => zeroRirReps + (1 - rir));
+      const repRange = sortedRir.map((rir) => zeroRirReps - rir);
       const minRep = Math.min(...repRange);
       const maxRep = Math.max(...repRange);
 

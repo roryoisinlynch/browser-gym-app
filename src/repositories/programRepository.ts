@@ -792,7 +792,7 @@ export async function getExerciseInstanceView(
     const zeroRirReps = Math.floor(
       (historicalBestEstimatedOneRepMax / prescribedWeight - 1) * 30
     );
-    prescribedRepTarget = Math.max(1, zeroRirReps + (1 - weekRir));
+    prescribedRepTarget = Math.max(1, zeroRirReps - weekRir);
   }
 
   let resolvedExerciseInstance = exerciseInstance;
