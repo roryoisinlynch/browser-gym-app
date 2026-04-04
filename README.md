@@ -460,3 +460,5 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
  - add the ability to add rest days in the 'programme' config page
  - fix the intensity target bar so that it's clear when the target is met
  - consider starting the target bar from the warmup threshold instead of at 0
+ - add a create session button in session config
+ - fully audit seed data
