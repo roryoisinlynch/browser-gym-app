@@ -46,6 +46,43 @@
   margin-bottom: 8px;
 }
 
+.week-page__rir-track {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.week-page__rir-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 24px;
+}
+
+.week-page__rir-pip {
+  display: block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.week-page__rir-step--current .week-page__rir-pip {
+  background: var(--accent);
+}
+
+.week-page__rir-value {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.week-page__rir-step--current .week-page__rir-value {
+  color: var(--accent);
+}
+
 .week-page__content {
   margin: 0;
 }

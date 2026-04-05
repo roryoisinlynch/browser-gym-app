@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import BottomNav from "../components/BottomNav";
 import DayCard, { type DayState } from "../components/DayCard";
-import ProgressTrack from "../components/ProgressTrack";
 import TopBar from "../components/TopBar";
 import type { SeasonTemplate } from "../domain/models";
 import type { WeekInstanceItemView } from "../repositories/programRepository";
 import {
+  getActiveSeasonInstance,
   getSeasonTemplates,
   getWeekInstanceItemsForCurrentWeek,
   getWeekInstancesForSeasonInstance,
@@ -26,6 +26,7 @@ export default function WeekPage() {
   const [items, setItems] = useState<WeekInstanceItemView[]>([]);
   const [seasonTemplates, setSeasonTemplates] = useState<SeasonTemplate[]>([]);
   const [totalWeeks, setTotalWeeks] = useState<number | null>(null);
+  const [rirSequence, setRirSequence] = useState<number[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -33,9 +34,10 @@ export default function WeekPage() {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      const [weekItems, templates] = await Promise.all([
+      const [weekItems, templates, activeSeasonInstance] = await Promise.all([
         getWeekInstanceItemsForCurrentWeek(),
         getSeasonTemplates(),
+        getActiveSeasonInstance(),
       ]);
 
       setItems(weekItems);
@@ -45,6 +47,13 @@ export default function WeekPage() {
         const seasonInstanceId = weekItems[0].weekInstance.seasonInstanceId;
         const allWeekInstances = await getWeekInstancesForSeasonInstance(seasonInstanceId);
         setTotalWeeks(allWeekInstances.length);
+      }
+
+      if (activeSeasonInstance) {
+        const matchingTemplate = templates.find(
+          (t) => t.id === activeSeasonInstance.seasonTemplateId
+        );
+        setRirSequence(matchingTemplate?.rirSequence ?? null);
       }
     } catch (error) {
       console.error(error);
@@ -86,11 +95,10 @@ export default function WeekPage() {
     });
   }, [sessionItems]);
 
-  const completedCount = useMemo(() => {
-    return sessionItems.filter(
-      ({ sessionInstance }) => sessionInstance?.status === "completed"
-    ).length;
-  }, [sessionItems]);
+  const currentRirIndex = useMemo(() => {
+    if (items.length === 0) return -1;
+    return items[0].weekInstance.order - 1;
+  }, [items]);
 
   const weekLabel = useMemo(() => {
     if (items.length === 0 || totalWeeks == null) return "Week";
@@ -174,14 +182,20 @@ export default function WeekPage() {
       <section className="week-shell">
         <header className="week-page__header">
           <h1 className="week-page__title">{weekLabel}</h1>
-          <p className="week-page__subtitle">
-            {completedCount} / {sessionItems.length} sessions completed
-          </p>
 
-          <ProgressTrack
-            states={dayStates}
-            ariaLabel={`Week progress: ${completedCount} of ${sessionItems.length} sessions completed`}
-          />
+          {rirSequence && rirSequence.length > 0 && (
+            <div className="week-page__rir-track" aria-label="RIR progression">
+              {rirSequence.map((rir, i) => (
+                <div
+                  key={i}
+                  className={`week-page__rir-step${i === currentRirIndex ? " week-page__rir-step--current" : ""}`}
+                >
+                  <span className="week-page__rir-pip" />
+                  <span className="week-page__rir-value">{rir}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </header>
 
         <section className="week-page__content">
