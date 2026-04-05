@@ -9,7 +9,7 @@ import { mockSessionTemplates } from "../data/mockSessionTemplates";
 import { mockSessionTemplateMuscleGroups } from "../data/mockSessionTemplateMuscleGroups";
 import { mockExerciseTemplates } from "../data/mockExerciseTemplates";
 
-const SEED_KEY = "seed-v3";
+const SEED_KEY = "seed-v4";
 
 export async function seedDatabaseIfNeeded(): Promise<void> {
   const db = await openDatabase();

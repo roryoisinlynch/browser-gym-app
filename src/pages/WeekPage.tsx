@@ -8,7 +8,7 @@ import type { WeekInstanceItemView } from "../repositories/programRepository";
 import {
   getSeasonTemplates,
   getWeekInstanceItemsForCurrentWeek,
-  getWeekTemplates,
+  getWeekInstancesForSeasonInstance,
   startSeasonFromTemplate,
 } from "../repositories/programRepository";
 import "./WeekPage.css";
@@ -33,15 +33,19 @@ export default function WeekPage() {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      const [weekItems, weeks, templates] = await Promise.all([
+      const [weekItems, templates] = await Promise.all([
         getWeekInstanceItemsForCurrentWeek(),
-        getWeekTemplates(),
         getSeasonTemplates(),
       ]);
 
       setItems(weekItems);
-      setTotalWeeks(weeks.length);
       setSeasonTemplates(templates);
+
+      if (weekItems.length > 0) {
+        const seasonInstanceId = weekItems[0].weekInstance.seasonInstanceId;
+        const allWeekInstances = await getWeekInstancesForSeasonInstance(seasonInstanceId);
+        setTotalWeeks(allWeekInstances.length);
+      }
     } catch (error) {
       console.error(error);
       setErrorMessage("Could not load the current week.");

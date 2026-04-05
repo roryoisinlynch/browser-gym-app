@@ -8,7 +8,7 @@ import {
   getExerciseSessionHistory,
   getExerciseTemplateById,
   getMovementTypeById,
-  getWeekTemplates,
+  getSeasonTemplates,
   saveExerciseTemplate,
   saveMovementType,
 } from "../repositories/programRepository";
@@ -66,10 +66,8 @@ export default function ConfigExercisePage() {
       const uniqueNames = [...new Set(allTemplates.map((t) => t.exerciseName))].sort();
       setAllExerciseNames(uniqueNames);
 
-      const weeks = await getWeekTemplates();
-      const scheme = weeks
-        .map((w) => w.targetRir)
-        .filter((r): r is number => r != null);
+      const seasonTemplates = await getSeasonTemplates();
+      const scheme = seasonTemplates[0]?.rirSequence ?? [];
       setRirScheme(scheme);
 
       if (isNew) {

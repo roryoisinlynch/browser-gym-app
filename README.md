@@ -164,31 +164,35 @@ SessionInstance → "Legs 1 performed on 2026-03-18"
 
 ## Week
 
-A **Week** groups sessions and defines the intensity context for that phase of training.
+A **Week** groups sessions and rest days into a repeating structural unit.
 
 Template:
 
 ```
-WeekTemplate
+WeekTemplate (one canonical template per SeasonTemplate)
 ```
 
 Instance:
 
 ```
-WeekInstance
+WeekInstance (one per week of the season, all referencing the same template)
 ```
 
-Weeks define the **target RIR** for the season progression.
+Each `SeasonTemplate` has exactly **one canonical `WeekTemplate`** that defines the structural layout — the ordered list of sessions and rest days that make up a week. When a season is started, this template is replicated once per entry in `SeasonTemplate.rirSequence` to produce the actual `WeekInstance` records.
 
-Example:
+The RIR target for each week is **not stored on the template**. It is derived at runtime from `SeasonTemplate.rirSequence[weekInstance.order - 1]`.
+
+Example — a 5-week season with `rirSequence: [4, 3, 2, 1, 0]`:
 
 ```
-Week 1 → 4 RIR
-Week 2 → 3 RIR
-Week 3 → 2 RIR
-Week 4 → 1 RIR
-Week 5 → 0 RIR
+WeekInstance order 1 → RIR 4  (rirSequence[0])
+WeekInstance order 2 → RIR 3  (rirSequence[1])
+WeekInstance order 3 → RIR 2  (rirSequence[2])
+WeekInstance order 4 → RIR 1  (rirSequence[3])
+WeekInstance order 5 → RIR 0  (rirSequence[4])
 ```
+
+All five week instances share the same session and rest-day structure. Only the intensity target changes week to week.
 
 ---
 
