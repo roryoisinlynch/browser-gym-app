@@ -80,7 +80,8 @@ export default function ExercisePage() {
   const [rows, setRows] = useState<EditableRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isRowSaving, setIsRowSaving] = useState(false);
+  const [isFinishing, setIsFinishing] = useState(false);
   const draftCounterRef = useRef(1);
 
   useEffect(() => {
@@ -190,7 +191,7 @@ export default function ExercisePage() {
     }
 
     try {
-      setIsSaving(true);
+      setIsRowSaving(true);
       setErrorMessage(null);
 
       let persistedSetId = row.persistedSetId;
@@ -214,21 +215,16 @@ export default function ExercisePage() {
       setRows((currentRows) =>
         currentRows.map((candidate) =>
           candidate.id === rowId
-            ? {
-                ...candidate,
-                id: persistedSetId!,
-                persistedSetId,
-              }
+            ? { ...candidate, persistedSetId }
             : candidate
         )
       );
-
 
     } catch (error) {
       console.error("Failed to save set row:", error);
       setErrorMessage("Could not save the set.");
     } finally {
-      setIsSaving(false);
+      setIsRowSaving(false);
     }
   }
 
@@ -239,7 +235,7 @@ export default function ExercisePage() {
     }
 
     try {
-      setIsSaving(true);
+      setIsRowSaving(true);
       setErrorMessage(null);
 
       if (row.persistedSetId) {
@@ -256,7 +252,7 @@ export default function ExercisePage() {
       console.error("Failed to remove set row:", error);
       setErrorMessage("Could not remove the set.");
     } finally {
-      setIsSaving(false);
+      setIsRowSaving(false);
     }
   }
 
@@ -288,7 +284,7 @@ async function handleFinishExercise() {
   }
 
   try {
-    setIsSaving(true);
+    setIsFinishing(true);
     setErrorMessage(null);
 
     await completeExerciseInstance(exerciseView.exerciseInstance.id);
@@ -297,7 +293,7 @@ async function handleFinishExercise() {
     console.error("Failed to finish exercise:", error);
     setErrorMessage("Could not finish exercise.");
   } finally {
-    setIsSaving(false);
+    setIsFinishing(false);
   }
 }
 
@@ -352,7 +348,7 @@ async function handleFinishExercise() {
             Status: {getExerciseStatusLabel(exerciseStatus)}
           </p>
           {errorMessage && <p className="exercise-page__message">{errorMessage}</p>}
-          {isSaving && <p className="exercise-page__message">Saving changes…</p>}
+          {(isRowSaving || isFinishing) && <p className="exercise-page__message">Saving changes…</p>}
         </header>
 
         <ExerciseSummaryCard
@@ -393,7 +389,7 @@ async function handleFinishExercise() {
           <button
             type="button"
             onClick={handleFinishExercise}
-            disabled={isSaving || isCompleted}
+            disabled={isFinishing || isCompleted}
             style={{
               width: "100%",
               minHeight: "42px",
@@ -403,7 +399,7 @@ async function handleFinishExercise() {
               color: isCompleted ? "var(--text-muted)" : "var(--accent)",
               fontSize: "0.92rem",
               fontWeight: 800,
-              cursor: isSaving || isCompleted ? "default" : "pointer",
+              cursor: isFinishing || isCompleted ? "default" : "pointer",
             }}
           >
             {isCompleted ? "Exercise finished" : "Finish exercise"}
