@@ -1,5 +1,20 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import type {
   SeasonTemplate,
   SessionTemplate,
@@ -26,6 +41,40 @@ interface ProgramItem {
   sessionTemplate: SessionTemplate | null;
 }
 
+// ── Sortable item wrapper ─────────────────────────────────────────────────────
+
+interface SortableItemProps {
+  id: string;
+  children: (dragHandleProps: React.HTMLAttributes<HTMLElement>, isDragging: boolean) => React.ReactNode;
+}
+
+function SortableItem({ id, children }: SortableItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    position: "relative",
+    zIndex: isDragging ? 1 : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      {children({ ...attributes, ...listeners }, isDragging)}
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
 export default function ConfigProgramDetailPage() {
   const { seasonTemplateId } = useParams<{ seasonTemplateId: string }>();
   const navigate = useNavigate();
@@ -46,6 +95,10 @@ export default function ConfigProgramDetailPage() {
 
   // Delete confirm
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
 
   async function loadData() {
     if (!seasonTemplateId) return;
@@ -106,6 +159,26 @@ export default function ConfigProgramDetailPage() {
       );
     } finally {
       setRirSaving(false);
+    }
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = items.findIndex((i) => i.weekTemplateItem.id === active.id);
+    const newIndex = items.findIndex((i) => i.weekTemplateItem.id === over.id);
+    const reordered = arrayMove(items, oldIndex, newIndex);
+
+    // Optimistic update
+    setItems(reordered);
+
+    // Persist new order values
+    for (let i = 0; i < reordered.length; i++) {
+      await saveWeekTemplateItem({
+        ...reordered[i].weekTemplateItem,
+        order: i + 1,
+      });
     }
   }
 
@@ -211,95 +284,118 @@ export default function ConfigProgramDetailPage() {
         <div className="config-program-detail__section">
           <p className="config-program-detail__section-label">Week Structure</p>
 
-          <div className="config-program-detail__item-list">
-            {items.map((item) => {
-              const id = item.weekTemplateItem.id;
-              const isRest = item.weekTemplateItem.type === "rest";
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={items.map((i) => i.weekTemplateItem.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="config-program-detail__item-list">
+                {items.map((item) => {
+                  const id = item.weekTemplateItem.id;
+                  const isRest = item.weekTemplateItem.type === "rest";
 
-              if (isRest) {
-                return (
-                  <div key={id} className="config-program-detail__rest-row">
-                    <div className="config-program-detail__rest-divider">
-                      {item.weekTemplateItem.label ?? "Rest"}
-                    </div>
-                    {confirmDeleteId === id ? (
-                      <div className="config-program-detail__delete-confirm">
-                        <button
-                          type="button"
-                          className="config-program-detail__delete-confirm-yes"
-                          onClick={() => handleDeleteItem(item)}
-                        >
-                          Remove
-                        </button>
-                        <button
-                          type="button"
-                          className="config-program-detail__delete-confirm-no"
-                          onClick={() => setConfirmDeleteId(null)}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        className="config-program-detail__delete-btn"
-                        onClick={() => setConfirmDeleteId(id)}
-                        aria-label="Remove rest day"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                );
-              }
-
-              return (
-                <div key={id} className="config-program-detail__session-row">
-                  <button
-                    type="button"
-                    className="config-program-detail__session-card"
-                    onClick={() =>
-                      navigate(
-                        `/config/sessions/${item.sessionTemplate?.id}`
-                      )
-                    }
-                  >
-                    <span className="config-program-detail__session-name">
-                      {item.sessionTemplate?.name ?? "Unnamed session"}
-                    </span>
-                    <span className="config-program-detail__session-chevron">›</span>
-                  </button>
-                  {confirmDeleteId === id ? (
-                    <div className="config-program-detail__delete-confirm">
-                      <button
-                        type="button"
-                        className="config-program-detail__delete-confirm-yes"
-                        onClick={() => handleDeleteItem(item)}
-                      >
-                        Delete
-                      </button>
-                      <button
-                        type="button"
-                        className="config-program-detail__delete-confirm-no"
-                        onClick={() => setConfirmDeleteId(null)}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      className="config-program-detail__delete-btn"
-                      onClick={() => setConfirmDeleteId(id)}
-                      aria-label={`Delete ${item.sessionTemplate?.name}`}
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                  return (
+                    <SortableItem key={id} id={id}>
+                      {(dragHandleProps) =>
+                        isRest ? (
+                          <div className="config-program-detail__rest-row">
+                            <div className="config-program-detail__rest-divider">
+                              <span
+                                className="config-program-detail__drag-handle"
+                                {...dragHandleProps}
+                              >
+                                ⠿
+                              </span>
+                              {item.weekTemplateItem.label ?? "Rest"}
+                            </div>
+                            {confirmDeleteId === id ? (
+                              <div className="config-program-detail__delete-confirm">
+                                <button
+                                  type="button"
+                                  className="config-program-detail__delete-confirm-yes"
+                                  onClick={() => handleDeleteItem(item)}
+                                >
+                                  Remove
+                                </button>
+                                <button
+                                  type="button"
+                                  className="config-program-detail__delete-confirm-no"
+                                  onClick={() => setConfirmDeleteId(null)}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                className="config-program-detail__delete-btn"
+                                onClick={() => setConfirmDeleteId(id)}
+                                aria-label="Remove rest day"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="config-program-detail__session-row">
+                            <span
+                              className="config-program-detail__drag-handle"
+                              {...dragHandleProps}
+                            >
+                              ⠿
+                            </span>
+                            <button
+                              type="button"
+                              className="config-program-detail__session-card"
+                              onClick={() =>
+                                navigate(`/config/sessions/${item.sessionTemplate?.id}`)
+                              }
+                            >
+                              <span className="config-program-detail__session-name">
+                                {item.sessionTemplate?.name ?? "Unnamed session"}
+                              </span>
+                              <span className="config-program-detail__session-chevron">›</span>
+                            </button>
+                            {confirmDeleteId === id ? (
+                              <div className="config-program-detail__delete-confirm">
+                                <button
+                                  type="button"
+                                  className="config-program-detail__delete-confirm-yes"
+                                  onClick={() => handleDeleteItem(item)}
+                                >
+                                  Delete
+                                </button>
+                                <button
+                                  type="button"
+                                  className="config-program-detail__delete-confirm-no"
+                                  onClick={() => setConfirmDeleteId(null)}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                className="config-program-detail__delete-btn"
+                                onClick={() => setConfirmDeleteId(id)}
+                                aria-label={`Delete ${item.sessionTemplate?.name}`}
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+                        )
+                      }
+                    </SortableItem>
+                  );
+                })}
+              </div>
+            </SortableContext>
+          </DndContext>
 
           {showAddSession ? (
             <div className="config-program-detail__add-session-form">
