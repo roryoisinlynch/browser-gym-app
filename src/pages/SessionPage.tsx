@@ -622,13 +622,20 @@ export default function SessionPage() {
                                 >
                                   <button
                                     type="button"
-                                    className="exercise-card exercise-card--button"
+                                    className={[
+                                      "exercise-card",
+                                      "exercise-card--button",
+                                      !sessionStarted ? "exercise-card--locked" : "",
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" ")}
                                     onClick={() =>
                                       handleOpenExercise(
                                         exerciseTemplate.id,
                                         exerciseInstance?.id ?? null
                                       )
                                     }
+                                    disabled={!sessionStarted}
                                   >
                                     <div className="exercise-card__top-row">
                                       <div className="exercise-card__title-block">

@@ -505,3 +505,13 @@
 .exercise-card--button:active {
   transform: scale(0.99);
 }
+
+.exercise-card--locked {
+  opacity: 0.38;
+  cursor: default;
+  pointer-events: none;
+}
+
+.exercise-card--locked:hover {
+  transform: none;
+}
