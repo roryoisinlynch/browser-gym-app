@@ -96,6 +96,17 @@ export default function ConfigSessionDetailPage() {
     }
   }
 
+  async function handleUpdateTarget(stmgId: string, delta: number) {
+    const section = sections.find(
+      (s) => s.sessionTemplateMuscleGroup.id === stmgId
+    );
+    if (!section) return;
+    const stmg = section.sessionTemplateMuscleGroup;
+    const newTarget = Math.max(1, stmg.targetWorkingSets + delta);
+    await saveSessionTemplateMuscleGroup({ ...stmg, targetWorkingSets: newTarget });
+    await loadData();
+  }
+
   async function handleDeleteSection(stmgId: string) {
     const confirmed = window.confirm(
       "Remove this muscle group section and all its exercises?"
@@ -128,6 +139,29 @@ export default function ConfigSessionDetailPage() {
                 <p className="config-session-detail__section-name">
                   {section.muscleGroup.name}
                 </p>
+                <div className="config-session-detail__target-stepper">
+                  <button
+                    type="button"
+                    className="config-session-detail__target-btn"
+                    onClick={() => handleUpdateTarget(stmg.id, -1)}
+                    disabled={stmg.targetWorkingSets <= 1}
+                    aria-label="Decrease target sets"
+                  >
+                    −
+                  </button>
+                  <span className="config-session-detail__target-value">
+                    {stmg.targetWorkingSets}
+                  </span>
+                  <button
+                    type="button"
+                    className="config-session-detail__target-btn"
+                    onClick={() => handleUpdateTarget(stmg.id, 1)}
+                    aria-label="Increase target sets"
+                  >
+                    +
+                  </button>
+                  <span className="config-session-detail__target-label">sets</span>
+                </div>
                 <button
                   type="button"
                   className="config-session-detail__section-delete"
