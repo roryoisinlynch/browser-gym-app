@@ -1059,24 +1059,17 @@ export async function getExerciseInstanceView(
     // Reps float: 0 RIR = max reps at this weight without exceeding e1RM.
     // Use the recent max when available so targets stay fair after a long gap.
     const effectiveOneRepMax = recentMaxEstimatedOneRepMax ?? historicalBestEstimatedOneRepMax;
-    let effectivePrescribedWeight = exerciseTemplate.prescribedWeight;
 
-    // If the configured weight exceeds the effective e1RM (e.g. after a long
-    // training gap), scale it down to maintain the same relative intensity
-    // rather than producing an impossible target.
-    if (effectivePrescribedWeight >= effectiveOneRepMax) {
-      const intensityRatio = exerciseTemplate.prescribedWeight / historicalBestEstimatedOneRepMax;
-      effectivePrescribedWeight = Math.max(
-        2.5,
-        Math.round(effectiveOneRepMax * intensityRatio / 2.5) * 2.5
+    // If the configured weight exceeds the effective e1RM the rep formula
+    // produces nonsense (negative reps). Leave the target blank until a
+    // proper solution is in place.
+    if (exerciseTemplate.prescribedWeight < effectiveOneRepMax) {
+      prescribedWeight = exerciseTemplate.prescribedWeight;
+      const zeroRirReps = Math.floor(
+        (effectiveOneRepMax / prescribedWeight - 1) * 30
       );
+      prescribedRepTarget = Math.max(1, zeroRirReps - weekRir);
     }
-
-    prescribedWeight = effectivePrescribedWeight;
-    const zeroRirReps = Math.floor(
-      (effectiveOneRepMax / prescribedWeight - 1) * 30
-    );
-    prescribedRepTarget = Math.max(1, zeroRirReps - weekRir);
   }
 
   let resolvedExerciseInstance = exerciseInstance;
