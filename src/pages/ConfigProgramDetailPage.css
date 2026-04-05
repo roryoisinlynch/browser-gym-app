@@ -28,6 +28,26 @@
   color: var(--accent);
 }
 
+/* Name */
+
+.config-program-detail__name-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  background: #1a1e26;
+  color: var(--text-strong);
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: inherit;
+  outline: none;
+}
+
+.config-program-detail__name-input:focus {
+  border-color: var(--accent);
+}
+
 /* RIR */
 
 .config-program-detail__rir-row {

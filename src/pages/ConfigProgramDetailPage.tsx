@@ -83,6 +83,9 @@ export default function ConfigProgramDetailPage() {
   const [weekTemplate, setWeekTemplate] = useState<WeekTemplate | null>(null);
   const [items, setItems] = useState<ProgramItem[]>([]);
 
+  // Name edit
+  const [nameInput, setNameInput] = useState("");
+
   // RIR edit
   const [rirInput, setRirInput] = useState("");
   const [rirError, setRirError] = useState<string | null>(null);
@@ -109,6 +112,7 @@ export default function ConfigProgramDetailPage() {
     if (!season) return;
 
     setSeasonTemplate(season);
+    setNameInput(season.name);
     setRirInput(season.rirSequence?.join(", ") ?? "");
 
     if (!wt) return;
@@ -137,6 +141,15 @@ export default function ConfigProgramDetailPage() {
     const nums = parts.map(Number);
     if (nums.some(isNaN)) return null;
     return nums;
+  }
+
+  async function handleSaveName() {
+    if (!seasonTemplate) return;
+    const name = nameInput.trim();
+    if (!name || name === seasonTemplate.name) return;
+    const updated = { ...seasonTemplate, name };
+    await saveSeasonTemplate(updated);
+    setSeasonTemplate(updated);
   }
 
   async function handleSaveRir() {
@@ -251,6 +264,19 @@ export default function ConfigProgramDetailPage() {
         backLabel="Programs"
       />
       <section className="config-program-detail-shell">
+
+        {/* Program name */}
+        <div className="config-program-detail__section">
+          <p className="config-program-detail__section-label">Program Name</p>
+          <input
+            className="config-program-detail__name-input"
+            type="text"
+            value={nameInput}
+            onChange={(e) => setNameInput(e.target.value)}
+            onBlur={handleSaveName}
+            onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+          />
+        </div>
 
         {/* RIR sequence */}
         <div className="config-program-detail__section">
