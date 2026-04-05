@@ -464,3 +464,4 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
  - fully audit seed data
  - QR code for PC
  - fix the settings settings settings label
+ - add proper import export features
