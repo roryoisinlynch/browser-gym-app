@@ -6,7 +6,8 @@ import SessionPage from "./pages/SessionPage";
 import SettingsPage from "./pages/SettingsPage";
 import ImportPage from "./pages/ImportPage";
 import SetsPage from "./pages/SetsPage";
-import ConfigSessionsPage from "./pages/ConfigSessionsPage";
+import ConfigProgramsPage from "./pages/ConfigProgramsPage";
+import ConfigProgramDetailPage from "./pages/ConfigProgramDetailPage";
 import ConfigSessionDetailPage from "./pages/ConfigSessionDetailPage";
 import ConfigExercisePage from "./pages/ConfigExercisePage";
 
@@ -21,7 +22,8 @@ export default function App() {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/import" element={<ImportPage />} />
         <Route path="/sets" element={<SetsPage />} />
-        <Route path="/config/sessions" element={<ConfigSessionsPage />} />
+        <Route path="/config/programs" element={<ConfigProgramsPage />} />
+        <Route path="/config/programs/:seasonTemplateId" element={<ConfigProgramDetailPage />} />
         <Route path="/config/sessions/:sessionTemplateId" element={<ConfigSessionDetailPage />} />
         <Route path="/config/exercises/new" element={<ConfigExercisePage />} />
         <Route path="/config/exercises/:exerciseTemplateId" element={<ConfigExercisePage />} />

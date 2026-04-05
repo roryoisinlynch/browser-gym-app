@@ -22,14 +22,14 @@ export default function SettingsPage() {
             <button
               type="button"
               className="settings-nav-card"
-              onClick={() => navigate("/config/sessions")}
+              onClick={() => navigate("/config/programs")}
             >
               <div className="settings-nav-card__body">
                 <span className="settings-nav-card__title">
-                  Configure sessions
+                  Configure programs
                 </span>
                 <span className="settings-nav-card__desc">
-                  Manage exercises, weights, and rep targets
+                  Manage sessions, exercises, weights, and progression
                 </span>
               </div>
               <span className="settings-nav-card__chevron">›</span>

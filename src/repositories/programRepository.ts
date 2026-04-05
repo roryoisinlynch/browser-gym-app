@@ -321,6 +321,28 @@ export async function getWeekTemplates(): Promise<WeekTemplate[]> {
   return weeks.sort((a, b) => a.order - b.order);
 }
 
+export async function getCanonicalWeekTemplateForSeason(
+  seasonTemplateId: string
+): Promise<WeekTemplate | undefined> {
+  const all = await getAllByIndex<WeekTemplate>(
+    STORE_NAMES.weekTemplates,
+    "bySeasonTemplateId",
+    seasonTemplateId
+  );
+  return all.sort((a, b) => a.order - b.order)[0];
+}
+
+export async function getWeekTemplateItemsForWeekTemplate(
+  weekTemplateId: string
+): Promise<WeekTemplateItem[]> {
+  const items = await getAllByIndex<WeekTemplateItem>(
+    STORE_NAMES.weekTemplateItems,
+    "byWeekTemplateId",
+    weekTemplateId
+  );
+  return items.sort((a, b) => a.order - b.order);
+}
+
 export async function getWeekTemplateById(
   weekTemplateId: string
 ): Promise<WeekTemplate | undefined> {
@@ -1499,6 +1521,48 @@ export async function getAllSessionTemplates(): Promise<SessionTemplate[]> {
 }
 
 // ─── Config: template writes ──────────────────────────────────────────────────
+
+export async function saveSeasonTemplate(
+  template: SeasonTemplate
+): Promise<void> {
+  await putItem(STORE_NAMES.seasonTemplates, template);
+}
+
+export async function deleteSeasonTemplateById(id: string): Promise<void> {
+  // Cascade: session templates (and their stmgs + exercises)
+  const allSessionTemplates = await getAll<SessionTemplate>(
+    STORE_NAMES.sessionTemplates
+  );
+  for (const st of allSessionTemplates.filter((s) => s.seasonTemplateId === id)) {
+    await deleteSessionTemplateById(st.id);
+  }
+  // Cascade: canonical week template and its items
+  const weekTemplate = await getCanonicalWeekTemplateForSeason(id);
+  if (weekTemplate) {
+    const items = await getWeekTemplateItemsForWeekTemplate(weekTemplate.id);
+    for (const item of items) {
+      await deleteItem(STORE_NAMES.weekTemplateItems, item.id);
+    }
+    await deleteItem(STORE_NAMES.weekTemplates, weekTemplate.id);
+  }
+  await deleteItem(STORE_NAMES.seasonTemplates, id);
+}
+
+export async function saveWeekTemplate(
+  template: WeekTemplate
+): Promise<void> {
+  await putItem(STORE_NAMES.weekTemplates, template);
+}
+
+export async function saveWeekTemplateItem(
+  item: WeekTemplateItem
+): Promise<void> {
+  await putItem(STORE_NAMES.weekTemplateItems, item);
+}
+
+export async function deleteWeekTemplateItemById(id: string): Promise<void> {
+  await deleteItem(STORE_NAMES.weekTemplateItems, id);
+}
 
 export async function saveSessionTemplate(
   template: SessionTemplate

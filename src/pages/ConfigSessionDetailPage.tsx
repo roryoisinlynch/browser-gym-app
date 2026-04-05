@@ -111,8 +111,8 @@ export default function ConfigSessionDetailPage() {
     <main className="config-session-detail-page">
       <TopBar
         title={sessionTemplate.name}
-        backTo="/config/sessions"
-        backLabel="Sessions"
+        backTo={`/config/programs/${sessionTemplate.seasonTemplateId}`}
+        backLabel="Program"
       />
       <section className="config-session-detail-shell">
         <header className="config-session-detail-header">

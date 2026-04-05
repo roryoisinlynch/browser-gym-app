@@ -1,0 +1,305 @@
+.config-program-detail-page {
+  min-height: 100vh;
+  padding: 64px 0 100px;
+  background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+}
+
+.config-program-detail-shell {
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 16px 0 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* Section */
+
+.config-program-detail__section {
+  padding: 0 20px;
+}
+
+.config-program-detail__section-label {
+  margin: 0 0 10px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* RIR */
+
+.config-program-detail__rir-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.config-program-detail__rir-input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  background: #1a1e26;
+  color: var(--text-strong);
+  font-size: 0.9rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.config-program-detail__rir-input:focus {
+  border-color: var(--accent);
+}
+
+.config-program-detail__rir-save {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+
+.config-program-detail__rir-save:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.config-program-detail__rir-error {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  color: #f87171;
+}
+
+.config-program-detail__rir-hint {
+  margin: 6px 0 0;
+  font-size: 0.76rem;
+  color: var(--text-soft);
+}
+
+/* Item list */
+
+.config-program-detail__item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+/* Session row */
+
+.config-program-detail__session-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.config-program-detail__session-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.12s;
+  text-align: left;
+}
+
+.config-program-detail__session-card:hover {
+  background: #262c35;
+  transform: translateY(-1px);
+}
+
+.config-program-detail__session-card:active {
+  transform: scale(0.985);
+}
+
+.config-program-detail__session-name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.config-program-detail__session-chevron {
+  font-size: 1.1rem;
+  color: var(--text-soft);
+}
+
+/* Rest row */
+
+.config-program-detail__rest-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.config-program-detail__rest-divider {
+  flex: 1;
+  padding: 6px 0;
+  text-align: center;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  border-top: 1px solid var(--card-border);
+  border-bottom: 1px solid var(--card-border);
+}
+
+/* Delete */
+
+.config-program-detail__delete-btn {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--card-border);
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.config-program-detail__delete-btn:hover {
+  background: #3a1a1a;
+  color: #e06c6c;
+}
+
+.config-program-detail__delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.config-program-detail__delete-confirm-yes,
+.config-program-detail__delete-confirm-no {
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.config-program-detail__delete-confirm-yes {
+  background: #5a1a1a;
+  color: #e06c6c;
+}
+
+.config-program-detail__delete-confirm-yes:hover {
+  background: #7a2020;
+}
+
+.config-program-detail__delete-confirm-no {
+  background: transparent;
+  color: var(--text-soft);
+}
+
+.config-program-detail__delete-confirm-no:hover {
+  background: var(--card-bg);
+}
+
+/* Add session form */
+
+.config-program-detail__add-session-form {
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.config-program-detail__add-session-input {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  background: #1a1e26;
+  color: var(--text-strong);
+  font-size: 0.9rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.config-program-detail__add-session-input:focus {
+  border-color: var(--accent);
+}
+
+.config-program-detail__add-session-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.config-program-detail__add-cancel,
+.config-program-detail__add-save {
+  padding: 8px 16px;
+  border-radius: 9px;
+  border: 1px solid var(--card-border);
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.config-program-detail__add-cancel {
+  background: transparent;
+  color: var(--text-soft);
+}
+
+.config-program-detail__add-cancel:hover {
+  background: #262c35;
+}
+
+.config-program-detail__add-save {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.config-program-detail__add-save:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Add row (session + rest day buttons) */
+
+.config-program-detail__add-row {
+  display: flex;
+  gap: 8px;
+}
+
+.config-program-detail__add-btn {
+  flex: 1;
+  padding: 11px 12px;
+  border-radius: 12px;
+  border: 1px dashed var(--card-border);
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: center;
+}
+
+.config-program-detail__add-btn:hover {
+  background: var(--card-bg);
+}
+
+.config-program-detail__add-btn--rest {
+  color: var(--text-soft);
+}
