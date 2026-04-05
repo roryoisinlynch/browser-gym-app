@@ -110,7 +110,7 @@ export default function WeekPage() {
   if (isLoading) {
     return (
       <main className="week-page">
-        <TopBar title="Week" />
+        <TopBar title="Week" backTo="/season" backLabel="Season" />
         <section className="week-shell">
           <p>Loading week...</p>
         </section>
@@ -122,7 +122,7 @@ export default function WeekPage() {
   if (errorMessage) {
     return (
       <main className="week-page">
-        <TopBar title="Week" />
+        <TopBar title="Week" backTo="/season" backLabel="Season" />
         <section className="week-shell">
           <p>{errorMessage}</p>
         </section>
@@ -134,7 +134,7 @@ export default function WeekPage() {
   if (items.length === 0) {
     return (
       <main className="week-page">
-        <TopBar title="Week" />
+        <TopBar title="Week" backTo="/season" backLabel="Season" />
         <section className="week-shell">
           <header className="week-page__header">
             <h1 className="week-page__title">No active program</h1>
