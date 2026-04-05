@@ -470,6 +470,10 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
 ---
 
 # To do:
+ - working weight config: expose effective e1RM (recent-max when applicable, else historical best) from programRepository and use it instead of historical e1RM to generate the weight options list on ConfigExercisePage; show a note when recent max differs from all-time best so the user knows which baseline is being used
+ - working weight config: when the user opens ConfigExercisePage and their current prescribedWeight exceeds the effective e1RM, surface a clear warning so they know the existing choice is invalid under current capacity
+ - ExercisePage: when the target is blank because prescribedWeight > effectiveE1RM (temp fix), show an inline banner explaining why and linking directly to ConfigExercisePage so the user can pick a valid weight and return
+ - working weight staleness: consider scanning exercise templates at season-creation time and flagging any where the newly-computed effectiveE1RM would make the current prescribedWeight invalid, so the user is prompted to update before starting the first session of the new season
  - check epley logic when entering sets, it seems off
  - update working weight config in line with the 'effective' e1RM concept 
  - Summary pages
