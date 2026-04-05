@@ -470,10 +470,7 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
 ---
 
 # To do:
- - there should be a volume target for each session in the model, this is tracked on the session instance page. Currently there is no way for users to configure what this target is, as far as i'm aware. Can we add a way for this to be configured in the muscle group section of the program configuration editor (target should be muscle group level)
- - can we add a restriction to the session instance page to prevent users from clicking through to exercise instances before the session has been started, perhaps the exercises could be greyed out before start is pressed to draw the eye to the start button 
- - on the exercise sets interface, when entering a weight and then click the reps field, the keyboard often disappears and the page does a sort of reset, so you have to click the reps field twice in a row. This seems to happen only after you first enter a value in the weight field, if you go back and modify that value and then click reps again it seems fine. The same applies the other way around (entering reps first then weight). This also happens when you enter reps and weight, and then go to press the finish button. The first press doesn't register, it just closes the keyboard. 
- - I would like to expand the 'historical max' e1RM logic, specifically in relation to how it is used in the exercise sets instance page. For a given exercise, if the historical best e1RM has not been beaten in over three seasons, i would like to default to a temporary 'recent max' e1RM which is the highest e1RM for the exercise in the last three seasons (including the current season instance, so two historical seasons). The 'last 3 seasons' should be the last 3 seasons where this exercise was actually attempted, so if there are some recent historical seasons without this exercise, naturally they would not be counted. The current season may not have a record of this exercise yet if it's the first attempt, so we should consider the current season regardless, and the previous 2 historical seasons with activity for this exercise. I would like this behaviour to be transparent on the exercise sets page, so if a 'recent max' has been calculated, there should be a little tooltip at the top of the page saying something like "The previous PR [date, e1RM] was set n days ago, so to fairly adjust intensity targets, a more recent PR [date, e1RM] is substituted here". (I'm sure you can find a better way to phrase this for me). I think the 'Top Set Progress' bar should still maintain the current range (0 to historical max e1RM) but include an additonal target marker to identify the 'recent max' on the scale relative to the 'historical max'. 
+ - update working weight config in line with the 'effective' e1RM concept 
  - Summary pages
  - check that new PRs affect the e1RM for the next session, not just the next week or next season
  - test program hopping, delete a full program and see if exercise history persists (test both as a new user and a user with csv imports)
@@ -485,8 +482,6 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
  - consider starting the target bar from the warmup threshold instead of at 0
  - OR add a warmup bar above it with 0-60 intensity and have the current one 61-100
  - OR denote section markers: warmup, RIR target, local e1RM, max e1RM
- - add a create session button in session config
- - fully audit seed data
  - QR code for PC
  - fix the settings settings settings label
  - add proper import export features
@@ -494,3 +489,5 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
  - add prompt to select working weight when new PR is hit
  - add an exercise detail screen where you can see a table of all exercises and their: last lift, e1RM local, e1RM max, total lifts, days since PR. Sortable by each column.
  - add a season instance page which functions exactly like the week instance page showing a list of week instances (where the week page shows a list of session instances)
+ - is seed data taken from mock data or does it have its own definiton, should it? what do we want the final seed data to look like
+ - can the app tell whether it has been downloaded and installed? if so condition on mobile to tell the user how
