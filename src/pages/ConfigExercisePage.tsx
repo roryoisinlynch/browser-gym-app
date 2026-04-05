@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type { ExerciseTemplate, MovementType, WeightMode } from "../domain/models";
 import {
@@ -53,6 +53,9 @@ export default function ConfigExercisePage() {
   const [resolvedMuscleGroupId, setResolvedMuscleGroupId] = useState(muscleGroupId);
 
   const [allExerciseNames, setAllExerciseNames] = useState<string[]>([]);
+
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -251,6 +254,14 @@ export default function ConfigExercisePage() {
 
   const selectedOption = weightOptions.find((o) => o.weight === selectedWeight);
 
+  const filteredSuggestions = useMemo(() => {
+    const q = exerciseName.trim().toLowerCase();
+    if (!q) return allExerciseNames.slice(0, 8);
+    return allExerciseNames
+      .filter((n) => n.toLowerCase().includes(q))
+      .slice(0, 8);
+  }, [exerciseName, allExerciseNames]);
+
 
   return (
     <main className="config-exercise-page">
@@ -267,21 +278,42 @@ export default function ConfigExercisePage() {
         </header>
 
         {/* Name */}
-        <div className="config-exercise__field-group">
+        <div className="config-exercise__field-group config-exercise__autocomplete-wrap">
           <label className="config-exercise__label">Exercise name</label>
           <input
+            ref={nameInputRef}
             className="config-exercise__input"
             type="text"
-            list="exercise-name-suggestions"
             value={exerciseName}
-            onChange={(e) => setExerciseName(e.target.value)}
+            onChange={(e) => {
+              setExerciseName(e.target.value);
+              setShowSuggestions(true);
+            }}
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
             placeholder="e.g. Bench Press"
+            autoComplete="off"
           />
-          <datalist id="exercise-name-suggestions">
-            {allExerciseNames.map((name) => (
-              <option key={name} value={name} />
-            ))}
-          </datalist>
+          {showSuggestions && filteredSuggestions.length > 0 && (
+            <ul className="config-exercise__suggestions">
+              {filteredSuggestions.map((name) => (
+                <li key={name}>
+                  <button
+                    type="button"
+                    className="config-exercise__suggestion-item"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setExerciseName(name);
+                      setShowSuggestions(false);
+                      nameInputRef.current?.blur();
+                    }}
+                  >
+                    {name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         {/* Movement type */}
