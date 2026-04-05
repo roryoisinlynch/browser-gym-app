@@ -359,6 +359,9 @@ async function handleFinishExercise() {
           targetEstimatedOneRepMax={exerciseView.targetEstimatedOneRepMax}
           topSetEstimatedOneRepMax={topSetEstimatedOneRepMax}
           historicalBestEstimatedOneRepMax={exerciseView.historicalBestEstimatedOneRepMax}
+          historicalBestDate={exerciseView.historicalBestDate}
+          recentMaxEstimatedOneRepMax={exerciseView.recentMaxEstimatedOneRepMax}
+          recentMaxDate={exerciseView.recentMaxDate}
           isBodyweight={isBodyweight}
           historicalBestReps={exerciseView.historicalBestReps}
           topSetReps={topSetReps}

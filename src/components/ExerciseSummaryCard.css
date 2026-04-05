@@ -143,3 +143,43 @@
   background: #ffffff;
   box-shadow: 0 0 0 1px rgba(15, 19, 24, 0.55);
 }
+
+.exercise-summary-card__bar-recent-max {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px rgba(15, 19, 24, 0.55);
+  opacity: 0.75;
+}
+
+.exercise-summary-card__bar-foot-recent-max {
+  color: var(--accent);
+  opacity: 0.85;
+}
+
+.exercise-summary-card__recent-max-banner {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(216, 240, 106, 0.2);
+  background: rgba(216, 240, 106, 0.05);
+}
+
+.exercise-summary-card__recent-max-heading {
+  margin: 0 0 4px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.exercise-summary-card__recent-max-body {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}

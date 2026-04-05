@@ -8,6 +8,9 @@ interface ExerciseSummaryCardProps {
   targetEstimatedOneRepMax: number | null;
   topSetEstimatedOneRepMax: number | null;
   historicalBestEstimatedOneRepMax: number | null;
+  historicalBestDate: string | null;
+  recentMaxEstimatedOneRepMax: number | null;
+  recentMaxDate: string | null;
   isBodyweight?: boolean;
   historicalBestReps?: number | null;
   topSetReps?: number | null;
@@ -24,6 +27,20 @@ function formatMetricValue(
   }
 
   return `${Number.isInteger(value) ? value : value.toFixed(1)}${suffix}`;
+}
+
+function formatDate(isoDate: string): string {
+  return new Date(isoDate).toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function daysSince(isoDate: string): number {
+  return Math.round(
+    (Date.now() - new Date(isoDate).getTime()) / (1000 * 60 * 60 * 24)
+  );
 }
 
 function getScaleMax(
@@ -51,6 +68,9 @@ export default function ExerciseSummaryCard({
   targetEstimatedOneRepMax,
   topSetEstimatedOneRepMax,
   historicalBestEstimatedOneRepMax,
+  historicalBestDate,
+  recentMaxEstimatedOneRepMax,
+  recentMaxDate,
   isBodyweight = false,
   historicalBestReps = null,
   topSetReps = null,
@@ -76,6 +96,11 @@ export default function ExerciseSummaryCard({
       ? ((targetReps ?? 0) / scaleMax) * 100
       : ((targetEstimatedOneRepMax ?? 0) / scaleMax) * 100
   );
+
+  const recentMaxPercentage =
+    !isBodyweight && recentMaxEstimatedOneRepMax != null
+      ? clampPercentage((recentMaxEstimatedOneRepMax / scaleMax) * 100)
+      : null;
 
   if (isAmrap || needsWeightConfig) {
     return (
@@ -117,6 +142,29 @@ export default function ExerciseSummaryCard({
     );
   }
 
+  const recentMaxBanner = recentMaxEstimatedOneRepMax != null && recentMaxDate != null ? (() => {
+    const historicalStr = formatMetricValue(historicalBestEstimatedOneRepMax, "kg");
+    const recentStr = formatMetricValue(recentMaxEstimatedOneRepMax, "kg");
+    const recentDateStr = formatDate(recentMaxDate);
+    const dayCount = daysSince(recentMaxDate);
+
+    const historicalContext = historicalBestDate != null
+      ? `Your all-time PR of ${historicalStr} (set ${daysSince(historicalBestDate)} days ago) hasn't been matched in your last three active seasons.`
+      : `Your all-time PR of ${historicalStr} is from your imported training history.`;
+
+    return (
+      <div className="exercise-summary-card__recent-max-banner" role="note">
+        <p className="exercise-summary-card__recent-max-heading">Using recent best for targets</p>
+        <p className="exercise-summary-card__recent-max-body">
+          {historicalContext}{" "}
+          Today's targets are based on your most recent best of{" "}
+          <strong>{recentStr}</strong> ({recentDateStr}, {dayCount} days ago) to
+          keep your training load fair and sustainable.
+        </p>
+      </div>
+    );
+  })() : null;
+
   return (
     <section className="exercise-summary-card">
       <div className="exercise-summary-card__header-row">
@@ -129,6 +177,8 @@ export default function ExerciseSummaryCard({
           Target RIR: {targetRir ?? "—"}
         </div>
       </div>
+
+      {recentMaxBanner}
 
       <div className="exercise-summary-card__metrics-grid">
         <div className="exercise-summary-card__metric">
@@ -160,7 +210,7 @@ export default function ExerciseSummaryCard({
           <span className="exercise-summary-card__bar-value">
             {isBodyweight
               ? `Historical best ${formatMetricValue(historicalBestReps, " reps")}`
-              : `Historical best ${formatMetricValue(historicalBestEstimatedOneRepMax, "kg")}`}
+              : `All-time best ${formatMetricValue(historicalBestEstimatedOneRepMax, "kg")}`}
           </span>
         </div>
 
@@ -172,6 +222,13 @@ export default function ExerciseSummaryCard({
             className="exercise-summary-card__bar-fill"
             style={{ width: `${fillPercentage}%` }}
           />
+          {recentMaxPercentage != null && (
+            <span
+              className="exercise-summary-card__bar-recent-max"
+              style={{ left: `${recentMaxPercentage}%` }}
+              aria-hidden="true"
+            />
+          )}
           <span
             className="exercise-summary-card__bar-target"
             style={{ left: `${targetPercentage}%` }}
@@ -185,7 +242,12 @@ export default function ExerciseSummaryCard({
               ? `Top set ${formatMetricValue(topSetReps, " reps")}`
               : `Top set ${formatMetricValue(topSetEstimatedOneRepMax, "kg")}`}
           </span>
-          <span>Target marker</span>
+          {recentMaxPercentage != null && (
+            <span className="exercise-summary-card__bar-foot-recent-max">
+              Recent best
+            </span>
+          )}
+          <span>Target</span>
         </div>
       </div>
     </section>

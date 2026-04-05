@@ -101,6 +101,17 @@ export interface ExerciseInstanceView {
   movementType: MovementType;
   historicalBestEstimatedOneRepMax: number | null;
   historicalBestReps: number | null;
+  /** Date (ISO string) of the all-time PR — null when it came from imported data. */
+  historicalBestDate: string | null;
+  /**
+   * Set when the all-time PR hasn't been matched within the last three seasons
+   * that include this exercise. Prescription logic uses this value instead of
+   * historicalBestEstimatedOneRepMax so intensity targets stay achievable.
+   * Null when the historical best is still current.
+   */
+  recentMaxEstimatedOneRepMax: number | null;
+  /** Date (ISO string) of the recent-max PR. */
+  recentMaxDate: string | null;
   targetEstimatedOneRepMax: number | null;
   sets: AnalyzedExerciseSet[];
 }
@@ -871,6 +882,107 @@ export async function getExerciseInstanceView(
     return best == null || set.performedReps > best ? set.performedReps : best;
   }, null);
 
+  // ── Recent-max computation ────────────────────────────────────────────────
+  // If the all-time best e1RM hasn't been matched within the last three seasons
+  // where this exercise was actually attempted, we substitute a "recent max"
+  // so that intensity targets remain fair and achievable.
+  const allExerciseInstancesForTemplate = await getAllByIndex<ExerciseInstance>(
+    STORE_NAMES.exerciseInstances,
+    "byExerciseTemplateId",
+    exerciseTemplate.id
+  );
+
+  // Fetch session + season metadata for every prior (non-current) instance.
+  type InstanceMeta = { seasonId: string; seasonOrder: number; date: string };
+  const instanceMetaMap = new Map<string, InstanceMeta>();
+
+  await Promise.all(
+    allExerciseInstancesForTemplate
+      .filter((inst) => inst.id !== exerciseInstance.id)
+      .map(async (inst) => {
+        const instSession = await getSessionInstanceById(inst.sessionInstanceId);
+        if (!instSession?.seasonInstanceId) return;
+        const instSeason = await getSeasonInstanceById(instSession.seasonInstanceId);
+        if (!instSeason) return;
+        instanceMetaMap.set(inst.id, {
+          seasonId: instSeason.id,
+          seasonOrder: instSeason.order,
+          date: instSession.date,
+        });
+      })
+  );
+
+  // Collect seasons where this exercise has been attempted (real sets only).
+  const seasonsWithActivity = new Map<string, number>(); // id → order
+  for (const set of priorHistoricalSets) {
+    if (set.exerciseInstanceId === "__imported__") continue;
+    const meta = instanceMetaMap.get(set.exerciseInstanceId);
+    if (meta && !seasonsWithActivity.has(meta.seasonId)) {
+      seasonsWithActivity.set(meta.seasonId, meta.seasonOrder);
+    }
+  }
+  // Current season always counts, even on a first attempt.
+  seasonsWithActivity.set(seasonInstance.id, seasonInstance.order);
+
+  // The three most-recent seasons with activity.
+  const recentSeasonIds = new Set(
+    [...seasonsWithActivity.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([id]) => id)
+  );
+
+  let recentMaxEstimatedOneRepMax: number | null = null;
+  let recentMaxDate: string | null = null;
+  let historicalBestDate: string | null = null;
+  let trackedBestFromRealSets: number | null = null;
+
+  for (const set of priorHistoricalSets) {
+    if (set.exerciseInstanceId === "__imported__") continue;
+
+    const e1rm = calculateEstimatedOneRepMax(set.performedWeight, set.performedReps);
+    if (e1rm == null) continue;
+
+    const meta = instanceMetaMap.get(set.exerciseInstanceId);
+
+    // Track the date of the best real-set PR.
+    if (trackedBestFromRealSets == null || e1rm > trackedBestFromRealSets) {
+      trackedBestFromRealSets = e1rm;
+      historicalBestDate = meta?.date ?? null;
+    }
+
+    // Track the best e1RM within the recent seasons.
+    if (meta && recentSeasonIds.has(meta.seasonId)) {
+      if (recentMaxEstimatedOneRepMax == null || e1rm > recentMaxEstimatedOneRepMax) {
+        recentMaxEstimatedOneRepMax = e1rm;
+        recentMaxDate = meta.date;
+      }
+    }
+  }
+
+  // If the historical best came from imported data (no real set matches it),
+  // clear the date so the tooltip can display a generic fallback.
+  if (
+    historicalBestEstimatedOneRepMax != null &&
+    (trackedBestFromRealSets == null ||
+      trackedBestFromRealSets < historicalBestEstimatedOneRepMax)
+  ) {
+    historicalBestDate = null;
+  }
+
+  // No substitution needed if the all-time best was already matched within
+  // the recent seasons (recentMax ≥ historicalBest).
+  const historicalBestIsRecent =
+    recentMaxEstimatedOneRepMax != null &&
+    historicalBestEstimatedOneRepMax != null &&
+    recentMaxEstimatedOneRepMax >= historicalBestEstimatedOneRepMax;
+
+  if (historicalBestIsRecent) {
+    recentMaxEstimatedOneRepMax = null;
+    recentMaxDate = null;
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   const weekRir =
     seasonTemplate.rirSequence?.[weekInstance.order - 1] ??
     weekTemplate.targetRir ??
@@ -894,9 +1006,11 @@ export async function getExerciseInstanceView(
   ) {
     // Weight is fixed by the user's settings choice.
     // Reps float: 0 RIR = max reps at this weight without exceeding e1RM.
+    // Use the recent max when available so targets stay fair after a long gap.
+    const effectiveOneRepMax = recentMaxEstimatedOneRepMax ?? historicalBestEstimatedOneRepMax;
     prescribedWeight = exerciseTemplate.prescribedWeight;
     const zeroRirReps = Math.floor(
-      (historicalBestEstimatedOneRepMax / prescribedWeight - 1) * 30
+      (effectiveOneRepMax / prescribedWeight - 1) * 30
     );
     prescribedRepTarget = Math.max(1, zeroRirReps - weekRir);
   }
@@ -926,6 +1040,9 @@ export async function getExerciseInstanceView(
     movementType,
     historicalBestEstimatedOneRepMax,
     historicalBestReps,
+    historicalBestDate,
+    recentMaxEstimatedOneRepMax,
+    recentMaxDate,
     targetEstimatedOneRepMax,
     sets: buildAnalyzedSetList(currentSets, allHistoricalSets),
   };
