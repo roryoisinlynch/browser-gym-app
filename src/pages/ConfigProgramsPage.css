@@ -97,6 +97,55 @@
   line-height: 1;
 }
 
+/* Active pill */
+
+.config-programs__card--active {
+  border-color: var(--accent);
+}
+
+.config-programs__card-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.config-programs__active-pill {
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Actions (activate + delete buttons) */
+
+.config-programs__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.config-programs__activate-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.config-programs__activate-btn:hover {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
 /* Delete */
 
 .config-programs__delete-btn {

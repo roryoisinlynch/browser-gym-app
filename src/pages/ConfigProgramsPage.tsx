@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { SeasonTemplate, WeekTemplate } from "../domain/models";
+import type { SeasonInstance, SeasonTemplate, WeekTemplate } from "../domain/models";
 import {
   getSeasonTemplates,
+  getActiveSeasonInstance,
+  activateProgram,
   saveSeasonTemplate,
   saveWeekTemplate,
   deleteSeasonTemplateById,
@@ -14,16 +16,22 @@ import "./ConfigProgramsPage.css";
 export default function ConfigProgramsPage() {
   const navigate = useNavigate();
   const [programs, setPrograms] = useState<SeasonTemplate[]>([]);
+  const [activeInstance, setActiveInstance] = useState<SeasonInstance | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [newRir, setNewRir] = useState("4,3,2,1,0");
   const [isSaving, setIsSaving] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmActivateId, setConfirmActivateId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function loadData() {
-    const templates = await getSeasonTemplates();
+    const [templates, active] = await Promise.all([
+      getSeasonTemplates(),
+      getActiveSeasonInstance(),
+    ]);
     setPrograms(templates);
+    setActiveInstance(active ?? null);
   }
 
   useEffect(() => {
@@ -75,11 +83,19 @@ export default function ConfigProgramsPage() {
     }
   }
 
+  async function handleActivate(id: string) {
+    await activateProgram(id);
+    setConfirmActivateId(null);
+    await loadData();
+  }
+
   async function handleDelete(id: string) {
     await deleteSeasonTemplateById(id);
     setConfirmDeleteId(null);
     await loadData();
   }
+
+  const activeTemplateId = activeInstance?.seasonTemplateId ?? null;
 
   return (
     <main className="config-programs-page">
@@ -94,53 +110,95 @@ export default function ConfigProgramsPage() {
         </header>
 
         <div className="config-programs__list">
-          {programs.map((program) => (
-            <div key={program.id} className="config-programs__row">
-              <button
-                type="button"
-                className="config-programs__card"
-                onClick={() => navigate(`/config/programs/${program.id}`)}
-              >
-                <span className="config-programs__card-body">
-                  <span className="config-programs__card-name">{program.name}</span>
-                  {program.rirSequence && (
-                    <span className="config-programs__card-rir">
-                      RIR {program.rirSequence.join(", ")}
-                    </span>
-                  )}
-                </span>
-                <span className="config-programs__chevron">›</span>
-              </button>
-              {confirmDeleteId === program.id ? (
-                <div className="config-programs__delete-confirm">
-                  <span className="config-programs__delete-confirm-text">Delete?</span>
-                  <button
-                    type="button"
-                    className="config-programs__delete-confirm-yes"
-                    onClick={() => handleDelete(program.id)}
-                  >
-                    Yes
-                  </button>
-                  <button
-                    type="button"
-                    className="config-programs__delete-confirm-no"
-                    onClick={() => setConfirmDeleteId(null)}
-                  >
-                    No
-                  </button>
-                </div>
-              ) : (
+          {programs.map((program) => {
+            const isActive = program.id === activeTemplateId;
+            const isConfirmingActivate = confirmActivateId === program.id;
+            const isConfirmingDelete = confirmDeleteId === program.id;
+
+            return (
+              <div key={program.id} className="config-programs__row">
                 <button
                   type="button"
-                  className="config-programs__delete-btn"
-                  onClick={() => setConfirmDeleteId(program.id)}
-                  aria-label={`Delete ${program.name}`}
+                  className={`config-programs__card${isActive ? " config-programs__card--active" : ""}`}
+                  onClick={() => navigate(`/config/programs/${program.id}`)}
                 >
-                  ✕
+                  <span className="config-programs__card-body">
+                    <span className="config-programs__card-name">{program.name}</span>
+                    {program.rirSequence && (
+                      <span className="config-programs__card-rir">
+                        RIR {program.rirSequence.join(", ")}
+                      </span>
+                    )}
+                  </span>
+                  <span className="config-programs__card-right">
+                    {isActive && (
+                      <span className="config-programs__active-pill">Active</span>
+                    )}
+                    <span className="config-programs__chevron">›</span>
+                  </span>
                 </button>
-              )}
-            </div>
-          ))}
+
+                {isConfirmingActivate ? (
+                  <div className="config-programs__delete-confirm">
+                    <span className="config-programs__delete-confirm-text">Switch?</span>
+                    <button
+                      type="button"
+                      className="config-programs__delete-confirm-yes config-programs__delete-confirm-yes--activate"
+                      onClick={() => handleActivate(program.id)}
+                    >
+                      Yes
+                    </button>
+                    <button
+                      type="button"
+                      className="config-programs__delete-confirm-no"
+                      onClick={() => setConfirmActivateId(null)}
+                    >
+                      No
+                    </button>
+                  </div>
+                ) : isConfirmingDelete ? (
+                  <div className="config-programs__delete-confirm">
+                    <span className="config-programs__delete-confirm-text">Delete?</span>
+                    <button
+                      type="button"
+                      className="config-programs__delete-confirm-yes"
+                      onClick={() => handleDelete(program.id)}
+                    >
+                      Yes
+                    </button>
+                    <button
+                      type="button"
+                      className="config-programs__delete-confirm-no"
+                      onClick={() => setConfirmDeleteId(null)}
+                    >
+                      No
+                    </button>
+                  </div>
+                ) : (
+                  <div className="config-programs__actions">
+                    {!isActive && (
+                      <button
+                        type="button"
+                        className="config-programs__activate-btn"
+                        onClick={() => setConfirmActivateId(program.id)}
+                        aria-label={`Activate ${program.name}`}
+                      >
+                        ▶
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="config-programs__delete-btn"
+                      onClick={() => setConfirmDeleteId(program.id)}
+                      aria-label={`Delete ${program.name}`}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {showCreate ? (

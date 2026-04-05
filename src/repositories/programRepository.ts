@@ -178,6 +178,45 @@ export async function getSeasonTemplates(): Promise<SeasonTemplate[]> {
   return getAll<SeasonTemplate>(STORE_NAMES.seasonTemplates);
 }
 
+export async function getActiveSeasonInstance(): Promise<SeasonInstance | undefined> {
+  const instances = await getAllByIndex<SeasonInstance>(
+    STORE_NAMES.seasonInstances,
+    "byStatus",
+    "in_progress"
+  );
+  return instances[0];
+}
+
+export async function activateProgram(
+  seasonTemplateId: string
+): Promise<SeasonInstance | undefined> {
+  const nowIso = new Date().toISOString();
+
+  // Complete any currently active seasons and their in-progress weeks
+  const activeInstances = await getAllByIndex<SeasonInstance>(
+    STORE_NAMES.seasonInstances,
+    "byStatus",
+    "in_progress"
+  );
+  for (const active of activeInstances) {
+    const weeks = await getWeekInstancesForSeasonInstance(active.id);
+    for (const week of weeks.filter((w) => w.status === "in_progress")) {
+      await putItem(STORE_NAMES.weekInstances, {
+        ...week,
+        status: "completed",
+        completedAt: week.completedAt ?? nowIso,
+      });
+    }
+    await putItem(STORE_NAMES.seasonInstances, {
+      ...active,
+      status: "completed",
+      completedAt: active.completedAt ?? nowIso,
+    });
+  }
+
+  return startSeasonFromTemplate(seasonTemplateId);
+}
+
 export async function getSeasonTemplateById(
   seasonTemplateId: string
 ): Promise<SeasonTemplate | undefined> {
