@@ -1,5 +1,5 @@
 const DB_NAME = "browser-gym-app";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 export const STORE_NAMES = {
   muscleGroups: "muscleGroups",
@@ -34,8 +34,9 @@ export function openDatabase(): Promise<IDBDatabase> {
 
     request.onerror = () => reject(request.error);
 
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = (event) => {
       const db = request.result;
+      const oldVersion = event.oldVersion;
 
       if (!db.objectStoreNames.contains(STORE_NAMES.muscleGroups)) {
         db.createObjectStore(STORE_NAMES.muscleGroups, { keyPath: "id" });
@@ -74,10 +75,13 @@ export function openDatabase(): Promise<IDBDatabase> {
       }
 
       if (!db.objectStoreNames.contains(STORE_NAMES.sessionTemplates)) {
-        const store = db.createObjectStore(STORE_NAMES.sessionTemplates, {
-          keyPath: "id",
-        });
-        store.createIndex("byWeekTemplateId", "weekTemplateId", { unique: false });
+        db.createObjectStore(STORE_NAMES.sessionTemplates, { keyPath: "id" });
+      } else if (oldVersion < 3) {
+        // v2→v3: sessions are now season-scoped; drop the old week index
+        const store = request.transaction!.objectStore(STORE_NAMES.sessionTemplates);
+        if (store.indexNames.contains("byWeekTemplateId")) {
+          store.deleteIndex("byWeekTemplateId");
+        }
       }
 
       if (!db.objectStoreNames.contains(STORE_NAMES.sessionTemplateMuscleGroups)) {

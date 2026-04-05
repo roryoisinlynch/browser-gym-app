@@ -41,6 +41,8 @@ export interface SeasonTemplate {
   name: string;
   plannedWeekCount: number;
   description?: string;
+  /** RIR target for each week in order, e.g. [4,3,2,1,0]. Overrides WeekTemplate.targetRir when set. */
+  rirSequence?: number[];
 }
 
 /**
@@ -72,11 +74,12 @@ export interface WeekTemplateItem {
 }
 
 /**
- * Reusable template for a session/day within a week template.
+ * Reusable template for a session/day. Season-scoped — referenced from
+ * WeekTemplateItems so the same session definition appears in every week.
  */
 export interface SessionTemplate {
   id: ID;
-  weekTemplateId: ID;
+  seasonTemplateId: ID;
   name: string;
   order: number;
 }

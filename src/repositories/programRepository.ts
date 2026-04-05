@@ -178,6 +178,12 @@ export async function getSeasonTemplates(): Promise<SeasonTemplate[]> {
   return getAll<SeasonTemplate>(STORE_NAMES.seasonTemplates);
 }
 
+export async function getSeasonTemplateById(
+  seasonTemplateId: string
+): Promise<SeasonTemplate | undefined> {
+  return getById<SeasonTemplate>(STORE_NAMES.seasonTemplates, seasonTemplateId);
+}
+
 export async function startSeasonFromTemplate(
   seasonTemplateId: string
 ): Promise<SeasonInstance | undefined> {
@@ -306,13 +312,22 @@ export async function getWeekTemplateById(
 export async function getSessionTemplatesForWeek(
   weekTemplateId: string
 ): Promise<SessionTemplate[]> {
-  const sessions = await getAllByIndex<SessionTemplate>(
-    STORE_NAMES.sessionTemplates,
+  const items = await getAllByIndex<WeekTemplateItem>(
+    STORE_NAMES.weekTemplateItems,
     "byWeekTemplateId",
     weekTemplateId
   );
-
-  return sessions.sort((a, b) => a.order - b.order);
+  const sessionTemplateIds = items
+    .filter((i) => i.type === "session" && i.sessionTemplateId)
+    .map((i) => i.sessionTemplateId!);
+  const templates = await Promise.all(
+    sessionTemplateIds.map((id) =>
+      getById<SessionTemplate>(STORE_NAMES.sessionTemplates, id)
+    )
+  );
+  return (templates.filter(Boolean) as SessionTemplate[]).sort(
+    (a, b) => a.order - b.order
+  );
 }
 
 export async function getSessionTemplateById(
@@ -710,6 +725,13 @@ export async function getExerciseInstanceView(
     return undefined;
   }
 
+  const seasonTemplate = await getSeasonTemplateById(
+    seasonInstance.seasonTemplateId
+  );
+  if (!seasonTemplate) {
+    return undefined;
+  }
+
   const sessionTemplate = await getSessionTemplateById(
     sessionInstance.sessionTemplateId
   );
@@ -770,7 +792,11 @@ export async function getExerciseInstanceView(
     return best == null || set.performedReps > best ? set.performedReps : best;
   }, null);
 
-  const weekRir = weekTemplate.targetRir ?? exerciseInstance.prescribedRir ?? 0;
+  const weekRir =
+    seasonTemplate.rirSequence?.[weekInstance.order - 1] ??
+    weekTemplate.targetRir ??
+    exerciseInstance.prescribedRir ??
+    0;
 
   // Always recompute from history — never carry over stale stored values.
   // No history → both remain null → AMRAP prompt shown to user.
@@ -1517,22 +1543,9 @@ export async function getMovementTypesByMuscleGroupId(
   );
 }
 
-export async function getAllSessionTemplateListItems(): Promise<
-  SessionTemplateListItem[]
-> {
-  const weekTemplates = (
-    await getAll<WeekTemplate>(STORE_NAMES.weekTemplates)
-  ).sort((a, b) => a.order - b.order);
-  const results: SessionTemplateListItem[] = [];
-  for (const weekTemplate of weekTemplates) {
-    const sessions = (
-      await getSessionTemplatesForWeek(weekTemplate.id)
-    ).sort((a, b) => a.order - b.order);
-    for (const sessionTemplate of sessions) {
-      results.push({ sessionTemplate, weekTemplate });
-    }
-  }
-  return results;
+export async function getAllSessionTemplates(): Promise<SessionTemplate[]> {
+  const templates = await getAll<SessionTemplate>(STORE_NAMES.sessionTemplates);
+  return templates.sort((a, b) => a.order - b.order);
 }
 
 // ─── Config: template writes ──────────────────────────────────────────────────

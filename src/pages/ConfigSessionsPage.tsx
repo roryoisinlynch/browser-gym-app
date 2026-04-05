@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { SessionTemplate, WeekTemplate } from "../domain/models";
+import type { SessionTemplate, SeasonTemplate } from "../domain/models";
 import {
-  getAllSessionTemplateListItems,
-  getWeekTemplates,
+  getAllSessionTemplates,
+  getSeasonTemplates,
   saveSessionTemplate,
   deleteSessionTemplateById,
 } from "../repositories/programRepository";
@@ -14,23 +14,19 @@ import "./ConfigSessionsPage.css";
 export default function ConfigSessionsPage() {
   const navigate = useNavigate();
   const [sessions, setSessions] = useState<SessionTemplate[]>([]);
-  const [weekTemplates, setWeekTemplates] = useState<WeekTemplate[]>([]);
+  const [seasonTemplate, setSeasonTemplate] = useState<SeasonTemplate | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
-  const [newWeekId, setNewWeekId] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   async function loadData() {
-    const [items, weeks] = await Promise.all([
-      getAllSessionTemplateListItems(),
-      getWeekTemplates(),
+    const [templates, seasons] = await Promise.all([
+      getAllSessionTemplates(),
+      getSeasonTemplates(),
     ]);
-    setSessions(items.map((i) => i.sessionTemplate));
-    setWeekTemplates(weeks.sort((a, b) => a.order - b.order));
-    if (weeks.length > 0 && !newWeekId) {
-      setNewWeekId(weeks[0].id);
-    }
+    setSessions(templates);
+    setSeasonTemplate(seasons[0] ?? null);
   }
 
   useEffect(() => {
@@ -39,15 +35,14 @@ export default function ConfigSessionsPage() {
 
   async function handleCreate() {
     const trimmed = newName.trim();
-    if (!trimmed || !newWeekId) return;
+    if (!trimmed || !seasonTemplate) return;
     setIsSaving(true);
     try {
-      const weekSessions = sessions.filter((s) => s.weekTemplateId === newWeekId);
       const template: SessionTemplate = {
         id: crypto.randomUUID(),
-        weekTemplateId: newWeekId,
+        seasonTemplateId: seasonTemplate.id,
         name: trimmed,
-        order: weekSessions.length + 1,
+        order: sessions.length + 1,
       };
       await saveSessionTemplate(template);
       setNewName("");
@@ -135,20 +130,6 @@ export default function ConfigSessionsPage() {
                 autoFocus
               />
             </label>
-            <label className="config-sessions__create-label">
-              Week
-              <select
-                className="config-sessions__create-select"
-                value={newWeekId}
-                onChange={(e) => setNewWeekId(e.target.value)}
-              >
-                {weekTemplates.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {w.name}
-                  </option>
-                ))}
-              </select>
-            </label>
             <div className="config-sessions__create-actions">
               <button
                 type="button"
@@ -161,7 +142,7 @@ export default function ConfigSessionsPage() {
                 type="button"
                 className="config-sessions__create-save"
                 onClick={handleCreate}
-                disabled={isSaving || !newName.trim() || !newWeekId}
+                disabled={isSaving || !newName.trim()}
               >
                 {isSaving ? "Saving…" : "Create"}
               </button>
