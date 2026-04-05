@@ -470,6 +470,7 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
 ---
 
 # To do:
+ - check epley logic when entering sets, it seems off
  - update working weight config in line with the 'effective' e1RM concept 
  - Summary pages
  - check that new PRs affect the e1RM for the next session, not just the next week or next season
