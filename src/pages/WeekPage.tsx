@@ -177,7 +177,7 @@ export default function WeekPage() {
 
   return (
     <main className="week-page">
-      <TopBar title="Week" />
+      <TopBar title="Week" backTo="/season" backLabel="Season" />
 
       <section className="week-shell">
         <header className="week-page__header">
