@@ -462,3 +462,5 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
  - consider starting the target bar from the warmup threshold instead of at 0
  - add a create session button in session config
  - fully audit seed data
+ - QR code for PC
+ - fix the settings settings settings label
