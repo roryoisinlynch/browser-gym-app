@@ -7,7 +7,6 @@ import {
   getActiveSeasonInstance,
   getSeasonTemplates,
   getWeekInstancesForSeasonInstance,
-  getWeekTemplateById,
   startSeasonFromTemplate,
 } from "../repositories/programRepository";
 import "./SeasonPage.css";
@@ -51,17 +50,21 @@ export default function SeasonPage() {
         return;
       }
 
+      const seasonTemplate = templates.find(
+        (t) => t.id === activeSeasonInstance.seasonTemplateId
+      );
+      const rirSequence = seasonTemplate?.rirSequence ?? null;
+
       const weekInstances = await getWeekInstancesForSeasonInstance(
         activeSeasonInstance.id
       );
 
-      const weekRows = await Promise.all(
-        weekInstances.map(async (wi) => {
-          const template = await getWeekTemplateById(wi.weekTemplateId);
-          const name = template?.name ?? `Week ${wi.order}`;
-          return { weekInstance: wi, name };
-        })
-      );
+      const weekRows = weekInstances.map((wi) => {
+        const rir = rirSequence?.[wi.order - 1];
+        const name =
+          rir != null ? `Week ${wi.order} — ${rir} RIR` : `Week ${wi.order}`;
+        return { weekInstance: wi, name };
+      });
 
       setWeeks(weekRows);
       setTotalWeeks(weekInstances.length);

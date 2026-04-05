@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import "./DayCard.css";
+import "./WeekCard.css";
 
 export type WeekCardState = "completed" | "next" | "upcoming";
 
@@ -16,11 +17,10 @@ export default function WeekCard({
   week: WeekCardItem;
   state: WeekCardState;
 }) {
-  return (
-    <Link to={`/week/${week.id}`} className={`day-card day-card--${state}`}>
+  const inner = (
+    <>
       <div className="day-card__text">
         <h2 className="day-card__title">{week.name}</h2>
-
         <p className="day-card__subtitle">
           {state === "completed" && "Completed"}
           {state === "next" && "Current week"}
@@ -32,17 +32,29 @@ export default function WeekCard({
         {state === "completed" && (
           <span className="day-pill day-pill--done">Done</span>
         )}
-
         {state === "next" && (
           <span className="day-pill day-pill--start">Go to Week</span>
         )}
-
         {state === "upcoming" && (
-          <span className="day-pill day-pill--view">
-            View <span className="day-pill__arrow">›</span>
+          <span className="day-pill day-pill--view week-card__pill--dim">
+            Upcoming
           </span>
         )}
       </div>
-    </Link>
+    </>
+  );
+
+  if (state === "next") {
+    return (
+      <Link to="/week" className="day-card day-card--next">
+        {inner}
+      </Link>
+    );
+  }
+
+  return (
+    <div className={`day-card day-card--${state} week-card--static`}>
+      {inner}
+    </div>
   );
 }

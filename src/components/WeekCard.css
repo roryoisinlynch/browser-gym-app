@@ -1,0 +1,16 @@
+.week-card--static {
+  cursor: default;
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+.week-card--static:hover {
+  transform: none;
+  box-shadow: var(--card-shadow);
+}
+
+.week-card__pill--dim {
+  background: transparent;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
