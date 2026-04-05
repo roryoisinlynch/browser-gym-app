@@ -437,6 +437,29 @@ For example, if the user's best set of pull-ups is 12 reps and the week prescrib
 prescribed_reps = 12 - 4 = 8 reps
 ```
 
+## Exercise history matching
+
+Exercise history (for historical best e1RM, recent-max fallback, intensity analysis, and progress charts) is matched by **exercise name**, not by template ID.
+
+This means:
+
+- If the same exercise appears in multiple session templates (e.g. "Bench Press" in both *Push 1* and *Push 2*), all logged sets count toward a single shared history.
+- If an exercise template is deleted, its prior session data is not lost — `ExerciseInstance` carries a denormalised `exerciseName` field written at creation time, so history lookup does not depend on the template still existing.
+
+The normalisation is case-insensitive and trims whitespace, so "bench press", "Bench Press", and " Bench Press " are treated as the same exercise.
+
+This behaviour applies consistently across:
+
+| Context | Matched by |
+|---|---|
+| Historical best e1RM (prescription) | Exercise name |
+| Recent-max fallback | Exercise name |
+| Working-set intensity analysis | Exercise name |
+| Progress charts (ExerciseInsights) | Exercise name |
+| CSV import merge | Exercise name |
+
+---
+
 ## CSV import handling
 
 Imported sets for bodyweight exercises frequently appear as `0kg × n reps` since the source spreadsheet had no weight column. The import pipeline handles this in two stages:
@@ -461,6 +484,7 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
  - fix the intensity target bar so that it's clear when the target is met
  - consider starting the target bar from the warmup threshold instead of at 0
  - OR add a warmup bar above it with 0-60 intensity and have the current one 61-100
+ - OR denote section markers: warmup, RIR target, local e1RM, max e1RM
  - add a create session button in session config
  - fully audit seed data
  - QR code for PC

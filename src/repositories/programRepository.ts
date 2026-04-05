@@ -843,9 +843,31 @@ export async function getExerciseInstanceView(
 
   const isBodyweight = exerciseTemplate.weightMode === "bodyweight";
 
+  // History is matched by exercise name (not template ID) so that:
+  // - Multiple templates for the same exercise (e.g. "Bench Press" in two
+  //   different sessions) share a unified history.
+  // - Deleted templates don't orphan prior session data — ExerciseInstance
+  //   carries a denormalised exerciseName for exactly this purpose.
+  const normalizedExerciseName = exerciseTemplate.exerciseName.trim().toLowerCase();
+  const allMatchingInstances = (
+    await getAll<ExerciseInstance>(STORE_NAMES.exerciseInstances)
+  ).filter(
+    (inst) => (inst.exerciseName ?? "").trim().toLowerCase() === normalizedExerciseName
+  );
+
+  const realSetsByInstance = await Promise.all(
+    allMatchingInstances.map((inst) => getExerciseSetsForExerciseInstance(inst.id))
+  );
+  const realHistoricalSets: ExerciseSet[] = realSetsByInstance.flat().sort((a, b) => {
+    if (a.exerciseInstanceId !== b.exerciseInstanceId) {
+      return a.exerciseInstanceId.localeCompare(b.exerciseInstanceId);
+    }
+    return a.setIndex - b.setIndex;
+  });
+
   const allHistoricalSets = await mergeWithImportedSets(
     exerciseTemplate.exerciseName,
-    await getExerciseSetsForExerciseTemplate(exerciseTemplate.id),
+    realHistoricalSets,
     isBodyweight
   );
 
@@ -886,18 +908,14 @@ export async function getExerciseInstanceView(
   // If the all-time best e1RM hasn't been matched within the last three seasons
   // where this exercise was actually attempted, we substitute a "recent max"
   // so that intensity targets remain fair and achievable.
-  const allExerciseInstancesForTemplate = await getAllByIndex<ExerciseInstance>(
-    STORE_NAMES.exerciseInstances,
-    "byExerciseTemplateId",
-    exerciseTemplate.id
-  );
+  // Re-uses allMatchingInstances (name-matched, same scope as historical best).
 
   // Fetch session + season metadata for every prior (non-current) instance.
   type InstanceMeta = { seasonId: string; seasonOrder: number; date: string };
   const instanceMetaMap = new Map<string, InstanceMeta>();
 
   await Promise.all(
-    allExerciseInstancesForTemplate
+    allMatchingInstances
       .filter((inst) => inst.id !== exerciseInstance.id)
       .map(async (inst) => {
         const instSession = await getSessionInstanceById(inst.sessionInstanceId);
