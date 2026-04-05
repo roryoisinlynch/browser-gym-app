@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { ExerciseSessionDataPoint } from "../repositories/programRepository";
-import { getExerciseSessionHistory } from "../repositories/programRepository";
+import { getExerciseSessionHistory, resolveExerciseSeasonKey } from "../repositories/programRepository";
 import "./ExerciseInsights.css";
 
 interface ExerciseInsightsProps {
@@ -91,7 +91,7 @@ function binDataPoints(
       binType === "week"
         ? d.weekInstanceId ?? getMondayKey(d.date)
         : binType === "season"
-        ? d.seasonInstanceId ?? d.date.slice(0, 7)
+        ? resolveExerciseSeasonKey(d.seasonInstanceId, d.date)
         : binType === "quarter"
         ? getQuarterKey(d.date)
         : getYearKey(d.date);

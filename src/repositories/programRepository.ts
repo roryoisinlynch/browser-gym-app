@@ -649,6 +649,22 @@ export async function getExerciseSetsForExerciseTemplate(
     });
 }
 
+/**
+ * Returns a stable key that identifies which "season" a data point belongs to.
+ *
+ * For real sessions this is the SeasonInstance ID. For imported data (which
+ * carries no season membership) it falls back to the calendar month ("YYYY-MM"),
+ * mirroring the bucketing used in the ExerciseInsights chart so that both
+ * the recent-max prescription logic and the chart treat imported history
+ * consistently.
+ */
+export function resolveExerciseSeasonKey(
+  seasonInstanceId: string | null | undefined,
+  date: string
+): string {
+  return seasonInstanceId ?? date.slice(0, 7);
+}
+
 export interface ExerciseSessionDataPoint {
   exerciseInstanceId: string;
   weekInstanceId: string | null;
@@ -906,12 +922,17 @@ export async function getExerciseInstanceView(
 
   // ── Recent-max computation ────────────────────────────────────────────────
   // If the all-time best e1RM hasn't been matched within the last three seasons
-  // where this exercise was actually attempted, we substitute a "recent max"
-  // so that intensity targets remain fair and achievable.
-  // Re-uses allMatchingInstances (name-matched, same scope as historical best).
+  // where this exercise was actually attempted, substitute a "recent max" so
+  // that intensity targets remain fair and achievable.
+  //
+  // Season membership uses resolveExerciseSeasonKey — the same logic as the
+  // ExerciseInsights chart — so real SeasonInstance IDs and calendar-month
+  // pseudo-seasons for imported data are handled identically in both places.
 
-  // Fetch session + season metadata for every prior (non-current) instance.
-  type InstanceMeta = { seasonId: string; seasonOrder: number; date: string };
+  // Build a session-level map from exerciseInstanceId → { seasonKey, date }.
+  // seasonKey = SeasonInstance ID for real sessions; no SeasonInstance lookup
+  // needed since SessionInstance already carries seasonInstanceId directly.
+  type InstanceMeta = { seasonKey: string; date: string };
   const instanceMetaMap = new Map<string, InstanceMeta>();
 
   await Promise.all(
@@ -919,83 +940,95 @@ export async function getExerciseInstanceView(
       .filter((inst) => inst.id !== exerciseInstance.id)
       .map(async (inst) => {
         const instSession = await getSessionInstanceById(inst.sessionInstanceId);
-        if (!instSession?.seasonInstanceId) return;
-        const instSeason = await getSeasonInstanceById(instSession.seasonInstanceId);
-        if (!instSeason) return;
+        if (!instSession) return;
         instanceMetaMap.set(inst.id, {
-          seasonId: instSeason.id,
-          seasonOrder: instSeason.order,
+          seasonKey: resolveExerciseSeasonKey(instSession.seasonInstanceId, instSession.date),
           date: instSession.date,
         });
       })
   );
 
-  // Collect seasons where this exercise has been attempted (real sets only).
-  const seasonsWithActivity = new Map<string, number>(); // id → order
-  for (const set of priorHistoricalSets) {
-    if (set.exerciseInstanceId === "__imported__") continue;
-    const meta = instanceMetaMap.get(set.exerciseInstanceId);
-    if (meta && !seasonsWithActivity.has(meta.seasonId)) {
-      seasonsWithActivity.set(meta.seasonId, meta.seasonOrder);
-    }
-  }
-  // Current season always counts, even on a first attempt.
-  seasonsWithActivity.set(seasonInstance.id, seasonInstance.order);
+  // One bucket per season key — tracks the most-recent session date (for
+  // chronological ordering) and the best e1RM with its date (for the tooltip).
+  type SeasonBucket = { sortDate: string; bestE1RM: number | null; bestDate: string | null };
+  const seasonBuckets = new Map<string, SeasonBucket>();
 
-  // The three most-recent seasons with activity.
-  const recentSeasonIds = new Set(
-    [...seasonsWithActivity.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-      .map(([id]) => id)
-  );
-
-  let recentMaxEstimatedOneRepMax: number | null = null;
-  let recentMaxDate: string | null = null;
-  let historicalBestDate: string | null = null;
-  let trackedBestFromRealSets: number | null = null;
-
-  for (const set of priorHistoricalSets) {
-    if (set.exerciseInstanceId === "__imported__") continue;
-
-    const e1rm = calculateEstimatedOneRepMax(set.performedWeight, set.performedReps);
-    if (e1rm == null) continue;
-
-    const meta = instanceMetaMap.get(set.exerciseInstanceId);
-
-    // Track the date of the best real-set PR.
-    if (trackedBestFromRealSets == null || e1rm > trackedBestFromRealSets) {
-      trackedBestFromRealSets = e1rm;
-      historicalBestDate = meta?.date ?? null;
-    }
-
-    // Track the best e1RM within the recent seasons.
-    if (meta && recentSeasonIds.has(meta.seasonId)) {
-      if (recentMaxEstimatedOneRepMax == null || e1rm > recentMaxEstimatedOneRepMax) {
-        recentMaxEstimatedOneRepMax = e1rm;
-        recentMaxDate = meta.date;
+  function mergeIntoBucket(key: string, date: string, e1rm: number | null): void {
+    const existing = seasonBuckets.get(key);
+    if (!existing) {
+      seasonBuckets.set(key, { sortDate: date, bestE1RM: e1rm, bestDate: e1rm != null ? date : null });
+    } else {
+      if (date > existing.sortDate) existing.sortDate = date;
+      if (e1rm != null && (existing.bestE1RM == null || e1rm > existing.bestE1RM)) {
+        existing.bestE1RM = e1rm;
+        existing.bestDate = date;
       }
     }
   }
 
-  // If the historical best came from imported data (no real set matches it),
-  // clear the date so the tooltip can display a generic fallback.
-  if (
-    historicalBestEstimatedOneRepMax != null &&
-    (trackedBestFromRealSets == null ||
-      trackedBestFromRealSets < historicalBestEstimatedOneRepMax)
-  ) {
-    historicalBestDate = null;
+  // Current season always participates, even on a first attempt.
+  mergeIntoBucket(seasonInstance.id, sessionInstance.date, null);
+
+  // Real prior sets.
+  for (const set of priorHistoricalSets) {
+    if (set.exerciseInstanceId === "__imported__") continue;
+    const meta = instanceMetaMap.get(set.exerciseInstanceId);
+    if (!meta) continue;
+    mergeIntoBucket(meta.seasonKey, meta.date,
+      calculateEstimatedOneRepMax(set.performedWeight, set.performedReps));
+  }
+
+  // Imported sets — grouped into calendar-month pseudo-seasons using raw
+  // ImportedSet records (which carry dates, unlike the merged ExerciseSet view).
+  const allRawImported = await loadAllImportedSets();
+  for (const s of allRawImported) {
+    if (s.exerciseName.trim().toLowerCase() !== normalizedExerciseName) continue;
+    if (s.reps <= 0) continue;
+    const e1rm = !isBodyweight && s.weight > 0
+      ? calculateEstimatedOneRepMax(s.weight, s.reps)
+      : null;
+    mergeIntoBucket(resolveExerciseSeasonKey(null, s.date), s.date, e1rm);
+  }
+
+  // Sort buckets by most-recent activity (newest first) and take the top 3.
+  const recentSeasonKeys = new Set(
+    [...seasonBuckets.entries()]
+      .sort((a, b) => b[1].sortDate.localeCompare(a[1].sortDate))
+      .slice(0, 3)
+      .map(([key]) => key)
+  );
+
+  // Historical best date — from whichever bucket produced the all-time best e1RM.
+  let historicalBestDate: string | null = null;
+  for (const bucket of seasonBuckets.values()) {
+    if (
+      bucket.bestE1RM != null &&
+      historicalBestEstimatedOneRepMax != null &&
+      bucket.bestE1RM >= historicalBestEstimatedOneRepMax
+    ) {
+      historicalBestDate = bucket.bestDate;
+      break;
+    }
+  }
+
+  // Recent max — best e1RM across the three most-recent season buckets.
+  let recentMaxEstimatedOneRepMax: number | null = null;
+  let recentMaxDate: string | null = null;
+  for (const [key, bucket] of seasonBuckets.entries()) {
+    if (!recentSeasonKeys.has(key) || bucket.bestE1RM == null) continue;
+    if (recentMaxEstimatedOneRepMax == null || bucket.bestE1RM > recentMaxEstimatedOneRepMax) {
+      recentMaxEstimatedOneRepMax = bucket.bestE1RM;
+      recentMaxDate = bucket.bestDate;
+    }
   }
 
   // No substitution needed if the all-time best was already matched within
   // the recent seasons (recentMax ≥ historicalBest).
-  const historicalBestIsRecent =
+  if (
     recentMaxEstimatedOneRepMax != null &&
     historicalBestEstimatedOneRepMax != null &&
-    recentMaxEstimatedOneRepMax >= historicalBestEstimatedOneRepMax;
-
-  if (historicalBestIsRecent) {
+    recentMaxEstimatedOneRepMax >= historicalBestEstimatedOneRepMax
+  ) {
     recentMaxEstimatedOneRepMax = null;
     recentMaxDate = null;
   }
