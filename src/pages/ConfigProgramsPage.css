@@ -114,7 +114,7 @@
   padding: 2px 8px;
   border-radius: 20px;
   background: var(--accent);
-  color: #fff;
+  color: #0f1113;
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -318,7 +318,7 @@
 
 .config-programs__create-save {
   background: var(--accent);
-  color: #fff;
+  color: #0f1113;
   border-color: var(--accent);
 }
 

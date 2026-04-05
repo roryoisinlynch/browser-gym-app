@@ -77,7 +77,7 @@
   border-radius: 10px;
   border: none;
   background: var(--accent);
-  color: #fff;
+  color: #0f1113;
   font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
@@ -312,7 +312,7 @@
 
 .config-program-detail__add-save {
   background: var(--accent);
-  color: #fff;
+  color: #0f1113;
   border-color: var(--accent);
 }
 
