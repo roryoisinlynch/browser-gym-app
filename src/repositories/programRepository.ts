@@ -1537,6 +1537,24 @@ export async function getAllSessionTemplateListItems(): Promise<
 
 // ─── Config: template writes ──────────────────────────────────────────────────
 
+export async function saveSessionTemplate(
+  template: SessionTemplate
+): Promise<void> {
+  await putItem(STORE_NAMES.sessionTemplates, template);
+}
+
+export async function deleteSessionTemplateById(id: string): Promise<void> {
+  const sections = await getAllByIndex<SessionTemplateMuscleGroup>(
+    STORE_NAMES.sessionTemplateMuscleGroups,
+    "bySessionTemplateId",
+    id
+  );
+  for (const section of sections) {
+    await deleteSessionTemplateMuscleGroupById(section.id);
+  }
+  await deleteItem(STORE_NAMES.sessionTemplates, id);
+}
+
 export async function saveMuscleGroup(muscleGroup: MuscleGroup): Promise<void> {
   await putItem(STORE_NAMES.muscleGroups, muscleGroup);
 }

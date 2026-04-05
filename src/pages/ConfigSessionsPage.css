@@ -77,3 +77,178 @@
   color: var(--text-soft);
   line-height: 1;
 }
+
+/* Row wrapper for card + delete */
+.config-sessions__session-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.config-sessions__session-row .config-sessions__session-card {
+  flex: 1;
+}
+
+.config-sessions__delete-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.config-sessions__delete-btn:hover {
+  background: #3a1a1a;
+  color: #e06c6c;
+}
+
+.config-sessions__delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.config-sessions__delete-confirm-text {
+  font-size: 0.78rem;
+  color: var(--text-soft);
+}
+
+.config-sessions__delete-confirm-yes,
+.config-sessions__delete-confirm-no {
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.config-sessions__delete-confirm-yes {
+  background: #5a1a1a;
+  color: #e06c6c;
+}
+
+.config-sessions__delete-confirm-yes:hover {
+  background: #7a2020;
+}
+
+.config-sessions__delete-confirm-no {
+  background: transparent;
+  color: var(--text-soft);
+}
+
+.config-sessions__delete-confirm-no:hover {
+  background: var(--card-bg);
+}
+
+/* Add button */
+.config-sessions__add-btn {
+  display: block;
+  margin: 16px 20px 0;
+  width: calc(100% - 40px);
+  padding: 13px 16px;
+  border-radius: 14px;
+  border: 1px dashed var(--card-border);
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: center;
+}
+
+.config-sessions__add-btn:hover {
+  background: var(--card-bg);
+}
+
+/* Create form */
+.config-sessions__create-form {
+  margin: 16px 20px 0;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.config-sessions__create-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-strong);
+}
+
+.config-sessions__create-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.config-sessions__create-input,
+.config-sessions__create-select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  background: #1a1e26;
+  color: var(--text-strong);
+  font-size: 0.9rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.config-sessions__create-input:focus,
+.config-sessions__create-select:focus {
+  border-color: var(--accent);
+}
+
+.config-sessions__create-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.config-sessions__create-cancel,
+.config-sessions__create-save {
+  padding: 9px 18px;
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.config-sessions__create-cancel {
+  background: transparent;
+  color: var(--text-soft);
+}
+
+.config-sessions__create-cancel:hover {
+  background: #262c35;
+}
+
+.config-sessions__create-save {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.config-sessions__create-save:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
