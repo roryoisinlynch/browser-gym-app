@@ -105,7 +105,8 @@
   border: 1px solid var(--panel-border);
   background: #1a1e26;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  overflow: hidden;
+  max-height: 260px;
+  overflow-y: auto;
 }
 
 .config-exercise__suggestion-item {

@@ -256,10 +256,8 @@ export default function ConfigExercisePage() {
 
   const filteredSuggestions = useMemo(() => {
     const q = exerciseName.trim().toLowerCase();
-    if (!q) return allExerciseNames.slice(0, 8);
-    return allExerciseNames
-      .filter((n) => n.toLowerCase().includes(q))
-      .slice(0, 8);
+    if (!q) return allExerciseNames;
+    return allExerciseNames.filter((n) => n.toLowerCase().includes(q));
   }, [exerciseName, allExerciseNames]);
 
 
