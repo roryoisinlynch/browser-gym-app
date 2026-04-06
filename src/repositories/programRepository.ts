@@ -56,6 +56,14 @@ export interface SessionTemplateGroupWithExercises {
   }>;
 }
 
+/**
+ * Returns the date the session was actually completed, as "YYYY-MM-DD".
+ * Falls back to the scheduled date if completedAt is not set.
+ */
+function sessionCompletedDate(session: SessionInstance): string {
+  return (session.completedAt ?? session.date).slice(0, 10);
+}
+
 export interface AnalyzedExerciseSet {
   set: ExerciseSet;
   analysis: {
@@ -166,7 +174,7 @@ export async function getAllSetRecords(): Promise<SetRecord[]> {
         exerciseName: template.exerciseName,
         weight: set.performedWeight ?? null,
         reps: set.performedReps ?? null,
-        date: session.date,
+        date: sessionCompletedDate(session),
       };
     })
     .filter((r): r is SetRecord => r !== null);
@@ -748,7 +756,7 @@ export async function getExerciseSessionHistory(
         exerciseInstanceId: exerciseInstance.id,
         weekInstanceId: sessionInstance.weekInstanceId,
         seasonInstanceId: sessionInstance.seasonInstanceId,
-        date: sessionInstance.date,
+        date: sessionCompletedDate(sessionInstance),
         topWeight,
         topReps: topReps ?? topRepCount,
         topEstimatedOneRepMax: topE1RM,
@@ -1038,7 +1046,7 @@ export async function getExerciseInstanceView(
         if (!instSession) return;
         instanceMetaMap.set(inst.id, {
           seasonKey: resolveExerciseSeasonKey(instSession.seasonInstanceId, instSession.date),
-          date: instSession.date,
+          date: sessionCompletedDate(instSession),
         });
       })
   );
@@ -1062,7 +1070,7 @@ export async function getExerciseInstanceView(
   }
 
   // Current season always participates, even on a first attempt.
-  mergeIntoBucket(seasonInstance.id, sessionInstance.date, null);
+  mergeIntoBucket(seasonInstance.id, sessionCompletedDate(sessionInstance), null);
 
   // Real prior sets.
   for (const set of priorHistoricalSets) {
@@ -1883,7 +1891,7 @@ export async function getSessionPRs(sessionInstanceId: string): Promise<SessionP
         );
         if (prevExInst) {
           const prevSession = await getSessionInstanceById(prevExInst.sessionInstanceId);
-          previousDate = prevSession?.date ?? null;
+          previousDate = prevSession ? sessionCompletedDate(prevSession) : null;
         }
       }
 
