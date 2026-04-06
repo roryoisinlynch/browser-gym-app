@@ -17,4 +17,4 @@ curl -s "https://api.github.com/repos/roryoisinlynch/browser-gym-app/actions/run
   | python3 -c "import sys,json; r=json.load(sys.stdin)['workflow_runs'][0]; print(r['status'], r['conclusion'])"
 ```
 
-Poll every 15 seconds, with a hard cap of 20 attempts (~5 minutes). This keeps each deploy check to at most 20 API requests; the unauthenticated rate limit is 60 requests/hour, so never run more than 3 deploys' worth of polling in a single hour. If the cap is reached without a `completed` status, report the run URL and stop — do not keep polling.
+Poll every 15 seconds, with a hard cap of 20 attempts (~5 minutes). A normal deploy completes in ~4 requests; the 20-attempt cap only applies if the deploy hangs. The unauthenticated rate limit is 60 requests/hour — if the cap is hit on multiple consecutive deploys, pause and flag the situation rather than continuing to poll. If the cap is reached without a `completed` status, report the run URL and stop — do not keep polling.
