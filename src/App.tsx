@@ -11,6 +11,7 @@ import ConfigProgramsPage from "./pages/ConfigProgramsPage";
 import ConfigProgramDetailPage from "./pages/ConfigProgramDetailPage";
 import ConfigSessionDetailPage from "./pages/ConfigSessionDetailPage";
 import ConfigExercisePage from "./pages/ConfigExercisePage";
+import SessionSummaryPage from "./pages/SessionSummaryPage";
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="/week" element={<WeekPage />} />
         <Route path="/week/:weekInstanceId" element={<WeekPage />} />
         <Route path="/session/:sessionInstanceId" element={<SessionPage />} />
+        <Route path="/session/:sessionInstanceId/summary" element={<SessionSummaryPage />} />
         <Route path="/exercise/:exerciseInstanceId" element={<ExercisePage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/import" element={<ImportPage />} />

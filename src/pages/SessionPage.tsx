@@ -359,7 +359,7 @@ export default function SessionPage() {
       setErrorMessage(null);
 
       await stopSessionInstance(sessionView.sessionInstance.id);
-      navigate("/week");
+      navigate(`/session/${sessionView.sessionInstance.id}/summary`);
     } catch (error) {
       console.error("Could not finish session.", error);
       setErrorMessage("Could not finish session.");

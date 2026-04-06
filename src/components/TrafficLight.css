@@ -1,0 +1,55 @@
+.traffic-light {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.traffic-light__arrow {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.traffic-light__bulb {
+  display: block;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Sizes */
+.traffic-light--sm .traffic-light__bulb {
+  width: 10px;
+  height: 10px;
+}
+
+.traffic-light--md .traffic-light__bulb {
+  width: 16px;
+  height: 16px;
+}
+
+.traffic-light--lg .traffic-light__bulb {
+  width: 28px;
+  height: 28px;
+}
+
+/* Colours */
+.traffic-light__bulb--green {
+  background: #6bcb77;
+  box-shadow: 0 0 8px rgba(107, 203, 119, 0.5);
+}
+
+.traffic-light__bulb--amber {
+  background: #f4a261;
+  box-shadow: 0 0 8px rgba(244, 162, 97, 0.5);
+}
+
+.traffic-light__bulb--red {
+  background: #e76f51;
+  box-shadow: 0 0 8px rgba(231, 111, 81, 0.4);
+}
+
+.traffic-light__bulb--grey {
+  background: var(--panel-border);
+  box-shadow: none;
+}

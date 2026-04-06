@@ -1,0 +1,251 @@
+.summary-page {
+  min-height: 100vh;
+  padding: 64px 0 100px;
+  background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+  color: var(--text-strong);
+}
+
+.summary-shell {
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 20px 14px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.summary-loading,
+.summary-error {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* ── Header ── */
+.summary-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summary-title {
+  margin: 0;
+  font-size: 1.28rem;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  font-weight: 800;
+  color: var(--text-strong);
+}
+
+/* ── Stats row ── */
+.summary-stats-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 16px 20px;
+  border-radius: 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+}
+
+.summary-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.summary-stat__value {
+  font-size: 1.48rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-strong);
+}
+
+.summary-stat__label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.summary-stat-divider {
+  width: 1px;
+  height: 36px;
+  background: var(--panel-border);
+  margin: 0 12px;
+}
+
+/* ── Section ── */
+.summary-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.summary-section-title {
+  margin: 0;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+/* ── Metric bars ── */
+.summary-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.summary-metric-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.summary-metric-bar__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.summary-metric-bar__label {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.summary-metric-bar__value {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.summary-metric-bar__pct {
+  color: var(--text-soft);
+  font-size: 0.8rem;
+}
+
+.summary-metric-bar__track {
+  position: relative;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--panel-border);
+  overflow: hidden;
+}
+
+.summary-metric-bar__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+
+/* ── Score block ── */
+.summary-score-block {
+  padding: 20px;
+  border-radius: 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.summary-score-scores {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+}
+
+.summary-score-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.summary-score-item--total {
+  gap: 6px;
+}
+
+.summary-score-item__rag {
+  margin-bottom: 2px;
+}
+
+.summary-score-item__pct {
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-muted);
+}
+
+.summary-score-item__pct--total {
+  font-size: 2.4rem;
+  color: var(--text-strong);
+  letter-spacing: -0.04em;
+}
+
+.summary-score-item__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.summary-score-footnote {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--text-soft);
+  text-align: center;
+}
+
+/* ── Breadcrumb section ── */
+.summary-section--breadcrumb {
+  align-items: center;
+  padding: 20px;
+  border-radius: 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+}
+
+/* ── Actions ── */
+.summary-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.summary-action-button {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 800;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.16s ease, opacity 0.16s ease;
+}
+
+.summary-action-button:hover {
+  transform: translateY(-1px);
+}
+
+.summary-action-button:active {
+  transform: scale(0.99);
+}
+
+.summary-action-button--primary {
+  background: var(--accent);
+  color: #0f1113;
+  border-color: var(--accent);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.35);
+}
