@@ -533,3 +533,4 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
  - add a season instance page which functions exactly like the week instance page showing a list of week instances (where the week page shows a list of session instances)
  - is seed data taken from mock data or does it have its own definiton, should it? what do we want the final seed data to look like
  - can the app tell whether it has been downloaded and installed? if so condition on mobile to tell the user how
+ - onboarding flow to show users towards selecting a preset, creating their own, or modifying a preset
