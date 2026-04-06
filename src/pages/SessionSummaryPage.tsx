@@ -198,32 +198,37 @@ export default function SessionSummaryPage() {
           )}
 
           <div className="summary-score-block">
-            <TrafficLight status={ragStatus} size="md" showAll />
-            <div className="summary-score-divider" />
-            <div className="summary-score-right">
-              <div className="summary-score-scores">
-                <div className="summary-score-item">
-                  <span className="summary-score-item__pct">{volumeScore}%</span>
-                  <span className="summary-score-item__label">Volume</span>
-                </div>
-                <div className="summary-score-item summary-score-item--total">
-                  <span className="summary-score-item__pct summary-score-item__pct--total">
-                    {sessionScore}
-                  </span>
-                  <span className="summary-score-item__label">
-                    Session score: {ragStatus.charAt(0).toUpperCase() + ragStatus.slice(1)}
-                  </span>
-                </div>
-                <div className="summary-score-item">
-                  <span className="summary-score-item__pct">{intensityScore}%</span>
-                  <span className="summary-score-item__label">Intensity</span>
-                </div>
+            {/* Left: traffic lights + score number + label */}
+            <div className="summary-score-primary">
+              <TrafficLight status={ragStatus} size="md" showAll />
+              <div className="summary-score-number">
+                <span className="summary-score-item__pct summary-score-item__pct--total">
+                  {sessionScore}
+                </span>
+                <span className="summary-score-item__label">
+                  Session score: {ragStatus.charAt(0).toUpperCase() + ragStatus.slice(1)}
+                </span>
               </div>
-              <p className="summary-score-footnote">
-                Score = average of volume and intensity (each out of 100)
-              </p>
+            </div>
+
+            <div className="summary-score-divider" />
+
+            {/* Right: volume + intensity */}
+            <div className="summary-score-secondary">
+              <div className="summary-score-item">
+                <span className="summary-score-item__pct">{volumeScore}%</span>
+                <span className="summary-score-item__label">Volume</span>
+              </div>
+              <div className="summary-score-item">
+                <span className="summary-score-item__pct">{intensityScore}%</span>
+                <span className="summary-score-item__label">Intensity</span>
+              </div>
             </div>
           </div>
+
+          <p className="summary-score-footnote">
+            Score = average of volume and intensity (each out of 100)
+          </p>
         </section>
 
         {/* ── Weekly breadcrumb ── */}
