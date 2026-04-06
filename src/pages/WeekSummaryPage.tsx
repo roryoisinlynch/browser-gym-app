@@ -12,6 +12,52 @@ import {
 } from "../repositories/programRepository";
 import { computeSessionMetrics } from "../services/sessionMetrics";
 import { computeWeekMetrics, emojiForRating } from "../services/weekMetrics";
+import type { WeekMetrics } from "../services/weekMetrics";
+
+function buildWeekNarrative(metrics: WeekMetrics): string {
+  const { volumeScore, intensityScore, consistencyScore } = metrics;
+
+  const volStatus = volumeScore >= 100 ? "green" : volumeScore >= 90 ? "amber" : "red";
+  const intStatus = intensityScore >= 100 ? "green" : intensityScore >= 90 ? "amber" : "red";
+  const conStatus = consistencyScore >= 100 ? "green" : consistencyScore >= 90 ? "amber" : "red";
+
+  const volPhrase =
+    volStatus === "green" ? "lifted enough sets to meet your volume target"
+    : volStatus === "amber" ? "almost lifted enough sets to meet your volume target"
+    : "didn't lift enough sets to meet your volume target";
+
+  const intPhrase =
+    intStatus === "green" ? "lifted enough weight to hit your intensity target"
+    : intStatus === "amber" ? "almost lifted enough weight to hit your intensity target"
+    : "didn't lift enough weight to hit your intensity target";
+
+  const conPhrase =
+    conStatus === "green" ? "completed your sessions on schedule"
+    : conStatus === "amber" ? "nearly kept to your session schedule"
+    : "took longer than planned to finish your sessions";
+
+  const positives = [
+    { status: volStatus, phrase: volPhrase },
+    { status: intStatus, phrase: intPhrase },
+    { status: conStatus, phrase: conPhrase },
+  ].filter(i => i.status !== "red").map(i => i.phrase);
+
+  const negatives = [
+    { status: volStatus, phrase: volPhrase },
+    { status: intStatus, phrase: intPhrase },
+    { status: conStatus, phrase: conPhrase },
+  ].filter(i => i.status === "red").map(i => i.phrase);
+
+  function join(phrases: string[]): string {
+    if (phrases.length === 1) return phrases[0];
+    if (phrases.length === 2) return `${phrases[0]} and ${phrases[1]}`;
+    return `${phrases[0]}, ${phrases[1]}, and ${phrases[2]}`;
+  }
+
+  if (negatives.length === 0) return `You ${join(positives)}.`;
+  if (positives.length === 0) return `You ${join(negatives)}.`;
+  return `You ${join(positives)}, but you ${join(negatives)}.`;
+}
 import WeeklyBreadcrumb from "../components/WeeklyBreadcrumb";
 import type { BreadcrumbSession } from "../components/WeeklyBreadcrumb";
 import WeeksBreadcrumb from "../components/WeeksBreadcrumb";
@@ -207,6 +253,8 @@ export default function WeekSummaryPage() {
         {/* ── Results ── */}
         <section className="week-summary-section">
           <h2 className="week-summary-section-title">Results</h2>
+
+          <p className="week-summary-narrative">{buildWeekNarrative(metrics)}</p>
 
           <div className="week-summary-score-block">
             {/* Left: big emoji + week score */}

@@ -102,6 +102,15 @@
   gap: 2px;
 }
 
+/* ── Narrative ── */
+.week-summary-narrative {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
 /* ── Score block ── */
 .week-summary-score-block {
   padding: 12px 20px;
