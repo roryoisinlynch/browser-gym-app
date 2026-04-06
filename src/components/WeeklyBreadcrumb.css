@@ -16,8 +16,9 @@
 
 .weekly-breadcrumb__trail {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 0;
+  padding-top: 14px; /* room for the absolutely-positioned arrow above */
 }
 
 .weekly-breadcrumb__item {

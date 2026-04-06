@@ -1,11 +1,16 @@
 .traffic-light {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
 }
 
 .traffic-light__arrow {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 2px;
   font-size: 0.6rem;
   color: var(--text-muted);
   line-height: 1;
