@@ -96,21 +96,29 @@ export function computeWeekMetrics(
     );
   }
 
-  // Consistency: how long did the week take vs how long it was scheduled to take.
-  const scheduledDays = weekTemplateItems.length;
+  // Consistency: blended score of completion rate × timing rate.
+  //   completionRate = completed sessions / scheduled sessions (capped at 1)
+  //   timingRate     = expected calendar length / actual calendar length (capped at 1)
+  // Both must be good for a high score; each independently penalises skips or delays.
+  const expectedLength = weekTemplateItems.length; // calendar days the week was designed to span
+  const scheduledSessionCount = weekTemplateItems.filter((i) => i.type === "session").length;
+  const skippedSessions = Math.max(0, scheduledSessionCount - completedViews.length);
+
   let consistencyScore = 100;
-  if (weekInstance.startedAt && weekInstance.completedAt && scheduledDays > 0) {
-    const startMs = new Date(weekInstance.startedAt).getTime();
-    const endMs = new Date(weekInstance.completedAt).getTime();
-    const actualDays = Math.max(1, (endMs - startMs) / 86_400_000);
-    consistencyScore = Math.min(100, Math.round((scheduledDays / actualDays) * 100));
+  if (scheduledSessionCount > 0) {
+    const completionRate = Math.min(1, completedViews.length / scheduledSessionCount);
+    let timingRate = 1;
+    if (weekInstance.startedAt && weekInstance.completedAt && expectedLength > 0) {
+      const startMs = new Date(weekInstance.startedAt).getTime();
+      const endMs = new Date(weekInstance.completedAt).getTime();
+      const actualLength = Math.max(1, (endMs - startMs) / 86_400_000);
+      timingRate = Math.min(1, expectedLength / actualLength);
+    }
+    consistencyScore = Math.round(completionRate * timingRate * 100);
   }
 
   const weekScore = Math.round((volumeScore + intensityScore + consistencyScore) / 3);
   const emojiRating = getEmojiRating(weekScore);
-
-  const scheduledSessionCount = weekTemplateItems.filter((i) => i.type === "session").length;
-  const skippedSessions = Math.max(0, scheduledSessionCount - completedViews.length);
 
   return {
     totalSets,
