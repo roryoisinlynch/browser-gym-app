@@ -30,7 +30,6 @@ export default function App() {
         <Route path="/config/programs" element={<ConfigProgramsPage />} />
         <Route path="/config/programs/:seasonTemplateId" element={<ConfigProgramDetailPage />} />
         <Route path="/config/sessions/:sessionTemplateId" element={<ConfigSessionDetailPage />} />
-        <Route path="/config/exercises/new" element={<ConfigExercisePage />} />
         <Route path="/config/exercises/:exerciseTemplateId" element={<ConfigExercisePage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

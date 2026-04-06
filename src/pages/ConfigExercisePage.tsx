@@ -238,7 +238,7 @@ export default function ConfigExercisePage() {
       navigate(-1);
     } catch (err) {
       console.error("[ConfigExercisePage] save failed:", err);
-      setError(`Could not save exercise: ${err instanceof Error ? err.message : String(err)}`);
+      setError("Could not save exercise.");
     } finally {
       setIsSaving(false);
     }
