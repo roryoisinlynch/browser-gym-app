@@ -204,13 +204,13 @@ export default function SessionSummaryPage() {
                 <span className="summary-score-item__label">Volume</span>
               </div>
               <div className="summary-score-item summary-score-item--total">
-                <div className="summary-score-item__rag">
-                  <TrafficLight status={ragStatus} size="lg" />
-                </div>
+                <TrafficLight status={ragStatus} size="md" showAll />
                 <span className="summary-score-item__pct summary-score-item__pct--total">
                   {sessionScore}
                 </span>
-                <span className="summary-score-item__label">Score</span>
+                <span className="summary-score-item__label">
+                  Session score: {ragStatus.charAt(0).toUpperCase() + ragStatus.slice(1)}
+                </span>
               </div>
               <div className="summary-score-item">
                 <span className="summary-score-item__pct">{intensityScore}%</span>

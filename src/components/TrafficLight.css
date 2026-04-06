@@ -53,3 +53,15 @@
   background: var(--panel-border);
   box-shadow: none;
 }
+
+/* Inactive bulbs in showAll mode */
+.traffic-light__bulb--inactive {
+  box-shadow: none;
+  opacity: 0.15;
+}
+
+/* Stack layout for showAll */
+.traffic-light--stack {
+  flex-direction: column;
+  gap: 5px;
+}
