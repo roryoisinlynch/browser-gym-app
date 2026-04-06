@@ -205,12 +205,7 @@ export default function SessionSummaryPage() {
                 <span className="summary-score-item__pct summary-score-item__pct--total">
                   {sessionScore}
                 </span>
-                <div className="summary-score-labels">
-                  <span className="summary-score-rag-label">Session score:</span>
-                  <span className="summary-score-rag-value">
-                    {ragStatus.charAt(0).toUpperCase() + ragStatus.slice(1)}
-                  </span>
-                </div>
+                <span className="summary-score-rag-label">Session score</span>
               </div>
             </div>
 
