@@ -206,7 +206,7 @@ export default function SessionSummaryPage() {
                   {sessionScore}
                 </span>
                 <span className="summary-score-item__label">
-                  Session score: {ragStatus.charAt(0).toUpperCase() + ragStatus.slice(1)}
+                  Session<br />Score:<br />{ragStatus.charAt(0).toUpperCase() + ragStatus.slice(1)}
                 </span>
               </div>
             </div>

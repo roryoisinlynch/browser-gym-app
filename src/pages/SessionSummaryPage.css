@@ -134,8 +134,9 @@
 
 .summary-score-number {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
 }
 
 .summary-score-secondary {
