@@ -1,0 +1,48 @@
+.weeks-breadcrumb {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.weeks-breadcrumb__label {
+  margin: 0;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.weeks-breadcrumb__trail {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0;
+}
+
+.weeks-breadcrumb__item {
+  display: flex;
+  align-items: center;
+}
+
+.weeks-breadcrumb__separator {
+  display: block;
+  width: 14px;
+  height: 1.5px;
+  background: var(--panel-border);
+  margin: 0 2px;
+}
+
+.weeks-breadcrumb__emoji {
+  font-size: 1.5rem;
+  line-height: 1;
+  opacity: 0.55;
+  transition: opacity 0.15s;
+}
+
+.weeks-breadcrumb__emoji--current {
+  opacity: 1;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.35));
+}

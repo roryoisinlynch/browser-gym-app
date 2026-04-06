@@ -290,6 +290,16 @@ export default function SessionSummaryPage() {
           </section>
         )}
 
+        {/* ── Week summary CTA (shown when this was the last session in the week) ── */}
+        {sessionView.weekInstance.status === "completed" && (
+          <button
+            className="summary-week-cta"
+            onClick={() => navigate(`/week/${sessionView.weekInstance.id}/summary`)}
+          >
+            View week summary →
+          </button>
+        )}
+
       </section>
 
       <BottomNav activeTab="session" />

@@ -1922,6 +1922,105 @@ export async function getSessionPRs(sessionInstanceId: string): Promise<SessionP
   return prs;
 }
 
+// ─── Week PRs ─────────────────────────────────────────────────────────────────
+
+/**
+ * Returns exercises where the week produced a genuine all-time e1RM PR.
+ *
+ * Same rules as getSessionPRs, but scoped to the full week:
+ *  - Groups all exercise instances across every session in the week by template.
+ *  - Must have at least 3 prior instances from OUTSIDE this week.
+ *  - The best e1RM achieved anywhere in the week must beat all prior history.
+ *  - Multiple PRs for the same exercise within the week collapse into one entry.
+ */
+export async function getWeekPRs(weekInstanceId: string): Promise<SessionPR[]> {
+  const weekSessions = await getSessionInstancesForWeekInstance(weekInstanceId);
+
+  const allWeekExerciseInstances: ExerciseInstance[] = (
+    await Promise.all(
+      weekSessions.map((s) => getExerciseInstancesForSessionInstance(s.id))
+    )
+  ).flat();
+
+  // Group by exercise template ID so multiple sessions for the same exercise collapse.
+  const byTemplate = new Map<string, ExerciseInstance[]>();
+  for (const ei of allWeekExerciseInstances) {
+    const list = byTemplate.get(ei.exerciseTemplateId) ?? [];
+    list.push(ei);
+    byTemplate.set(ei.exerciseTemplateId, list);
+  }
+
+  const prs: SessionPR[] = [];
+
+  for (const [exerciseTemplateId, weekExerciseInstances] of byTemplate) {
+    const exerciseName = weekExerciseInstances[0].exerciseName ?? "Unknown exercise";
+    const weekInstanceIds = new Set(weekExerciseInstances.map((ei) => ei.id));
+
+    const allInstances = await getAllByIndex<ExerciseInstance>(
+      STORE_NAMES.exerciseInstances,
+      "byExerciseTemplateId",
+      exerciseTemplateId
+    );
+    const priorInstances = allInstances.filter((i) => !weekInstanceIds.has(i.id));
+    if (priorInstances.length < 3) continue;
+
+    const nativeSets = await getExerciseSetsForExerciseTemplate(exerciseTemplateId);
+    const allSets = await mergeWithImportedSets(exerciseName, nativeSets);
+
+    // Best e1RM from anywhere in this week.
+    const weekSets = allSets.filter((s) => weekInstanceIds.has(s.exerciseInstanceId));
+    let newE1RM: number | null = null;
+    let newTopSet: ExerciseSet | null = null;
+    for (const s of weekSets) {
+      const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
+      if (e1rm != null && (newE1RM === null || e1rm > newE1RM)) {
+        newE1RM = e1rm;
+        newTopSet = s;
+      }
+    }
+    if (newE1RM === null || newTopSet === null) continue;
+
+    // All-time best from every session BEFORE this week.
+    const priorInstanceIds = new Set(priorInstances.map((i) => i.id));
+    const priorSets = allSets.filter((s) => priorInstanceIds.has(s.exerciseInstanceId));
+    let previousE1RM: number | null = null;
+    let previousTopSet: ExerciseSet | null = null;
+    for (const s of priorSets) {
+      const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
+      if (e1rm != null && (previousE1RM === null || e1rm > previousE1RM)) {
+        previousE1RM = e1rm;
+        previousTopSet = s;
+      }
+    }
+
+    if (previousE1RM === null || newE1RM > previousE1RM) {
+      let previousDate: string | null = null;
+      if (previousTopSet != null && previousTopSet.exerciseInstanceId !== "__imported__") {
+        const prevExInst = priorInstances.find(
+          (i) => i.id === previousTopSet!.exerciseInstanceId
+        );
+        if (prevExInst) {
+          const prevSession = await getSessionInstanceById(prevExInst.sessionInstanceId);
+          previousDate = prevSession ? sessionCompletedDate(prevSession) : null;
+        }
+      }
+
+      prs.push({
+        exerciseName,
+        newE1RM,
+        newWeight: newTopSet.performedWeight!,
+        newReps: newTopSet.performedReps!,
+        previousE1RM,
+        previousWeight: previousTopSet?.performedWeight ?? null,
+        previousReps: previousTopSet?.performedReps ?? null,
+        previousDate,
+      });
+    }
+  }
+
+  return prs;
+}
+
 // ─── Active destination routing ───────────────────────────────────────────────
 
 /**
