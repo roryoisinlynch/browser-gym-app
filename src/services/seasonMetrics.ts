@@ -17,10 +17,10 @@ export interface SeasonMetrics {
 }
 
 export function getSeasonGrade(score: number): SeasonGrade {
-  if (score >= 93) return "A";
-  if (score >= 80) return "B";
-  if (score >= 65) return "C";
-  if (score >= 50) return "D";
+  if (score >= 100) return "A";
+  if (score >= 96) return "B";
+  if (score >= 92) return "C";
+  if (score >= 88) return "D";
   return "F";
 }
 
