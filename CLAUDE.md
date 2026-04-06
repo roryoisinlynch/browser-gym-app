@@ -4,7 +4,7 @@
 
 After completing any code changes, run the entire build → commit → push → poll sequence as a **single chained bash command** so it only requires one approval. Use `&&` throughout so the chain aborts on any failure (a broken build will never commit, a failed commit will never push).
 
-Skip the deploy check entirely if the only changed files are `*.md`. Those changes do not affect the build.
+Skip the deploy check entirely if the only changed files are `*.md` files with no code changes whatsoever. Any commit that touches source code — even a one-line string change — must go through the full build and poll sequence.
 
 Template (non-MD changes):
 
