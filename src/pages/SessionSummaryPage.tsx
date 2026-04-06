@@ -44,7 +44,7 @@ function buildNarrative(metrics: ReturnType<typeof computeSessionMetrics>): stri
 
   // Both failed: restructure to avoid repeating "didn't lift"
   if (volumeStatus === "red" && intensityStatus === "red") {
-    return "You didn't lift enough sets to meet your volume target, or enough weight to hit your intensity target.";
+    return "You didn't log enough sets to meet your volume target, or lift enough weight to hit your intensity target.";
   }
 
   // Both positive (green or amber) → "and"; one positive one negative → "but"
