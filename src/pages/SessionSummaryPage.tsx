@@ -18,30 +18,38 @@ import "./SessionSummaryPage.css";
 
 
 function buildNarrative(metrics: ReturnType<typeof computeSessionMetrics>): string | null {
-  const { workingSetsCompleted, workingSetsTarget, setsMetIntensity, intensityTarget } = metrics;
+  const { workingSetsTarget, intensityTarget, volumeScore, intensityScore } = metrics;
 
   if (workingSetsTarget === 0) return null;
 
-  const volumePositive = workingSetsCompleted >= workingSetsTarget;
+  const volumeStatus = volumeScore >= 100 ? "green" : volumeScore >= 90 ? "amber" : "red";
   const volumePhrase =
-    workingSetsCompleted > workingSetsTarget
-      ? "lifted more than enough sets to meet your volume target"
-      : workingSetsCompleted === workingSetsTarget
-        ? "lifted enough sets to meet your volume target"
+    volumeStatus === "green"
+      ? "lifted enough sets to meet your volume target"
+      : volumeStatus === "amber"
+        ? "almost lifted enough sets to meet your volume target"
         : "didn't lift enough sets to meet your volume target";
 
   if (intensityTarget === 0) {
     return `You ${volumePhrase}.`;
   }
 
-  const intensityPositive = setsMetIntensity >= intensityTarget;
+  const intensityStatus = intensityScore >= 100 ? "green" : intensityScore >= 90 ? "amber" : "red";
   const intensityPhrase =
-    setsMetIntensity > intensityTarget
-      ? "lifted more than enough weight to hit your intensity target"
-      : setsMetIntensity === intensityTarget
-        ? "lifted enough weight to hit your intensity target"
+    intensityStatus === "green"
+      ? "lifted enough weight to hit your intensity target"
+      : intensityStatus === "amber"
+        ? "almost lifted enough weight to hit your intensity target"
         : "didn't lift enough weight to hit your intensity target";
 
+  // Both failed: restructure to avoid repeating "didn't lift"
+  if (volumeStatus === "red" && intensityStatus === "red") {
+    return "You didn't lift enough sets to meet your volume target, or enough weight to hit your intensity target.";
+  }
+
+  // Both positive (green or amber) → "and"; one positive one negative → "but"
+  const volumePositive = volumeStatus !== "red";
+  const intensityPositive = intensityStatus !== "red";
   const conjunction = volumePositive === intensityPositive ? "and" : "but";
 
   return `You ${volumePhrase}, ${conjunction} you ${intensityPhrase}.`;
