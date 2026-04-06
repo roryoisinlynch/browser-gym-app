@@ -1701,6 +1701,15 @@ export async function stopSessionInstance(
     status: "completed",
   };
 
+  // Complete any exercise instances that were started but left in_progress.
+  // Exercises that were never started (not_started) are left untouched.
+  const exerciseInstances = await getExerciseInstancesForSessionInstance(sessionInstanceId);
+  await Promise.all(
+    exerciseInstances
+      .filter((e) => e.status === "in_progress")
+      .map((e) => completeExerciseInstance(e.id))
+  );
+
   await putItem(STORE_NAMES.sessionInstances, updatedSession);
 
   const weekSessions = await getSessionInstancesForWeekInstance(
