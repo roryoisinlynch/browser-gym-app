@@ -95,6 +95,15 @@
 }
 
 
+/* ── Narrative ── */
+.summary-narrative {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
 /* ── Score block ── */
 .summary-score-block {
   padding: 20px;

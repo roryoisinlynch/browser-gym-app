@@ -17,6 +17,36 @@ import BottomNav from "../components/BottomNav";
 import "./SessionSummaryPage.css";
 
 
+function buildNarrative(metrics: ReturnType<typeof computeSessionMetrics>): string | null {
+  const { workingSetsCompleted, workingSetsTarget, setsMetIntensity, intensityTarget } = metrics;
+
+  if (workingSetsTarget === 0) return null;
+
+  const volumePositive = workingSetsCompleted >= workingSetsTarget;
+  const volumePhrase =
+    workingSetsCompleted > workingSetsTarget
+      ? "lifted more than enough sets to meet your volume target"
+      : workingSetsCompleted === workingSetsTarget
+        ? "lifted enough sets to meet your volume target"
+        : "didn't lift enough sets to meet your volume target";
+
+  if (intensityTarget === 0) {
+    return `You ${volumePhrase}.`;
+  }
+
+  const intensityPositive = setsMetIntensity >= intensityTarget;
+  const intensityPhrase =
+    setsMetIntensity > intensityTarget
+      ? "lifted more than enough weight to hit your intensity target"
+      : setsMetIntensity === intensityTarget
+        ? "lifted enough weight to hit your intensity target"
+        : "didn't lift enough weight to hit your intensity target";
+
+  const conjunction = volumePositive === intensityPositive ? "and" : "but";
+
+  return `You ${volumePhrase}, ${conjunction} you ${intensityPhrase}.`;
+}
+
 export default function SessionSummaryPage() {
   const { sessionInstanceId } = useParams<{ sessionInstanceId: string }>();
   const navigate = useNavigate();
@@ -118,6 +148,7 @@ export default function SessionSummaryPage() {
   }
 
   const { ragStatus, sessionScore, volumeScore, intensityScore } = metrics;
+  const narrative = buildNarrative(metrics);
 
   return (
     <main className="summary-page">
@@ -153,6 +184,10 @@ export default function SessionSummaryPage() {
         {/* ── Results ── */}
         <section className="summary-section">
           <h2 className="summary-section-title">Results</h2>
+
+          {narrative && (
+            <p className="summary-narrative">{narrative}</p>
+          )}
 
           <div className="summary-score-block">
             <div className="summary-score-scores">
