@@ -5,6 +5,7 @@ import {
   deleteExerciseTemplateById,
   getAllExerciseTemplates,
   getAllMovementTypes,
+  getActiveSeasonInstance,
   getEffectiveE1RM,
   getExerciseTemplateById,
   getMovementTypeById,
@@ -106,7 +107,11 @@ export default function ConfigExercisePage() {
       }
 
       if (template.weightMode !== "bodyweight") {
-        const { historicalBest, recentMax } = await getEffectiveE1RM(template.exerciseName);
+        const activeSeason = await getActiveSeasonInstance();
+        const { historicalBest, recentMax } = await getEffectiveE1RM(
+          template.exerciseName,
+          activeSeason?.id
+        );
         setHistoricalBestE1RM(historicalBest);
         setRecentMaxE1RM(recentMax);
       }
