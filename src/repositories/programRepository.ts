@@ -222,6 +222,22 @@ export async function activateProgram(
   for (const active of activeInstances) {
     const weeks = await getWeekInstancesForSeasonInstance(active.id);
     for (const week of weeks.filter((w) => w.status === "in_progress")) {
+      // Drain any in-progress sessions (and their exercises) so they don't
+      // pollute getActiveDestinationRoute after the program switch.
+      const weekSessions = await getSessionInstancesForWeekInstance(week.id);
+      for (const session of weekSessions.filter((s) => s.status === "in_progress")) {
+        const exerciseInstances = await getExerciseInstancesForSessionInstance(session.id);
+        await Promise.all(
+          exerciseInstances
+            .filter((e) => e.status === "in_progress")
+            .map((e) => completeExerciseInstance(e.id))
+        );
+        await putItem(STORE_NAMES.sessionInstances, {
+          ...session,
+          status: "completed",
+          completedAt: session.completedAt ?? nowIso,
+        });
+      }
       await putItem(STORE_NAMES.weekInstances, {
         ...week,
         status: "completed",

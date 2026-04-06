@@ -259,22 +259,3 @@
   font-weight: 700;
 }
 
-/* ── Done button ── */
-.week-summary-done-btn {
-  display: block;
-  width: 100%;
-  padding: 16px;
-  border-radius: 14px;
-  border: none;
-  background: var(--accent);
-  color: #fff;
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  transition: opacity 0.15s;
-}
-
-.week-summary-done-btn:active {
-  opacity: 0.8;
-}

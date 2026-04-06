@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import type { SessionInstanceView, SessionPR } from "../repositories/programRepository";
 import {
   getWeekInstanceById,
@@ -22,8 +22,6 @@ import "./WeekSummaryPage.css";
 
 export default function WeekSummaryPage() {
   const { weekInstanceId } = useParams<{ weekInstanceId: string }>();
-  const navigate = useNavigate();
-
   const [weekName, setWeekName] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<ReturnType<typeof computeWeekMetrics> | null>(null);
   const [sessionBreadcrumb, setSessionBreadcrumb] = useState<BreadcrumbSession[]>([]);
@@ -323,12 +321,6 @@ export default function WeekSummaryPage() {
           </section>
         )}
 
-        <button
-          className="week-summary-done-btn"
-          onClick={() => navigate("/week")}
-        >
-          Back to week
-        </button>
       </section>
 
       <BottomNav activeTab="session" />
