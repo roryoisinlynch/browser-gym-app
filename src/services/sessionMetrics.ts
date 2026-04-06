@@ -46,23 +46,45 @@ export function computeSessionMetrics(view: SessionInstanceView): SessionMetrics
   // One "intense" set expected per three target working sets, rounded down.
   const intensityTarget = Math.floor(workingSetsTarget / 3);
 
-  // Count sets whose e1RM met or exceeded the prescribed e1RM target.
-  // Bodyweight exercises (no prescribedWeight) are excluded from this metric
-  // as we cannot reliably compute a weight-based e1RM target for them.
+  // Count sets that met their intensity target, with three cases:
+  //
+  //  1. Weight-based (prescribedWeight + prescribedRepTarget set):
+  //     pass if the set's e1RM ≥ the prescribed e1RM target.
+  //
+  //  2. Bodyweight with a rep target (prescribedWeight null, prescribedRepTarget set):
+  //     pass if performedReps ≥ prescribedRepTarget. The target already has RIR
+  //     baked in (e.g. best = 15 reps, RIR 4 → target = 11 reps).
+  //
+  //  3. AMRAP / no history (prescribedRepTarget null):
+  //     any set with logged data auto-passes. There is no defined target to
+  //     compare against, and penalising "do as many as you can" sets is unfair.
   let setsMetIntensity = 0;
   for (const group of view.muscleGroups) {
     for (const exercise of group.exercises) {
       if (!exercise.exerciseInstance) continue;
       const { prescribedWeight, prescribedRepTarget } = exercise.exerciseInstance;
-      if (prescribedWeight == null || prescribedRepTarget == null) continue;
-      const targetE1RM = calculateEstimatedOneRepMax(prescribedWeight, prescribedRepTarget);
-      if (targetE1RM == null) continue;
-      for (const { analysis } of exercise.sets) {
-        if (
-          analysis.estimatedOneRepMax != null &&
-          analysis.estimatedOneRepMax >= targetE1RM
-        ) {
-          setsMetIntensity++;
+
+      for (const { set, analysis } of exercise.sets) {
+        if (prescribedWeight != null && prescribedRepTarget != null) {
+          // Case 1: weight-based
+          const targetE1RM = calculateEstimatedOneRepMax(prescribedWeight, prescribedRepTarget);
+          if (
+            targetE1RM != null &&
+            analysis.estimatedOneRepMax != null &&
+            analysis.estimatedOneRepMax >= targetE1RM
+          ) {
+            setsMetIntensity++;
+          }
+        } else if (prescribedRepTarget != null) {
+          // Case 2: bodyweight with rep target
+          if (set.performedReps != null && set.performedReps >= prescribedRepTarget) {
+            setsMetIntensity++;
+          }
+        } else {
+          // Case 3: AMRAP — auto-pass any set with logged data
+          if (set.performedReps != null || set.performedWeight != null) {
+            setsMetIntensity++;
+          }
         }
       }
     }
