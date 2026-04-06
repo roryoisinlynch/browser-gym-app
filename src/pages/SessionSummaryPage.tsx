@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import type { SessionInstanceView } from "../repositories/programRepository";
+import type { SessionInstanceView, SessionPR } from "../repositories/programRepository";
 import {
   getSessionInstanceView,
   getSessionInstancesForWeekInstance,
+  getSessionPRs,
 } from "../repositories/programRepository";
 import {
   computeSessionMetrics,
@@ -61,6 +62,7 @@ export default function SessionSummaryPage() {
 
   const [sessionView, setSessionView] = useState<SessionInstanceView | null>(null);
   const [breadcrumbSessions, setBreadcrumbSessions] = useState<BreadcrumbSession[]>([]);
+  const [prs, setPrs] = useState<SessionPR[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -115,6 +117,7 @@ export default function SessionSummaryPage() {
         );
 
         setBreadcrumbSessions(breadcrumbItems);
+        setPrs(await getSessionPRs(sessionInstanceId));
       } catch (error) {
         console.error("Failed to load session summary:", error);
         setErrorMessage("Could not load session summary.");
@@ -233,6 +236,28 @@ export default function SessionSummaryPage() {
         {breadcrumbSessions.length > 1 && (
           <section className="summary-section summary-section--breadcrumb">
             <WeeklyBreadcrumb sessions={breadcrumbSessions} />
+          </section>
+        )}
+
+        {/* ── Personal records ── */}
+        {prs.length > 0 && (
+          <section className="summary-section">
+            <h2 className="summary-section-title">Personal records</h2>
+            <ul className="summary-pr-list">
+              {prs.map((pr) => (
+                <li key={pr.exerciseName} className="summary-pr-item">
+                  <span className="summary-pr-name">{pr.exerciseName}</span>
+                  <span className="summary-pr-values">
+                    {Math.round(pr.newE1RM * 10) / 10} kg e1RM
+                    {pr.previousE1RM != null && (
+                      <span className="summary-pr-previous">
+                        {" "}was {Math.round(pr.previousE1RM * 10) / 10}
+                      </span>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </section>
         )}
 

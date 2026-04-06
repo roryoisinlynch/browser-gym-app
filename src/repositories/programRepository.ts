@@ -1798,6 +1798,81 @@ export async function stopSessionInstance(
   return updatedSession;
 }
 
+// ─── Session PRs ─────────────────────────────────────────────────────────────
+
+export interface SessionPR {
+  exerciseName: string;
+  newE1RM: number;
+  previousE1RM: number | null;
+}
+
+/**
+ * Returns exercises where the session produced a genuine all-time e1RM PR.
+ *
+ * Rules:
+ *  - Must have at least 3 prior exercise instances (1st–3rd are excluded).
+ *  - The top set's e1RM must beat the all-time best from every prior session
+ *    (not just the "effective" recent-max substitute used for prescriptions).
+ *  - Bodyweight exercises (no performedWeight) are excluded as e1RM cannot
+ *    be computed without a weight value.
+ */
+export async function getSessionPRs(sessionInstanceId: string): Promise<SessionPR[]> {
+  const exerciseInstances = await getExerciseInstancesForSessionInstance(sessionInstanceId);
+  const prs: SessionPR[] = [];
+
+  for (const exerciseInstance of exerciseInstances) {
+    // Count prior instances of this exercise (excluding current)
+    const allInstances = await getAllByIndex<ExerciseInstance>(
+      STORE_NAMES.exerciseInstances,
+      "byExerciseTemplateId",
+      exerciseInstance.exerciseTemplateId
+    );
+    const priorInstances = allInstances.filter((i) => i.id !== exerciseInstance.id);
+    if (priorInstances.length < 3) continue;
+
+    const exerciseName = exerciseInstance.exerciseName ?? "Unknown exercise";
+
+    // All sets for this template across all time (native + imported)
+    const nativeSets = await getExerciseSetsForExerciseTemplate(
+      exerciseInstance.exerciseTemplateId
+    );
+    const allSets = await mergeWithImportedSets(exerciseName, nativeSets);
+
+    // Top e1RM achieved in this session
+    const currentSets = allSets.filter(
+      (s) => s.exerciseInstanceId === exerciseInstance.id
+    );
+    if (currentSets.length === 0) continue;
+
+    let newE1RM: number | null = null;
+    for (const s of currentSets) {
+      const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
+      if (e1rm != null && (newE1RM === null || e1rm > newE1RM)) {
+        newE1RM = e1rm;
+      }
+    }
+    if (newE1RM === null) continue;
+
+    // All-time best from every session BEFORE this one
+    const priorSets = allSets.filter(
+      (s) => s.exerciseInstanceId !== exerciseInstance.id
+    );
+    let previousE1RM: number | null = null;
+    for (const s of priorSets) {
+      const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
+      if (e1rm != null && (previousE1RM === null || e1rm > previousE1RM)) {
+        previousE1RM = e1rm;
+      }
+    }
+
+    if (previousE1RM === null || newE1RM > previousE1RM) {
+      prs.push({ exerciseName, newE1RM, previousE1RM });
+    }
+  }
+
+  return prs;
+}
+
 // ─── Config: template reads ───────────────────────────────────────────────────
 
 export async function getAllExerciseTemplates(): Promise<ExerciseTemplate[]> {

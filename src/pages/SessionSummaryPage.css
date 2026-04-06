@@ -209,6 +209,47 @@
   border: 1px solid var(--card-border);
 }
 
+/* ── Personal records ── */
+.summary-pr-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.summary-pr-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+}
+
+.summary-pr-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  min-width: 0;
+}
+
+.summary-pr-values {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.summary-pr-previous {
+  font-weight: 500;
+  color: var(--text-soft);
+}
+
 /* ── Actions ── */
 .summary-actions {
   display: flex;
