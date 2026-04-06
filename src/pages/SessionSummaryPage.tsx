@@ -240,10 +240,10 @@ export default function SessionSummaryPage() {
         <div className="summary-actions">
           <button
             type="button"
-            className="summary-action-button summary-action-button--primary"
+            className="summary-back-button"
             onClick={() => navigate("/week")}
           >
-            Back to week
+            ← Back
           </button>
         </div>
       </section>
