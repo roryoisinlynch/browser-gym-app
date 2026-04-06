@@ -61,7 +61,9 @@ export interface SessionTemplateGroupWithExercises {
  * Falls back to the scheduled date if completedAt is not set.
  */
 function sessionCompletedDate(session: SessionInstance): string {
-  return (session.completedAt ?? session.date).slice(0, 10);
+  const d = new Date(session.completedAt ?? session.date);
+  // Use local calendar date so "today" matches the user's clock, not UTC.
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 export interface AnalyzedExerciseSet {

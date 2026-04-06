@@ -247,10 +247,13 @@ export default function SessionSummaryPage() {
             <ul className="summary-pr-list">
               {prs.map((pr) => {
                 const daysSince = pr.previousDate
-                  ? Math.round(
-                      (Date.now() - new Date(pr.previousDate).getTime()) /
-                        86400000
-                    )
+                  ? (() => {
+                      const [y, m, d] = pr.previousDate.split("-").map(Number);
+                      const prevLocal = new Date(y, m - 1, d).getTime();
+                      const today = new Date();
+                      const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+                      return Math.round((todayLocal - prevLocal) / 86400000);
+                    })()
                   : null;
                 const pctGain =
                   pr.previousE1RM != null
