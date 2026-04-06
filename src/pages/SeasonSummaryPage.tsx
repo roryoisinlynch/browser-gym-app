@@ -133,14 +133,20 @@ export default function SeasonSummaryPage() {
           s => s.seasonTemplateId === seasonInstance.seasonTemplateId && s.status === "completed"
         );
 
-        const rows: SeasonRow[] = await Promise.all(
-          sameTemplate.map(async (s): Promise<SeasonRow> => {
+        const rows: SeasonRow[] = (await Promise.all(
+          sameTemplate.map(async (s): Promise<SeasonRow | null> => {
             const isCurrent = s.id === seasonInstanceId;
             let grade: SeasonGrade | null = null;
             let prCount = 0;
 
             try {
               const sWeeks = await getWeekInstancesForSeasonInstance(s.id);
+
+              // Only show seasons where every week was fully completed —
+              // this filters out seasons abandoned mid-way via a program switch.
+              const allWeeksCompleted = sWeeks.every(w => w.status === "completed");
+              if (!allWeeksCompleted) return null;
+
               const sCompletedWeeks = sWeeks.filter(w => w.status === "completed");
               const sWeekMetrics = await Promise.all(
                 sCompletedWeeks.map(async (w) => {
@@ -172,7 +178,7 @@ export default function SeasonSummaryPage() {
               completedAt: s.completedAt ?? null,
             };
           })
-        );
+        )).filter((r): r is SeasonRow => r !== null);
 
         setSeasonRows(rows);
 
