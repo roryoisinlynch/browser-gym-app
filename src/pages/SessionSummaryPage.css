@@ -134,10 +134,28 @@
 
 .summary-score-number {
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 2px;
 }
+
+.summary-score-rag-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.summary-score-rag-value {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.summary-score-rag-value[data-rag="green"] { color: #6bcb77; }
+.summary-score-rag-value[data-rag="amber"] { color: #f4a261; }
+.summary-score-rag-value[data-rag="red"]   { color: #e76f51; }
 
 .summary-score-secondary {
   flex: 1;
