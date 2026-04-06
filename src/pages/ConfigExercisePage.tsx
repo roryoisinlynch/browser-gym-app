@@ -5,7 +5,7 @@ import {
   deleteExerciseTemplateById,
   getAllExerciseTemplates,
   getAllMovementTypes,
-  getExerciseSessionHistory,
+  getEffectiveE1RM,
   getExerciseTemplateById,
   getMovementTypeById,
   getSeasonTemplates,
@@ -42,7 +42,8 @@ export default function ConfigExercisePage() {
 
   // Weight selection (the anchor stored on the template)
   const [selectedWeight, setSelectedWeight] = useState<number | null>(null);
-  const [historicalE1RM, setHistoricalE1RM] = useState<number | null>(null);
+  const [historicalBestE1RM, setHistoricalBestE1RM] = useState<number | null>(null);
+  const [recentMaxE1RM, setRecentMaxE1RM] = useState<number | null>(null);
   const [rirScheme, setRirScheme] = useState<number[]>([]);
   const [minRepsFilter, setMinRepsFilter] = useState(1);
   const [maxRepsFilter, setMaxRepsFilter] = useState(30);
@@ -105,21 +106,18 @@ export default function ConfigExercisePage() {
       }
 
       if (template.weightMode !== "bodyweight") {
-        const history = await getExerciseSessionHistory(template.exerciseName);
-        const best = history.reduce<number | null>((max, d) => {
-          if (d.topEstimatedOneRepMax == null) return max;
-          return max == null || d.topEstimatedOneRepMax > max
-            ? d.topEstimatedOneRepMax
-            : max;
-        }, null);
-        setHistoricalE1RM(best);
+        const { historicalBest, recentMax } = await getEffectiveE1RM(template.exerciseName);
+        setHistoricalBestE1RM(historicalBest);
+        setRecentMaxE1RM(recentMax);
       }
     }
     load();
   }, [exerciseTemplateId, isNew, muscleGroupId]);
 
+  const effectiveE1RM = recentMaxE1RM ?? historicalBestE1RM;
+
   const weightOptions = useMemo<WeightOption[]>(() => {
-    if (!historicalE1RM || rirScheme.length === 0) return [];
+    if (!effectiveE1RM || rirScheme.length === 0) return [];
     if (weightMode === "bodyweight") return [];
 
     const inc = parseFloat(weightIncrement) || 2.5;
@@ -130,14 +128,14 @@ export default function ConfigExercisePage() {
       candidates = [...availableWeights].sort((a, b) => a - b);
     } else {
       candidates = [];
-      for (let w = inc; w < historicalE1RM; w = Math.round((w + inc) * 1000) / 1000) {
+      for (let w = inc; w < effectiveE1RM; w = Math.round((w + inc) * 1000) / 1000) {
         candidates.push(w);
       }
     }
 
     const options: WeightOption[] = [];
     for (const weight of candidates) {
-      const zeroRirReps = Math.floor((historicalE1RM / weight - 1) * 30);
+      const zeroRirReps = Math.floor((effectiveE1RM / weight - 1) * 30);
       if (zeroRirReps < 1) continue;
 
       const repRange = sortedRir.map((rir) => zeroRirReps - rir);
@@ -149,14 +147,14 @@ export default function ConfigExercisePage() {
 
       // Remainder: the e1RM gap that the floor'd rep count doesn't account for
       const impliedE1RM = weight * (1 + zeroRirReps / 30);
-      const remainder = historicalE1RM - impliedE1RM;
+      const remainder = effectiveE1RM - impliedE1RM;
 
       options.push({ weight, zeroRirReps, remainder, repRange });
     }
 
     return options.reverse(); // heaviest first
   }, [
-    historicalE1RM,
+    effectiveE1RM,
     weightMode,
     weightIncrement,
     availableWeights,
@@ -454,14 +452,14 @@ export default function ConfigExercisePage() {
               )}
             </label>
 
-            {historicalE1RM != null ? (
+            {effectiveE1RM != null ? (
               <>
                 <p className="config-exercise__e1rm-note">
-                  Historical e1RM:{" "}
+                  {recentMaxE1RM != null ? "Effective e1RM" : "e1RM"}:{" "}
                   <strong>
-                    {Number.isInteger(historicalE1RM)
-                      ? historicalE1RM
-                      : historicalE1RM.toFixed(1)}
+                    {Number.isInteger(effectiveE1RM)
+                      ? effectiveE1RM
+                      : effectiveE1RM.toFixed(1)}
                     kg
                   </strong>
                   {"  ·  "}
@@ -469,6 +467,16 @@ export default function ConfigExercisePage() {
                     RIR scheme: {[...rirScheme].sort((a, b) => b - a).join(", ")}
                   </span>
                 </p>
+                {recentMaxE1RM != null && historicalBestE1RM != null && (
+                  <p className="config-exercise__e1rm-recency-note">
+                    All-time best:{" "}
+                    {Number.isInteger(historicalBestE1RM)
+                      ? historicalBestE1RM
+                      : historicalBestE1RM.toFixed(1)}
+                    kg — using recent max as baseline because the all-time best
+                    wasn't matched in the last three seasons.
+                  </p>
+                )}
 
                 {/* Filter */}
                 <div className="config-exercise__rep-filter">
@@ -537,7 +545,7 @@ export default function ConfigExercisePage() {
               </>
             ) : (
               <p className="config-exercise__no-history-note">
-                No history yet. Options will appear after the first session
+                No history yet — options will appear after the first session
                 (AMRAP to establish a baseline).
               </p>
             )}

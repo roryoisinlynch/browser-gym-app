@@ -363,6 +363,29 @@ export async function startSeasonFromTemplate(
   await putItem(STORE_NAMES.seasonInstances, newSeasonInstance);
   await replicateSeasonWeeks(seasonTemplate, newSeasonInstanceId, nowIso);
 
+  // Reset any prescribed weights that now exceed the effective e1RM.
+  // A new season shifts the three-season window, so an older PR that was
+  // previously within range may no longer be "recent", lowering the effective
+  // e1RM below the configured working weight. Clear those weights so the user
+  // is prompted to re-select on the next session rather than being given a
+  // nonsensical (or silently suppressed) prescription.
+  const allTemplates = await getAllExerciseTemplates();
+  const weightedTemplates = allTemplates.filter(
+    (t) => t.weightMode !== "bodyweight" && t.prescribedWeight != null && t.prescribedWeight > 0
+  );
+  await Promise.all(
+    weightedTemplates.map(async (t) => {
+      const { historicalBest, recentMax } = await getEffectiveE1RM(
+        t.exerciseName,
+        newSeasonInstanceId
+      );
+      const effectiveE1RM = recentMax ?? historicalBest;
+      if (effectiveE1RM == null || t.prescribedWeight! >= effectiveE1RM) {
+        await putItem(STORE_NAMES.exerciseTemplates, { ...t, prescribedWeight: null });
+      }
+    })
+  );
+
   return newSeasonInstance;
 }
 
@@ -775,6 +798,78 @@ export async function getExerciseSessionHistory(
   }
 
   return dataPoints.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
+ * Returns the historical best e1RM and, when the all-time best hasn't been
+ * matched in the last three seasons, a "recent max" that reflects current
+ * capacity. This mirrors the prescription logic in getExerciseInstanceView so
+ * that ConfigExercisePage generates weight options against the same baseline.
+ *
+ * Pass currentSeasonInstanceId when a new season has just started (e.g. after
+ * startSeasonFromTemplate) so its empty bucket is counted among the three most
+ * recent seasons before any sets are logged.
+ */
+export async function getEffectiveE1RM(
+  exerciseName: string,
+  currentSeasonInstanceId?: string
+): Promise<{ historicalBest: number | null; recentMax: number | null }> {
+  const history = await getExerciseSessionHistory(exerciseName);
+
+  const historicalBest = history.reduce<number | null>((best, dp) => {
+    if (dp.topEstimatedOneRepMax == null) return best;
+    return best == null || dp.topEstimatedOneRepMax > best
+      ? dp.topEstimatedOneRepMax
+      : best;
+  }, null);
+
+  if (historicalBest == null) return { historicalBest: null, recentMax: null };
+
+  type SeasonBucket = { sortDate: string; bestE1RM: number | null };
+  const seasonBuckets = new Map<string, SeasonBucket>();
+
+  if (currentSeasonInstanceId) {
+    const nowDate = new Date().toISOString().slice(0, 10);
+    seasonBuckets.set(currentSeasonInstanceId, { sortDate: nowDate, bestE1RM: null });
+  }
+
+  for (const dp of history) {
+    const key = resolveExerciseSeasonKey(dp.seasonInstanceId, dp.date);
+    const existing = seasonBuckets.get(key);
+    if (!existing) {
+      seasonBuckets.set(key, { sortDate: dp.date, bestE1RM: dp.topEstimatedOneRepMax });
+    } else {
+      if (dp.date > existing.sortDate) existing.sortDate = dp.date;
+      if (
+        dp.topEstimatedOneRepMax != null &&
+        (existing.bestE1RM == null || dp.topEstimatedOneRepMax > existing.bestE1RM)
+      ) {
+        existing.bestE1RM = dp.topEstimatedOneRepMax;
+      }
+    }
+  }
+
+  const recentSeasonKeys = new Set(
+    [...seasonBuckets.entries()]
+      .sort((a, b) => b[1].sortDate.localeCompare(a[1].sortDate))
+      .slice(0, 3)
+      .map(([key]) => key)
+  );
+
+  let recentMax: number | null = null;
+  for (const [key, bucket] of seasonBuckets.entries()) {
+    if (!recentSeasonKeys.has(key) || bucket.bestE1RM == null) continue;
+    if (recentMax == null || bucket.bestE1RM > recentMax) {
+      recentMax = bucket.bestE1RM;
+    }
+  }
+
+  // No substitution needed if recent max matches or exceeds the historical best.
+  if (recentMax != null && recentMax >= historicalBest) {
+    recentMax = null;
+  }
+
+  return { historicalBest, recentMax };
 }
 
 function buildAnalyzedSetList(
