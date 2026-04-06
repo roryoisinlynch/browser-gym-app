@@ -252,41 +252,40 @@ export default function SessionSummaryPage() {
                         86400000
                     )
                   : null;
-                const formattedDate = pr.previousDate
-                  ? (() => {
-                      const d = new Date(pr.previousDate);
-                      const day = d.getDate();
-                      const month = d.toLocaleString("en-GB", { month: "short" });
-                      const year = String(d.getFullYear()).slice(2);
-                      return `${day} ${month} ${year}`;
-                    })()
-                  : null;
+                const pctGain =
+                  pr.previousE1RM != null
+                    ? Math.round((pr.newE1RM / pr.previousE1RM - 1) * 100)
+                    : null;
+                const kgGain =
+                  pr.previousE1RM != null
+                    ? Math.round((pr.newE1RM - pr.previousE1RM) * 100) / 100
+                    : null;
+                const repLabel = pr.newReps === 1 ? "rep" : "reps";
                 return (
                   <li key={pr.exerciseName} className="summary-pr-item">
-                    <span className="summary-pr-name">{pr.exerciseName}</span>
-                    <div className="summary-pr-grid">
-                      <div className="summary-pr-col summary-pr-col--new">
-                        <span className="summary-pr-col-label">New</span>
-                        <span className="summary-pr-e1rm">{Math.round(pr.newE1RM * 10) / 10} e1RM</span>
-                        <span className="summary-pr-set">{pr.newWeight}kg × {pr.newReps}</span>
-                      </div>
-                      <div className="summary-pr-col summary-pr-col--prev">
-                        <span className="summary-pr-col-label">Previous</span>
-                        {pr.previousE1RM != null ? (
-                          <>
-                            <span className="summary-pr-e1rm">{Math.round(pr.previousE1RM * 10) / 10} e1RM</span>
-                            {pr.previousWeight != null && pr.previousReps != null && (
-                              <span className="summary-pr-set">{pr.previousWeight}kg × {pr.previousReps}</span>
-                            )}
-                            {formattedDate != null && daysSince != null && (
-                              <span className="summary-pr-date">{formattedDate} · {daysSince}d ago</span>
-                            )}
+                    <span className="summary-pr-name">
+                      {pr.exerciseName}{" "}
+                      <span className="summary-pr-set-inline">
+                        ({pr.newWeight}kg × {pr.newReps} {repLabel})
+                      </span>
+                    </span>
+                    {pr.previousE1RM != null ? (
+                      <span className="summary-pr-detail">
+                        {Math.round(pr.previousE1RM * 100) / 100}kg{" "}
+                        <span className="summary-pr-arrow">→</span>{" "}
+                        {Math.round(pr.newE1RM * 100) / 100}kg e1RM
+                        {pctGain != null && <> (+{pctGain}%)</>}
+                        {kgGain != null && (
+                          <>, up {kgGain}kg
+                          {daysSince != null && <> from {daysSince}d ago</>}
                           </>
-                        ) : (
-                          <span className="summary-pr-e1rm">—</span>
                         )}
-                      </div>
-                    </div>
+                      </span>
+                    ) : (
+                      <span className="summary-pr-detail">
+                        {Math.round(pr.newE1RM * 100) / 100}kg e1RM
+                      </span>
+                    )}
                   </li>
                 );
               })}
