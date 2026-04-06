@@ -252,22 +252,41 @@ export default function SessionSummaryPage() {
                         86400000
                     )
                   : null;
+                const formattedDate = pr.previousDate
+                  ? (() => {
+                      const d = new Date(pr.previousDate);
+                      const day = d.getDate();
+                      const month = d.toLocaleString("en-GB", { month: "short" });
+                      const year = String(d.getFullYear()).slice(2);
+                      return `${day} ${month} ${year}`;
+                    })()
+                  : null;
                 return (
                   <li key={pr.exerciseName} className="summary-pr-item">
-                    <div className="summary-pr-left">
-                      <span className="summary-pr-name">{pr.exerciseName}</span>
-                      {pr.previousE1RM != null && pr.previousWeight != null && pr.previousReps != null && (
-                        <span className="summary-pr-previous">
-                          was {pr.previousWeight}×{pr.previousReps}
-                          {daysSince != null && (
-                            <> · {daysSince}d ago{pr.previousDate && <> ({pr.previousDate})</>}</>
-                          )}
-                        </span>
-                      )}
+                    <span className="summary-pr-name">{pr.exerciseName}</span>
+                    <div className="summary-pr-grid">
+                      <div className="summary-pr-col summary-pr-col--new">
+                        <span className="summary-pr-col-label">New</span>
+                        <span className="summary-pr-e1rm">{Math.round(pr.newE1RM * 10) / 10} e1RM</span>
+                        <span className="summary-pr-set">{pr.newWeight}kg × {pr.newReps}</span>
+                      </div>
+                      <div className="summary-pr-col summary-pr-col--prev">
+                        <span className="summary-pr-col-label">Previous</span>
+                        {pr.previousE1RM != null ? (
+                          <>
+                            <span className="summary-pr-e1rm">{Math.round(pr.previousE1RM * 10) / 10} e1RM</span>
+                            {pr.previousWeight != null && pr.previousReps != null && (
+                              <span className="summary-pr-set">{pr.previousWeight}kg × {pr.previousReps}</span>
+                            )}
+                            {formattedDate != null && daysSince != null && (
+                              <span className="summary-pr-date">{formattedDate} · {daysSince}d ago</span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="summary-pr-e1rm">—</span>
+                        )}
+                      </div>
                     </div>
-                    <span className="summary-pr-values">
-                      {pr.newWeight}×{pr.newReps}
-                    </span>
                   </li>
                 );
               })}
