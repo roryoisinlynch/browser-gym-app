@@ -106,7 +106,7 @@
 
 /* ── Score block ── */
 .summary-score-block {
-  padding: 16px 20px;
+  padding: 20px;
   border-radius: 14px;
   background: var(--card-bg);
   border: 1px solid var(--card-border);
@@ -181,9 +181,10 @@
 }
 
 .summary-score-item__pct--total {
-  font-size: 2.4rem;
+  font-size: 4rem;
   color: var(--text-strong);
   letter-spacing: -0.04em;
+  line-height: 1;
 }
 
 .summary-score-item__label {

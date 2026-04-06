@@ -34,8 +34,8 @@
 }
 
 .traffic-light--lg .traffic-light__bulb {
-  width: 28px;
-  height: 28px;
+  width: 40px;
+  height: 40px;
 }
 
 /* Colours */
@@ -68,5 +68,5 @@
 /* Stack layout for showAll */
 .traffic-light--stack {
   flex-direction: column;
-  gap: 5px;
+  gap: 8px;
 }
