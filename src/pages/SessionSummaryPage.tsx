@@ -260,20 +260,14 @@ export default function SessionSummaryPage() {
                   pr.previousE1RM != null
                     ? Math.round((pr.newE1RM - pr.previousE1RM) * 100) / 100
                     : null;
-                const repLabel = pr.newReps === 1 ? "rep" : "reps";
                 return (
                   <li key={pr.exerciseName} className="summary-pr-item">
-                    <span className="summary-pr-name">
-                      {pr.exerciseName}{" "}
-                      <span className="summary-pr-set-inline">
-                        ({pr.newWeight}kg × {pr.newReps} {repLabel})
-                      </span>
-                    </span>
+                    <span className="summary-pr-name">{pr.exerciseName}</span>
                     {pr.previousE1RM != null ? (
                       <span className="summary-pr-detail">
                         {Math.round(pr.previousE1RM * 100) / 100}kg{" "}
                         <span className="summary-pr-arrow">→</span>{" "}
-                        {Math.round(pr.newE1RM * 100) / 100}kg e1RM
+                        <span className="summary-pr-new-value">{Math.round(pr.newE1RM * 100) / 100}kg</span> e1RM
                         {pctGain != null && <> (+{pctGain}%)</>}
                         {kgGain != null && (
                           <>, up {kgGain}kg
@@ -283,7 +277,7 @@ export default function SessionSummaryPage() {
                       </span>
                     ) : (
                       <span className="summary-pr-detail">
-                        {Math.round(pr.newE1RM * 100) / 100}kg e1RM
+                        <span className="summary-pr-new-value">{Math.round(pr.newE1RM * 100) / 100}kg</span> e1RM
                       </span>
                     )}
                   </li>

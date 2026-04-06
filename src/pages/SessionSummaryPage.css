@@ -238,9 +238,9 @@
   color: var(--text-strong);
 }
 
-.summary-pr-set-inline {
-  font-weight: 500;
-  color: var(--text-muted);
+.summary-pr-new-value {
+  color: var(--accent);
+  font-weight: 700;
 }
 
 .summary-pr-detail {
