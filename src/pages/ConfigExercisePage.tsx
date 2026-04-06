@@ -204,7 +204,7 @@ export default function ConfigExercisePage() {
       return;
     }
 
-    if (weightMode !== "bodyweight" && selectedWeight === null) {
+    if (weightMode !== "bodyweight" && weightOptions.length > 0 && selectedWeight === null) {
       setError("Please select a weight option.");
       return;
     }
@@ -236,8 +236,9 @@ export default function ConfigExercisePage() {
 
       await saveExerciseTemplate(template);
       navigate(-1);
-    } catch {
-      setError("Could not save exercise.");
+    } catch (err) {
+      console.error("[ConfigExercisePage] save failed:", err);
+      setError(`Could not save exercise: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setIsSaving(false);
     }
