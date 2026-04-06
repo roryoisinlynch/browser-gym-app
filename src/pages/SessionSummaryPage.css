@@ -131,13 +131,14 @@
   gap: 12px;
 }
 
-/* Centers the score number and labels in the space between lights and divider */
+/* Centers the score number and label in the space between lights and divider */
 .summary-score-center {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  gap: 10px;
 }
 
 
