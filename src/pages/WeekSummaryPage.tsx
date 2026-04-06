@@ -39,10 +39,9 @@ function buildWeekNarrative(metrics: WeekMetrics): string {
     : intStatus === "amber" ? "almost lifted enough weight to hit your intensity target"
     : "didn't lift enough weight to hit your intensity target";
 
-  const conPhrase =
-    skippedSessions === 0 ? "didn't skip any days"
-    : skippedSessions === 1 ? "skipped 1 day"
-    : `skipped ${skippedSessions} days`;
+  const conPhrase = skippedSessions === 0
+    ? "stayed consistent with your schedule"
+    : "did not stay consistent with your schedule";
 
   const items = [
     { positive: volStatus !== "red", phrase: volPhrase },
