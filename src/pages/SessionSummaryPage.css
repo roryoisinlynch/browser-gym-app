@@ -94,58 +94,6 @@
   color: var(--text-soft);
 }
 
-/* ── Metric bars ── */
-.summary-metrics {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.summary-metric-bar {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.summary-metric-bar__row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.summary-metric-bar__label {
-  font-size: 0.86rem;
-  font-weight: 700;
-  color: var(--text-strong);
-}
-
-.summary-metric-bar__value {
-  font-size: 0.84rem;
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-.summary-metric-bar__pct {
-  color: var(--text-soft);
-  font-size: 0.8rem;
-}
-
-.summary-metric-bar__track {
-  position: relative;
-  height: 5px;
-  border-radius: 999px;
-  background: var(--panel-border);
-  overflow: hidden;
-}
-
-.summary-metric-bar__fill {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: var(--accent);
-  transition: width 0.4s ease;
-}
 
 /* ── Score block ── */
 .summary-score-block {
@@ -159,9 +107,10 @@
 }
 
 .summary-score-scores {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: flex-end;
-  justify-content: space-around;
+  gap: 8px;
 }
 
 .summary-score-item {

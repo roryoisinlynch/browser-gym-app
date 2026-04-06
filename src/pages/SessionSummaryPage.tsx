@@ -16,26 +16,6 @@ import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import "./SessionSummaryPage.css";
 
-function MetricBar({ label, value, total }: { label: string; value: number; total: number }) {
-  const pct = total > 0 ? Math.min(100, Math.round((value / total) * 100)) : 0;
-  return (
-    <div className="summary-metric-bar">
-      <div className="summary-metric-bar__row">
-        <span className="summary-metric-bar__label">{label}</span>
-        <span className="summary-metric-bar__value">
-          {value} / {total}
-          <span className="summary-metric-bar__pct"> — {pct}%</span>
-        </span>
-      </div>
-      <div className="summary-metric-bar__track">
-        <span
-          className="summary-metric-bar__fill"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
-  );
-}
 
 export default function SessionSummaryPage() {
   const { sessionInstanceId } = useParams<{ sessionInstanceId: string }>();
@@ -173,19 +153,6 @@ export default function SessionSummaryPage() {
         {/* ── Results ── */}
         <section className="summary-section">
           <h2 className="summary-section-title">Results</h2>
-
-          <div className="summary-metrics">
-            <MetricBar
-              label="Volume"
-              value={metrics.workingSetsCompleted}
-              total={metrics.workingSetsTarget}
-            />
-            <MetricBar
-              label="Intensity"
-              value={metrics.setsMetIntensity}
-              total={metrics.intensityTarget}
-            />
-          </div>
 
           <div className="summary-score-block">
             <div className="summary-score-scores">

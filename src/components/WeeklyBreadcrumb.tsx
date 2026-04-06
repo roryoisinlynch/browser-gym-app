@@ -19,7 +19,7 @@ export default function WeeklyBreadcrumb({ sessions }: WeeklyBreadcrumbProps) {
 
   return (
     <div className="weekly-breadcrumb" aria-label="Sessions this week">
-      <p className="weekly-breadcrumb__label">This week</p>
+      <p className="weekly-breadcrumb__label">Sessions this week</p>
       <div className="weekly-breadcrumb__trail">
         {sessions.map((session, index) => (
           <div key={session.sessionInstanceId} className="weekly-breadcrumb__item">
