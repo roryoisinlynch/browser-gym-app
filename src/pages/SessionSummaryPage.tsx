@@ -9,7 +9,6 @@ import {
   computeSessionMetrics,
   formatDuration,
 } from "../services/sessionMetrics";
-import type { RagStatus } from "../services/sessionMetrics";
 import TrafficLight from "../components/TrafficLight";
 import WeeklyBreadcrumb from "../components/WeeklyBreadcrumb";
 import type { BreadcrumbSession } from "../components/WeeklyBreadcrumb";
