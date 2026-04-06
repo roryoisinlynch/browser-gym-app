@@ -605,6 +605,11 @@ export async function getSeasonInstanceById(
   return getById<SeasonInstance>(STORE_NAMES.seasonInstances, seasonInstanceId);
 }
 
+export async function getAllSeasonInstances(): Promise<SeasonInstance[]> {
+  const all = await getAll<SeasonInstance>(STORE_NAMES.seasonInstances);
+  return all.sort((a, b) => a.order - b.order);
+}
+
 export async function getWeekInstanceById(
   weekInstanceId: string
 ): Promise<WeekInstance | undefined> {
@@ -2008,6 +2013,109 @@ export async function getWeekPRs(weekInstanceId: string): Promise<SessionPR[]> {
     if (newE1RM === null || newTopSet === null) continue;
 
     // All-time best from every session BEFORE this week.
+    const priorInstanceIds = new Set(priorInstances.map((i) => i.id));
+    const priorSets = allSets.filter((s) => priorInstanceIds.has(s.exerciseInstanceId));
+    let previousE1RM: number | null = null;
+    let previousTopSet: ExerciseSet | null = null;
+    for (const s of priorSets) {
+      const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
+      if (e1rm != null && (previousE1RM === null || e1rm > previousE1RM)) {
+        previousE1RM = e1rm;
+        previousTopSet = s;
+      }
+    }
+
+    if (previousE1RM === null || newE1RM > previousE1RM) {
+      let previousDate: string | null = null;
+      if (previousTopSet != null && previousTopSet.exerciseInstanceId !== "__imported__") {
+        const prevExInst = priorInstances.find(
+          (i) => i.id === previousTopSet!.exerciseInstanceId
+        );
+        if (prevExInst) {
+          const prevSession = await getSessionInstanceById(prevExInst.sessionInstanceId);
+          previousDate = prevSession ? sessionCompletedDate(prevSession) : null;
+        }
+      }
+
+      prs.push({
+        exerciseName,
+        newE1RM,
+        newWeight: newTopSet.performedWeight!,
+        newReps: newTopSet.performedReps!,
+        previousE1RM,
+        previousWeight: previousTopSet?.performedWeight ?? null,
+        previousReps: previousTopSet?.performedReps ?? null,
+        previousDate,
+      });
+    }
+  }
+
+  return prs;
+}
+
+// ─── Season PRs ───────────────────────────────────────────────────────────────
+
+/**
+ * Returns exercises where the season produced a genuine all-time e1RM PR.
+ *
+ * Same rules as getWeekPRs, but scoped to the full season:
+ *  - Groups all exercise instances across every session in every week of the season.
+ *  - Must have at least 3 prior instances from OUTSIDE this season.
+ *  - The best e1RM achieved anywhere in the season must beat all prior history.
+ *  - Multiple PRs for the same exercise within the season collapse into one entry.
+ *  - previousE1RM is the all-time best BEFORE the season started.
+ */
+export async function getSeasonPRs(seasonInstanceId: string): Promise<SessionPR[]> {
+  const seasonWeeks = await getWeekInstancesForSeasonInstance(seasonInstanceId);
+
+  const allSeasonSessions: SessionInstance[] = (
+    await Promise.all(
+      seasonWeeks.map((w) => getSessionInstancesForWeekInstance(w.id))
+    )
+  ).flat();
+
+  const allSeasonExerciseInstances: ExerciseInstance[] = (
+    await Promise.all(
+      allSeasonSessions.map((s) => getExerciseInstancesForSessionInstance(s.id))
+    )
+  ).flat();
+
+  const byTemplate = new Map<string, ExerciseInstance[]>();
+  for (const ei of allSeasonExerciseInstances) {
+    const list = byTemplate.get(ei.exerciseTemplateId) ?? [];
+    list.push(ei);
+    byTemplate.set(ei.exerciseTemplateId, list);
+  }
+
+  const prs: SessionPR[] = [];
+
+  for (const [exerciseTemplateId, seasonExerciseInstances] of byTemplate) {
+    const exerciseName = seasonExerciseInstances[0].exerciseName ?? "Unknown exercise";
+    const seasonExInstanceIds = new Set(seasonExerciseInstances.map((ei) => ei.id));
+
+    const allInstances = await getAllByIndex<ExerciseInstance>(
+      STORE_NAMES.exerciseInstances,
+      "byExerciseTemplateId",
+      exerciseTemplateId
+    );
+    const priorInstances = allInstances.filter((i) => !seasonExInstanceIds.has(i.id));
+    if (priorInstances.length < 3) continue;
+
+    const nativeSets = await getExerciseSetsForExerciseTemplate(exerciseTemplateId);
+    const allSets = await mergeWithImportedSets(exerciseName, nativeSets);
+
+    const seasonSets = allSets.filter((s) => seasonExInstanceIds.has(s.exerciseInstanceId));
+    let newE1RM: number | null = null;
+    let newTopSet: ExerciseSet | null = null;
+    for (const s of seasonSets) {
+      const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
+      if (e1rm != null && (newE1RM === null || e1rm > newE1RM)) {
+        newE1RM = e1rm;
+        newTopSet = s;
+      }
+    }
+    if (newE1RM === null || newTopSet === null) continue;
+
     const priorInstanceIds = new Set(priorInstances.map((i) => i.id));
     const priorSets = allSets.filter((s) => priorInstanceIds.has(s.exerciseInstanceId));
     let previousE1RM: number | null = null;

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import type { SessionInstanceView, SessionPR } from "../repositories/programRepository";
 import {
   getWeekInstanceById,
@@ -10,7 +10,9 @@ import {
   getWeekInstancesForSeasonInstance,
   getWeekPRs,
   getWeekInstanceItemsForWeekInstance,
+  getSeasonInstanceById,
 } from "../repositories/programRepository";
+import type { SeasonInstance } from "../domain/models";
 import type { WeekTemplateItem, WeekInstanceItem } from "../domain/models";
 import { computeSessionMetrics } from "../services/sessionMetrics";
 import { computeWeekMetrics, emojiForRating } from "../services/weekMetrics";
@@ -73,8 +75,10 @@ export default function WeekSummaryPage() {
   const [weekTemplateDays, setWeekTemplateDays] = useState<WeekTemplateItem[]>([]);
   const [weekInstanceItems, setWeekInstanceItems] = useState<WeekInstanceItem[]>([]);
   const [completedSessionIds, setCompletedSessionIds] = useState<Set<string>>(new Set());
+  const [seasonInstance, setSeasonInstance] = useState<SeasonInstance | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     async function load() {
@@ -120,6 +124,11 @@ export default function WeekSummaryPage() {
         setWeekTemplateDays(templateItems);
         setWeekInstanceItems(wii);
         setCompletedSessionIds(new Set(sessions.filter(s => s.status === "completed").map(s => s.id)));
+
+        if (weekInstance.status === "completed") {
+          const si = await getSeasonInstanceById(weekInstance.seasonInstanceId);
+          if (si?.status === "completed") setSeasonInstance(si);
+        }
 
         // Sessions this week breadcrumb — show all sessions with their RAG status.
         const breadcrumbSessions: BreadcrumbSession[] = await Promise.all(
@@ -417,6 +426,16 @@ export default function WeekSummaryPage() {
               })}
             </ul>
           </section>
+        )}
+
+        {/* ── Season summary CTA ── */}
+        {seasonInstance && (
+          <button
+            className="week-summary-season-cta"
+            onClick={() => navigate(`/season/${seasonInstance.id}/summary`)}
+          >
+            View season summary →
+          </button>
         )}
 
       </section>
