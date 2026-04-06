@@ -106,35 +106,44 @@
 
 /* ── Score block ── */
 .summary-score-block {
-  padding: 20px;
+  padding: 12px 20px;
   border-radius: 14px;
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   display: flex;
   flex-direction: row;
-  align-items: center;
+  align-items: stretch;
   gap: 0;
 }
 
 .summary-score-divider {
   width: 1px;
-  align-self: stretch;
   background: var(--panel-border);
   margin: 0 16px;
   flex-shrink: 0;
 }
 
 .summary-score-primary {
+  flex: 1;
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 12px;
-  flex-shrink: 0;
 }
 
-.summary-score-number {
+/* Centers the score number and labels in the space between lights and divider */
+.summary-score-center {
+  flex: 1;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.summary-score-labels {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 2px;
 }
 
@@ -147,15 +156,12 @@
 }
 
 .summary-score-rag-value {
-  font-size: 1rem;
+  font-size: 1.2rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  color: var(--text-strong);
 }
-
-.summary-score-rag-value[data-rag="green"] { color: #6bcb77; }
-.summary-score-rag-value[data-rag="amber"] { color: #f4a261; }
-.summary-score-rag-value[data-rag="red"]   { color: #e76f51; }
 
 .summary-score-secondary {
   flex: 1;
@@ -169,14 +175,16 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 6px;
 }
 
 
 .summary-score-item__pct {
-  font-size: 1.3rem;
+  font-size: 2rem;
   font-weight: 800;
   letter-spacing: -0.03em;
+  line-height: 1;
   color: var(--text-muted);
 }
 

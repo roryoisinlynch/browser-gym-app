@@ -201,17 +201,16 @@ export default function SessionSummaryPage() {
             {/* Left: traffic lights + score + label */}
             <div className="summary-score-primary">
               <TrafficLight status={ragStatus} size="lg" showAll />
-              <div className="summary-score-number">
+              <div className="summary-score-center">
                 <span className="summary-score-item__pct summary-score-item__pct--total">
                   {sessionScore}
                 </span>
-                <span className="summary-score-rag-label">Session score:</span>
-                <span
-                  className="summary-score-rag-value"
-                  data-rag={ragStatus}
-                >
-                  {ragStatus.charAt(0).toUpperCase() + ragStatus.slice(1)}
-                </span>
+                <div className="summary-score-labels">
+                  <span className="summary-score-rag-label">Session score:</span>
+                  <span className="summary-score-rag-value">
+                    {ragStatus.charAt(0).toUpperCase() + ragStatus.slice(1)}
+                  </span>
+                </div>
               </div>
             </div>
 
