@@ -18,6 +18,8 @@ import {
 } from "../services/seasonMetrics";
 import type { SeasonMetrics, SeasonGrade } from "../services/seasonMetrics";
 import type { SeasonInstance } from "../domain/models";
+import WeeksBreadcrumb from "../components/WeeksBreadcrumb";
+import type { BreadcrumbWeek } from "../components/WeeksBreadcrumb";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import "./SeasonSummaryPage.css";
@@ -75,6 +77,7 @@ export default function SeasonSummaryPage() {
   const [metrics, setMetrics] = useState<SeasonMetrics | null>(null);
   const [prs, setPrs] = useState<SessionPR[]>([]);
   const [seasonRows, setSeasonRows] = useState<SeasonRow[]>([]);
+  const [weeksBreadcrumb, setWeeksBreadcrumb] = useState<BreadcrumbWeek[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -172,6 +175,19 @@ export default function SeasonSummaryPage() {
         );
 
         setSeasonRows(rows);
+
+        // Weeks this season breadcrumb — all weeks with their emoji rating.
+        const wbItems: BreadcrumbWeek[] = await Promise.all(
+          weeks.map(async (w): Promise<BreadcrumbWeek> => {
+            if (w.status !== "completed") return { weekInstanceId: w.id, emojiRating: null, isCurrent: false };
+            const idx = completedWeeks.indexOf(w);
+            if (idx !== -1 && weekMetricsList[idx]) {
+              return { weekInstanceId: w.id, emojiRating: weekMetricsList[idx].emojiRating, isCurrent: false };
+            }
+            return { weekInstanceId: w.id, emojiRating: null, isCurrent: false };
+          })
+        );
+        setWeeksBreadcrumb(wbItems);
       } catch (err) {
         console.error("Failed to load season summary:", err);
         setErrorMessage("Could not load season summary.");
@@ -221,34 +237,37 @@ export default function SeasonSummaryPage() {
         </header>
 
         {/* ── Descriptive stats ── */}
-        <div className="season-summary-stats-row">
-          {durationLabel && (
-            <>
-              <div className="season-summary-stat">
-                <span className="season-summary-stat__value">{durationLabel}</span>
-                <span className="season-summary-stat__label">Duration</span>
-              </div>
-              <div className="season-summary-stat-divider" />
-            </>
-          )}
-          <div className="season-summary-stat">
-            <span className="season-summary-stat__value">{totalWeeks}</span>
-            <span className="season-summary-stat__label">Weeks</span>
+        <div className="season-summary-stats-rows">
+          <div className="season-summary-stats-row">
+            {durationLabel && (
+              <>
+                <div className="season-summary-stat">
+                  <span className="season-summary-stat__value">{durationLabel}</span>
+                  <span className="season-summary-stat__label">Duration</span>
+                </div>
+                <div className="season-summary-stat-divider" />
+              </>
+            )}
+            <div className="season-summary-stat">
+              <span className="season-summary-stat__value">{totalWeeks}</span>
+              <span className="season-summary-stat__label">Weeks</span>
+            </div>
+            <div className="season-summary-stat-divider" />
+            <div className="season-summary-stat">
+              <span className="season-summary-stat__value">{totalSessions}</span>
+              <span className="season-summary-stat__label">Sessions</span>
+            </div>
           </div>
-          <div className="season-summary-stat-divider" />
-          <div className="season-summary-stat">
-            <span className="season-summary-stat__value">{totalSessions}</span>
-            <span className="season-summary-stat__label">Sessions</span>
-          </div>
-          <div className="season-summary-stat-divider" />
-          <div className="season-summary-stat">
-            <span className="season-summary-stat__value">{totalSets}</span>
-            <span className="season-summary-stat__label">Total sets</span>
-          </div>
-          <div className="season-summary-stat-divider" />
-          <div className="season-summary-stat">
-            <span className="season-summary-stat__value">{prs.length}</span>
-            <span className="season-summary-stat__label">Total PRs</span>
+          <div className="season-summary-stats-row">
+            <div className="season-summary-stat">
+              <span className="season-summary-stat__value">{totalSets}</span>
+              <span className="season-summary-stat__label">Total sets</span>
+            </div>
+            <div className="season-summary-stat-divider" />
+            <div className="season-summary-stat">
+              <span className="season-summary-stat__value">{prs.length}</span>
+              <span className="season-summary-stat__label">Total PRs</span>
+            </div>
           </div>
         </div>
 
@@ -294,6 +313,13 @@ export default function SeasonSummaryPage() {
           </p>
         </section>
 
+        {/* ── Weeks this season ── */}
+        {weeksBreadcrumb.length > 0 && (
+          <section className="season-summary-section season-summary-section--breadcrumb">
+            <WeeksBreadcrumb weeks={weeksBreadcrumb} />
+          </section>
+        )}
+
         {/* ── All seasons ── */}
         {seasonRows.length > 1 && (
           <section className="season-summary-section">
@@ -314,9 +340,7 @@ export default function SeasonSummaryPage() {
                           {row.grade}
                         </span>
                       )}
-                      {row.prCount > 0 && (
-                        <span className="season-summary-season-row__prs">{row.prCount} PR{row.prCount !== 1 ? "s" : ""}</span>
-                      )}
+                      <span className="season-summary-season-row__prs">{row.prCount} PR{row.prCount !== 1 ? "s" : ""}</span>
                       {finishDate && (
                         <span className="season-summary-season-row__date">{finishDate}</span>
                       )}

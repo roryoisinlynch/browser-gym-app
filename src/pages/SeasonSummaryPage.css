@@ -37,7 +37,13 @@
   color: var(--text-strong);
 }
 
-/* ── Stats row ── */
+/* ── Stats rows ── */
+.season-summary-stats-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .season-summary-stats-row {
   display: flex;
   align-items: center;
@@ -226,6 +232,15 @@
   color: var(--text-soft);
   text-align: center;
   padding: 0 4px;
+}
+
+/* ── Breadcrumb section ── */
+.season-summary-section--breadcrumb {
+  align-items: center;
+  padding: 20px;
+  border-radius: 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
 }
 
 /* ── All seasons list ── */
