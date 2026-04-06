@@ -94,6 +94,14 @@
   color: var(--text-soft);
 }
 
+.summary-section-title--accent {
+  color: var(--accent);
+}
+
+.summary-section--pr {
+  gap: 6px;
+}
+
 
 /* ── Narrative ── */
 .summary-narrative {

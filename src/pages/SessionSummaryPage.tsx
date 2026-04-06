@@ -242,8 +242,8 @@ export default function SessionSummaryPage() {
 
         {/* ── Personal records ── */}
         {prs.length > 0 && (
-          <section className="summary-section">
-            <h2 className="summary-section-title">Personal records</h2>
+          <section className="summary-section summary-section--pr">
+            <h2 className="summary-section-title summary-section-title--accent">Personal records</h2>
             <ul className="summary-pr-list">
               {prs.map((pr) => {
                 const daysSince = pr.previousDate
