@@ -1803,7 +1803,12 @@ export async function stopSessionInstance(
 export interface SessionPR {
   exerciseName: string;
   newE1RM: number;
+  newWeight: number;
+  newReps: number;
   previousE1RM: number | null;
+  previousWeight: number | null;
+  previousReps: number | null;
+  previousDate: string | null;
 }
 
 /**
@@ -1845,32 +1850,75 @@ export async function getSessionPRs(sessionInstanceId: string): Promise<SessionP
     if (currentSets.length === 0) continue;
 
     let newE1RM: number | null = null;
+    let newTopSet: ExerciseSet | null = null;
     for (const s of currentSets) {
       const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
       if (e1rm != null && (newE1RM === null || e1rm > newE1RM)) {
         newE1RM = e1rm;
+        newTopSet = s;
       }
     }
-    if (newE1RM === null) continue;
+    if (newE1RM === null || newTopSet === null) continue;
 
     // All-time best from every session BEFORE this one
     const priorSets = allSets.filter(
       (s) => s.exerciseInstanceId !== exerciseInstance.id
     );
     let previousE1RM: number | null = null;
+    let previousTopSet: ExerciseSet | null = null;
     for (const s of priorSets) {
       const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
       if (e1rm != null && (previousE1RM === null || e1rm > previousE1RM)) {
         previousE1RM = e1rm;
+        previousTopSet = s;
       }
     }
 
     if (previousE1RM === null || newE1RM > previousE1RM) {
-      prs.push({ exerciseName, newE1RM, previousE1RM });
+      // Resolve date for the previous best set (not available for imported sets)
+      let previousDate: string | null = null;
+      if (previousTopSet != null && previousTopSet.exerciseInstanceId !== "__imported__") {
+        const prevExInst = allInstances.find(
+          (i) => i.id === previousTopSet!.exerciseInstanceId
+        );
+        if (prevExInst) {
+          const prevSession = await getSessionInstanceById(prevExInst.sessionInstanceId);
+          previousDate = prevSession?.date ?? null;
+        }
+      }
+
+      prs.push({
+        exerciseName,
+        newE1RM,
+        newWeight: newTopSet.performedWeight!,
+        newReps: newTopSet.performedReps!,
+        previousE1RM,
+        previousWeight: previousTopSet?.performedWeight ?? null,
+        previousReps: previousTopSet?.performedReps ?? null,
+        previousDate,
+      });
     }
   }
 
   return prs;
+}
+
+// ─── Active destination routing ───────────────────────────────────────────────
+
+/**
+ * Returns the route of the first active instance, in priority order:
+ * in-progress exercise → in-progress session → /week.
+ */
+export async function getActiveDestinationRoute(): Promise<string> {
+  const exerciseInstances = await getAll<ExerciseInstance>(STORE_NAMES.exerciseInstances);
+  const activeExercise = exerciseInstances.find((i) => i.status === "in_progress");
+  if (activeExercise) return `/exercise/${activeExercise.id}`;
+
+  const sessionInstances = await getAll<SessionInstance>(STORE_NAMES.sessionInstances);
+  const activeSession = sessionInstances.find((i) => i.status === "in_progress");
+  if (activeSession) return `/session/${activeSession.id}`;
+
+  return "/week";
 }
 
 // ─── Config: template reads ───────────────────────────────────────────────────

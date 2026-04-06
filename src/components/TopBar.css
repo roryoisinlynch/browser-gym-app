@@ -39,6 +39,10 @@
   border-radius: 999px;
   text-decoration: none;
   color: var(--text-strong);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
 }
 
 .top-bar__back:active {

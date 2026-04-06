@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { SessionInstanceListItem } from "../repositories/programRepository";
-import { getSessionInstanceListItemsForCurrentWeek } from "../repositories/programRepository";
+import { getActiveDestinationRoute } from "../repositories/programRepository";
 import "./BottomNav.css";
 
 type BottomNavTab = "home" | "session" | "settings" | "none";
@@ -16,42 +15,15 @@ function getTabClass(tab: BottomNavTab, activeTab: BottomNavTab) {
     : "bottom-nav__link";
 }
 
-function getCurrentSessionPath(items: SessionInstanceListItem[]) {
-  const inProgress = items.find(
-    ({ sessionInstance }) => sessionInstance.status === "in_progress"
-  );
-
-  if (inProgress) {
-    return `/session/${inProgress.sessionInstance.id}`;
-  }
-
-  const nextNotStarted = items.find(
-    ({ sessionInstance }) => sessionInstance.status === "not_started"
-  );
-
-  if (nextNotStarted) {
-    return `/session/${nextNotStarted.sessionInstance.id}`;
-  }
-
-  const firstItem = items[0];
-
-  if (firstItem) {
-    return `/session/${firstItem.sessionInstance.id}`;
-  }
-
-  return "/week";
-}
-
 export default function BottomNav({ activeTab }: BottomNavProps) {
   const [sessionPath, setSessionPath] = useState("/week");
 
   useEffect(() => {
     async function loadSessionPath() {
       try {
-        const items = await getSessionInstanceListItemsForCurrentWeek();
-        setSessionPath(getCurrentSessionPath(items));
+        setSessionPath(await getActiveDestinationRoute());
       } catch (error) {
-        console.error("Failed to load current session path:", error);
+        console.error("Failed to load active destination:", error);
         setSessionPath("/week");
       }
     }

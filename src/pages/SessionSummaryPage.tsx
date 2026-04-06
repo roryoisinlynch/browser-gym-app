@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { SessionInstanceView, SessionPR } from "../repositories/programRepository";
 import {
+  getActiveDestinationRoute,
   getSessionInstanceView,
   getSessionInstancesForWeekInstance,
   getSessionPRs,
@@ -165,8 +166,8 @@ export default function SessionSummaryPage() {
     <main className="summary-page">
       <TopBar
         title="Session summary"
-        backTo={`/session/${sessionInstanceId}`}
-        backLabel="Back to session"
+        backLabel="Back"
+        onBack={async () => navigate(await getActiveDestinationRoute())}
       />
 
       <section className="summary-shell">
@@ -244,33 +245,36 @@ export default function SessionSummaryPage() {
           <section className="summary-section">
             <h2 className="summary-section-title">Personal records</h2>
             <ul className="summary-pr-list">
-              {prs.map((pr) => (
-                <li key={pr.exerciseName} className="summary-pr-item">
-                  <span className="summary-pr-name">{pr.exerciseName}</span>
-                  <span className="summary-pr-values">
-                    {Math.round(pr.newE1RM * 10) / 10} kg e1RM
-                    {pr.previousE1RM != null && (
-                      <span className="summary-pr-previous">
-                        {" "}was {Math.round(pr.previousE1RM * 10) / 10}
-                      </span>
-                    )}
-                  </span>
-                </li>
-              ))}
+              {prs.map((pr) => {
+                const daysSince = pr.previousDate
+                  ? Math.round(
+                      (Date.now() - new Date(pr.previousDate).getTime()) /
+                        86400000
+                    )
+                  : null;
+                return (
+                  <li key={pr.exerciseName} className="summary-pr-item">
+                    <div className="summary-pr-left">
+                      <span className="summary-pr-name">{pr.exerciseName}</span>
+                      {pr.previousE1RM != null && pr.previousWeight != null && pr.previousReps != null && (
+                        <span className="summary-pr-previous">
+                          was {pr.previousWeight}×{pr.previousReps}
+                          {daysSince != null && (
+                            <> · {daysSince}d ago{pr.previousDate && <> ({pr.previousDate})</>}</>
+                          )}
+                        </span>
+                      )}
+                    </div>
+                    <span className="summary-pr-values">
+                      {pr.newWeight}×{pr.newReps}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           </section>
         )}
 
-        {/* ── Actions ── */}
-        <div className="summary-actions">
-          <button
-            type="button"
-            className="summary-back-button"
-            onClick={() => navigate("/week")}
-          >
-            ← Back
-          </button>
-        </div>
       </section>
 
       <BottomNav activeTab="session" />
