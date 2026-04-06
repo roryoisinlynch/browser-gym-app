@@ -328,6 +328,48 @@ This approach allows:
 
 ---
 
+# Scheduled Dates vs Completion Dates
+
+`SessionInstance` carries two distinct date concepts that serve different purposes. Confusing them is a common source of bugs.
+
+## `date` — the scheduled date
+
+Set once at season creation by `replicateSeasonWeeks`. Never updated after that.
+
+```
+date = SeasonInstance.startedAt + (weekIndex × 9 + (sessionOrder − 1)) days
+```
+
+`SeasonInstance.startedAt` is the sole anchor: it is written as `new Date().toISOString()` when `startSeasonFromTemplate` is called (either explicitly or automatically when the last session of the previous season is completed). Every scheduled session date in the season is an offset from that value.
+
+**Use this field for:** schedule adherence / consistency KPI (did the user train on the day the program said to?), display of the programme calendar.
+
+**Do not use this field for:** showing when a session was actually done, historical ordering of sets, progress charts, or personal-record date labels. Because sessions are pre-generated for the whole season at start time, `date` can be weeks or months in the future relative to when the user is actually training.
+
+## `completedAt` — the actual completion timestamp
+
+Written by `stopSessionInstance` as `new Date().toISOString()` at the moment the user taps "Finish session". This reflects when the session was really done.
+
+**Use this field for:** everything date-related that the user sees — set records, exercise history/progress charts, PR "N days ago" labels, and any future "actual vs scheduled" adherence comparison.
+
+## `sessionCompletedDate(session)` — the helper
+
+`src/repositories/programRepository.ts` exports a private helper that extracts a `YYYY-MM-DD` local-calendar date from a session, to be used wherever a display date is needed:
+
+```ts
+// Uses completedAt if present, falls back to date for in-progress/legacy records.
+// Extracts the local calendar date (not UTC) to avoid off-by-one issues for
+// users whose UTC offset means their local midnight differs from UTC midnight.
+function sessionCompletedDate(session: SessionInstance): string {
+  const d = new Date(session.completedAt ?? session.date);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+```
+
+Any new code that needs a date for a native set record should call this helper rather than reading `session.date` directly.
+
+---
+
 # Templates vs Instances
 
 A key architectural principle:
