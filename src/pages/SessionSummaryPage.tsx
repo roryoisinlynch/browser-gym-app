@@ -27,10 +27,10 @@ function buildNarrative(metrics: ReturnType<typeof computeSessionMetrics>): stri
   const volumeStatus = volumeScore >= 100 ? "green" : volumeScore >= 90 ? "amber" : "red";
   const volumePhrase =
     volumeStatus === "green"
-      ? "lifted enough sets to meet your volume target"
+      ? "logged enough sets to meet your volume target"
       : volumeStatus === "amber"
-        ? "almost lifted enough sets to meet your volume target"
-        : "didn't lift enough sets to meet your volume target";
+        ? "almost logged enough sets to meet your volume target"
+        : "didn't log enough sets to meet your volume target";
 
   if (intensityTarget === 0) {
     return `You ${volumePhrase}.`;
@@ -44,7 +44,7 @@ function buildNarrative(metrics: ReturnType<typeof computeSessionMetrics>): stri
         ? "almost lifted enough weight to hit your intensity target"
         : "didn't lift enough weight to hit your intensity target";
 
-  // Both failed: restructure to avoid repeating "didn't lift"
+  // Both failed: restructure to avoid repeating "didn't"
   if (volumeStatus === "red" && intensityStatus === "red") {
     return "You didn't log enough sets to meet your volume target, or lift enough weight to hit your intensity target.";
   }

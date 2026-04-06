@@ -17,6 +17,7 @@ export interface WeekMetrics {
   consistencyScore: number;
   weekScore: number;
   emojiRating: EmojiRating;
+  skippedSessions: number;
 }
 
 export function getEmojiRating(score: number): EmojiRating {
@@ -108,6 +109,9 @@ export function computeWeekMetrics(
   const weekScore = Math.round((volumeScore + intensityScore + consistencyScore) / 3);
   const emojiRating = getEmojiRating(weekScore);
 
+  const scheduledSessionCount = weekTemplateItems.filter((i) => i.type === "session").length;
+  const skippedSessions = Math.max(0, scheduledSessionCount - completedViews.length);
+
   return {
     totalSets,
     totalSessions,
@@ -117,5 +121,6 @@ export function computeWeekMetrics(
     consistencyScore,
     weekScore,
     emojiRating,
+    skippedSessions,
   };
 }

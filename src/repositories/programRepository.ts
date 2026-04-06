@@ -1351,6 +1351,17 @@ export async function getSessionInstancesForWeekInstance(
   return sessions.sort((a, b) => a.date.localeCompare(b.date));
 }
 
+export async function getWeekInstanceItemsForWeekInstance(
+  weekInstanceId: string
+): Promise<WeekInstanceItem[]> {
+  const items = await getAllByIndex<WeekInstanceItem>(
+    STORE_NAMES.weekInstanceItems,
+    "byWeekInstanceId",
+    weekInstanceId
+  );
+  return items.sort((a, b) => a.order - b.order);
+}
+
 export async function getCurrentWeekInstance(): Promise<WeekInstance | undefined> {
   const weekInstances = await getAllByIndex<WeekInstance>(
     STORE_NAMES.weekInstances,

@@ -42,10 +42,7 @@
   display: flex;
   align-items: center;
   gap: 0;
-  padding: 16px 20px;
-  border-radius: 14px;
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
+  padding: 4px 0;
 }
 
 .week-summary-stat {
@@ -265,6 +262,65 @@
 
 .week-summary-pr-arrow {
   color: var(--accent);
+  font-weight: 700;
+}
+
+/* ── Consistency visual ── */
+.consistency-visual {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.consistency-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.consistency-row__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  width: 48px;
+  flex-shrink: 0;
+}
+
+.consistency-circles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.consistency-circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.consistency-circle--gym {
+  background: rgba(255, 255, 255, 0.30);
+}
+
+.consistency-circle--rest {
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.consistency-circle--missed {
+  background: transparent;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+}
+
+.consistency-circle__x {
+  font-size: 0.75rem;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.40);
   font-weight: 700;
 }
 

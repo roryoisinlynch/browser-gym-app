@@ -9,22 +9,30 @@ import {
   getSessionInstanceView,
   getWeekInstancesForSeasonInstance,
   getWeekPRs,
+  getWeekInstanceItemsForWeekInstance,
 } from "../repositories/programRepository";
+import type { WeekTemplateItem, WeekInstanceItem } from "../domain/models";
 import { computeSessionMetrics } from "../services/sessionMetrics";
 import { computeWeekMetrics, emojiForRating } from "../services/weekMetrics";
 import type { WeekMetrics } from "../services/weekMetrics";
+import WeeklyBreadcrumb from "../components/WeeklyBreadcrumb";
+import type { BreadcrumbSession } from "../components/WeeklyBreadcrumb";
+import WeeksBreadcrumb from "../components/WeeksBreadcrumb";
+import type { BreadcrumbWeek } from "../components/WeeksBreadcrumb";
+import TopBar from "../components/TopBar";
+import BottomNav from "../components/BottomNav";
+import "./WeekSummaryPage.css";
 
 function buildWeekNarrative(metrics: WeekMetrics): string {
-  const { volumeScore, intensityScore, consistencyScore } = metrics;
+  const { volumeScore, intensityScore, skippedSessions } = metrics;
 
   const volStatus = volumeScore >= 100 ? "green" : volumeScore >= 90 ? "amber" : "red";
   const intStatus = intensityScore >= 100 ? "green" : intensityScore >= 90 ? "amber" : "red";
-  const conStatus = consistencyScore >= 100 ? "green" : consistencyScore >= 90 ? "amber" : "red";
 
   const volPhrase =
-    volStatus === "green" ? "lifted enough sets to meet your volume target"
-    : volStatus === "amber" ? "almost lifted enough sets to meet your volume target"
-    : "didn't lift enough sets to meet your volume target";
+    volStatus === "green" ? "logged enough sets to meet your volume target"
+    : volStatus === "amber" ? "almost logged enough sets to meet your volume target"
+    : "didn't log enough sets to meet your volume target";
 
   const intPhrase =
     intStatus === "green" ? "lifted enough weight to hit your intensity target"
@@ -32,21 +40,18 @@ function buildWeekNarrative(metrics: WeekMetrics): string {
     : "didn't lift enough weight to hit your intensity target";
 
   const conPhrase =
-    conStatus === "green" ? "completed your sessions on schedule"
-    : conStatus === "amber" ? "nearly kept to your session schedule"
-    : "took longer than planned to finish your sessions";
+    skippedSessions === 0 ? "didn't skip any days"
+    : skippedSessions === 1 ? "skipped 1 day"
+    : `skipped ${skippedSessions} days`;
 
-  const positives = [
-    { status: volStatus, phrase: volPhrase },
-    { status: intStatus, phrase: intPhrase },
-    { status: conStatus, phrase: conPhrase },
-  ].filter(i => i.status !== "red").map(i => i.phrase);
+  const items = [
+    { positive: volStatus !== "red", phrase: volPhrase },
+    { positive: intStatus !== "red", phrase: intPhrase },
+    { positive: skippedSessions === 0, phrase: conPhrase },
+  ];
 
-  const negatives = [
-    { status: volStatus, phrase: volPhrase },
-    { status: intStatus, phrase: intPhrase },
-    { status: conStatus, phrase: conPhrase },
-  ].filter(i => i.status === "red").map(i => i.phrase);
+  const positives = items.filter(i => i.positive).map(i => i.phrase);
+  const negatives = items.filter(i => !i.positive).map(i => i.phrase);
 
   function join(phrases: string[]): string {
     if (phrases.length === 1) return phrases[0];
@@ -58,13 +63,6 @@ function buildWeekNarrative(metrics: WeekMetrics): string {
   if (positives.length === 0) return `You ${join(negatives)}.`;
   return `You ${join(positives)}, but you ${join(negatives)}.`;
 }
-import WeeklyBreadcrumb from "../components/WeeklyBreadcrumb";
-import type { BreadcrumbSession } from "../components/WeeklyBreadcrumb";
-import WeeksBreadcrumb from "../components/WeeksBreadcrumb";
-import type { BreadcrumbWeek } from "../components/WeeksBreadcrumb";
-import TopBar from "../components/TopBar";
-import BottomNav from "../components/BottomNav";
-import "./WeekSummaryPage.css";
 
 export default function WeekSummaryPage() {
   const { weekInstanceId } = useParams<{ weekInstanceId: string }>();
@@ -73,6 +71,9 @@ export default function WeekSummaryPage() {
   const [sessionBreadcrumb, setSessionBreadcrumb] = useState<BreadcrumbSession[]>([]);
   const [weeksBreadcrumb, setWeeksBreadcrumb] = useState<BreadcrumbWeek[]>([]);
   const [prs, setPrs] = useState<SessionPR[]>([]);
+  const [weekTemplateDays, setWeekTemplateDays] = useState<WeekTemplateItem[]>([]);
+  const [weekInstanceItems, setWeekInstanceItems] = useState<WeekInstanceItem[]>([]);
+  const [completedSessionIds, setCompletedSessionIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -96,12 +97,13 @@ export default function WeekSummaryPage() {
           return;
         }
 
-        const [weekTemplate, sessions] = await Promise.all([
+        const [weekTemplate, sessions, wii] = await Promise.all([
           getWeekTemplateById(weekInstance.weekTemplateId),
           getSessionInstancesForWeekInstance(weekInstanceId),
+          getWeekInstanceItemsForWeekInstance(weekInstanceId),
         ]);
 
-        const weekTemplateItems = await getWeekTemplateItemsForWeekTemplate(
+        const templateItems = await getWeekTemplateItemsForWeekTemplate(
           weekInstance.weekTemplateId
         );
 
@@ -113,9 +115,12 @@ export default function WeekSummaryPage() {
           )
         ).filter((sv): sv is SessionInstanceView => sv != null);
 
-        setMetrics(computeWeekMetrics(weekInstance, weekTemplateItems, sessionViews));
+        setMetrics(computeWeekMetrics(weekInstance, templateItems, sessionViews));
         setWeekName(weekTemplate?.name ?? "Week summary");
         setPrs(weekPRs);
+        setWeekTemplateDays(templateItems);
+        setWeekInstanceItems(wii);
+        setCompletedSessionIds(new Set(sessions.filter(s => s.status === "completed").map(s => s.id)));
 
         // Sessions this week breadcrumb — show all sessions with their RAG status.
         const breadcrumbSessions: BreadcrumbSession[] = await Promise.all(
@@ -214,6 +219,9 @@ export default function WeekSummaryPage() {
 
   const { totalSets, totalSessions, durationLabel, volumeScore, intensityScore, consistencyScore, weekScore, emojiRating } = metrics;
 
+  // Build lookup maps for the consistency visual.
+  const wiiByTemplateItemId = new Map(weekInstanceItems.map(i => [i.weekTemplateItemId, i]));
+
   return (
     <main className="week-summary-page">
       <TopBar
@@ -291,6 +299,49 @@ export default function WeekSummaryPage() {
             Score = average of volume, intensity and consistency (each out of 100)
           </p>
         </section>
+
+        {/* ── Consistency visual ── */}
+        {weekTemplateDays.length > 0 && (
+          <section className="week-summary-section">
+            <h2 className="week-summary-section-title">Schedule</h2>
+            <div className="consistency-visual">
+              <div className="consistency-row">
+                <span className="consistency-row__label">Planned</span>
+                <div className="consistency-circles">
+                  {weekTemplateDays.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`consistency-circle ${item.type === "session" ? "consistency-circle--gym" : "consistency-circle--rest"}`}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="consistency-row">
+                <span className="consistency-row__label">Actual</span>
+                <div className="consistency-circles">
+                  {weekTemplateDays.map((item) => {
+                    if (item.type === "rest") {
+                      return <div key={item.id} className="consistency-circle consistency-circle--rest" />;
+                    }
+                    const wii = wiiByTemplateItemId.get(item.id);
+                    const sessionId = wii?.sessionInstanceId;
+                    // A session is completed if its instance exists and has completed status.
+                    // We rely on the breadcrumb sessions list to check status.
+                    const completed = sessionId != null && completedSessionIds.has(sessionId);
+                    return (
+                      <div
+                        key={item.id}
+                        className={`consistency-circle ${completed ? "consistency-circle--gym" : "consistency-circle--missed"}`}
+                      >
+                        {!completed && <span className="consistency-circle__x">×</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* ── Sessions this week ── */}
         {sessionBreadcrumb.length > 0 && (
