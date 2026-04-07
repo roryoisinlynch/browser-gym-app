@@ -38,6 +38,24 @@ function getEquivalentRepsAtWeight(
   return Number.isFinite(equivalentReps) ? Math.max(0, equivalentReps) : null;
 }
 
+function getMarkerPercent(
+  repValue: number | null,
+  dashCount: number
+): number | null {
+  if (repValue == null || !Number.isFinite(repValue) || dashCount <= 0) {
+    return null;
+  }
+
+  const clamped = clamp(repValue, 0, dashCount);
+  const isWholeRep = Math.abs(clamped - Math.round(clamped)) < 0.0001;
+
+  if (isWholeRep && clamped >= 1) {
+    return clamp(((clamped - 0.5) / dashCount) * 100, 0, 100);
+  }
+
+  return clamp((clamped / dashCount) * 100, 0, 100);
+}
+
 export default function ExerciseRepDashProgress({
   workingWeight,
   targetReps,
@@ -72,11 +90,11 @@ export default function ExerciseRepDashProgress({
     clamp(topSetEquivalentReps - index, 0, 1)
   );
 
-  const targetMarkerPercent = clamp((targetReps / dashCount) * 100, 0, 100);
-  const effectiveMarkerPercent =
-    effectiveEquivalentReps == null
-      ? null
-      : clamp((effectiveEquivalentReps / dashCount) * 100, 0, 100);
+  const targetMarkerPercent = getMarkerPercent(targetReps, dashCount);
+  const effectiveMarkerPercent = getMarkerPercent(
+    effectiveEquivalentReps,
+    dashCount
+  );
 
   return (
     <div className="exercise-rep-dash-progress">
@@ -92,10 +110,12 @@ export default function ExerciseRepDashProgress({
 
       <div className="exercise-rep-dash-progress__track-wrap">
         <div className="exercise-rep-dash-progress__markers" aria-hidden="true">
-          <span
-            className="exercise-rep-dash-progress__marker exercise-rep-dash-progress__marker--target"
-            style={{ left: `${targetMarkerPercent}%` }}
-          />
+          {targetMarkerPercent != null && (
+            <span
+              className="exercise-rep-dash-progress__marker exercise-rep-dash-progress__marker--target"
+              style={{ left: `${targetMarkerPercent}%` }}
+            />
+          )}
           {effectiveMarkerPercent != null && (
             <span
               className="exercise-rep-dash-progress__marker exercise-rep-dash-progress__marker--effective"
