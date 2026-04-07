@@ -365,40 +365,31 @@ export default function SeasonSummaryPage() {
               Personal records
             </h2>
             <ul className="season-summary-pr-list">
-              {prs.map((pr) => {
-                const pctGain =
-                  pr.previousE1RM != null
-                    ? Math.round((pr.newE1RM / pr.previousE1RM - 1) * 100)
-                    : null;
-                const kgGain =
-                  pr.previousE1RM != null
-                    ? Math.round((pr.newE1RM - pr.previousE1RM) * 100) / 100
-                    : null;
-                return (
-                  <li key={pr.exerciseName} className="season-summary-pr-item">
-                    <span className="season-summary-pr-name">{pr.exerciseName}</span>
-                    {pr.previousE1RM != null ? (
-                      <span className="season-summary-pr-detail">
-                        {Math.round(pr.previousE1RM * 100) / 100}kg{" "}
-                        <span className="season-summary-pr-arrow">→</span>{" "}
-                        <span className="season-summary-pr-new-value">
-                          {Math.round(pr.newE1RM * 100) / 100}kg
-                        </span>{" "}
-                        e1RM
-                        {pctGain != null && <> (+{pctGain}%)</>}
-                        {kgGain != null && <>, up {kgGain}kg</>}
-                      </span>
-                    ) : (
-                      <span className="season-summary-pr-detail">
-                        <span className="season-summary-pr-new-value">
-                          {Math.round(pr.newE1RM * 100) / 100}kg
-                        </span>{" "}
-                        e1RM
-                      </span>
-                    )}
-                  </li>
-                );
-              })}
+              {prs.map((pr) => (
+                <li key={pr.exerciseName} className="season-summary-pr-item">
+                  <span className="season-summary-pr-name">{pr.exerciseName}</span>
+                  {pr.prType === "reps" ? (
+                    <span className="season-summary-pr-detail">
+                      {pr.previousReps != null && <>{pr.previousReps} reps <span className="season-summary-pr-arrow">→</span> </>}
+                      <span className="season-summary-pr-new-value">{pr.newReps} reps</span>
+                    </span>
+                  ) : pr.previousE1RM != null && pr.newE1RM != null ? (
+                    <span className="season-summary-pr-detail">
+                      {Math.round(pr.previousE1RM * 100) / 100}kg{" "}
+                      <span className="season-summary-pr-arrow">→</span>{" "}
+                      <span className="season-summary-pr-new-value">{Math.round(pr.newE1RM * 100) / 100}kg</span>{" "}
+                      e1RM
+                      {<> (+{Math.round((pr.newE1RM / pr.previousE1RM - 1) * 100)}%)</>}
+                      <>, up {Math.round((pr.newE1RM - pr.previousE1RM) * 100) / 100}kg</>
+                    </span>
+                  ) : pr.newE1RM != null ? (
+                    <span className="season-summary-pr-detail">
+                      <span className="season-summary-pr-new-value">{Math.round(pr.newE1RM * 100) / 100}kg</span>{" "}
+                      e1RM
+                    </span>
+                  ) : null}
+                </li>
+              ))}
             </ul>
           </section>
         )}

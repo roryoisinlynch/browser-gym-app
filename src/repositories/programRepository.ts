@@ -1852,9 +1852,10 @@ export async function stopSessionInstance(
 // ─── Session PRs ─────────────────────────────────────────────────────────────
 
 export interface SessionPR {
+  prType: "e1rm" | "reps";
   exerciseName: string;
-  newE1RM: number;
-  newWeight: number;
+  newE1RM: number | null;   // null for reps-type PRs
+  newWeight: number | null; // null for reps-type PRs
   newReps: number;
   previousE1RM: number | null;
   previousWeight: number | null;
@@ -1862,15 +1863,25 @@ export interface SessionPR {
   previousDate: string | null;
 }
 
+/** Resolves the date of the previous best set for PR display. */
+async function resolvePreviousDate(
+  previousTopSet: ExerciseSet | null,
+  priorInstances: ExerciseInstance[]
+): Promise<string | null> {
+  if (previousTopSet == null || previousTopSet.exerciseInstanceId === "__imported__") return null;
+  const prevExInst = priorInstances.find((i) => i.id === previousTopSet.exerciseInstanceId);
+  if (!prevExInst) return null;
+  const prevSession = await getSessionInstanceById(prevExInst.sessionInstanceId);
+  return prevSession ? sessionCompletedDate(prevSession) : null;
+}
+
 /**
- * Returns exercises where the session produced a genuine all-time e1RM PR.
+ * Returns exercises where the session produced a genuine all-time PR.
  *
  * Rules:
  *  - Must have at least 3 prior exercise instances (1st–3rd are excluded).
- *  - The top set's e1RM must beat the all-time best from every prior session
- *    (not just the "effective" recent-max substitute used for prescriptions).
- *  - Bodyweight exercises (no performedWeight) are excluded as e1RM cannot
- *    be computed without a weight value.
+ *  - Weighted exercises: top set e1RM must beat all-time prior best e1RM.
+ *  - Bodyweight exercises: max reps in a single set must beat all-time prior max reps.
  */
 export async function getSessionPRs(sessionInstanceId: string): Promise<SessionPR[]> {
   const exerciseInstances = await getExerciseInstancesForSessionInstance(sessionInstanceId);
@@ -1887,67 +1898,89 @@ export async function getSessionPRs(sessionInstanceId: string): Promise<SessionP
     if (priorInstances.length < 3) continue;
 
     const exerciseName = exerciseInstance.exerciseName ?? "Unknown exercise";
+    const exerciseTemplate = await getExerciseTemplateById(exerciseInstance.exerciseTemplateId);
+    const isBodyweight = exerciseTemplate?.weightMode === "bodyweight";
 
-    // All sets for this template across all time (native + imported)
     const nativeSets = await getExerciseSetsForExerciseTemplate(
       exerciseInstance.exerciseTemplateId
     );
-    const allSets = await mergeWithImportedSets(exerciseName, nativeSets);
+    const allSets = await mergeWithImportedSets(exerciseName, nativeSets, isBodyweight);
 
-    // Top e1RM achieved in this session
-    const currentSets = allSets.filter(
-      (s) => s.exerciseInstanceId === exerciseInstance.id
-    );
+    const currentSets = allSets.filter((s) => s.exerciseInstanceId === exerciseInstance.id);
     if (currentSets.length === 0) continue;
 
-    let newE1RM: number | null = null;
-    let newTopSet: ExerciseSet | null = null;
-    for (const s of currentSets) {
-      const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
-      if (e1rm != null && (newE1RM === null || e1rm > newE1RM)) {
-        newE1RM = e1rm;
-        newTopSet = s;
-      }
-    }
-    if (newE1RM === null || newTopSet === null) continue;
+    const priorSets = allSets.filter((s) => s.exerciseInstanceId !== exerciseInstance.id);
 
-    // All-time best from every session BEFORE this one
-    const priorSets = allSets.filter(
-      (s) => s.exerciseInstanceId !== exerciseInstance.id
-    );
-    let previousE1RM: number | null = null;
-    let previousTopSet: ExerciseSet | null = null;
-    for (const s of priorSets) {
-      const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
-      if (e1rm != null && (previousE1RM === null || e1rm > previousE1RM)) {
-        previousE1RM = e1rm;
-        previousTopSet = s;
+    if (isBodyweight) {
+      // Bodyweight PR: max reps in a single set.
+      let newMaxReps: number | null = null;
+      let newTopSet: ExerciseSet | null = null;
+      for (const s of currentSets) {
+        if (s.performedReps != null && (newMaxReps === null || s.performedReps > newMaxReps)) {
+          newMaxReps = s.performedReps;
+          newTopSet = s;
+        }
       }
-    }
+      if (newMaxReps === null || newTopSet === null) continue;
 
-    if (previousE1RM === null || newE1RM > previousE1RM) {
-      // Resolve date for the previous best set (not available for imported sets)
-      let previousDate: string | null = null;
-      if (previousTopSet != null && previousTopSet.exerciseInstanceId !== "__imported__") {
-        const prevExInst = allInstances.find(
-          (i) => i.id === previousTopSet!.exerciseInstanceId
-        );
-        if (prevExInst) {
-          const prevSession = await getSessionInstanceById(prevExInst.sessionInstanceId);
-          previousDate = prevSession ? sessionCompletedDate(prevSession) : null;
+      let previousMaxReps: number | null = null;
+      let previousTopSet: ExerciseSet | null = null;
+      for (const s of priorSets) {
+        if (s.performedReps != null && (previousMaxReps === null || s.performedReps > previousMaxReps)) {
+          previousMaxReps = s.performedReps;
+          previousTopSet = s;
         }
       }
 
-      prs.push({
-        exerciseName,
-        newE1RM,
-        newWeight: newTopSet.performedWeight!,
-        newReps: newTopSet.performedReps!,
-        previousE1RM,
-        previousWeight: previousTopSet?.performedWeight ?? null,
-        previousReps: previousTopSet?.performedReps ?? null,
-        previousDate,
-      });
+      if (previousMaxReps === null || newMaxReps > previousMaxReps) {
+        prs.push({
+          prType: "reps",
+          exerciseName,
+          newE1RM: null,
+          newWeight: null,
+          newReps: newMaxReps,
+          previousE1RM: null,
+          previousWeight: null,
+          previousReps: previousMaxReps,
+          previousDate: await resolvePreviousDate(previousTopSet, priorInstances),
+        });
+      }
+    } else {
+      // Weighted PR: best e1RM.
+      let newE1RM: number | null = null;
+      let newTopSet: ExerciseSet | null = null;
+      for (const s of currentSets) {
+        const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
+        if (e1rm != null && (newE1RM === null || e1rm > newE1RM)) {
+          newE1RM = e1rm;
+          newTopSet = s;
+        }
+      }
+      if (newE1RM === null || newTopSet === null) continue;
+
+      let previousE1RM: number | null = null;
+      let previousTopSet: ExerciseSet | null = null;
+      for (const s of priorSets) {
+        const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
+        if (e1rm != null && (previousE1RM === null || e1rm > previousE1RM)) {
+          previousE1RM = e1rm;
+          previousTopSet = s;
+        }
+      }
+
+      if (previousE1RM === null || newE1RM > previousE1RM) {
+        prs.push({
+          prType: "e1rm",
+          exerciseName,
+          newE1RM,
+          newWeight: newTopSet.performedWeight!,
+          newReps: newTopSet.performedReps!,
+          previousE1RM,
+          previousWeight: previousTopSet?.performedWeight ?? null,
+          previousReps: previousTopSet?.performedReps ?? null,
+          previousDate: await resolvePreviousDate(previousTopSet, priorInstances),
+        });
+      }
     }
   }
 
@@ -1996,57 +2029,84 @@ export async function getWeekPRs(weekInstanceId: string): Promise<SessionPR[]> {
     const priorInstances = allInstances.filter((i) => !weekInstanceIds.has(i.id));
     if (priorInstances.length < 3) continue;
 
+    const exerciseTemplate = await getExerciseTemplateById(exerciseTemplateId);
+    const isBodyweight = exerciseTemplate?.weightMode === "bodyweight";
+
     const nativeSets = await getExerciseSetsForExerciseTemplate(exerciseTemplateId);
-    const allSets = await mergeWithImportedSets(exerciseName, nativeSets);
+    const allSets = await mergeWithImportedSets(exerciseName, nativeSets, isBodyweight);
 
-    // Best e1RM from anywhere in this week.
     const weekSets = allSets.filter((s) => weekInstanceIds.has(s.exerciseInstanceId));
-    let newE1RM: number | null = null;
-    let newTopSet: ExerciseSet | null = null;
-    for (const s of weekSets) {
-      const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
-      if (e1rm != null && (newE1RM === null || e1rm > newE1RM)) {
-        newE1RM = e1rm;
-        newTopSet = s;
-      }
-    }
-    if (newE1RM === null || newTopSet === null) continue;
-
-    // All-time best from every session BEFORE this week.
     const priorInstanceIds = new Set(priorInstances.map((i) => i.id));
     const priorSets = allSets.filter((s) => priorInstanceIds.has(s.exerciseInstanceId));
-    let previousE1RM: number | null = null;
-    let previousTopSet: ExerciseSet | null = null;
-    for (const s of priorSets) {
-      const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
-      if (e1rm != null && (previousE1RM === null || e1rm > previousE1RM)) {
-        previousE1RM = e1rm;
-        previousTopSet = s;
-      }
-    }
 
-    if (previousE1RM === null || newE1RM > previousE1RM) {
-      let previousDate: string | null = null;
-      if (previousTopSet != null && previousTopSet.exerciseInstanceId !== "__imported__") {
-        const prevExInst = priorInstances.find(
-          (i) => i.id === previousTopSet!.exerciseInstanceId
-        );
-        if (prevExInst) {
-          const prevSession = await getSessionInstanceById(prevExInst.sessionInstanceId);
-          previousDate = prevSession ? sessionCompletedDate(prevSession) : null;
+    if (isBodyweight) {
+      let newMaxReps: number | null = null;
+      let newTopSet: ExerciseSet | null = null;
+      for (const s of weekSets) {
+        if (s.performedReps != null && (newMaxReps === null || s.performedReps > newMaxReps)) {
+          newMaxReps = s.performedReps;
+          newTopSet = s;
+        }
+      }
+      if (newMaxReps === null || newTopSet === null) continue;
+
+      let previousMaxReps: number | null = null;
+      let previousTopSet: ExerciseSet | null = null;
+      for (const s of priorSets) {
+        if (s.performedReps != null && (previousMaxReps === null || s.performedReps > previousMaxReps)) {
+          previousMaxReps = s.performedReps;
+          previousTopSet = s;
         }
       }
 
-      prs.push({
-        exerciseName,
-        newE1RM,
-        newWeight: newTopSet.performedWeight!,
-        newReps: newTopSet.performedReps!,
-        previousE1RM,
-        previousWeight: previousTopSet?.performedWeight ?? null,
-        previousReps: previousTopSet?.performedReps ?? null,
-        previousDate,
-      });
+      if (previousMaxReps === null || newMaxReps > previousMaxReps) {
+        prs.push({
+          prType: "reps",
+          exerciseName,
+          newE1RM: null,
+          newWeight: null,
+          newReps: newMaxReps,
+          previousE1RM: null,
+          previousWeight: null,
+          previousReps: previousMaxReps,
+          previousDate: await resolvePreviousDate(previousTopSet, priorInstances),
+        });
+      }
+    } else {
+      let newE1RM: number | null = null;
+      let newTopSet: ExerciseSet | null = null;
+      for (const s of weekSets) {
+        const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
+        if (e1rm != null && (newE1RM === null || e1rm > newE1RM)) {
+          newE1RM = e1rm;
+          newTopSet = s;
+        }
+      }
+      if (newE1RM === null || newTopSet === null) continue;
+
+      let previousE1RM: number | null = null;
+      let previousTopSet: ExerciseSet | null = null;
+      for (const s of priorSets) {
+        const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
+        if (e1rm != null && (previousE1RM === null || e1rm > previousE1RM)) {
+          previousE1RM = e1rm;
+          previousTopSet = s;
+        }
+      }
+
+      if (previousE1RM === null || newE1RM > previousE1RM) {
+        prs.push({
+          prType: "e1rm",
+          exerciseName,
+          newE1RM,
+          newWeight: newTopSet.performedWeight!,
+          newReps: newTopSet.performedReps!,
+          previousE1RM,
+          previousWeight: previousTopSet?.performedWeight ?? null,
+          previousReps: previousTopSet?.performedReps ?? null,
+          previousDate: await resolvePreviousDate(previousTopSet, priorInstances),
+        });
+      }
     }
   }
 
@@ -2101,55 +2161,84 @@ export async function getSeasonPRs(seasonInstanceId: string): Promise<SessionPR[
     const priorInstances = allInstances.filter((i) => !seasonExInstanceIds.has(i.id));
     if (priorInstances.length < 3) continue;
 
+    const exerciseTemplate = await getExerciseTemplateById(exerciseTemplateId);
+    const isBodyweight = exerciseTemplate?.weightMode === "bodyweight";
+
     const nativeSets = await getExerciseSetsForExerciseTemplate(exerciseTemplateId);
-    const allSets = await mergeWithImportedSets(exerciseName, nativeSets);
+    const allSets = await mergeWithImportedSets(exerciseName, nativeSets, isBodyweight);
 
     const seasonSets = allSets.filter((s) => seasonExInstanceIds.has(s.exerciseInstanceId));
-    let newE1RM: number | null = null;
-    let newTopSet: ExerciseSet | null = null;
-    for (const s of seasonSets) {
-      const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
-      if (e1rm != null && (newE1RM === null || e1rm > newE1RM)) {
-        newE1RM = e1rm;
-        newTopSet = s;
-      }
-    }
-    if (newE1RM === null || newTopSet === null) continue;
-
     const priorInstanceIds = new Set(priorInstances.map((i) => i.id));
     const priorSets = allSets.filter((s) => priorInstanceIds.has(s.exerciseInstanceId));
-    let previousE1RM: number | null = null;
-    let previousTopSet: ExerciseSet | null = null;
-    for (const s of priorSets) {
-      const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
-      if (e1rm != null && (previousE1RM === null || e1rm > previousE1RM)) {
-        previousE1RM = e1rm;
-        previousTopSet = s;
-      }
-    }
 
-    if (previousE1RM === null || newE1RM > previousE1RM) {
-      let previousDate: string | null = null;
-      if (previousTopSet != null && previousTopSet.exerciseInstanceId !== "__imported__") {
-        const prevExInst = priorInstances.find(
-          (i) => i.id === previousTopSet!.exerciseInstanceId
-        );
-        if (prevExInst) {
-          const prevSession = await getSessionInstanceById(prevExInst.sessionInstanceId);
-          previousDate = prevSession ? sessionCompletedDate(prevSession) : null;
+    if (isBodyweight) {
+      let newMaxReps: number | null = null;
+      let newTopSet: ExerciseSet | null = null;
+      for (const s of seasonSets) {
+        if (s.performedReps != null && (newMaxReps === null || s.performedReps > newMaxReps)) {
+          newMaxReps = s.performedReps;
+          newTopSet = s;
+        }
+      }
+      if (newMaxReps === null || newTopSet === null) continue;
+
+      let previousMaxReps: number | null = null;
+      let previousTopSet: ExerciseSet | null = null;
+      for (const s of priorSets) {
+        if (s.performedReps != null && (previousMaxReps === null || s.performedReps > previousMaxReps)) {
+          previousMaxReps = s.performedReps;
+          previousTopSet = s;
         }
       }
 
-      prs.push({
-        exerciseName,
-        newE1RM,
-        newWeight: newTopSet.performedWeight!,
-        newReps: newTopSet.performedReps!,
-        previousE1RM,
-        previousWeight: previousTopSet?.performedWeight ?? null,
-        previousReps: previousTopSet?.performedReps ?? null,
-        previousDate,
-      });
+      if (previousMaxReps === null || newMaxReps > previousMaxReps) {
+        prs.push({
+          prType: "reps",
+          exerciseName,
+          newE1RM: null,
+          newWeight: null,
+          newReps: newMaxReps,
+          previousE1RM: null,
+          previousWeight: null,
+          previousReps: previousMaxReps,
+          previousDate: await resolvePreviousDate(previousTopSet, priorInstances),
+        });
+      }
+    } else {
+      let newE1RM: number | null = null;
+      let newTopSet: ExerciseSet | null = null;
+      for (const s of seasonSets) {
+        const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
+        if (e1rm != null && (newE1RM === null || e1rm > newE1RM)) {
+          newE1RM = e1rm;
+          newTopSet = s;
+        }
+      }
+      if (newE1RM === null || newTopSet === null) continue;
+
+      let previousE1RM: number | null = null;
+      let previousTopSet: ExerciseSet | null = null;
+      for (const s of priorSets) {
+        const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
+        if (e1rm != null && (previousE1RM === null || e1rm > previousE1RM)) {
+          previousE1RM = e1rm;
+          previousTopSet = s;
+        }
+      }
+
+      if (previousE1RM === null || newE1RM > previousE1RM) {
+        prs.push({
+          prType: "e1rm",
+          exerciseName,
+          newE1RM,
+          newWeight: newTopSet.performedWeight!,
+          newReps: newTopSet.performedReps!,
+          previousE1RM,
+          previousWeight: previousTopSet?.performedWeight ?? null,
+          previousReps: previousTopSet?.performedReps ?? null,
+          previousDate: await resolvePreviousDate(previousTopSet, priorInstances),
+        });
+      }
     }
   }
 
