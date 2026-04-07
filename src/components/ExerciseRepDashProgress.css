@@ -22,7 +22,39 @@
 
 .exercise-rep-dash-progress__track-wrap {
   position: relative;
-  padding: 22px 0 18px;
+  padding-top: 12px;
+}
+
+.exercise-rep-dash-progress__markers {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 10px;
+  pointer-events: none;
+}
+
+.exercise-rep-dash-progress__marker {
+  position: absolute;
+  top: 0;
+  width: 0;
+  height: 0;
+  transform: translateX(-50%);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 7px solid currentColor;
+}
+
+.exercise-rep-dash-progress__marker--historical {
+  color: #ff6b8f;
+}
+
+.exercise-rep-dash-progress__marker--effective {
+  color: var(--accent);
+}
+
+.exercise-rep-dash-progress__marker--target {
+  color: #ffffff;
 }
 
 .exercise-rep-dash-progress__track {
@@ -49,61 +81,30 @@
   background: linear-gradient(90deg, var(--accent-strong), var(--accent));
 }
 
-.exercise-rep-dash-progress__marker {
-  position: absolute;
-  transform: translateX(-50%);
+.exercise-rep-dash-progress__legend {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  pointer-events: none;
+  flex-wrap: wrap;
+  gap: 10px 14px;
 }
 
-.exercise-rep-dash-progress__marker--top {
-  top: 0;
-}
-
-.exercise-rep-dash-progress__marker--bottom {
-  bottom: 0;
-  flex-direction: column-reverse;
-}
-
-.exercise-rep-dash-progress__marker-line {
-  width: 2px;
-  height: 18px;
-  border-radius: 999px;
-  box-shadow: 0 0 0 1px rgba(15, 19, 24, 0.55);
-}
-
-.exercise-rep-dash-progress__marker-line--target {
-  background: #ffffff;
-}
-
-.exercise-rep-dash-progress__marker-line--effective {
-  background: var(--accent);
-  opacity: 0.9;
-}
-
-.exercise-rep-dash-progress__marker-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 20px;
-  padding: 0 8px;
-  border-radius: 999px;
-  background: rgba(15, 19, 24, 0.92);
-  border: 1px solid rgba(216, 240, 106, 0.16);
-  color: var(--text-strong);
-  font-size: 0.68rem;
+.exercise-rep-dash-progress__legend-item {
+  font-size: 0.74rem;
   font-weight: 800;
-  white-space: nowrap;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
-.exercise-rep-dash-progress__marker--top .exercise-rep-dash-progress__marker-pill {
-  margin-bottom: 4px;
+.exercise-rep-dash-progress__legend-item--historical {
+  color: #ff6b8f;
 }
 
-.exercise-rep-dash-progress__marker--bottom .exercise-rep-dash-progress__marker-pill {
-  margin-top: 4px;
+.exercise-rep-dash-progress__legend-item--effective {
+  color: var(--accent);
+}
+
+.exercise-rep-dash-progress__legend-item--target {
+  color: #ffffff;
 }
 
 @media (max-width: 360px) {
@@ -111,15 +112,5 @@
   .exercise-rep-dash-progress__footer {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .exercise-rep-dash-progress__track-wrap {
-    padding-top: 26px;
-    padding-bottom: 22px;
-  }
-
-  .exercise-rep-dash-progress__marker-pill {
-    font-size: 0.64rem;
-    padding: 0 6px;
   }
 }

@@ -38,17 +38,6 @@ function getEquivalentRepsAtWeight(
   return Number.isFinite(equivalentReps) ? Math.max(0, equivalentReps) : null;
 }
 
-function getMarkerVariant(
-  primaryPosition: number | null,
-  secondaryPosition: number | null
-): "top" | "bottom" {
-  if (primaryPosition == null || secondaryPosition == null) {
-    return "top";
-  }
-
-  return Math.abs(primaryPosition - secondaryPosition) < 10 ? "bottom" : "top";
-}
-
 export default function ExerciseRepDashProgress({
   workingWeight,
   targetReps,
@@ -79,22 +68,16 @@ export default function ExerciseRepDashProgress({
     workingWeight
   );
 
-
-  const targetPercent = clamp((targetReps / dashCount) * 100, 0, 100);
-  const effectivePercent =
-    effectiveEquivalentReps == null
-      ? null
-      : clamp((effectiveEquivalentReps / dashCount) * 100, 0, 100);
-
-  const targetVariant = getMarkerVariant(targetPercent, effectivePercent);
-  const effectiveVariant =
-    effectivePercent == null
-      ? "top"
-      : getMarkerVariant(effectivePercent, targetPercent);
-
   const dashFillFractions = Array.from({ length: dashCount }, (_, index) =>
     clamp(topSetEquivalentReps - index, 0, 1)
   );
+
+  const historicalMarkerPercent = 0;
+  const targetMarkerPercent = clamp((targetReps / dashCount) * 100, 0, 100);
+  const effectiveMarkerPercent =
+    effectiveEquivalentReps == null
+      ? null
+      : clamp((effectiveEquivalentReps / dashCount) * 100, 0, 100);
 
   return (
     <div className="exercise-rep-dash-progress">
@@ -109,6 +92,23 @@ export default function ExerciseRepDashProgress({
       </div>
 
       <div className="exercise-rep-dash-progress__track-wrap">
+        <div className="exercise-rep-dash-progress__markers" aria-hidden="true">
+          <span
+            className="exercise-rep-dash-progress__marker exercise-rep-dash-progress__marker--historical"
+            style={{ left: `${historicalMarkerPercent}%` }}
+          />
+          <span
+            className="exercise-rep-dash-progress__marker exercise-rep-dash-progress__marker--target"
+            style={{ left: `${targetMarkerPercent}%` }}
+          />
+          {effectiveMarkerPercent != null && (
+            <span
+              className="exercise-rep-dash-progress__marker exercise-rep-dash-progress__marker--effective"
+              style={{ left: `${effectiveMarkerPercent}%` }}
+            />
+          )}
+        </div>
+
         <div
           className="exercise-rep-dash-progress__track"
           aria-label="Rep-equivalent progress toward all-time PR at working weight"
@@ -126,36 +126,24 @@ export default function ExerciseRepDashProgress({
             </span>
           ))}
         </div>
+      </div>
 
-        <div
-          className={`exercise-rep-dash-progress__marker exercise-rep-dash-progress__marker--${targetVariant}`}
-          style={{ left: `${targetPercent}%` }}
-          aria-hidden="true"
-        >
-          <span className="exercise-rep-dash-progress__marker-line exercise-rep-dash-progress__marker-line--target" />
-          <span className="exercise-rep-dash-progress__marker-pill">Target</span>
-        </div>
-
-        {effectivePercent != null && (
-          <div
-            className={`exercise-rep-dash-progress__marker exercise-rep-dash-progress__marker--${effectiveVariant}`}
-            style={{ left: `${effectivePercent}%` }}
-            aria-hidden="true"
-          >
-            <span className="exercise-rep-dash-progress__marker-line exercise-rep-dash-progress__marker-line--effective" />
-            <span className="exercise-rep-dash-progress__marker-pill">Recent best</span>
-          </div>
+      <div className="exercise-rep-dash-progress__legend">
+        <span className="exercise-rep-dash-progress__legend-item exercise-rep-dash-progress__legend-item--historical">
+          Historical best
+        </span>
+        {effectiveMarkerPercent != null && (
+          <span className="exercise-rep-dash-progress__legend-item exercise-rep-dash-progress__legend-item--effective">
+            Recent best
+          </span>
         )}
+        <span className="exercise-rep-dash-progress__legend-item exercise-rep-dash-progress__legend-item--target">
+          Rep target
+        </span>
       </div>
 
       <div className="exercise-rep-dash-progress__footer">
-        <span>
-          Top set equiv.{" "}
-          {topSetEquivalentReps <= 0
-            ? "0.0"
-            : Math.min(topSetEquivalentReps, dashCount).toFixed(1)}{" "}
-          reps
-        </span>
+        <span>Top set equiv. {Math.min(topSetEquivalentReps, dashCount).toFixed(1)} reps</span>
         <span>{formatMetricValue(workingWeight, "kg")} working weight</span>
         <span>PR</span>
       </div>
