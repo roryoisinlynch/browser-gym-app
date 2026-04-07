@@ -80,13 +80,41 @@ export default function BottomNav({ activeTab }: BottomNavProps) {
       >
         <span className="bottom-nav__icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" className="bottom-nav__svg">
-            <path
-              d="M4 6h10M18 6h2M10 6v4M4 12h4M12 12h8M14 12v4M4 18h14M20 18h0M16 18v-4"
+            <rect
+              x="3"
+              y="4"
+              width="18"
+              height="7"
+              rx="3.5"
               fill="none"
               stroke="currentColor"
               strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+            />
+            <circle
+              cx="17"
+              cy="7.5"
+              r="2.1"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+            />
+            <rect
+              x="3"
+              y="13"
+              width="18"
+              height="7"
+              rx="3.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+            />
+            <circle
+              cx="7"
+              cy="16.5"
+              r="2.1"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
             />
           </svg>
         </span>
