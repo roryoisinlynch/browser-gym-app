@@ -27,20 +27,13 @@
   color: var(--text-strong);
 }
 
-.bottom-nav__link--side {
-  align-items: flex-start;
-}
-
+/* subtle inward move only */
 .bottom-nav__link--left {
-  transform: translate(10px, -4px);
+  transform: translateX(4px);
 }
 
 .bottom-nav__link--right {
-  transform: translate(-10px, -4px);
-}
-
-.bottom-nav__link--center {
-  align-items: flex-start;
+  transform: translateX(-4px);
 }
 
 .bottom-nav__icon {
@@ -50,6 +43,7 @@
   height: 24px;
 }
 
+/* floating center button */
 .bottom-nav__icon--plus {
   width: 40px;
   height: 40px;
@@ -58,11 +52,16 @@
   background: var(--accent);
   color: #0f1113;
   box-shadow:
-    0 4px 10px rgba(0, 0, 0, 0.55),
-    0 1px 3px rgba(0, 0, 0, 0.65);
+    0 2px 6px rgba(0,0,0,0.65),
+    0 1px 2px rgba(0,0,0,0.8);
 }
 
 .bottom-nav__svg {
   width: 22px;
   height: 22px;
+}
+
+.bottom-nav__svg--gear {
+  width: 20px;
+  height: 20px;
 }
