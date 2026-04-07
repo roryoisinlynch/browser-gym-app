@@ -61,7 +61,7 @@ export default function ConfigSessionsPage() {
 
   return (
     <main className="config-sessions-page">
-      <TopBar title="Programme" backTo="/settings" backLabel="Settings" />
+      <TopBar title="Program" backTo="/settings" backLabel="Settings" />
       <section className="config-sessions-shell">
         <header className="config-sessions-header">
           <p className="config-sessions-eyebrow">Configuration</p>

@@ -342,7 +342,7 @@ date = SeasonInstance.startedAt + (weekIndex × 9 + (sessionOrder − 1)) days
 
 `SeasonInstance.startedAt` is the sole anchor: it is written as `new Date().toISOString()` when `startSeasonFromTemplate` is called (either explicitly or automatically when the last session of the previous season is completed). Every scheduled session date in the season is an offset from that value.
 
-**Use this field for:** schedule adherence / consistency KPI (did the user train on the day the program said to?), display of the programme calendar.
+**Use this field for:** schedule adherence / consistency KPI (did the user train on the day the program said to?), display of the program calendar.
 
 **Do not use this field for:** showing when a session was actually done, historical ordering of sets, progress charts, or personal-record date labels. Because sessions are pre-generated for the whole season at start time, `date` can be weeks or months in the future relative to when the user is actually training.
 

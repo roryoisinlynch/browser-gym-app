@@ -99,7 +99,7 @@ export default function ConfigProgramsPage() {
 
   return (
     <main className="config-programs-page">
-      <TopBar title="Programme" backTo="/settings" backLabel="Settings" />
+      <TopBar title="Program" backTo="/settings" backLabel="Settings" />
       <section className="config-programs-shell">
         <header className="config-programs-header">
           <p className="config-programs-eyebrow">Configuration</p>

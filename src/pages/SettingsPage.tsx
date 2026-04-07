@@ -17,7 +17,7 @@ export default function SettingsPage() {
         </header>
 
         <div className="settings-section">
-          <p className="settings-section-label">Programme</p>
+          <p className="settings-section-label">Program</p>
           <div className="settings-card-list">
             <button
               type="button"
