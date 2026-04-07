@@ -512,21 +512,29 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
 ---
 
 # To do:
+ - can you add an 'up next' section at the top of the dashboard page? It should (in priority order) either: direct the user to select and activate a program, direct a user to an active exercise, an active session, or an active week. Anything else I might have missed on that list? it should be clickable to link through to the appropriate section. If the current day is scheduled to be a rest day (and the user is on track with the schedule) then it should just say today is a rest day, but identify the 'up next' gym day.
+ - can you add a season timeline section after the 'up next' section on the dashboard page? it should appear conditionally based on whether a season is currently active. It should be a timeline which represents the scheduled start and finish of a season, it should identify where the user should be currently based on the schedule, and where they currently are.
+ - can you add a PRs section at the end of the dashboard page? it should present exactly the same way as the PRs sections in the summary pages, showing all PRs in descending order. Unlike the summary pages however, if a given exercise has multiple PRs, they can show as separate records (though if this requires significant code change then it isn't the end of the world to keep it the same).
+ - if this is feasible (is it?) can we add links from the dashboard page to view the most recent summary page for the last completed session, week, and season (conditionally appearing based on whether or not these instances exist yet). It would be cool if we could somehow include a visual of the rank for each entity (a traffic light, an emoji, a grade)
+ - just above the PRs section on the dashboard page, can we add a section to spotlight the most recent PR, outlining the lift, the old and new e1RM, the date the PR was set, the days since the previous PR, and a line graph for the given exercise just like the one on the exercise sets page (with the same bin toggles etc)
+ - is it possible to conditionally present a QR code if a user opens the application on a desktop browser? I have a PNG file of the QR code (which i can convert if needed to any other file type), where in the project files should i store it?
+ - is it possible to identify whether or not a mobile user has opened the app as an installd PWA app as opposed to just opening it raw in their mobile browser? I'm wondering whether we can conditionally present instructions to install as PWA.
+ - can you add an import/export feature to the settings screen which allows users to export all relevant data from the model as a file (json perhaps? whatever is best) so they can migrate to another device, or save for backup purposes. 
+ - on the exercise sets instance page, can you conditionally add a button to take the user to the exercise settings page where they can select a working weight? Ideally, they would be redirected back to this exercise set instance after they make their changes. The conditions which should surface this button are: the exercise has no selected working weight yet, the exercise is prescribed target reps that are outside the range of 5-20. There may already be a conditional label prompting users to do this based on one of these conditions but i don't think it links to settings.
+ - add tooltip on the exercise settings page to suggest bodyweight weight mode where working weight choices are less than 3, or where they have 30+ reps
+ - have 'Target' read as AMRAP instead of emdash for AMRAP sets
+ - fix the intensity target bar so that it's clear when the target is met
+ - is it easy to add a 'share' button on the summary pages which takes a screenshot and allows you to post to whatsapp?
  - check epley logic when entering sets, it seems off
- - Summary pages
  - check that new PRs affect the e1RM for the next session, not just the next week or next season
  - test program hopping, delete a full program and see if exercise history persists (test both as a new user and a user with csv imports)
  - on the edit exercise screen in the config screen there is no back button in the top nav bar, can we add one like we have on the other screens.
  - update readme to explain how working weight is set in config and its relation to RIR schemes, the philosophy behind consistent weights week to week
- - have 'Target' read as AMRAP instead of emdash for AMRAP sets
  - how are warmup sets classified for bodyweight exercises?
- - fix the intensity target bar so that it's clear when the target is met
  - consider starting the target bar from the warmup threshold instead of at 0
  - OR add a warmup bar above it with 0-60 intensity and have the current one 61-100
  - OR denote section markers: warmup, RIR target, local e1RM, max e1RM
- - QR code for PC
  - fix the settings settings settings label
- - add proper import export features
  - modify onboarding flow to force uers to select a program or create their own
  - add prompt to select working weight when new PR is hit
  - add an exercise detail screen where you can see a table of all exercises and their: last lift, e1RM local, e1RM max, total lifts, days since PR. Sortable by each column.
@@ -534,3 +542,6 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
  - is seed data taken from mock data or does it have its own definiton, should it? what do we want the final seed data to look like
  - can the app tell whether it has been downloaded and installed? if so condition on mobile to tell the user how
  - onboarding flow to show users towards selecting a preset, creating their own, or modifying a preset
+ - add clear directions when creating days, muscle groups, exercises and movement types
+
+ - i think home page is no longer used, can you confirm? it's an old version of what has now become the week page.
