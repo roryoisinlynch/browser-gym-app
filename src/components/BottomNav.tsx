@@ -46,7 +46,6 @@ export default function BottomNav({ activeTab }: BottomNavProps) {
             />
           </svg>
         </span>
-        <span className="bottom-nav__label">Home</span>
       </Link>
 
       <Link
@@ -68,7 +67,6 @@ export default function BottomNav({ activeTab }: BottomNavProps) {
             />
           </svg>
         </span>
-        <span className="bottom-nav__label">Session</span>
       </Link>
 
       <Link
@@ -76,10 +74,12 @@ export default function BottomNav({ activeTab }: BottomNavProps) {
         className={getTabClass("settings", activeTab)}
         aria-label="Settings"
       >
-        <span className="bottom-nav__icon bottom-nav__icon--gear" aria-hidden="true">
+        <span
+          className="bottom-nav__icon bottom-nav__icon--gear"
+          aria-hidden="true"
+        >
           ⚙
         </span>
-        <span className="bottom-nav__label">Settings</span>
       </Link>
     </nav>
   );
