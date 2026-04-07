@@ -72,7 +72,6 @@ export default function ExerciseRepDashProgress({
     clamp(topSetEquivalentReps - index, 0, 1)
   );
 
-  const historicalMarkerPercent = 0;
   const targetMarkerPercent = clamp((targetReps / dashCount) * 100, 0, 100);
   const effectiveMarkerPercent =
     effectiveEquivalentReps == null
@@ -93,10 +92,6 @@ export default function ExerciseRepDashProgress({
 
       <div className="exercise-rep-dash-progress__track-wrap">
         <div className="exercise-rep-dash-progress__markers" aria-hidden="true">
-          <span
-            className="exercise-rep-dash-progress__marker exercise-rep-dash-progress__marker--historical"
-            style={{ left: `${historicalMarkerPercent}%` }}
-          />
           <span
             className="exercise-rep-dash-progress__marker exercise-rep-dash-progress__marker--target"
             style={{ left: `${targetMarkerPercent}%` }}
@@ -129,9 +124,6 @@ export default function ExerciseRepDashProgress({
       </div>
 
       <div className="exercise-rep-dash-progress__legend">
-        <span className="exercise-rep-dash-progress__legend-item exercise-rep-dash-progress__legend-item--historical">
-          Historical best
-        </span>
         {effectiveMarkerPercent != null && (
           <span className="exercise-rep-dash-progress__legend-item exercise-rep-dash-progress__legend-item--effective">
             Recent best
@@ -143,7 +135,9 @@ export default function ExerciseRepDashProgress({
       </div>
 
       <div className="exercise-rep-dash-progress__footer">
-        <span>Top set equiv. {Math.min(topSetEquivalentReps, dashCount).toFixed(1)} reps</span>
+        <span>
+          Top set equiv. {Math.min(topSetEquivalentReps, dashCount).toFixed(1)} reps
+        </span>
         <span>{formatMetricValue(workingWeight, "kg")} working weight</span>
         <span>PR</span>
       </div>

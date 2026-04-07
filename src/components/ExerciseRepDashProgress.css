@@ -45,10 +45,6 @@
   border-top: 7px solid currentColor;
 }
 
-.exercise-rep-dash-progress__marker--historical {
-  color: #ff6b8f;
-}
-
 .exercise-rep-dash-progress__marker--effective {
   color: var(--accent);
 }
@@ -93,10 +89,6 @@
   line-height: 1.2;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-}
-
-.exercise-rep-dash-progress__legend-item--historical {
-  color: #ff6b8f;
 }
 
 .exercise-rep-dash-progress__legend-item--effective {
