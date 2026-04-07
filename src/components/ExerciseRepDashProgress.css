@@ -1,0 +1,125 @@
+.exercise-rep-dash-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.exercise-rep-dash-progress__header,
+.exercise-rep-dash-progress__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.exercise-rep-dash-progress__label,
+.exercise-rep-dash-progress__value,
+.exercise-rep-dash-progress__footer {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.exercise-rep-dash-progress__track-wrap {
+  position: relative;
+  padding: 22px 0 18px;
+}
+
+.exercise-rep-dash-progress__track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 4px;
+  min-height: 12px;
+}
+
+.exercise-rep-dash-progress__dash {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(43, 49, 58, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.exercise-rep-dash-progress__dash-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent-strong), var(--accent));
+}
+
+.exercise-rep-dash-progress__marker {
+  position: absolute;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+.exercise-rep-dash-progress__marker--top {
+  top: 0;
+}
+
+.exercise-rep-dash-progress__marker--bottom {
+  bottom: 0;
+  flex-direction: column-reverse;
+}
+
+.exercise-rep-dash-progress__marker-line {
+  width: 2px;
+  height: 18px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px rgba(15, 19, 24, 0.55);
+}
+
+.exercise-rep-dash-progress__marker-line--target {
+  background: #ffffff;
+}
+
+.exercise-rep-dash-progress__marker-line--effective {
+  background: var(--accent);
+  opacity: 0.9;
+}
+
+.exercise-rep-dash-progress__marker-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(15, 19, 24, 0.92);
+  border: 1px solid rgba(216, 240, 106, 0.16);
+  color: var(--text-strong);
+  font-size: 0.68rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.exercise-rep-dash-progress__marker--top .exercise-rep-dash-progress__marker-pill {
+  margin-bottom: 4px;
+}
+
+.exercise-rep-dash-progress__marker--bottom .exercise-rep-dash-progress__marker-pill {
+  margin-top: 4px;
+}
+
+@media (max-width: 360px) {
+  .exercise-rep-dash-progress__header,
+  .exercise-rep-dash-progress__footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .exercise-rep-dash-progress__track-wrap {
+    padding-top: 26px;
+    padding-bottom: 22px;
+  }
+
+  .exercise-rep-dash-progress__marker-pill {
+    font-size: 0.64rem;
+    padding: 0 6px;
+  }
+}

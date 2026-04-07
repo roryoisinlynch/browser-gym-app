@@ -1,4 +1,5 @@
 import "./ExerciseSummaryCard.css";
+import ExerciseRepDashProgress from "./ExerciseRepDashProgress.tsx";
 
 interface ExerciseSummaryCardProps {
   movementTypeName: string;
@@ -250,6 +251,16 @@ export default function ExerciseSummaryCard({
           <span>Target</span>
         </div>
       </div>
+
+      {!isBodyweight && (
+        <ExerciseRepDashProgress
+          workingWeight={targetWeight}
+          targetReps={targetReps}
+          topSetEstimatedOneRepMax={topSetEstimatedOneRepMax}
+          historicalBestEstimatedOneRepMax={historicalBestEstimatedOneRepMax}
+          effectiveEstimatedOneRepMax={recentMaxEstimatedOneRepMax}
+        />
+      )}
     </section>
   );
 }
