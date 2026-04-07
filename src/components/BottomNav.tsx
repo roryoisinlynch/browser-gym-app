@@ -80,21 +80,21 @@ export default function BottomNav({ activeTab }: BottomNavProps) {
       >
         <span className="bottom-nav__icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" className="bottom-nav__svg">
+            <circle
+              cx="12"
+              cy="12"
+              r="3"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+            />
             <path
-              d="M9.67 4.2 9.4 5.57a6.9 6.9 0 0 0-1.5.87L6.7 5.92 4.92 7.7l.52 1.2c-.35.47-.64.97-.87 1.5L3.2 10.67v2.66l1.37.27c.23.53.52 1.03.87 1.5l-.52 1.2 1.78 1.78 1.2-.52c.47.35.97.64 1.5.87l.27 1.37h2.66l.27-1.37c.53-.23 1.03-.52 1.5-.87l1.2.52 1.78-1.78-.52-1.2c.35-.47.64-.97.87-1.5l1.37-.27v-2.66l-1.37-.27a6.9 6.9 0 0 0-.87-1.5l.52-1.2-1.78-1.78-1.2.52a6.9 6.9 0 0 0-1.5-.87L14.33 4.2z"
+              d="M19.4 12a7.4 7.4 0 0 0-.07-1l2.07-1.61-2-3.46-2.47 1a7.6 7.6 0 0 0-1.73-1L14.8 2h-5.6l-.37 2.93a7.6 7.6 0 0 0-1.73 1l-2.47-1-2 3.46L4.67 11a7.4 7.4 0 0 0 0 2l-2.07 1.61 2 3.46 2.47-1a7.6 7.6 0 0 0 1.73 1L9.2 22h5.6l.37-2.93a7.6 7.6 0 0 0 1.73-1l2.47 1 2-3.46L19.33 13c.05-.33.07-.66.07-1z"
               fill="none"
               stroke="currentColor"
               strokeWidth="1.8"
               strokeLinecap="round"
               strokeLinejoin="round"
-            />
-            <circle
-              cx="12"
-              cy="12"
-              r="2.6"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
             />
           </svg>
         </span>
