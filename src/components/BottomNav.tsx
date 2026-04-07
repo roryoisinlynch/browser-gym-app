@@ -57,6 +57,27 @@ export default function BottomNav({ activeTab }: BottomNavProps) {
         className={`${getTabClass("session", activeTab)} bottom-nav__link--center`}
         aria-label="Current session"
       >
+        <span
+          className="bottom-nav__icon bottom-nav__icon--plus"
+          aria-hidden="true"
+        >
+          <svg viewBox="0 0 24 24" className="bottom-nav__svg">
+            <path
+              d="M12 5v14M5 12h14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+            />
+          </svg>
+        </span>
+      </Link>
+
+      <Link
+        to="/settings"
+        className={`${getTabClass("settings", activeTab)} bottom-nav__link--side bottom-nav__link--right`}
+        aria-label="Settings"
+      >
         <span className="bottom-nav__icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" className="bottom-nav__svg">
             <path
@@ -68,16 +89,6 @@ export default function BottomNav({ activeTab }: BottomNavProps) {
               strokeLinejoin="round"
             />
           </svg>
-        </span>
-      </Link>
-
-      <Link
-        to="/settings"
-        className={`${getTabClass("settings", activeTab)} bottom-nav__link--side bottom-nav__link--right`}
-        aria-label="Settings"
-      >
-        <span className="bottom-nav__icon bottom-nav__icon--gear" aria-hidden="true">
-          ⚙
         </span>
       </Link>
     </nav>
