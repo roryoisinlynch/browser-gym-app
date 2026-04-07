@@ -27,23 +27,27 @@
   color: var(--text-strong);
 }
 
-/* subtle inward move only */
+/* subtle inward movement */
 .bottom-nav__link--left {
-  transform: translateX(4px);
+  transform: translate(4px, -2px);
 }
 
 .bottom-nav__link--right {
-  transform: translateX(-4px);
+  transform: translate(-4px, -2px);
 }
 
 .bottom-nav__icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 24px;
+  height: 26px;
 }
 
-/* floating center button */
+.bottom-nav__icon--gear {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
 .bottom-nav__icon--plus {
   width: 40px;
   height: 40px;
@@ -57,11 +61,6 @@
 }
 
 .bottom-nav__svg {
-  width: 22px;
-  height: 22px;
-}
-
-.bottom-nav__svg--gear {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
 }

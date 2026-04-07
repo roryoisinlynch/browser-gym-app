@@ -78,22 +78,8 @@ export default function BottomNav({ activeTab }: BottomNavProps) {
         className={`${getTabClass("settings", activeTab)} bottom-nav__link--side bottom-nav__link--right`}
         aria-label="Settings"
       >
-        <span className="bottom-nav__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" className="bottom-nav__svg">
-            <path
-              d="M12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-            />
-            <path
-              d="M12 3.5v2M12 18.5v2M18.5 12h2M3.5 12h2M17 7l1.4-1.4M5.6 18.4 7 17M17 17l1.4 1.4M5.6 5.6 7 7"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-            />
-          </svg>
+        <span className="bottom-nav__icon bottom-nav__icon--gear" aria-hidden="true">
+          ⚙
         </span>
       </Link>
     </nav>
