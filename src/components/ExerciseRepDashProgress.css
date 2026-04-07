@@ -30,16 +30,18 @@
   top: 0;
   left: 0;
   right: 0;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 4px;
   height: 10px;
   pointer-events: none;
 }
 
 .exercise-rep-dash-progress__marker {
-  position: absolute;
-  top: 0;
+  justify-self: center;
   width: 0;
   height: 0;
-  transform: translateX(-50%);
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
   border-top: 7px solid currentColor;

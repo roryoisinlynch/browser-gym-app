@@ -38,24 +38,6 @@ function getEquivalentRepsAtWeight(
   return Number.isFinite(equivalentReps) ? Math.max(0, equivalentReps) : null;
 }
 
-function getMarkerPercent(
-  repValue: number | null,
-  dashCount: number
-): number | null {
-  if (repValue == null || !Number.isFinite(repValue) || dashCount <= 0) {
-    return null;
-  }
-
-  const clamped = clamp(repValue, 0, dashCount);
-  const isWholeRep = Math.abs(clamped - Math.round(clamped)) < 0.0001;
-
-  if (isWholeRep && clamped >= 1) {
-    return clamp(((clamped - 0.5) / dashCount) * 100, 0, 100);
-  }
-
-  return clamp((clamped / dashCount) * 100, 0, 100);
-}
-
 export default function ExerciseRepDashProgress({
   workingWeight,
   targetReps,
@@ -90,11 +72,12 @@ export default function ExerciseRepDashProgress({
     clamp(topSetEquivalentReps - index, 0, 1)
   );
 
-  const targetMarkerPercent = getMarkerPercent(targetReps, dashCount);
-  const effectiveMarkerPercent = getMarkerPercent(
-    effectiveEquivalentReps,
-    dashCount
-  );
+  const targetDashIndex = clamp(Math.round(targetReps) - 1, 0, dashCount - 1);
+
+  const effectiveDashIndex =
+    effectiveEquivalentReps == null
+      ? null
+      : clamp(Math.round(effectiveEquivalentReps) - 1, 0, dashCount - 1);
 
   return (
     <div className="exercise-rep-dash-progress">
@@ -110,16 +93,14 @@ export default function ExerciseRepDashProgress({
 
       <div className="exercise-rep-dash-progress__track-wrap">
         <div className="exercise-rep-dash-progress__markers" aria-hidden="true">
-          {targetMarkerPercent != null && (
-            <span
-              className="exercise-rep-dash-progress__marker exercise-rep-dash-progress__marker--target"
-              style={{ left: `${targetMarkerPercent}%` }}
-            />
-          )}
-          {effectiveMarkerPercent != null && (
+          <span
+            className="exercise-rep-dash-progress__marker exercise-rep-dash-progress__marker--target"
+            style={{ gridColumn: targetDashIndex + 1 }}
+          />
+          {effectiveDashIndex != null && (
             <span
               className="exercise-rep-dash-progress__marker exercise-rep-dash-progress__marker--effective"
-              style={{ left: `${effectiveMarkerPercent}%` }}
+              style={{ gridColumn: effectiveDashIndex + 1 }}
             />
           )}
         </div>
@@ -144,7 +125,7 @@ export default function ExerciseRepDashProgress({
       </div>
 
       <div className="exercise-rep-dash-progress__legend">
-        {effectiveMarkerPercent != null && (
+        {effectiveDashIndex != null && (
           <span className="exercise-rep-dash-progress__legend-item exercise-rep-dash-progress__legend-item--effective">
             Recent best
           </span>
