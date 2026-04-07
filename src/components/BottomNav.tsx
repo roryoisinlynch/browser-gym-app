@@ -57,17 +57,15 @@ export default function BottomNav({ activeTab }: BottomNavProps) {
         className={`${getTabClass("session", activeTab)} bottom-nav__link--center`}
         aria-label="Current session"
       >
-        <span
-          className="bottom-nav__icon bottom-nav__icon--plus"
-          aria-hidden="true"
-        >
+        <span className="bottom-nav__icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" className="bottom-nav__svg">
             <path
-              d="M12 5v14M5 12h14"
+              d="M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8zm9.4 3.4c0-.5-.04-1-.12-1.48l2.02-1.58-1.9-3.28-2.44.98a9.4 9.4 0 0 0-2.56-1.48L16.1 1h-4.2l-.34 4.16c-.9.32-1.76.8-2.56 1.48l-2.44-.98-1.9 3.28 2.02 1.58c-.08.48-.12.98-.12 1.48s.04 1 .12 1.48l-2.02 1.58 1.9 3.28 2.44-.98c.8.68 1.66 1.16 2.56 1.48L11.9 23h4.2l.34-4.16c.9-.32 1.76-.8 2.56-1.48l2.44.98 1.9-3.28-2.02-1.58c.08-.48.12-.98.12-1.48z"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2.2"
+              strokeWidth="1.8"
               strokeLinecap="round"
+              strokeLinejoin="round"
             />
           </svg>
         </span>
