@@ -68,16 +68,16 @@ export default function ExerciseRepDashProgress({
     workingWeight
   );
 
-  const dashFillFractions = Array.from({ length: dashCount }, (_, index) =>
-    clamp(topSetEquivalentReps - index, 0, 1)
-  );
-
   const targetDashIndex = clamp(Math.round(targetReps) - 1, 0, dashCount - 1);
 
   const effectiveDashIndex =
     effectiveEquivalentReps == null
       ? null
       : clamp(Math.round(effectiveEquivalentReps) - 1, 0, dashCount - 1);
+
+  const dashFillFractions = Array.from({ length: dashCount }, (_, index) =>
+    clamp(topSetEquivalentReps - index, 0, 1)
+  );
 
   return (
     <div className="exercise-rep-dash-progress">
@@ -91,37 +91,40 @@ export default function ExerciseRepDashProgress({
         </span>
       </div>
 
-      <div className="exercise-rep-dash-progress__track-wrap">
-        <div className="exercise-rep-dash-progress__markers" aria-hidden="true">
-          <span
-            className="exercise-rep-dash-progress__marker exercise-rep-dash-progress__marker--target"
-            style={{ gridColumn: targetDashIndex + 1 }}
-          />
-          {effectiveDashIndex != null && (
-            <span
-              className="exercise-rep-dash-progress__marker exercise-rep-dash-progress__marker--effective"
-              style={{ gridColumn: effectiveDashIndex + 1 }}
-            />
-          )}
-        </div>
+      <div
+        className="exercise-rep-dash-progress__track"
+        aria-label="Rep-equivalent progress toward all-time PR at working weight"
+      >
+        {dashFillFractions.map((fraction, index) => {
+          const isTarget = index === targetDashIndex;
+          const isEffective = effectiveDashIndex != null && index === effectiveDashIndex;
 
-        <div
-          className="exercise-rep-dash-progress__track"
-          aria-label="Rep-equivalent progress toward all-time PR at working weight"
-        >
-          {dashFillFractions.map((fraction, index) => (
+          return (
             <span
               key={index}
-              className="exercise-rep-dash-progress__dash"
+              className="exercise-rep-dash-progress__dash-wrap"
               aria-hidden="true"
             >
-              <span
-                className="exercise-rep-dash-progress__dash-fill"
-                style={{ width: `${fraction * 100}%` }}
-              />
+              {(isTarget || isEffective) && (
+                <span
+                  className={[
+                    "exercise-rep-dash-progress__marker",
+                    isTarget
+                      ? "exercise-rep-dash-progress__marker--target"
+                      : "exercise-rep-dash-progress__marker--effective",
+                  ].join(" ")}
+                />
+              )}
+
+              <span className="exercise-rep-dash-progress__dash">
+                <span
+                  className="exercise-rep-dash-progress__dash-fill"
+                  style={{ width: `${fraction * 100}%` }}
+                />
+              </span>
             </span>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
       <div className="exercise-rep-dash-progress__legend">
