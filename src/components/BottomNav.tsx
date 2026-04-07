@@ -93,11 +93,10 @@ export default function BottomNav({ activeTab }: BottomNavProps) {
             <circle
               cx="17"
               cy="7.5"
-              r="2.1"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
+              r="2"
+              fill="currentColor"
             />
+
             <rect
               x="3"
               y="13"
@@ -111,10 +110,8 @@ export default function BottomNav({ activeTab }: BottomNavProps) {
             <circle
               cx="7"
               cy="16.5"
-              r="2.1"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
+              r="2"
+              fill="currentColor"
             />
           </svg>
         </span>
