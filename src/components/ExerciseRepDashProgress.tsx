@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import "./ExerciseRepDashProgress.css";
 
 interface ExerciseRepDashProgressProps {
@@ -44,7 +44,7 @@ export default function ExerciseRepDashProgress({
   const [captionBelowBar, setCaptionBelowBar] = useState(false);
 
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const captionRowRef = useRef<HTMLDivElement | null>(null);
+  const captionGroupRef = useRef<HTMLDivElement | null>(null);
   const infoRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -99,8 +99,13 @@ export default function ExerciseRepDashProgress({
       ? null
       : clamp(Math.round(effectiveEquivalentReps) - 1, 0, dashCount - 1);
 
+  // Source of truth: effectiveEstimatedOneRepMax != null already means
+  // "use recent best" upstream. Suppress only on explicit 0 RIR.
   const showRecentBest =
-    effectiveEstimatedOneRepMax != null && (targetRir ?? 0) > 0 && effectiveDashIndex != null;
+    effectiveEstimatedOneRepMax != null &&
+    targetRir !== 0 &&
+    effectiveDashIndex != null &&
+    effectiveDashIndex !== targetDashIndex;
 
   const dashFillFractions = Array.from({ length: dashCount }, (_, index) =>
     clamp(topSetEquivalentReps - index, 0, 1)
@@ -108,23 +113,13 @@ export default function ExerciseRepDashProgress({
 
   const hasMetTarget = topSetEquivalentReps >= targetReps;
 
-  const visibleMarkerIndices = useMemo(() => {
-    const indices = [targetDashIndex];
-    if (showRecentBest && effectiveDashIndex != null) {
-      indices.push(effectiveDashIndex);
-    }
-    return indices;
-  }, [targetDashIndex, showRecentBest, effectiveDashIndex]);
-
   useLayoutEffect(() => {
     function measureOverlap() {
       const root = rootRef.current;
-      const captionRow = captionRowRef.current;
-      if (!root || !captionRow) {
-        return;
-      }
+      const captionGroup = captionGroupRef.current;
 
-      const captionRect = captionRow.getBoundingClientRect();
+      if (!root || !captionGroup) return;
+
       const markerEls = root.querySelectorAll<HTMLElement>(
         ".exercise-rep-dash-progress__marker[data-visible='true']"
       );
@@ -134,16 +129,16 @@ export default function ExerciseRepDashProgress({
         return;
       }
 
-      const horizontalPadding = 8;
-      const captionLeft = captionRect.left - horizontalPadding;
-      const captionRight = captionRect.right + horizontalPadding;
+      const captionRect = captionGroup.getBoundingClientRect();
+      const paddedLeft = captionRect.left - 8;
+      const paddedRight = captionRect.right + 8;
 
       let overlaps = false;
 
       markerEls.forEach((markerEl) => {
         const rect = markerEl.getBoundingClientRect();
-        const markerCenterX = rect.left + rect.width / 2;
-        if (markerCenterX >= captionLeft && markerCenterX <= captionRight) {
+        const centerX = rect.left + rect.width / 2;
+        if (centerX >= paddedLeft && centerX <= paddedRight) {
           overlaps = true;
         }
       });
@@ -151,18 +146,18 @@ export default function ExerciseRepDashProgress({
       setCaptionBelowBar(overlaps);
     }
 
-    const id = window.requestAnimationFrame(measureOverlap);
+    const raf = window.requestAnimationFrame(measureOverlap);
     window.addEventListener("resize", measureOverlap);
 
     return () => {
-      window.cancelAnimationFrame(id);
+      window.cancelAnimationFrame(raf);
       window.removeEventListener("resize", measureOverlap);
     };
-  }, [visibleMarkerIndices, isTooltipOpen]);
+  }, [showRecentBest, targetDashIndex, effectiveDashIndex, isTooltipOpen]);
 
   const captionRow = (
-    <div className="exercise-rep-dash-progress__caption-row" ref={captionRowRef}>
-      <div className="exercise-rep-dash-progress__caption-group">
+    <div className="exercise-rep-dash-progress__caption-row">
+      <div className="exercise-rep-dash-progress__caption-group" ref={captionGroupRef}>
         <span className="exercise-rep-dash-progress__caption">
           Intensity Target
         </span>
@@ -196,11 +191,10 @@ export default function ExerciseRepDashProgress({
                 Each segment on the bar represents one rep at your working
                 weight. If you lift a different weight, the segments fill
                 proportionately to reflect the equivalent intensity. The bar
-                tracks only your top set for this exercise in this session and
-                evaluates it against this week&apos;s RIR-based intensity target.
-                The full length of the bar is relative to your all-time best
-                lift for this exercise, so filling the bar would result in a new
-                PR.
+                tracks only your top set for this exercise in this session,
+                evaluates it against this week&apos;s RIR-based intensity
+                target, and uses your all-time best lift to set the full bar
+                length, so filling the bar would result in a new PR.
                 {showRecentBest
                   ? " The recent best is also annotated on the bar alongside the target."
                   : ""}
