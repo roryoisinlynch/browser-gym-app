@@ -512,6 +512,12 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
 ---
 
 # To do:
+ - target RIR on the session page isn't populating. same story on the exercise page.
+ - remove old progress bar and tidy up labels to only include: 'Intensity progress bar' caption, key to explain the arrow colours (conditionally excluding the recent best legend if using actual e1RM or if on 0 RIR target)
+ - generate a target met green checkbox on the sets page when the intensity is met
+ - on the session instance page, have the muscle group categories appear auto collapsed if they have met their volume target.
+ - on the session instance page, have the cards fill their space instead of being floating card objects. Have them flush to the card above and below, flush to the section header, flush to the sides of the screen. Make their colour a touch lighter than current, to boost contrast a little.
+ - Add a caption to the RIR indicator at the top of the week instance page. "RIR target: "
  - Tighten up the 'finish exercise' flow, it is just as easy to navigate back a page when finishing entering sets. It is however useful to have some mechanism to mark an exercise as active/finished (or is it? would you ever hit the + sign and want to go to an exercise directly? More likely you would want to go to the session page and pick the exercise). SOLUTION: Remove active status from exercise model, remove finish exercise button
  - on the week instance view, add a scheduled date to each day card. For 'done' sessions add an indicator to identify whether it was on schedule (green) early (amber) or late (red) and by +/- n days. For 'next' add a similar indicator to identify whether it's due in the past/present/future and by n days. For upcomming just have a due date with no indicators. Due dates should be formated like "Monday 5th".
  - add a confirmation before starting a season prompting the user to pick a start date, which will inform the consistency and due date targets for the remainder of the season.
@@ -533,12 +539,9 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
  - on the edit exercise screen in the config screen there is no back button in the top nav bar, can we add one like we have on the other screens.
  - update readme to explain how working weight is set in config and its relation to RIR schemes, the philosophy behind consistent weights week to week
  - how are warmup sets classified for bodyweight exercises?
- - consider starting the target bar from the warmup threshold instead of at 0
- - OR add a warmup bar above it with 0-60 intensity and have the current one 61-100
  - OR denote section markers: warmup, RIR target, local e1RM, max e1RM
  - fix the settings settings settings label
  - add an exercise detail screen where you can see a table of all exercises and their: last lift, e1RM local, e1RM max, total lifts, days since PR. Sortable by each column.
  - is seed data taken from mock data or does it have its own definiton, should it? what do we want the final seed data to look like
- - can the app tell whether it has been downloaded and installed? if so condition on mobile to tell the user how
  - add clear directions when creating days, muscle groups, exercises and movement types
  - i think home page is no longer used, can you confirm? it's an old version of what has now become the week page.
