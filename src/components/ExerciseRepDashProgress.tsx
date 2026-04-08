@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./ExerciseRepDashProgress.css";
 
 interface ExerciseRepDashProgressProps {
@@ -104,15 +104,100 @@ export default function ExerciseRepDashProgress({
 
   const hasMetTarget = topSetEquivalentReps >= targetReps;
 
+  const markerPercents = useMemo(() => {
+    const values: number[] = [];
+
+    if (targetDashIndex != null) {
+      values.push(((targetDashIndex + 0.5) / dashCount) * 100);
+    }
+
+    if (effectiveDashIndex != null) {
+      values.push(((effectiveDashIndex + 0.5) / dashCount) * 100);
+    }
+
+    return values;
+  }, [dashCount, targetDashIndex, effectiveDashIndex]);
+
+  const captionShouldRenderBelow = markerPercents.some(
+    (percent) => percent >= 12 && percent <= 88
+  );
+
+  const captionRow = (
+    <div className="exercise-rep-dash-progress__caption-row">
+      <div className="exercise-rep-dash-progress__caption-group">
+        <span className="exercise-rep-dash-progress__caption">
+          Intensity Target
+        </span>
+        {hasMetTarget && (
+          <span
+            className="exercise-rep-dash-progress__met-check"
+            aria-label="Intensity target met"
+            title="Intensity target met"
+          >
+            ✓
+          </span>
+        )}
+      </div>
+
+      <div className="exercise-rep-dash-progress__info" ref={infoRef}>
+        <button
+          type="button"
+          className="exercise-rep-dash-progress__info-button"
+          aria-label="Show intensity progress help"
+          aria-expanded={isTooltipOpen}
+          onClick={() => setIsTooltipOpen((current) => !current)}
+        >
+          ?
+        </button>
+
+        {isTooltipOpen && (
+          <div
+            className="exercise-rep-dash-progress__tooltip"
+            role="dialog"
+            aria-label="Intensity progress help"
+          >
+            <p className="exercise-rep-dash-progress__tooltip-text">
+              Each segment represents one rep at your working weight. If you use
+              a different weight, the bar fills proportionately to reflect the
+              equivalent intensity. It tracks only your top set for this
+              exercise in this session, compares it against this week&apos;s RIR-based
+              intensity target, and uses your all-time best lift to set the full
+              bar length, so filling the bar would mean a new PR.
+              {showEffectiveLegend
+                ? " Your recent best is also marked on the bar alongside the target."
+                : ""}
+            </p>
+
+            <div className="exercise-rep-dash-progress__tooltip-key">
+              <span className="exercise-rep-dash-progress__tooltip-key-item">
+                <span className="exercise-rep-dash-progress__tooltip-arrow exercise-rep-dash-progress__tooltip-arrow--target" />
+                Target
+              </span>
+              {showEffectiveLegend && (
+                <span className="exercise-rep-dash-progress__tooltip-key-item">
+                  <span className="exercise-rep-dash-progress__tooltip-arrow exercise-rep-dash-progress__tooltip-arrow--effective" />
+                  Recent best
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="exercise-rep-dash-progress">
+      {!captionShouldRenderBelow && captionRow}
+
       <div
         className="exercise-rep-dash-progress__track"
         aria-label="Intensity progress bar"
       >
         {dashFillFractions.map((fraction, index) => {
           const isTarget = index === targetDashIndex;
-          const isEffective = effectiveDashIndex != null && index === effectiveDashIndex;
+          const isEffective =
+            effectiveDashIndex != null && index === effectiveDashIndex;
 
           return (
             <span
@@ -142,63 +227,7 @@ export default function ExerciseRepDashProgress({
         })}
       </div>
 
-      <div className="exercise-rep-dash-progress__caption-row">
-        <div className="exercise-rep-dash-progress__caption-group">
-          <span className="exercise-rep-dash-progress__caption">
-            Intensity Target
-          </span>
-          {hasMetTarget && (
-            <span
-              className="exercise-rep-dash-progress__met-check"
-              aria-label="Intensity target met"
-              title="Intensity target met"
-            >
-              ✓
-            </span>
-          )}
-        </div>
-
-        <div className="exercise-rep-dash-progress__info" ref={infoRef}>
-          <button
-            type="button"
-            className="exercise-rep-dash-progress__info-button"
-            aria-label="Show intensity progress help"
-            aria-expanded={isTooltipOpen}
-            onClick={() => setIsTooltipOpen((current) => !current)}
-          >
-            ?
-          </button>
-
-          {isTooltipOpen && (
-            <div
-              className="exercise-rep-dash-progress__tooltip"
-              role="dialog"
-              aria-label="Intensity progress help"
-            >
-              <p className="exercise-rep-dash-progress__tooltip-text">
-                Each dash represents one rep needed to match your all-time PR at
-                your current working weight.
-              </p>
-              <p className="exercise-rep-dash-progress__tooltip-text">
-                Filled dashes show your top set&apos;s current intensity,
-                converted into rep-equivalents at that working weight.
-              </p>
-              <div className="exercise-rep-dash-progress__tooltip-key">
-                <span className="exercise-rep-dash-progress__tooltip-key-item">
-                  <span className="exercise-rep-dash-progress__tooltip-arrow exercise-rep-dash-progress__tooltip-arrow--target" />
-                  Target
-                </span>
-                {showEffectiveLegend && (
-                  <span className="exercise-rep-dash-progress__tooltip-key-item">
-                    <span className="exercise-rep-dash-progress__tooltip-arrow exercise-rep-dash-progress__tooltip-arrow--effective" />
-                    Recent best
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      {captionShouldRenderBelow && captionRow}
     </div>
   );
 }
