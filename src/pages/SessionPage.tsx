@@ -190,7 +190,17 @@ export default function SessionPage() {
         const initialCollapsedState = view.muscleGroups.reduce<
           Record<string, boolean>
         >((acc, group) => {
-          acc[group.sessionTemplateMuscleGroup.id] = false;
+          const completedWorkingSets = group.exercises.reduce(
+            (sum, exercise) => sum + exercise.workingSetCount,
+            0
+          );
+
+          const targetWorkingSets =
+            group.sessionTemplateMuscleGroup.targetWorkingSets;
+
+          acc[group.sessionTemplateMuscleGroup.id] =
+            targetWorkingSets > 0 && completedWorkingSets >= targetWorkingSets;
+
           return acc;
         }, {});
 
