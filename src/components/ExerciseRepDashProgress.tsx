@@ -118,7 +118,7 @@ export default function ExerciseRepDashProgress({
     clamp(topSetEquivalentReps - i, 0, 1)
   );
 
-  const hasMetTarget = topSetEquivalentReps >= targetReps;
+  const hasMetTarget = topSetEquivalentReps + 0.0001 >= targetReps;
 
   return (
     <div className="exercise-rep-dash-progress">
