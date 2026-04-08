@@ -433,8 +433,12 @@
   padding: 12px 14px;
   border: 0;
   border-radius: 0;
-  border-bottom: 1px solid var(--card-border);
+
   background: #262c35;
+
+  border-top: 1px solid rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--card-border);
+
   box-shadow: none;
 }
 
