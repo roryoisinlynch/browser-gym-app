@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./ExerciseRepDashProgress.css";
 
 interface ExerciseRepDashProgressProps {
@@ -32,6 +32,22 @@ function getEquivalentRepsAtWeight(
   return Number.isFinite(equivalentReps) ? Math.max(0, equivalentReps) : null;
 }
 
+function getTargetDashIndex(targetReps: number, dashCount: number): number {
+  return clamp(Math.round(targetReps) - 1, 0, dashCount - 1);
+}
+
+function getEffectiveDashIndex(
+  effectiveEquivalentReps: number | null,
+  dashCount: number
+): number | null {
+  if (effectiveEquivalentReps == null) {
+    return null;
+  }
+
+  const flooredRep = Math.max(1, Math.floor(effectiveEquivalentReps));
+  return clamp(flooredRep - 1, 0, dashCount - 1);
+}
+
 export default function ExerciseRepDashProgress({
   workingWeight,
   targetReps,
@@ -41,10 +57,6 @@ export default function ExerciseRepDashProgress({
   effectiveEstimatedOneRepMax,
 }: ExerciseRepDashProgressProps) {
   const [isTooltipOpen, setIsTooltipOpen] = useState(false);
-  const [captionBelowBar, setCaptionBelowBar] = useState(false);
-
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const captionGroupRef = useRef<HTMLDivElement | null>(null);
   const infoRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -84,6 +96,7 @@ export default function ExerciseRepDashProgress({
   }
 
   const dashCount = Math.max(1, Math.ceil(repsToHistoricalPr));
+
   const topSetEquivalentReps =
     getEquivalentRepsAtWeight(topSetEstimatedOneRepMax, workingWeight) ?? 0;
 
@@ -92,15 +105,12 @@ export default function ExerciseRepDashProgress({
     workingWeight
   );
 
-  const targetDashIndex = clamp(Math.round(targetReps) - 1, 0, dashCount - 1);
+  const targetDashIndex = getTargetDashIndex(targetReps, dashCount);
+  const effectiveDashIndex = getEffectiveDashIndex(
+    effectiveEquivalentReps,
+    dashCount
+  );
 
-  const effectiveDashIndex =
-    effectiveEquivalentReps == null
-      ? null
-      : clamp(Math.round(effectiveEquivalentReps) - 1, 0, dashCount - 1);
-
-  // Source of truth: effectiveEstimatedOneRepMax != null already means
-  // "use recent best" upstream. Suppress only on explicit 0 RIR.
   const showRecentBest =
     effectiveEstimatedOneRepMax != null &&
     targetRir !== 0 &&
@@ -113,63 +123,61 @@ export default function ExerciseRepDashProgress({
 
   const hasMetTarget = topSetEquivalentReps >= targetReps;
 
-  useLayoutEffect(() => {
-    function measureOverlap() {
-      const root = rootRef.current;
-      const captionGroup = captionGroupRef.current;
+  return (
+    <div className="exercise-rep-dash-progress">
+      <div
+        className="exercise-rep-dash-progress__track"
+        aria-label="Intensity progress bar"
+      >
+        {dashFillFractions.map((fraction, index) => {
+          const isTarget = index === targetDashIndex;
+          const isEffective =
+            showRecentBest && effectiveDashIndex != null && index === effectiveDashIndex;
 
-      if (!root || !captionGroup) return;
+          return (
+            <span
+              key={index}
+              className="exercise-rep-dash-progress__dash-wrap"
+              aria-hidden="true"
+            >
+              {(isTarget || isEffective) && (
+                <span
+                  className={[
+                    "exercise-rep-dash-progress__marker",
+                    isTarget
+                      ? "exercise-rep-dash-progress__marker--target"
+                      : "exercise-rep-dash-progress__marker--effective",
+                  ].join(" ")}
+                />
+              )}
 
-      const markerEls = root.querySelectorAll<HTMLElement>(
-        ".exercise-rep-dash-progress__marker[data-visible='true']"
-      );
+              <span className="exercise-rep-dash-progress__dash">
+                <span
+                  className="exercise-rep-dash-progress__dash-fill"
+                  style={{ width: `${fraction * 100}%` }}
+                />
+              </span>
+            </span>
+          );
+        })}
+      </div>
 
-      if (markerEls.length === 0) {
-        setCaptionBelowBar(false);
-        return;
-      }
-
-      const captionRect = captionGroup.getBoundingClientRect();
-      const paddedLeft = captionRect.left - 8;
-      const paddedRight = captionRect.right + 8;
-
-      let overlaps = false;
-
-      markerEls.forEach((markerEl) => {
-        const rect = markerEl.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        if (centerX >= paddedLeft && centerX <= paddedRight) {
-          overlaps = true;
-        }
-      });
-
-      setCaptionBelowBar(overlaps);
-    }
-
-    const raf = window.requestAnimationFrame(measureOverlap);
-    window.addEventListener("resize", measureOverlap);
-
-    return () => {
-      window.cancelAnimationFrame(raf);
-      window.removeEventListener("resize", measureOverlap);
-    };
-  }, [showRecentBest, targetDashIndex, effectiveDashIndex, isTooltipOpen]);
-
-  const captionRow = (
-    <div className="exercise-rep-dash-progress__caption-row">
-      <div className="exercise-rep-dash-progress__caption-group" ref={captionGroupRef}>
-        <span className="exercise-rep-dash-progress__caption">
-          Intensity Target
-        </span>
-        {hasMetTarget && (
-          <span
-            className="exercise-rep-dash-progress__met-check"
-            aria-label="Intensity target met"
-            title="Intensity target met"
-          >
-            ✓
+      <div className="exercise-rep-dash-progress__caption-row">
+        <div className="exercise-rep-dash-progress__caption-group">
+          <span className="exercise-rep-dash-progress__caption">
+            Intensity Target
           </span>
-        )}
+          {hasMetTarget && (
+            <span
+              className="exercise-rep-dash-progress__met-check"
+              aria-label="Intensity target met"
+              title="Intensity target met"
+            >
+              ✓
+            </span>
+          )}
+        </div>
+
         <div className="exercise-rep-dash-progress__info" ref={infoRef}>
           <button
             type="button"
@@ -192,9 +200,9 @@ export default function ExerciseRepDashProgress({
                 weight. If you lift a different weight, the segments fill
                 proportionately to reflect the equivalent intensity. The bar
                 tracks only your top set for this exercise in this session,
-                evaluates it against this week&apos;s RIR-based intensity
-                target, and uses your all-time best lift to set the full bar
-                length, so filling the bar would result in a new PR.
+                evaluates it against this week&apos;s RIR-based intensity target,
+                and uses your all-time best lift to set the full bar length, so
+                filling the bar would result in a new PR.
                 {showRecentBest
                   ? " The recent best is also annotated on the bar alongside the target."
                   : ""}
@@ -216,51 +224,6 @@ export default function ExerciseRepDashProgress({
           )}
         </div>
       </div>
-    </div>
-  );
-
-  return (
-    <div className="exercise-rep-dash-progress" ref={rootRef}>
-      {!captionBelowBar && captionRow}
-
-      <div
-        className="exercise-rep-dash-progress__track"
-        aria-label="Intensity progress bar"
-      >
-        {dashFillFractions.map((fraction, index) => {
-          const isTarget = index === targetDashIndex;
-          const isEffective = showRecentBest && effectiveDashIndex != null && index === effectiveDashIndex;
-
-          return (
-            <span
-              key={index}
-              className="exercise-rep-dash-progress__dash-wrap"
-              aria-hidden="true"
-            >
-              {(isTarget || isEffective) && (
-                <span
-                  className={[
-                    "exercise-rep-dash-progress__marker",
-                    isTarget
-                      ? "exercise-rep-dash-progress__marker--target"
-                      : "exercise-rep-dash-progress__marker--effective",
-                  ].join(" ")}
-                  data-visible="true"
-                />
-              )}
-
-              <span className="exercise-rep-dash-progress__dash">
-                <span
-                  className="exercise-rep-dash-progress__dash-fill"
-                  style={{ width: `${fraction * 100}%` }}
-                />
-              </span>
-            </span>
-          );
-        })}
-      </div>
-
-      {captionBelowBar && captionRow}
     </div>
   );
 }
