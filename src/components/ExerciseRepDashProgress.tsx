@@ -28,24 +28,7 @@ function getEquivalentRepsAtWeight(
     return null;
   }
 
-  const equivalentReps = 30 * (estimatedOneRepMax / workingWeight - 1);
-  return Number.isFinite(equivalentReps) ? Math.max(0, equivalentReps) : null;
-}
-
-function getTargetDashIndex(targetReps: number, dashCount: number): number {
-  return clamp(Math.round(targetReps) - 1, 0, dashCount - 1);
-}
-
-function getEffectiveDashIndex(
-  effectiveEquivalentReps: number | null,
-  dashCount: number
-): number | null {
-  if (effectiveEquivalentReps == null) {
-    return null;
-  }
-
-  const flooredRep = Math.max(1, Math.floor(effectiveEquivalentReps));
-  return clamp(flooredRep - 1, 0, dashCount - 1);
+  return Math.max(0, 30 * (estimatedOneRepMax / workingWeight - 1));
 }
 
 export default function ExerciseRepDashProgress({
@@ -56,27 +39,27 @@ export default function ExerciseRepDashProgress({
   historicalBestEstimatedOneRepMax,
   effectiveEstimatedOneRepMax,
 }: ExerciseRepDashProgressProps) {
-  const [isTooltipOpen, setIsTooltipOpen] = useState(false);
+  const [tooltipOpen, setTooltipOpen] = useState(false);
   const infoRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    function handlePointerDown(event: MouseEvent) {
+    function handleClick(event: MouseEvent) {
       if (!infoRef.current?.contains(event.target as Node)) {
-        setIsTooltipOpen(false);
+        setTooltipOpen(false);
       }
     }
 
     function handleEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setIsTooltipOpen(false);
+        setTooltipOpen(false);
       }
     }
 
-    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("mousedown", handleClick);
     document.addEventListener("keydown", handleEscape);
 
     return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("mousedown", handleClick);
       document.removeEventListener("keydown", handleEscape);
     };
   }, []);
@@ -89,36 +72,50 @@ export default function ExerciseRepDashProgress({
   if (
     repsToHistoricalPr == null ||
     targetReps == null ||
-    workingWeight == null ||
-    workingWeight <= 0
+    workingWeight == null
   ) {
     return null;
   }
 
-  const dashCount = Math.max(1, Math.ceil(repsToHistoricalPr));
+  /*
+    BAR LENGTH
 
-  const topSetEquivalentReps =
-    getEquivalentRepsAtWeight(topSetEstimatedOneRepMax, workingWeight) ?? 0;
+    floor(repsToHistoricalPr) = highest rep that does NOT beat all-time best
+    +1 segment = first rep that WOULD beat all-time best (PR)
+  */
+  const dashCount = Math.max(1, Math.floor(repsToHistoricalPr) + 1);
+
+  const allTimePrIndex = dashCount - 1;
+
+  const targetIndex = clamp(Math.round(targetReps) - 1, 0, dashCount - 1);
 
   const effectiveEquivalentReps = getEquivalentRepsAtWeight(
     effectiveEstimatedOneRepMax,
     workingWeight
   );
 
-  const targetDashIndex = getTargetDashIndex(targetReps, dashCount);
-  const effectiveDashIndex = getEffectiveDashIndex(
-    effectiveEquivalentReps,
-    dashCount
-  );
+  /*
+    RECENT BEST MARKER
+
+    floor(recentEquivalent) = highest rep that matches but does not beat
+    therefore marker sits one rep higher (beat recent best)
+  */
+  const recentBestIndex =
+    effectiveEquivalentReps == null
+      ? null
+      : clamp(Math.floor(effectiveEquivalentReps), 0, dashCount - 1);
 
   const showRecentBest =
     effectiveEstimatedOneRepMax != null &&
     targetRir !== 0 &&
-    effectiveDashIndex != null &&
-    effectiveDashIndex !== targetDashIndex;
+    recentBestIndex != null &&
+    recentBestIndex !== targetIndex;
 
-  const dashFillFractions = Array.from({ length: dashCount }, (_, index) =>
-    clamp(topSetEquivalentReps - index, 0, 1)
+  const topSetEquivalentReps =
+    getEquivalentRepsAtWeight(topSetEstimatedOneRepMax, workingWeight) ?? 0;
+
+  const dashFillFractions = Array.from({ length: dashCount }, (_, i) =>
+    clamp(topSetEquivalentReps - i, 0, 1)
   );
 
   const hasMetTarget = topSetEquivalentReps >= targetReps;
@@ -130,24 +127,23 @@ export default function ExerciseRepDashProgress({
         aria-label="Intensity progress bar"
       >
         {dashFillFractions.map((fraction, index) => {
-          const isTarget = index === targetDashIndex;
-          const isEffective =
-            showRecentBest && effectiveDashIndex != null && index === effectiveDashIndex;
+          const isTarget = index === targetIndex;
+          const isRecentBest = showRecentBest && index === recentBestIndex;
+          const isAllTime = index === allTimePrIndex;
 
           return (
-            <span
-              key={index}
-              className="exercise-rep-dash-progress__dash-wrap"
-              aria-hidden="true"
-            >
-              {(isTarget || isEffective) && (
+            <span key={index} className="exercise-rep-dash-progress__dash-wrap">
+              {(isTarget || isRecentBest || isAllTime) && (
                 <span
                   className={[
                     "exercise-rep-dash-progress__marker",
-                    isTarget
-                      ? "exercise-rep-dash-progress__marker--target"
-                      : "exercise-rep-dash-progress__marker--effective",
-                  ].join(" ")}
+                    isTarget && "exercise-rep-dash-progress__marker--target",
+                    isRecentBest &&
+                      "exercise-rep-dash-progress__marker--recent",
+                    isAllTime && "exercise-rep-dash-progress__marker--pr",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
                 />
               )}
 
@@ -167,6 +163,7 @@ export default function ExerciseRepDashProgress({
           <span className="exercise-rep-dash-progress__caption">
             Intensity Target
           </span>
+
           {hasMetTarget && (
             <span
               className="exercise-rep-dash-progress__met-check"
@@ -180,46 +177,29 @@ export default function ExerciseRepDashProgress({
 
         <div className="exercise-rep-dash-progress__info" ref={infoRef}>
           <button
-            type="button"
             className="exercise-rep-dash-progress__info-button"
-            aria-label="Show intensity progress help"
-            aria-expanded={isTooltipOpen}
-            onClick={() => setIsTooltipOpen((current) => !current)}
+            aria-expanded={tooltipOpen}
+            onClick={() => setTooltipOpen((v) => !v)}
           >
             ?
           </button>
 
-          {isTooltipOpen && (
-            <div
-              className="exercise-rep-dash-progress__tooltip"
-              role="dialog"
-              aria-label="Intensity progress help"
-            >
+          {tooltipOpen && (
+            <div className="exercise-rep-dash-progress__tooltip">
               <p className="exercise-rep-dash-progress__tooltip-text">
-                Each segment on the bar represents one rep at your working
-                weight. If you lift a different weight, the segments fill
-                proportionately to reflect the equivalent intensity. The bar
-                tracks only your top set for this exercise in this session,
-                evaluates it against this week&apos;s RIR-based intensity target,
-                and uses your all-time best lift to set the full bar length, so
-                filling the bar would result in a new PR.
-                {showRecentBest
-                  ? " The recent best is also annotated on the bar alongside the target."
-                  : ""}
-              </p>
-
-              <div className="exercise-rep-dash-progress__tooltip-key">
-                <span className="exercise-rep-dash-progress__tooltip-key-item">
-                  <span className="exercise-rep-dash-progress__tooltip-arrow exercise-rep-dash-progress__tooltip-arrow--target" />
-                  Target
-                </span>
+                This bar tracks the intensity of your top set. Each segment
+                represents one rep at your working weight. Reach the{" "}
+                <strong>green arrow</strong> to meet your intensity target for
+                the set
                 {showRecentBest && (
-                  <span className="exercise-rep-dash-progress__tooltip-key-item">
-                    <span className="exercise-rep-dash-progress__tooltip-arrow exercise-rep-dash-progress__tooltip-arrow--effective" />
-                    Recent best
-                  </span>
+                  <>
+                    , reach the <strong>white arrow</strong> to beat your recent
+                    best
+                  </>
                 )}
-              </div>
+                , or reach the <strong>yellow arrow</strong> to set an all-time
+                PR for this exercise.
+              </p>
             </div>
           )}
         </div>

@@ -29,12 +29,16 @@
   border-top: 7px solid currentColor;
 }
 
-.exercise-rep-dash-progress__marker--effective {
-  color: var(--accent);
+.exercise-rep-dash-progress__marker--target {
+  color: #4ade80;
 }
 
-.exercise-rep-dash-progress__marker--target {
+.exercise-rep-dash-progress__marker--recent {
   color: #ffffff;
+}
+
+.exercise-rep-dash-progress__marker--pr {
+  color: #facc15;
 }
 
 .exercise-rep-dash-progress__dash {
@@ -153,11 +157,15 @@
 }
 
 .exercise-rep-dash-progress__tooltip-arrow--target {
+  color: #4ade80;
+}
+
+.exercise-rep-dash-progress__tooltip-arrow--recent {
   color: #ffffff;
 }
 
-.exercise-rep-dash-progress__tooltip-arrow--effective {
-  color: var(--accent);
+.exercise-rep-dash-progress__tooltip-arrow--pr {
+  color: #facc15;
 }
 
 @media (max-width: 360px) {
