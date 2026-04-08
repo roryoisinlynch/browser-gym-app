@@ -75,6 +75,7 @@ export default function ExerciseSetTable({
               <input
                 inputMode="decimal"
                 type="number"
+                enterKeyHint="next"
                 className="exercise-set-table__input"
                 placeholder={targetWeight == null ? "Weight" : `${targetWeight}`}
                 value={row.weight}
@@ -87,11 +88,17 @@ export default function ExerciseSetTable({
             <input
               inputMode="numeric"
               type="number"
+              enterKeyHint="done"
               className="exercise-set-table__input"
               placeholder={targetReps == null ? "Reps" : `${targetReps}`}
               value={row.reps}
               onChange={(event) => onRepsChange(row.id, event.target.value)}
               onBlur={() => onRowBlur(row.id)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.currentTarget.blur();
+                }
+              }}
               aria-label="Reps"
             />
 
