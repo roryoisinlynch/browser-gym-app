@@ -3,6 +3,7 @@ import "./ExerciseRepDashProgress.css";
 interface ExerciseRepDashProgressProps {
   workingWeight: number | null;
   targetReps: number | null;
+  targetRir: number | null;
   topSetEstimatedOneRepMax: number | null;
   historicalBestEstimatedOneRepMax: number | null;
   effectiveEstimatedOneRepMax: number | null;
@@ -10,14 +11,6 @@ interface ExerciseRepDashProgressProps {
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
-}
-
-function formatMetricValue(value: number | null, suffix = ""): string {
-  if (value == null || Number.isNaN(value)) {
-    return "—";
-  }
-
-  return `${Number.isInteger(value) ? value : value.toFixed(1)}${suffix}`;
 }
 
 function getEquivalentRepsAtWeight(
@@ -41,6 +34,7 @@ function getEquivalentRepsAtWeight(
 export default function ExerciseRepDashProgress({
   workingWeight,
   targetReps,
+  targetRir,
   topSetEstimatedOneRepMax,
   historicalBestEstimatedOneRepMax,
   effectiveEstimatedOneRepMax,
@@ -75,25 +69,20 @@ export default function ExerciseRepDashProgress({
       ? null
       : clamp(Math.round(effectiveEquivalentReps) - 1, 0, dashCount - 1);
 
+  const showEffectiveLegend =
+    effectiveDashIndex != null && (targetRir ?? 0) > 0;
+
   const dashFillFractions = Array.from({ length: dashCount }, (_, index) =>
     clamp(topSetEquivalentReps - index, 0, 1)
   );
 
+  const hasMetTarget = topSetEquivalentReps >= targetReps;
+
   return (
     <div className="exercise-rep-dash-progress">
-      <div className="exercise-rep-dash-progress__header">
-        <span className="exercise-rep-dash-progress__label">
-          Rep path to all-time PR
-        </span>
-        <span className="exercise-rep-dash-progress__value">
-          {dashCount} {dashCount === 1 ? "rep" : "reps"} to match{" "}
-          {formatMetricValue(historicalBestEstimatedOneRepMax, "kg")}
-        </span>
-      </div>
-
       <div
         className="exercise-rep-dash-progress__track"
-        aria-label="Rep-equivalent progress toward all-time PR at working weight"
+        aria-label="Intensity progress bar"
       >
         {dashFillFractions.map((fraction, index) => {
           const isTarget = index === targetDashIndex;
@@ -128,23 +117,26 @@ export default function ExerciseRepDashProgress({
       </div>
 
       <div className="exercise-rep-dash-progress__legend">
-        {effectiveDashIndex != null && (
+        <span className="exercise-rep-dash-progress__legend-item exercise-rep-dash-progress__legend-item--target">
+          <span className="exercise-rep-dash-progress__legend-arrow exercise-rep-dash-progress__legend-arrow--target" />
+          Target
+        </span>
+        {showEffectiveLegend && (
           <span className="exercise-rep-dash-progress__legend-item exercise-rep-dash-progress__legend-item--effective">
+            <span className="exercise-rep-dash-progress__legend-arrow exercise-rep-dash-progress__legend-arrow--effective" />
             Recent best
           </span>
         )}
-        <span className="exercise-rep-dash-progress__legend-item exercise-rep-dash-progress__legend-item--target">
-          Rep target
-        </span>
       </div>
 
-      <div className="exercise-rep-dash-progress__footer">
-        <span>
-          Top set equiv. {Math.min(topSetEquivalentReps, dashCount).toFixed(1)} reps
-        </span>
-        <span>{formatMetricValue(workingWeight, "kg")} working weight</span>
-        <span>PR</span>
-      </div>
+      {hasMetTarget && (
+        <div className="exercise-rep-dash-progress__met">
+          <span className="exercise-rep-dash-progress__met-check" aria-hidden="true">
+            ✓
+          </span>
+          <span>Intensity target met</span>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,7 +3,9 @@
   padding: 14px;
   border: 1px solid var(--panel-border);
   border-radius: 18px;
-  background: linear-gradient(180deg, rgba(216, 240, 106, 0.06), rgba(216, 240, 106, 0.02)), var(--panel-bg);
+  background:
+    linear-gradient(180deg, rgba(216, 240, 106, 0.06), rgba(216, 240, 106, 0.02)),
+    var(--panel-bg);
   box-shadow: var(--card-shadow);
 }
 
@@ -76,68 +78,65 @@
   color: var(--text-strong);
 }
 
-.exercise-summary-card__bar-block {
+.exercise-summary-card__progress-block {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-bottom: 14px;
 }
 
-.exercise-summary-card__bar-label-row,
-.exercise-summary-card__bar-foot {
+.exercise-summary-card__progress-caption {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.exercise-summary-card__bodyweight-progress {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(15, 19, 24, 0.36);
+  border: 1px solid var(--panel-border);
 }
 
-.exercise-summary-card__bar-label,
-.exercise-summary-card__bar-value,
-.exercise-summary-card__bar-foot {
-  font-size: 0.8rem;
+.exercise-summary-card__bodyweight-progress-label {
+  font-size: 0.76rem;
   font-weight: 700;
-  color: var(--text-muted);
+  color: var(--text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.exercise-summary-card__bar {
-  position: relative;
-  height: 12px;
-  border-radius: 999px;
-  background: var(--panel-border);
-  overflow: hidden;
+.exercise-summary-card__bodyweight-progress-value {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-strong);
 }
 
-.exercise-summary-card__bar-fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--accent-strong), var(--accent));
+.exercise-summary-card__amrap-banner {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(216, 240, 106, 0.2);
+  background: rgba(216, 240, 106, 0.05);
 }
 
-.exercise-summary-card__bar-target {
-  position: absolute;
-  top: -3px;
-  bottom: -3px;
-  width: 2px;
-  border-radius: 999px;
-  background: #ffffff;
-  box-shadow: 0 0 0 1px rgba(15, 19, 24, 0.55);
-}
-
-.exercise-summary-card__bar-recent-max {
-  position: absolute;
-  top: -3px;
-  bottom: -3px;
-  width: 2px;
-  border-radius: 999px;
-  background: var(--accent);
-  box-shadow: 0 0 0 1px rgba(15, 19, 24, 0.55);
-  opacity: 0.75;
-}
-
-.exercise-summary-card__bar-foot-recent-max {
+.exercise-summary-card__amrap-heading {
+  margin: 0 0 4px;
+  font-size: 0.84rem;
+  font-weight: 800;
   color: var(--accent);
-  opacity: 0.85;
+}
+
+.exercise-summary-card__amrap-body {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
 }
 
 .exercise-summary-card__recent-max-banner {
@@ -162,25 +161,4 @@
   font-size: 0.8rem;
   color: var(--text-muted);
   line-height: 1.55;
-}
-
-.exercise-summary-card__amrap-banner {
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(216, 240, 106, 0.2);
-  background: rgba(216, 240, 106, 0.05);
-}
-
-.exercise-summary-card__amrap-heading {
-  margin: 0 0 4px;
-  font-size: 0.84rem;
-  font-weight: 800;
-  color: var(--accent);
-}
-
-.exercise-summary-card__amrap-body {
-  margin: 0;
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  line-height: 1.5;
 }
