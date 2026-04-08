@@ -513,7 +513,6 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
 
 # To do:
  - target RIR on the session page isn't populating. same story on the exercise page.
- - remove old progress bar and tidy up labels to only include: 'Intensity progress bar' caption, key to explain the arrow colours (conditionally excluding the recent best legend if using actual e1RM or if on 0 RIR target)
  - generate a target met green checkbox on the sets page when the intensity is met
  - on the session instance page, have the muscle group categories appear auto collapsed if they have met their volume target.
  - on the session instance page, have the cards fill their space instead of being floating card objects. Have them flush to the card above and below, flush to the section header, flush to the sides of the screen. Make their colour a touch lighter than current, to boost contrast a little.
