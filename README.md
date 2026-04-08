@@ -512,6 +512,10 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
 ---
 
 # To do:
+ - Tighten up the 'finish exercise' flow, it is just as easy to navigate back a page when finishing entering sets. It is however useful to have some mechanism to mark an exercise as active/finished (or is it? would you ever hit the + sign and want to go to an exercise directly? More likely you would want to go to the session page and pick the exercise). SOLUTION: Remove active status from exercise model, remove finish exercise button
+ - on the week instance view, add a scheduled date to each day card. For 'done' sessions add an indicator to identify whether it was on schedule (green) early (amber) or late (red) and by +/- n days. For 'next' add a similar indicator to identify whether it's due in the past/present/future and by n days. For upcomming just have a due date with no indicators. Due dates should be formated like "Monday 5th".
+ - add a confirmation before starting a season prompting the user to pick a start date, which will inform the consistency and due date targets for the remainder of the season.
+ - figure out why the week consistency summary shows all days as 'on time' even if they were early, consider maybe just differentiating between late and on time where early is just on time.
  - can you add an 'up next' section at the top of the dashboard page? It should (in priority order) either: direct the user to select and activate a program, direct a user to an active exercise, an active session, or an active week. Anything else I might have missed on that list? it should be clickable to link through to the appropriate section. If the current day is scheduled to be a rest day (and the user is on track with the schedule) then it should just say today is a rest day, but identify the 'up next' gym day.
  - can you add a season timeline section after the 'up next' section on the dashboard page? it should appear conditionally based on whether a season is currently active. It should be a timeline which represents the scheduled start and finish of a season, it should identify where the user should be currently based on the schedule, and where they currently are.
  - can you add a PRs section at the end of the dashboard page? it should present exactly the same way as the PRs sections in the summary pages, showing all PRs in descending order. Unlike the summary pages however, if a given exercise has multiple PRs, they can show as separate records (though if this requires significant code change then it isn't the end of the world to keep it the same).
@@ -525,8 +529,6 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
  - have 'Target' read as AMRAP instead of emdash for AMRAP sets
  - fix the intensity target bar so that it's clear when the target is met
  - is it easy to add a 'share' button on the summary pages which takes a screenshot and allows you to post to whatsapp?
- - check epley logic when entering sets, it seems off
- - check that new PRs affect the e1RM for the next session, not just the next week or next season
  - test program hopping, delete a full program and see if exercise history persists (test both as a new user and a user with csv imports)
  - on the edit exercise screen in the config screen there is no back button in the top nav bar, can we add one like we have on the other screens.
  - update readme to explain how working weight is set in config and its relation to RIR schemes, the philosophy behind consistent weights week to week
