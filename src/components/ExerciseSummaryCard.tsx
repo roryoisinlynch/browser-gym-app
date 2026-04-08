@@ -179,19 +179,14 @@ export default function ExerciseSummaryCard({
       </div>
 
       {!isBodyweight && (
-        <div className="exercise-summary-card__progress-block">
-          <p className="exercise-summary-card__progress-caption">
-            Intensity progress bar
-          </p>
-          <ExerciseRepDashProgress
-            workingWeight={targetWeight}
-            targetReps={targetReps}
-            targetRir={targetRir}
-            topSetEstimatedOneRepMax={topSetEstimatedOneRepMax}
-            historicalBestEstimatedOneRepMax={historicalBestEstimatedOneRepMax}
-            effectiveEstimatedOneRepMax={recentMaxEstimatedOneRepMax}
-          />
-        </div>
+        <ExerciseRepDashProgress
+          workingWeight={targetWeight}
+          targetReps={targetReps}
+          targetRir={targetRir}
+          topSetEstimatedOneRepMax={topSetEstimatedOneRepMax}
+          historicalBestEstimatedOneRepMax={historicalBestEstimatedOneRepMax}
+          effectiveEstimatedOneRepMax={recentMaxEstimatedOneRepMax}
+        />
       )}
 
       {isBodyweight && (

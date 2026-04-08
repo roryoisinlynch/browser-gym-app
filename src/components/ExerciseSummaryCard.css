@@ -78,21 +78,6 @@
   color: var(--text-strong);
 }
 
-.exercise-summary-card__progress-block {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.exercise-summary-card__progress-caption {
-  margin: 0;
-  font-size: 0.8rem;
-  font-weight: 800;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
 .exercise-summary-card__bodyweight-progress {
   display: flex;
   align-items: baseline;
