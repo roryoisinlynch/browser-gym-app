@@ -422,7 +422,6 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  border-top: 1px solid var(--panel-border);
 }
 
 .exercise-card-wrap {
@@ -434,8 +433,8 @@
 .exercise-card {
   width: 100%;
   padding: 12px 14px;
-  border-radius: 0;
   border: 0;
+  border-radius: 0;
   border-bottom: 1px solid var(--panel-border);
   background: #262c35;
   box-shadow: none;
@@ -503,16 +502,15 @@
   border: 0;
   text-align: left;
   cursor: pointer;
-  background: inherit;
 }
 
 .exercise-card--button:hover {
-  background: color-mix(in srgb, var(--panel-bg) 80%, white 20%);
+  background: #2a303a;
   transform: none;
 }
 
 .exercise-card--button:active {
-  background: color-mix(in srgb, var(--panel-bg) 75%, white 25%);
+  background: #2d3440;
   transform: none;
 }
 
