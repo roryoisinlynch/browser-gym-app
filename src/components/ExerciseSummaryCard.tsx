@@ -116,7 +116,7 @@ export default function ExerciseSummaryCard({
             historicalBestDate != null
               ? `Your all-time PR of ${historicalStr} (set ${daysSince(
                   historicalBestDate
-                )} days ago) hasn't been matched in your last three active seasons.`
+                )} days ago) hasn't been matched in a while.`
               : `Your all-time PR of ${historicalStr} is from your imported training history.`;
 
           return (
@@ -125,7 +125,7 @@ export default function ExerciseSummaryCard({
                 Using recent best for targets
               </p>
               <p className="exercise-summary-card__recent-max-body">
-                {historicalContext} Today&apos;s targets are based on your most
+                {historicalContext} Today&apos;s targets are based on your more
                 recent best of <strong>{recentStr}</strong> ({recentDateStr},{" "}
                 {dayCount} days ago) to keep your training load fair and
                 sustainable.
