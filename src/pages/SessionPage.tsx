@@ -186,25 +186,7 @@ export default function SessionPage() {
         }
 
         setSessionView(view);
-
-        const initialCollapsedState = view.muscleGroups.reduce<
-          Record<string, boolean>
-        >((acc, group) => {
-          const completedWorkingSets = group.exercises.reduce(
-            (sum, exercise) => sum + exercise.workingSetCount,
-            0
-          );
-
-          const targetWorkingSets =
-            group.sessionTemplateMuscleGroup.targetWorkingSets;
-
-          acc[group.sessionTemplateMuscleGroup.id] =
-            targetWorkingSets > 0 && completedWorkingSets >= targetWorkingSets;
-
-          return acc;
-        }, {});
-
-        setCollapsedGroups(initialCollapsedState);
+        setCollapsedGroups({});
       } catch (error) {
         console.error("Failed to load session page:", error);
         setErrorMessage("Could not load session data.");
@@ -293,6 +275,37 @@ export default function SessionPage() {
 
         return a.sessionTemplateMuscleGroup.order - b.sessionTemplateMuscleGroup.order;
       });
+  }, [sessionView]);
+
+  useEffect(() => {
+    if (!sessionView) {
+      return;
+    }
+
+    setCollapsedGroups((current) => {
+      const next = { ...current };
+
+      for (const group of sessionView.muscleGroups) {
+        const groupId = group.sessionTemplateMuscleGroup.id;
+
+        if (groupId in next) {
+          continue;
+        }
+
+        const completedWorkingSets = group.exercises.reduce(
+          (sum, exercise) => sum + exercise.workingSetCount,
+          0
+        );
+
+        const targetWorkingSets =
+          group.sessionTemplateMuscleGroup.targetWorkingSets;
+
+        next[groupId] =
+          targetWorkingSets > 0 && completedWorkingSets >= targetWorkingSets;
+      }
+
+      return next;
+    });
   }, [sessionView]);
 
   function toggleGroup(groupId: string) {
