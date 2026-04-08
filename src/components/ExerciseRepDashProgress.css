@@ -38,7 +38,7 @@
 }
 
 .exercise-rep-dash-progress__marker--pr {
-  color: #facc15;
+  color: var(--accent);
 }
 
 .exercise-rep-dash-progress__dash {
