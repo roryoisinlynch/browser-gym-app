@@ -17,7 +17,6 @@ import TopBar from "../components/TopBar";
 import "./ExercisePage.css";
 import BottomNav from "../components/BottomNav";
 
-
 type EditableRow = ExerciseSetTableRow & {
   persistedSetId: string | null;
 };
@@ -76,7 +75,9 @@ function getExerciseStatusLabel(
 export default function ExercisePage() {
   const { exerciseInstanceId } = useParams<{ exerciseInstanceId: string }>();
   const navigate = useNavigate();
-  const [exerciseView, setExerciseView] = useState<ExerciseInstanceView | null>(null);
+  const [exerciseView, setExerciseView] = useState<ExerciseInstanceView | null>(
+    null
+  );
   const [rows, setRows] = useState<EditableRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -219,7 +220,6 @@ export default function ExercisePage() {
             : candidate
         )
       );
-
     } catch (error) {
       console.error("Failed to save set row:", error);
       setErrorMessage("Could not save the set.");
@@ -244,7 +244,9 @@ export default function ExercisePage() {
 
       setRows((currentRows) => {
         const nextRows = currentRows.filter((candidate) => candidate.id !== rowId);
-        return nextRows.length > 0 ? nextRows : [createDraftRow(draftCounterRef.current++)];
+        return nextRows.length > 0
+          ? nextRows
+          : [createDraftRow(draftCounterRef.current++)];
       });
 
       await reloadExerciseView();
@@ -257,45 +259,61 @@ export default function ExercisePage() {
   }
 
   function handleAddRow() {
-    setRows((currentRows) => [...currentRows, createDraftRow(draftCounterRef.current++)]);
+    setRows((currentRows) => [
+      ...currentRows,
+      createDraftRow(draftCounterRef.current++),
+    ]);
   }
 
-async function handleFinishExercise() {
-  if (!exerciseView) {
-    return;
-  }
-
-  const populatedSetCount = rows.filter((row) => {
-    const weight = parseNullableNumber(row.weight);
-    const reps = parseNullableNumber(row.reps);
-    return weight != null || reps != null;
-  }).length;
-
-  if (populatedSetCount < 3) {
-    const confirmed = window.confirm(
-      `Only ${populatedSetCount} populated ${
-        populatedSetCount === 1 ? "set is" : "sets are"
-      } recorded. Finish exercise anyway?`
-    );
-
-    if (!confirmed) {
+  function handleConfigureExercise() {
+    if (!exerciseView) {
       return;
     }
+
+    const returnTo = `/exercise/${exerciseView.exerciseInstance.id}`;
+    navigate(
+      `/config/exercises/${exerciseView.exerciseTemplate.id}?returnTo=${encodeURIComponent(
+        returnTo
+      )}`
+    );
   }
 
-  try {
-    setIsFinishing(true);
-    setErrorMessage(null);
+  async function handleFinishExercise() {
+    if (!exerciseView) {
+      return;
+    }
 
-    await completeExerciseInstance(exerciseView.exerciseInstance.id);
-    navigate(`/session/${exerciseView.sessionInstance.id}`);
-  } catch (error) {
-    console.error("Failed to finish exercise:", error);
-    setErrorMessage("Could not finish exercise.");
-  } finally {
-    setIsFinishing(false);
+    const populatedSetCount = rows.filter((row) => {
+      const weight = parseNullableNumber(row.weight);
+      const reps = parseNullableNumber(row.reps);
+      return weight != null || reps != null;
+    }).length;
+
+    if (populatedSetCount < 3) {
+      const confirmed = window.confirm(
+        `Only ${populatedSetCount} populated ${
+          populatedSetCount === 1 ? "set is" : "sets are"
+        } recorded. Finish exercise anyway?`
+      );
+
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    try {
+      setIsFinishing(true);
+      setErrorMessage(null);
+
+      await completeExerciseInstance(exerciseView.exerciseInstance.id);
+      navigate(`/session/${exerciseView.sessionInstance.id}`);
+    } catch (error) {
+      console.error("Failed to finish exercise:", error);
+      setErrorMessage("Could not finish exercise.");
+    } finally {
+      setIsFinishing(false);
+    }
   }
-}
 
   if (isLoading) {
     return (
@@ -342,13 +360,18 @@ async function handleFinishExercise() {
             {exerciseView.exerciseTemplate.exerciseName}
           </h1>
           <p className="exercise-page__subtitle">
-            {exerciseView.sessionTemplate.name} · {exerciseView.weekTemplate.label ?? exerciseView.weekTemplate.name}
+            {exerciseView.sessionTemplate.name} ·{" "}
+            {exerciseView.weekTemplate.label ?? exerciseView.weekTemplate.name}
           </p>
           <p className="exercise-page__subtitle">
             Status: {getExerciseStatusLabel(exerciseStatus)}
           </p>
-          {errorMessage && <p className="exercise-page__message">{errorMessage}</p>}
-          {(isRowSaving || isFinishing) && <p className="exercise-page__message">Saving changes…</p>}
+          {errorMessage && (
+            <p className="exercise-page__message">{errorMessage}</p>
+          )}
+          {(isRowSaving || isFinishing) && (
+            <p className="exercise-page__message">Saving changes…</p>
+          )}
         </header>
 
         <ExerciseSummaryCard
@@ -358,7 +381,9 @@ async function handleFinishExercise() {
           targetReps={exerciseView.exerciseInstance.prescribedRepTarget ?? null}
           targetEstimatedOneRepMax={exerciseView.targetEstimatedOneRepMax}
           topSetEstimatedOneRepMax={topSetEstimatedOneRepMax}
-          historicalBestEstimatedOneRepMax={exerciseView.historicalBestEstimatedOneRepMax}
+          historicalBestEstimatedOneRepMax={
+            exerciseView.historicalBestEstimatedOneRepMax
+          }
           historicalBestDate={exerciseView.historicalBestDate}
           recentMaxEstimatedOneRepMax={exerciseView.recentMaxEstimatedOneRepMax}
           recentMaxDate={exerciseView.recentMaxDate}
@@ -368,6 +393,18 @@ async function handleFinishExercise() {
           isAmrap={isAmrap}
           needsWeightConfig={needsWeightConfig}
         />
+
+        <div className="exercise-page__config-cta-wrap">
+          <button
+            type="button"
+            className={`exercise-page__config-cta${
+              needsWeightConfig ? " exercise-page__config-cta--emphasised" : ""
+            }`}
+            onClick={handleConfigureExercise}
+          >
+            {needsWeightConfig ? "Set working weight" : "Adjust working weight"}
+          </button>
+        </div>
 
         <ExerciseSetTable
           rows={rows}
@@ -398,7 +435,9 @@ async function handleFinishExercise() {
               minHeight: "42px",
               borderRadius: "14px",
               border: "1px solid rgba(216, 240, 106, 0.32)",
-              background: isCompleted ? "var(--panel-bg)" : "rgba(216, 240, 106, 0.08)",
+              background: isCompleted
+                ? "var(--panel-bg)"
+                : "rgba(216, 240, 106, 0.08)",
               color: isCompleted ? "var(--text-muted)" : "var(--accent)",
               fontSize: "0.92rem",
               fontWeight: 800,

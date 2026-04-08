@@ -35,3 +35,45 @@
 .exercise-page__message {
   margin-top: 8px;
 }
+
+.exercise-page__config-cta-wrap {
+  margin: 0 14px 16px;
+}
+
+.exercise-page__config-cta {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 14px;
+  border: 1px solid var(--panel-border);
+  background: rgba(15, 19, 24, 0.36);
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    transform 0.12s;
+}
+
+.exercise-page__config-cta:hover {
+  background: rgba(15, 19, 24, 0.52);
+  color: var(--text-strong);
+}
+
+.exercise-page__config-cta:active {
+  transform: scale(0.98);
+}
+
+.exercise-page__config-cta--emphasised {
+  border-color: rgba(216, 240, 106, 0.32);
+  background: rgba(216, 240, 106, 0.1);
+  color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(216, 240, 106, 0.06);
+}
+
+.exercise-page__config-cta--emphasised:hover {
+  background: rgba(216, 240, 106, 0.18);
+  color: var(--accent);
+}

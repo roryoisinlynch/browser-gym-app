@@ -19,10 +19,7 @@ interface ExerciseSummaryCardProps {
   needsWeightConfig?: boolean;
 }
 
-function formatMetricValue(
-  value: number | null,
-  suffix = ""
-): string {
+function formatMetricValue(value: number | null, suffix = ""): string {
   if (value == null || Number.isNaN(value)) {
     return "—";
   }
@@ -91,8 +88,8 @@ export default function ExerciseSummaryCard({
                 Working weight not set
               </p>
               <p className="exercise-summary-card__amrap-body">
-                You have session history for this exercise. Go to Settings →
-                Configure sessions to select a working weight.
+                You have session history for this exercise. Set a working weight
+                to get today&apos;s target.
               </p>
             </>
           )}
@@ -128,9 +125,10 @@ export default function ExerciseSummaryCard({
                 Using recent best for targets
               </p>
               <p className="exercise-summary-card__recent-max-body">
-                {historicalContext} Today's targets are based on your most recent
-                best of <strong>{recentStr}</strong> ({recentDateStr}, {dayCount}{" "}
-                days ago) to keep your training load fair and sustainable.
+                {historicalContext} Today&apos;s targets are based on your most
+                recent best of <strong>{recentStr}</strong> ({recentDateStr},{" "}
+                {dayCount} days ago) to keep your training load fair and
+                sustainable.
               </p>
             </div>
           );

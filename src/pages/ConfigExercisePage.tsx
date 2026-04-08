@@ -32,6 +32,7 @@ export default function ConfigExercisePage() {
   const isNew = exerciseTemplateId === "new";
   const stmgId = searchParams.get("stmgId") ?? "";
   const muscleGroupId = searchParams.get("muscleGroupId") ?? "";
+  const returnTo = searchParams.get("returnTo");
 
   // Core form state
   const [exerciseName, setExerciseName] = useState("");
@@ -150,14 +151,13 @@ export default function ConfigExercisePage() {
       if (minRep < 1) continue;
       if (maxRep < minRepsFilter || minRep > maxRepsFilter) continue;
 
-      // Remainder: the e1RM gap that the floor'd rep count doesn't account for
       const impliedE1RM = weight * (1 + zeroRirReps / 30);
       const remainder = effectiveE1RM - impliedE1RM;
 
       options.push({ weight, zeroRirReps, remainder, repRange });
     }
 
-    return options.reverse(); // heaviest first
+    return options.reverse();
   }, [
     effectiveE1RM,
     weightMode,
@@ -182,13 +182,19 @@ export default function ConfigExercisePage() {
 
   async function handleSave() {
     const name = exerciseName.trim();
-    if (!name) { setError("Exercise name is required."); return; }
+    if (!name) {
+      setError("Exercise name is required.");
+      return;
+    }
 
     let resolvedMovementTypeId = movementTypeId;
 
     if (movementTypeId === "__new__") {
       const mtName = newMovementTypeName.trim();
-      if (!mtName) { setError("Movement type name is required."); return; }
+      if (!mtName) {
+        setError("Movement type name is required.");
+        return;
+      }
       const newMt: MovementType = {
         id: crypto.randomUUID(),
         muscleGroupId: resolvedMuscleGroupId,
@@ -204,7 +210,11 @@ export default function ConfigExercisePage() {
       return;
     }
 
-    if (weightMode !== "bodyweight" && weightOptions.length > 0 && selectedWeight === null) {
+    if (
+      weightMode !== "bodyweight" &&
+      weightOptions.length > 0 &&
+      selectedWeight === null
+    ) {
       setError("Please select a weight option.");
       return;
     }
@@ -235,6 +245,12 @@ export default function ConfigExercisePage() {
       };
 
       await saveExerciseTemplate(template);
+
+      if (returnTo) {
+        navigate(returnTo);
+        return;
+      }
+
       navigate(-1);
     } catch (err) {
       console.error("[ConfigExercisePage] save failed:", err);
@@ -251,6 +267,12 @@ export default function ConfigExercisePage() {
     );
     if (!confirmed) return;
     await deleteExerciseTemplateById(exerciseTemplateId);
+
+    if (returnTo) {
+      navigate(returnTo);
+      return;
+    }
+
     navigate(-1);
   }
 
@@ -261,7 +283,6 @@ export default function ConfigExercisePage() {
     if (!q) return allExerciseNames;
     return allExerciseNames.filter((n) => n.toLowerCase().includes(q));
   }, [exerciseName, allExerciseNames]);
-
 
   return (
     <main className="config-exercise-page">
@@ -277,7 +298,6 @@ export default function ConfigExercisePage() {
           {error && <p className="config-exercise-error">{error}</p>}
         </header>
 
-        {/* Name */}
         <div className="config-exercise__field-group config-exercise__autocomplete-wrap">
           <label className="config-exercise__label">Exercise name</label>
           <input
@@ -316,7 +336,6 @@ export default function ConfigExercisePage() {
           )}
         </div>
 
-        {/* Movement type */}
         <div className="config-exercise__field-group">
           <label className="config-exercise__label">Movement type</label>
           <select
@@ -344,7 +363,6 @@ export default function ConfigExercisePage() {
           )}
         </div>
 
-        {/* Weight mode */}
         <div className="config-exercise__field-group">
           <label className="config-exercise__label">Weight mode</label>
           <div className="config-exercise__radio-group">
@@ -366,8 +384,8 @@ export default function ConfigExercisePage() {
                     {mode === "bodyweight"
                       ? "Bodyweight"
                       : mode === "increment"
-                      ? "Increment"
-                      : "Fixed list"}
+                        ? "Increment"
+                        : "Fixed list"}
                   </span>
                 </label>
               )
@@ -439,12 +457,11 @@ export default function ConfigExercisePage() {
           )}
         </div>
 
-        {/* Rep options — only for weighted exercises */}
         {weightMode === "bodyweight" ? (
           <div className="config-exercise__field-group">
             <div className="config-exercise__bw-note">
               Rep targets are calculated automatically from your historical best
-              minus the week's RIR.
+              minus the week&apos;s RIR.
             </div>
           </div>
         ) : (
@@ -453,7 +470,9 @@ export default function ConfigExercisePage() {
               Working weight
               {selectedOption && (
                 <span className="config-exercise__label-selected">
-                  {" "}· {selectedOption.weight}kg · 0 RIR: {selectedOption.zeroRirReps} reps
+                  {" "}
+                  · {selectedOption.weight}kg · 0 RIR:{" "}
+                  {selectedOption.zeroRirReps} reps
                 </span>
               )}
             </label>
@@ -470,24 +489,20 @@ export default function ConfigExercisePage() {
                   </strong>
                   {"  ·  "}
                   <span className="config-exercise__e1rm-scheme">
-                    RIR scheme: {[...rirScheme].sort((a, b) => b - a).join(", ")}
+                    Scheme: {rirScheme.join(" · ")}
                   </span>
                 </p>
+
                 {recentMaxE1RM != null && historicalBestE1RM != null && (
                   <p className="config-exercise__e1rm-recency-note">
-                    All-time best:{" "}
-                    {Number.isInteger(historicalBestE1RM)
-                      ? historicalBestE1RM
-                      : historicalBestE1RM.toFixed(1)}
-                    kg — using recent max as baseline because the all-time best
-                    wasn't matched in the last three seasons.
+                    Using recent best instead of all-time PR to keep prescriptions
+                    realistic.
                   </p>
                 )}
 
-                {/* Filter */}
                 <div className="config-exercise__rep-filter">
                   <span className="config-exercise__rep-filter-label">
-                    Show 0 RIR reps
+                    Rep range
                   </span>
                   <input
                     className="config-exercise__input config-exercise__input--number"
@@ -558,7 +573,6 @@ export default function ConfigExercisePage() {
           </div>
         )}
 
-        {/* Actions */}
         <div className="config-exercise__actions">
           {!isNew && (
             <button
