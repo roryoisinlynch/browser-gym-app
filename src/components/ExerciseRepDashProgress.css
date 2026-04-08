@@ -165,7 +165,7 @@
 }
 
 .exercise-rep-dash-progress__tooltip-arrow--pr {
-  color: #facc15;
+  color: var(--accent);
 }
 
 @media (max-width: 360px) {
