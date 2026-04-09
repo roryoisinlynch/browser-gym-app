@@ -342,7 +342,7 @@ date = SeasonInstance.startedAt + (weekIndex × weekLength + (sessionOrder − 1
 
 where `weekLength` is the total number of items (sessions + rest days) in the `WeekTemplate`.
 
-`SeasonInstance.startedAt` is the sole anchor: it is written as `new Date().toISOString()` when `startSeasonFromTemplate` is called (either explicitly or automatically when the last session of the previous season is completed). Every scheduled session date in the season is an offset from that value.
+`SeasonInstance.startedAt` is the sole anchor. Every scheduled session date in the season is an offset from that value.
 
 **Use this field for:** schedule adherence / consistency KPI (did the user train on the day the program said to?), display of the program calendar.
 
@@ -369,6 +369,31 @@ function sessionCompletedDate(session: SessionInstance): string {
 ```
 
 Any new code that needs a date for a native set record should call this helper rather than reading `session.date` directly.
+
+---
+
+# Season Start Date
+
+When a season is started the user is prompted to confirm a **start date** via a date picker. All session scheduled dates are calculated as offsets from this date, so choosing the right anchor is important for consistency tracking to be meaningful.
+
+## Choosing a start date
+
+- **Today** — the default. Use this when starting a new block from scratch.
+- **A past date** — use this if the user has already been training the program informally and wants the schedule to reflect when they actually began. Scheduled dates in the past will show as overdue until they are completed.
+- **A future date** — use this to pre-schedule a block that starts after a rest week or holiday. Sessions will appear as upcoming until that date arrives.
+
+## When the prompt appears
+
+The date picker appears before a season is created, at every entry point:
+
+- **Week page / Season page** — when no program is active and the user taps a program to start it.
+- **Programs config page** — when the user switches to a different program.
+
+When the last session of a season is completed the season is marked done, but a new season is **not** started automatically. The user returns to the "No active program" screen and goes through the date picker before the next block begins. This ensures the new season's schedule is anchored to a deliberate date rather than whatever moment the finish button was tapped.
+
+## How `startedAt` propagates
+
+`startSeasonFromTemplate(seasonTemplateId, startedAt?)` accepts an optional ISO timestamp. When provided, it is written to `SeasonInstance.startedAt` and passed directly to `replicateSeasonWeeks`, which uses it as the anchor for every session's `date` field. When omitted it falls back to `new Date().toISOString()` (preserving the existing behaviour for any programmatic call that does not involve the UI flow).
 
 ---
 
