@@ -26,11 +26,13 @@ export default function WeeklyBreadcrumb({ sessions }: WeeklyBreadcrumbProps) {
             {index > 0 && (
               <span className="weekly-breadcrumb__separator" aria-hidden="true" />
             )}
-            <TrafficLight
-              status={session.ragStatus ?? "grey"}
-              size="sm"
-              isCurrent={session.isCurrent}
-            />
+            <div className="weekly-breadcrumb__dot">
+              <TrafficLight
+                status={session.ragStatus ?? "grey"}
+                size="sm"
+                isCurrent={session.isCurrent}
+              />
+            </div>
           </div>
         ))}
       </div>

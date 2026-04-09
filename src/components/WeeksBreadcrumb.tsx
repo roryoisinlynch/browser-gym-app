@@ -24,16 +24,18 @@ export default function WeeksBreadcrumb({ weeks }: WeeksBreadcrumbProps) {
             {index > 0 && (
               <span className="weeks-breadcrumb__separator" aria-hidden="true" />
             )}
-            <span
-              className={`weeks-breadcrumb__emoji${week.isCurrent ? " weeks-breadcrumb__emoji--current" : ""}`}
-              aria-label={
-                week.emojiRating != null
-                  ? `Week rating ${week.emojiRating}`
-                  : "Not yet completed"
-              }
-            >
-              {week.emojiRating != null ? emojiForRating(week.emojiRating) : "○"}
-            </span>
+            <div className="weeks-breadcrumb__dot">
+              <span
+                className={`weeks-breadcrumb__emoji${week.isCurrent ? " weeks-breadcrumb__emoji--current" : ""}`}
+                aria-label={
+                  week.emojiRating != null
+                    ? `Week rating ${week.emojiRating}`
+                    : "Not yet completed"
+                }
+              >
+                {week.emojiRating != null ? emojiForRating(week.emojiRating) : "○"}
+              </span>
+            </div>
           </div>
         ))}
       </div>

@@ -3,7 +3,6 @@
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  width: 100%;
 }
 
 .weekly-breadcrumb__label {
@@ -18,26 +17,31 @@
 .weekly-breadcrumb__trail {
   display: flex;
   align-items: center;
-  gap: 0;
-  padding-top: 14px; /* room for the absolutely-positioned arrow above */
-  width: 100%;
+  min-width: 66vw;
+  padding-top: 14px;
 }
 
+/* All items grow equally — icon cells */
 .weekly-breadcrumb__item {
+  flex: 1;
   display: flex;
+  justify-content: center;
   align-items: center;
-  flex: 1;
+  position: relative;
 }
 
-.weekly-breadcrumb__item:first-child {
-  flex: 0 0 auto;
-}
-
+/* Separator drawn as absolute line from prev center to this center */
 .weekly-breadcrumb__separator {
-  display: block;
-  flex: 1;
-  min-width: 8px;
+  position: absolute;
+  left: -50%;
+  right: 50%;
   height: 1.5px;
   background: var(--panel-border);
-  margin: 0;
+  z-index: 0;
+}
+
+.weekly-breadcrumb__dot {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
 }
