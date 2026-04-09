@@ -132,6 +132,7 @@ export interface ExerciseInstanceView {
   /** Date (ISO string) of the recent-max rep PR. */
   recentMaxRepsDate: string | null;
   targetEstimatedOneRepMax: number | null;
+  effectiveRir: number;
   sets: AnalyzedExerciseSet[];
 }
 
@@ -1286,6 +1287,7 @@ export async function getExerciseInstanceView(
     recentMaxReps,
     recentMaxRepsDate,
     targetEstimatedOneRepMax,
+    effectiveRir: weekRir,
     sets: buildAnalyzedSetList(
       currentSets,
       allHistoricalSets,

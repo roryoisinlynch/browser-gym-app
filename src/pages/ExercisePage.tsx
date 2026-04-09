@@ -339,7 +339,7 @@ export default function ExercisePage() {
 
         <ExerciseSummaryCard
           movementTypeName={exerciseView.movementType.name}
-          targetRir={exerciseView.exerciseInstance.prescribedRir ?? null}
+          targetRir={exerciseView.effectiveRir}
           targetWeight={exerciseView.exerciseInstance.prescribedWeight ?? null}
           targetReps={exerciseView.exerciseInstance.prescribedRepTarget ?? null}
           targetEstimatedOneRepMax={exerciseView.targetEstimatedOneRepMax}
