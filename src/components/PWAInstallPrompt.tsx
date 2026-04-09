@@ -8,7 +8,6 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
-
 function detectPlatform(): Platform {
   if (window.innerWidth >= 1024) return null;
   if (window.matchMedia("(display-mode: standalone)").matches) return null;
@@ -16,8 +15,9 @@ function detectPlatform(): Platform {
 
   const ua = navigator.userAgent;
   if (/iPad|iPhone|iPod/.test(ua) && !("MSStream" in window)) return "ios";
+  if (/Android/.test(ua)) return "android";
 
-  return null; // android/chrome handled via beforeinstallprompt event
+  return null;
 }
 
 export default function PWAInstallPrompt() {
@@ -26,28 +26,20 @@ export default function PWAInstallPrompt() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-
     const detected = detectPlatform();
-    if (detected === "ios") {
-      setPlatform("ios");
-      setVisible(true);
-      return;
+    if (!detected) return;
+
+    setPlatform(detected);
+    setVisible(true);
+
+    if (detected === "android") {
+      function handleBeforeInstallPrompt(e: Event) {
+        e.preventDefault();
+        setDeferredPrompt(e as BeforeInstallPromptEvent);
+      }
+      window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     }
-
-    if (window.innerWidth >= 1024) return;
-
-    function handleBeforeInstallPrompt(e: Event) {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setPlatform("android");
-      setVisible(true);
-    }
-
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-    };
   }, []);
 
   function dismiss() {
@@ -80,7 +72,9 @@ export default function PWAInstallPrompt() {
             <span className="pwa-prompt__body">
               {platform === "ios"
                 ? <>Tap the share icon <ShareIcon /> then <strong>Add to Home Screen</strong></>
-                : "Install Training Log for quick access — no browser bar, full screen."}
+                : deferredPrompt
+                  ? "Install Training Log for quick access — no browser bar, full screen."
+                  : <>Tap <strong>⋮</strong> then <strong>Add to Home Screen</strong></>}
             </span>
           </div>
           <button
@@ -101,7 +95,7 @@ export default function PWAInstallPrompt() {
           </button>
         </div>
 
-        {platform === "android" && (
+        {platform === "android" && deferredPrompt && (
           <button
             type="button"
             className="pwa-prompt__install-btn"
