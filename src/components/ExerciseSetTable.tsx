@@ -126,6 +126,7 @@ export default function ExerciseSetTable({
         <button
           type="button"
           className="exercise-set-table-card__add"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={onAddRow}
         >
           + Add set

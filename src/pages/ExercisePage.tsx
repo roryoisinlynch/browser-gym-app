@@ -180,9 +180,11 @@ export default function ExercisePage() {
 
     const performedWeight = parseNullableNumber(row.weight);
     const performedReps = parseNullableNumber(row.reps);
-    const hasBothValues = performedWeight != null && performedReps != null;
+    const hasRequiredValues = isBodyweight
+      ? performedReps != null
+      : performedWeight != null && performedReps != null;
 
-    if (!hasBothValues && row.persistedSetId == null) {
+    if (!hasRequiredValues && row.persistedSetId == null) {
       return;
     }
 
