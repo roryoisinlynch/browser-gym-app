@@ -45,3 +45,8 @@
   z-index: 1;
   flex: 0 0 auto;
 }
+
+.weekly-breadcrumb__dot .traffic-light__bulb {
+  width: 24px;
+  height: 24px;
+}
