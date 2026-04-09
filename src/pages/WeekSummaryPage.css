@@ -179,10 +179,20 @@
 
 .week-summary-score-item {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1px;
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: space-between;
   width: 100%;
+  gap: 6px;
+}
+
+@media (max-width: 375px) {
+  .week-summary-score-item {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 1px;
+  }
 }
 
 .week-summary-score-item__pct {
