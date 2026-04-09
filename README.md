@@ -512,6 +512,7 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
 ---
 
 # To do:
+ - fix weird hard-coded date logic that assumes 9 day weeks
  - bodyweight exercises should conditionally not render the adjust working weight button
  - the progress bar doesnt work for bodyweight exercises
  - the exerciseSets component should auto populate the weight cell with an actual value rather than a preview value so that it doesn't need to be modified if you don't need to.
