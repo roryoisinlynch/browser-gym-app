@@ -396,6 +396,8 @@ export default function ExercisePage() {
           historicalBestDate={exerciseView.historicalBestDate}
           recentMaxEstimatedOneRepMax={exerciseView.recentMaxEstimatedOneRepMax}
           recentMaxDate={exerciseView.recentMaxDate}
+          recentMaxReps={exerciseView.recentMaxReps}
+          recentMaxRepsDate={exerciseView.recentMaxRepsDate}
           isBodyweight={isBodyweight}
           historicalBestReps={exerciseView.historicalBestReps}
           topSetReps={topSetReps}

@@ -1,5 +1,6 @@
 import "./ExerciseSummaryCard.css";
 import ExerciseRepDashProgress from "./ExerciseRepDashProgress";
+import ExerciseRepDashProgressBodyweight from "./ExerciseRepDashProgressBodyweight";
 
 interface ExerciseSummaryCardProps {
   movementTypeName: string;
@@ -15,6 +16,8 @@ interface ExerciseSummaryCardProps {
   isBodyweight?: boolean;
   historicalBestReps?: number | null;
   topSetReps?: number | null;
+  recentMaxReps?: number | null;
+  recentMaxRepsDate?: string | null;
   isAmrap?: boolean;
   needsWeightConfig?: boolean;
 }
@@ -55,6 +58,8 @@ export default function ExerciseSummaryCard({
   isBodyweight = false,
   historicalBestReps = null,
   topSetReps = null,
+  recentMaxReps = null,
+  recentMaxRepsDate = null,
   isAmrap = false,
   needsWeightConfig = false,
 }: ExerciseSummaryCardProps) {
@@ -97,6 +102,34 @@ export default function ExerciseSummaryCard({
       </section>
     );
   }
+
+  const recentMaxRepsBanner =
+    recentMaxReps != null && recentMaxRepsDate != null
+      ? (() => {
+          const historicalStr = historicalBestReps != null ? `${historicalBestReps} reps` : null;
+          const recentStr = `${recentMaxReps} reps`;
+          const recentDateStr = formatDate(recentMaxRepsDate);
+          const dayCount = daysSince(recentMaxRepsDate);
+
+          const historicalContext = historicalStr
+            ? `Your all-time best of ${historicalStr} hasn't been matched in a while.`
+            : null;
+
+          return (
+            <div className="exercise-summary-card__recent-max-banner" role="note">
+              <p className="exercise-summary-card__recent-max-heading">
+                Using recent best for targets
+              </p>
+              <p className="exercise-summary-card__recent-max-body">
+                {historicalContext}{historicalContext ? " " : ""}Today&apos;s targets are based on your more
+                recent best of <strong>{recentStr}</strong> ({recentDateStr},{" "}
+                {dayCount} days ago) to keep your training load fair and
+                sustainable.
+              </p>
+            </div>
+          );
+        })()
+      : null;
 
   const recentMaxBanner =
     recentMaxEstimatedOneRepMax != null && recentMaxDate != null
@@ -148,7 +181,7 @@ export default function ExerciseSummaryCard({
         </div>
       </div>
 
-      {recentMaxBanner}
+      {isBodyweight ? recentMaxRepsBanner : recentMaxBanner}
 
       <div className="exercise-summary-card__metrics-grid">
         <div className="exercise-summary-card__metric">
@@ -187,15 +220,14 @@ export default function ExerciseSummaryCard({
         />
       )}
 
-      {isBodyweight && (
-        <div className="exercise-summary-card__bodyweight-progress">
-          <span className="exercise-summary-card__bodyweight-progress-label">
-            Top set
-          </span>
-          <strong className="exercise-summary-card__bodyweight-progress-value">
-            {formatMetricValue(topSetReps, " reps")}
-          </strong>
-        </div>
+      {isBodyweight && historicalBestReps != null && targetReps != null && (
+        <ExerciseRepDashProgressBodyweight
+          historicalBestReps={historicalBestReps}
+          recentMaxReps={recentMaxReps}
+          targetReps={targetReps}
+          targetRir={targetRir}
+          topSetReps={topSetReps}
+        />
       )}
     </section>
   );

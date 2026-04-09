@@ -122,6 +122,14 @@ export interface ExerciseInstanceView {
   recentMaxEstimatedOneRepMax: number | null;
   /** Date (ISO string) of the recent-max PR. */
   recentMaxDate: string | null;
+  /**
+   * Set when the all-time rep PR hasn't been matched within the last three
+   * seasons. Only populated for bodyweight exercises. Null when the historical
+   * best is still current.
+   */
+  recentMaxReps: number | null;
+  /** Date (ISO string) of the recent-max rep PR. */
+  recentMaxRepsDate: string | null;
   targetEstimatedOneRepMax: number | null;
   sets: AnalyzedExerciseSet[];
 }
@@ -1075,33 +1083,58 @@ export async function getExerciseInstanceView(
   );
 
   // One bucket per season key — tracks the most-recent session date (for
-  // chronological ordering) and the best e1RM with its date (for the tooltip).
-  type SeasonBucket = { sortDate: string; bestE1RM: number | null; bestDate: string | null };
+  // chronological ordering) and the best e1RM / best reps with their dates.
+  type SeasonBucket = {
+    sortDate: string;
+    bestE1RM: number | null;
+    bestDate: string | null;
+    bestReps: number | null;
+    bestRepsDate: string | null;
+  };
   const seasonBuckets = new Map<string, SeasonBucket>();
 
-  function mergeIntoBucket(key: string, date: string, e1rm: number | null): void {
+  function mergeIntoBucket(
+    key: string,
+    date: string,
+    e1rm: number | null,
+    reps: number | null = null
+  ): void {
     const existing = seasonBuckets.get(key);
     if (!existing) {
-      seasonBuckets.set(key, { sortDate: date, bestE1RM: e1rm, bestDate: e1rm != null ? date : null });
+      seasonBuckets.set(key, {
+        sortDate: date,
+        bestE1RM: e1rm,
+        bestDate: e1rm != null ? date : null,
+        bestReps: reps,
+        bestRepsDate: reps != null ? date : null,
+      });
     } else {
       if (date > existing.sortDate) existing.sortDate = date;
       if (e1rm != null && (existing.bestE1RM == null || e1rm > existing.bestE1RM)) {
         existing.bestE1RM = e1rm;
         existing.bestDate = date;
       }
+      if (reps != null && (existing.bestReps == null || reps > existing.bestReps)) {
+        existing.bestReps = reps;
+        existing.bestRepsDate = date;
+      }
     }
   }
 
   // Current season always participates, even on a first attempt.
-  mergeIntoBucket(seasonInstance.id, sessionCompletedDate(sessionInstance), null);
+  mergeIntoBucket(seasonInstance.id, sessionCompletedDate(sessionInstance), null, null);
 
   // Real prior sets.
   for (const set of priorHistoricalSets) {
     if (set.exerciseInstanceId === "__imported__") continue;
     const meta = instanceMetaMap.get(set.exerciseInstanceId);
     if (!meta) continue;
-    mergeIntoBucket(meta.seasonKey, meta.date,
-      calculateEstimatedOneRepMax(set.performedWeight, set.performedReps));
+    mergeIntoBucket(
+      meta.seasonKey,
+      meta.date,
+      calculateEstimatedOneRepMax(set.performedWeight, set.performedReps),
+      set.performedReps ?? null
+    );
   }
 
   // Imported sets — grouped into calendar-month pseudo-seasons using raw
@@ -1113,7 +1146,7 @@ export async function getExerciseInstanceView(
     const e1rm = !isBodyweight && s.weight > 0
       ? calculateEstimatedOneRepMax(s.weight, s.reps)
       : null;
-    mergeIntoBucket(resolveExerciseSeasonKey(null, s.date), s.date, e1rm);
+    mergeIntoBucket(resolveExerciseSeasonKey(null, s.date), s.date, e1rm, s.reps);
   }
 
   // Sort buckets by most-recent activity (newest first) and take the top 3.
@@ -1158,6 +1191,22 @@ export async function getExerciseInstanceView(
     recentMaxEstimatedOneRepMax = null;
     recentMaxDate = null;
   }
+
+  // Recent max reps — best rep count across the three most-recent season buckets.
+  let recentMaxReps: number | null = null;
+  let recentMaxRepsDate: string | null = null;
+  for (const [key, bucket] of seasonBuckets.entries()) {
+    if (!recentSeasonKeys.has(key) || bucket.bestReps == null) continue;
+    if (recentMaxReps == null || bucket.bestReps > recentMaxReps) {
+      recentMaxReps = bucket.bestReps;
+      recentMaxRepsDate = bucket.bestRepsDate;
+    }
+  }
+  // No substitution needed if the all-time rep best was matched recently.
+  if (recentMaxReps != null && historicalBestReps != null && recentMaxReps >= historicalBestReps) {
+    recentMaxReps = null;
+    recentMaxRepsDate = null;
+  }
   // ─────────────────────────────────────────────────────────────────────────
 
   const weekRir =
@@ -1173,8 +1222,10 @@ export async function getExerciseInstanceView(
 
   if (exerciseTemplate.weightMode === "bodyweight") {
     // Historical best is a 0 RIR effort, so prescription = best - weekRir.
-    if (historicalBestReps != null) {
-      prescribedRepTarget = Math.max(1, historicalBestReps - weekRir);
+    // Use the recent max when available so targets stay fair after a long gap.
+    const effectiveReps = recentMaxReps ?? historicalBestReps;
+    if (effectiveReps != null) {
+      prescribedRepTarget = Math.max(1, effectiveReps - weekRir);
     }
   } else if (
     historicalBestEstimatedOneRepMax != null &&
@@ -1226,6 +1277,8 @@ export async function getExerciseInstanceView(
     historicalBestDate,
     recentMaxEstimatedOneRepMax,
     recentMaxDate,
+    recentMaxReps,
+    recentMaxRepsDate,
     targetEstimatedOneRepMax,
     sets: buildAnalyzedSetList(currentSets, allHistoricalSets),
   };
