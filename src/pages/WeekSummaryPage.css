@@ -169,21 +169,21 @@
 
 .week-summary-score-secondary {
   flex: 1;
+  min-width: 0;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   justify-content: space-around;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   padding: 8px 0;
 }
 
 .week-summary-score-item {
   display: flex;
-  flex-direction: row;
-  align-items: baseline;
-  justify-content: space-between;
-  width: 100%;
-  gap: 6px;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
 }
 
 .week-summary-score-item__pct {
@@ -195,11 +195,12 @@
 }
 
 .week-summary-score-item__label {
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-soft);
+  text-align: center;
 }
 
 .week-summary-score-footnote {
