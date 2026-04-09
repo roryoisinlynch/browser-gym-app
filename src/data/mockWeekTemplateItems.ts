@@ -5,7 +5,7 @@ import { mockSessionTemplates } from "./mockSessionTemplates";
 const weekTemplate = mockWeekTemplates[0]!;
 
 function sessionById(id: string) {
-  return mockSessionTemplates.find((session) => session.id === id)!;
+  return mockSessionTemplates.find((s) => s.id === id)!;
 }
 
 export const mockWeekTemplateItems: WeekTemplateItem[] = [
@@ -14,14 +14,14 @@ export const mockWeekTemplateItems: WeekTemplateItem[] = [
     weekTemplateId: weekTemplate.id,
     order: 1,
     type: "session",
-    sessionTemplateId: sessionById("chest-back-1").id,
+    sessionTemplateId: sessionById("chest-back-a").id,
   },
   {
     id: `${weekTemplate.id}-item-2`,
     weekTemplateId: weekTemplate.id,
     order: 2,
     type: "session",
-    sessionTemplateId: sessionById("arms-shoulder-1").id,
+    sessionTemplateId: sessionById("arms-shoulder-a").id,
   },
   {
     id: `${weekTemplate.id}-item-3`,
@@ -35,14 +35,14 @@ export const mockWeekTemplateItems: WeekTemplateItem[] = [
     weekTemplateId: weekTemplate.id,
     order: 4,
     type: "session",
-    sessionTemplateId: sessionById("legs-1").id,
+    sessionTemplateId: sessionById("legs-a").id,
   },
   {
     id: `${weekTemplate.id}-item-5`,
     weekTemplateId: weekTemplate.id,
     order: 5,
     type: "session",
-    sessionTemplateId: sessionById("chest-back-2").id,
+    sessionTemplateId: sessionById("chest-back-b").id,
   },
   {
     id: `${weekTemplate.id}-item-6`,
@@ -56,14 +56,14 @@ export const mockWeekTemplateItems: WeekTemplateItem[] = [
     weekTemplateId: weekTemplate.id,
     order: 7,
     type: "session",
-    sessionTemplateId: sessionById("arms-shoulder-2").id,
+    sessionTemplateId: sessionById("arms-shoulder-b").id,
   },
   {
     id: `${weekTemplate.id}-item-8`,
     weekTemplateId: weekTemplate.id,
     order: 8,
     type: "session",
-    sessionTemplateId: sessionById("legs-2").id,
+    sessionTemplateId: sessionById("legs-b").id,
   },
   {
     id: `${weekTemplate.id}-item-9`,

@@ -5,7 +5,7 @@ export const mockSeasonTemplates: SeasonTemplate[] = [
     id: "season-template-1",
     name: "Arnold Split",
     plannedWeekCount: 5,
-    description: " Default training block",
+    description: "Default training block",
     rirSequence: [4, 3, 2, 1, 0],
   },
 ];

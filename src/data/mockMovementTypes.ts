@@ -1,48 +1,37 @@
 import type { MovementType } from "../domain/models";
 
 export const mockMovementTypes: MovementType[] = [
-  { id: "chest-flat", muscleGroupId: "chest", name: "Flat", order: 1 },
-  { id: "chest-incline", muscleGroupId: "chest", name: "Incline", order: 2 },
-  { id: "chest-fly", muscleGroupId: "chest", name: "Fly", order: 3 },
+  // Chest
+  { id: "chest-flat-press", muscleGroupId: "chest", name: "Flat Press", order: 1 },
+  { id: "chest-incline-press", muscleGroupId: "chest", name: "Incline Press", order: 2 },
+  { id: "chest-dip", muscleGroupId: "chest", name: "Dip", order: 3 },
+  { id: "chest-fly", muscleGroupId: "chest", name: "Chest Fly", order: 4 },
 
-  {
-    id: "back-vertical-pull",
-    muscleGroupId: "back",
-    name: "Vertical Pull",
-    order: 1,
-  },
-  {
-    id: "back-horizontal-row",
-    muscleGroupId: "back",
-    name: "Horizontal Row",
-    order: 2,
-  },
+  // Back
+  { id: "back-vertical-pull", muscleGroupId: "back", name: "Vertical Pull", order: 1 },
+  { id: "back-horizontal-row", muscleGroupId: "back", name: "Horizontal Row", order: 2 },
+  { id: "back-rear-delts", muscleGroupId: "back", name: "Rear Delts", order: 3 },
 
-  { id: "delts-press", muscleGroupId: "delts", name: "Press", order: 1 },
-  { id: "delts-lateral", muscleGroupId: "delts", name: "Lateral", order: 2 },
-  { id: "delts-rear", muscleGroupId: "delts", name: "Rear", order: 3 },
+  // Shoulder
+  { id: "shoulder-vertical-press", muscleGroupId: "shoulder", name: "Vertical Press", order: 1 },
+  { id: "shoulder-side-delts", muscleGroupId: "shoulder", name: "Side Delts", order: 2 },
 
+  // Arms
   { id: "arms-bicep", muscleGroupId: "arms", name: "Bicep", order: 1 },
   { id: "arms-tricep", muscleGroupId: "arms", name: "Tricep", order: 2 },
 
-  { id: "legs-squat", muscleGroupId: "legs", name: "Squat", order: 1 },
-  { id: "legs-hamstring", muscleGroupId: "legs", name: "Hamstring", order: 2 },
+  // Forearms
+  { id: "forearms-curl", muscleGroupId: "forearms", name: "Forearm Curl", order: 1 },
+  { id: "forearms-extension", muscleGroupId: "forearms", name: "Forearm Extension", order: 2 },
+  { id: "forearms-grip", muscleGroupId: "forearms", name: "Grip Strength", order: 3 },
 
-  { id: "core-flexion", muscleGroupId: "core", name: "Flexion", order: 1 },
-  { id: "core-leg-raise", muscleGroupId: "core", name: "Leg Raise", order: 2 },
+  // Quads
+  { id: "quads-squat", muscleGroupId: "quads", name: "Squat", order: 1 },
 
-  {
-    id: "forearms-flexion",
-    muscleGroupId: "forearms",
-    name: "Flexion",
-    order: 1,
-  },
-  {
-    id: "forearms-extension",
-    muscleGroupId: "forearms",
-    name: "Extension",
-    order: 2,
-  },
+  // Hamstring
+  { id: "hamstring-curl", muscleGroupId: "hamstring", name: "Hamstring", order: 1 },
 
-  { id: "grip-crush", muscleGroupId: "grip", name: "Crush", order: 1 },
+  // Core
+  { id: "core-leg-raise", muscleGroupId: "core", name: "Leg Raise", order: 1 },
+  { id: "core-crunch", muscleGroupId: "core", name: "Crunch", order: 2 },
 ];
