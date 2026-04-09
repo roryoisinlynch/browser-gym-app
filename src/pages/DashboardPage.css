@@ -82,6 +82,11 @@
   background: rgba(216, 240, 106, 0.06);
 }
 
+.dashboard-up-next--overdue {
+  border-color: rgba(231, 111, 81, 0.35);
+  background: rgba(231, 111, 81, 0.06);
+}
+
 .dashboard-up-next--today {
   border-color: rgba(216, 240, 106, 0.2);
   background: rgba(216, 240, 106, 0.04);
@@ -107,6 +112,11 @@
 .dashboard-up-next__pill--active {
   background: rgba(216, 240, 106, 0.18);
   color: var(--accent);
+}
+
+.dashboard-up-next__pill--overdue {
+  background: rgba(231, 111, 81, 0.18);
+  color: #e76f51;
 }
 
 .dashboard-up-next__pill--today {

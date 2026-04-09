@@ -32,6 +32,7 @@ type UpNextState =
   | { type: "loading" }
   | { type: "no_program" }
   | { type: "active_session"; sessionId: string; sessionName: string }
+  | { type: "overdue_session"; sessionId: string; sessionName: string; date: string; daysOverdue: number }
   | { type: "today_session"; sessionId: string; sessionName: string }
   | { type: "rest_day"; nextSessionName: string | null; nextDate: string | null; daysUntil: number | null }
   | { type: "upcoming"; sessionId: string; sessionName: string; date: string; daysUntil: number }
@@ -133,75 +134,54 @@ function computeUpNext(
   const itemDate = (item: WeekInstanceItemView) =>
     localDateIso(new Date(weekStartMs + (item.weekInstanceItem.order - 1) * 86400000));
 
-  const todayItem = weekItems.find((item) => itemDate(item) === today);
-
-  if (todayItem) {
-    if (todayItem.weekInstanceItem.type === "rest") {
-      const next = weekItems
-        .filter(
-          (item) =>
-            item.weekInstanceItem.type === "session" &&
-            item.sessionInstance?.status !== "completed" &&
-            itemDate(item) > today
-        )
-        .sort((a, b) => a.weekInstanceItem.order - b.weekInstanceItem.order)[0];
-      return {
-        type: "rest_day",
-        nextSessionName: next?.sessionTemplate?.name ?? null,
-        nextDate: next ? itemDate(next) : null,
-        daysUntil: next ? daysBetween(today, itemDate(next)) : null,
-      };
-    }
-
-    if (todayItem.sessionInstance?.status === "completed") {
-      const next = weekItems
-        .filter(
-          (item) =>
-            item.weekInstanceItem.type === "session" &&
-            item.sessionInstance?.status !== "completed" &&
-            itemDate(item) > today
-        )
-        .sort((a, b) => a.weekInstanceItem.order - b.weekInstanceItem.order)[0];
-      if (next?.sessionInstance && next.sessionTemplate) {
-        return {
-          type: "upcoming",
-          sessionId: next.sessionInstance.id,
-          sessionName: next.sessionTemplate.name,
-          date: itemDate(next),
-          daysUntil: daysBetween(today, itemDate(next)),
-        };
-      }
-      return { type: "week_complete" };
-    }
-
-    return {
-      type: "today_session",
-      sessionId: todayItem.sessionInstance?.id ?? "",
-      sessionName: todayItem.sessionTemplate?.name ?? "Session",
-    };
-  }
-
-  // Today is not in this week — find next upcoming session
-  const nextUpcoming = weekItems
-    .filter(
-      (item) =>
-        item.weekInstanceItem.type === "session" &&
-        item.sessionInstance?.status !== "completed" &&
-        itemDate(item) > today
-    )
+  // Surface the oldest incomplete session regardless of whether it's past/today/future
+  const oldest = sessionItems
+    .filter((item) => item.sessionInstance?.status !== "completed")
     .sort((a, b) => a.weekInstanceItem.order - b.weekInstanceItem.order)[0];
 
-  if (nextUpcoming?.sessionInstance && nextUpcoming.sessionTemplate) {
+  if (!oldest) {
+    // All sessions done for this week
+    return { type: "week_complete" };
+  }
+
+  const oldestDate = itemDate(oldest);
+
+  if (oldestDate < today) {
     return {
-      type: "upcoming",
-      sessionId: nextUpcoming.sessionInstance.id,
-      sessionName: nextUpcoming.sessionTemplate.name,
-      date: itemDate(nextUpcoming),
-      daysUntil: daysBetween(today, itemDate(nextUpcoming)),
+      type: "overdue_session",
+      sessionId: oldest.sessionInstance!.id,
+      sessionName: oldest.sessionTemplate?.name ?? "Session",
+      date: oldestDate,
+      daysOverdue: daysBetween(oldestDate, today),
     };
   }
 
-  return { type: "week_complete" };
+  if (oldestDate === today) {
+    return {
+      type: "today_session",
+      sessionId: oldest.sessionInstance!.id,
+      sessionName: oldest.sessionTemplate?.name ?? "Session",
+    };
+  }
+
+  // Oldest incomplete session is in the future — check if today is a rest day
+  const todayItem = weekItems.find((item) => itemDate(item) === today);
+  if (todayItem?.weekInstanceItem.type === "rest") {
+    return {
+      type: "rest_day",
+      nextSessionName: oldest.sessionTemplate?.name ?? null,
+      nextDate: oldestDate,
+      daysUntil: daysBetween(today, oldestDate),
+    };
+  }
+
+  return {
+    type: "upcoming",
+    sessionId: oldest.sessionInstance!.id,
+    sessionName: oldest.sessionTemplate?.name ?? "Session",
+    date: oldestDate,
+    daysUntil: daysBetween(today, oldestDate),
+  };
 }
 
 // ─── Async loaders ────────────────────────────────────────────────────────────
@@ -473,6 +453,24 @@ export default function DashboardPage() {
           >
             <span className="dashboard-up-next__pill dashboard-up-next__pill--active">Session active</span>
             <p className="dashboard-up-next__heading">{upNext.sessionName}</p>
+            <span className="dashboard-up-next__caret">→</span>
+          </div>
+        );
+
+      case "overdue_session":
+        return (
+          <div
+            className="dashboard-up-next dashboard-up-next--overdue"
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate(`/session/${upNext.sessionId}`)}
+            onKeyDown={(e) => e.key === "Enter" && navigate(`/session/${upNext.sessionId}`)}
+          >
+            <span className="dashboard-up-next__pill dashboard-up-next__pill--overdue">
+              {upNext.daysOverdue === 1 ? "1 day overdue" : `${upNext.daysOverdue} days overdue`}
+            </span>
+            <p className="dashboard-up-next__heading">{upNext.sessionName}</p>
+            <p className="dashboard-up-next__sub">{friendlyDate(upNext.date)}</p>
             <span className="dashboard-up-next__caret">→</span>
           </div>
         );
