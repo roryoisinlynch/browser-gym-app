@@ -37,7 +37,7 @@ type UpNextState =
   | { type: "upcoming"; sessionId: string; sessionName: string; date: string; daysUntil: number }
   | { type: "week_complete" };
 
-type DaySquareStatus = "green" | "amber" | "red" | "grey" | "rest-past" | "rest-future";
+type DaySquareStatus = "green" | "amber" | "late" | "overdue" | "grey" | "rest-past" | "rest-future";
 
 interface DaySquare {
   type: "session" | "rest";
@@ -254,7 +254,7 @@ async function loadTimeline(
 
       // Session day — resolve status
       if (!item.sessionInstanceId) {
-        days.push({ type: "session", scheduledDate, status: scheduledDate <= today ? "red" : "grey" });
+        days.push({ type: "session", scheduledDate, status: scheduledDate < today ? "overdue" : "grey" });
         continue;
       }
       const session = await getSessionInstanceById(item.sessionInstanceId);
@@ -264,7 +264,7 @@ async function loadTimeline(
       }
 
       if (session.status !== "completed") {
-        days.push({ type: "session", scheduledDate, status: scheduledDate <= today ? "red" : "grey" });
+        days.push({ type: "session", scheduledDate, status: scheduledDate < today ? "overdue" : "grey" });
         continue;
       }
 
@@ -273,7 +273,7 @@ async function loadTimeline(
         : scheduledDate;
       let status: DaySquareStatus;
       if (completedDate < scheduledDate) status = "amber";
-      else if (completedDate > scheduledDate) status = "red";
+      else if (completedDate > scheduledDate) status = "late";
       else status = "green";
       days.push({ type: "session", scheduledDate, status });
     }
@@ -579,12 +579,30 @@ export default function DashboardPage() {
             <span className="dashboard-timeline__legend-label">On time</span>
             <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--amber" />
             <span className="dashboard-timeline__legend-label">Early</span>
-            <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--red" />
-            <span className="dashboard-timeline__legend-label">Late / missed</span>
+            <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--late" />
+            <span className="dashboard-timeline__legend-label">Done late</span>
+            <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--overdue" />
+            <span className="dashboard-timeline__legend-label">Overdue</span>
             <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--grey" />
             <span className="dashboard-timeline__legend-label">Upcoming</span>
             <span className="dashboard-timeline__legend-dot dashboard-timeline__legend-dot--rest" />
             <span className="dashboard-timeline__legend-label">Rest</span>
+            {(() => {
+              const todayDay = days.find((d) => d.scheduledDate === today);
+              if (!todayDay) return null;
+              const todayClasses = [
+                "dashboard-timeline__legend-day--today",
+                `dashboard-timeline__day--${todayDay.status}`,
+                todayDay.type === "rest" ? "dashboard-timeline__day--rest" : "",
+                "dashboard-timeline__day--today",
+              ].filter(Boolean).join(" ");
+              return (
+                <>
+                  <span className={todayClasses} />
+                  <span className="dashboard-timeline__legend-label">Today</span>
+                </>
+              );
+            })()}
           </div>
           <div className="dashboard-timeline__meta">
             <span className="dashboard-timeline__date">{shortDate(startDate)}</span>

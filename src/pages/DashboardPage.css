@@ -201,24 +201,25 @@
   flex-shrink: 0;
 }
 
-/* Rest days are dots */
+/* Rest days are small dots */
 .dashboard-timeline__day--rest {
   border-radius: 50%;
-  width: 10px;
-  height: 10px;
+  width: 5px;
+  height: 5px;
   align-self: center;
-  margin: 0 2px;
+  margin: 0 4px;
 }
 
 /* Status colours — session squares */
-.dashboard-timeline__day--green      { background: #6bcb77; }
-.dashboard-timeline__day--amber      { background: #f4a261; }
-.dashboard-timeline__day--red        { background: #e76f51; }
-.dashboard-timeline__day--grey       { background: var(--panel-border); opacity: 0.5; }
+.dashboard-timeline__day--green   { background: #6bcb77; }
+.dashboard-timeline__day--amber   { background: #f4a261; }
+.dashboard-timeline__day--late    { background: #e76f51; }
+.dashboard-timeline__day--overdue { background: #9b2335; }
+.dashboard-timeline__day--grey    { background: var(--panel-border); opacity: 0.5; }
 
 /* Rest dot colours */
-.dashboard-timeline__day--rest.dashboard-timeline__day--rest-past   { background: var(--panel-border); opacity: 0.35; }
-.dashboard-timeline__day--rest.dashboard-timeline__day--rest-future  { background: var(--panel-border); opacity: 0.2; }
+.dashboard-timeline__day--rest.dashboard-timeline__day--rest-past   { background: var(--panel-border); opacity: 0.25; }
+.dashboard-timeline__day--rest.dashboard-timeline__day--rest-future  { background: var(--panel-border); opacity: 0.15; }
 
 /* Today accent ring */
 .dashboard-timeline__day--today {
@@ -241,19 +242,30 @@
   flex-shrink: 0;
 }
 
-.dashboard-timeline__legend-item--green  { background: #6bcb77; }
-.dashboard-timeline__legend-item--amber  { background: #f4a261; }
-.dashboard-timeline__legend-item--red    { background: #e76f51; }
-.dashboard-timeline__legend-item--grey   { background: var(--panel-border); opacity: 0.5; }
+.dashboard-timeline__legend-item--green   { background: #6bcb77; }
+.dashboard-timeline__legend-item--amber   { background: #f4a261; }
+.dashboard-timeline__legend-item--late    { background: #e76f51; }
+.dashboard-timeline__legend-item--overdue { background: #9b2335; }
+.dashboard-timeline__legend-item--grey    { background: var(--panel-border); opacity: 0.5; }
+
+/* Today legend — same shape/colour as the real day square */
+.dashboard-timeline__legend-day--today {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
 
 .dashboard-timeline__legend-dot {
-  width: 8px;
-  height: 8px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.dashboard-timeline__legend-dot--rest { background: var(--panel-border); opacity: 0.5; }
+.dashboard-timeline__legend-dot--rest { background: var(--panel-border); opacity: 0.35; }
 
 .dashboard-timeline__legend-label {
   font-size: 0.68rem;
