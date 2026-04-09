@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import DashboardPage from "./pages/DashboardPage";
 import ExercisePage from "./pages/ExercisePage";
 import WeekPage from "./pages/WeekPage";
@@ -18,6 +19,7 @@ import SeasonSummaryPage from "./pages/SeasonSummaryPage";
 export default function App() {
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
+      <PWAInstallPrompt />
       <Routes>
         <Route path="/" element={<DashboardPage />} />
         <Route path="/season" element={<SeasonPage />} />
