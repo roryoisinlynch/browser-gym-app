@@ -93,6 +93,7 @@ export default function SeasonSummaryPage() {
   const [weeksBreadcrumb, setWeeksBreadcrumb] = useState<BreadcrumbWeek[]>([]);
   const [seasonDaySquares, setSeasonDaySquares] = useState<DaySquare[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadProgress, setLoadProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -108,6 +109,7 @@ export default function SeasonSummaryPage() {
           getSeasonInstanceById(seasonInstanceId),
           getSeasonPRs(seasonInstanceId),
         ]);
+        setLoadProgress(10);
 
         if (!seasonInstance) {
           setErrorMessage("Season not found.");
@@ -119,6 +121,7 @@ export default function SeasonSummaryPage() {
           getSeasonTemplateById(seasonInstance.seasonTemplateId),
           getWeekInstancesForSeasonInstance(seasonInstanceId),
         ]);
+        setLoadProgress(20);
 
         const completedWeeks = weeks.filter(w => w.status === "completed");
 
@@ -141,6 +144,7 @@ export default function SeasonSummaryPage() {
             return computeWeekMetrics(w, templateItems, sessionViews);
           })
         );
+        setLoadProgress(50);
 
         const computed = computeSeasonMetrics(seasonInstance, weekMetricsList);
         setMetrics(computed);
@@ -188,6 +192,7 @@ export default function SeasonSummaryPage() {
           }
           setSeasonDaySquares(squares);
         }
+        setLoadProgress(65);
 
         // Past seasons list (same template, completed, ordered oldest→newest).
         const allSeasons = await getAllSeasonInstances();
@@ -243,6 +248,7 @@ export default function SeasonSummaryPage() {
         )).filter((r): r is SeasonRow => r !== null);
 
         setSeasonRows(rows);
+        setLoadProgress(85);
 
         // Weeks this season breadcrumb — all weeks with their emoji rating.
         const wbItems: BreadcrumbWeek[] = await Promise.all(
@@ -256,6 +262,7 @@ export default function SeasonSummaryPage() {
           })
         );
         setWeeksBreadcrumb(wbItems);
+        setLoadProgress(100);
       } catch (err) {
         console.error("Failed to load season summary:", err);
         setErrorMessage("Could not load season summary.");
@@ -285,7 +292,12 @@ export default function SeasonSummaryPage() {
 
       <section className="season-summary-shell">
         {isLoading ? (
-          <div className="page-spinner" />
+          <>
+            <div className="page-spinner" />
+            <div className="page-load-bar">
+              <div className="page-load-bar__fill" style={{ width: `${loadProgress}%` }} />
+            </div>
+          </>
         ) : (() => {
           const { totalSets, totalSessions, totalWeeks, durationLabel, volumeScore, intensityScore, consistencyScore, seasonScore, grade } = metrics!;
           const color = gradeColor(grade);

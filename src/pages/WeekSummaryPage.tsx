@@ -91,6 +91,7 @@ export default function WeekSummaryPage() {
   const [weekStartIso, setWeekStartIso] = useState<string | null>(null);
   const [sessionInfoMap, setSessionInfoMap] = useState<Map<string, { date: string; status: string; completedAt: string | null }>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
+  const [loadProgress, setLoadProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -107,6 +108,7 @@ export default function WeekSummaryPage() {
           getWeekInstanceById(weekInstanceId),
           getWeekPRs(weekInstanceId),
         ]);
+        setLoadProgress(15);
 
         if (!weekInstance) {
           setErrorMessage("Week not found.");
@@ -119,10 +121,12 @@ export default function WeekSummaryPage() {
           getSessionInstancesForWeekInstance(weekInstanceId),
           getWeekInstanceItemsForWeekInstance(weekInstanceId),
         ]);
+        setLoadProgress(30);
 
         const templateItems = await getWeekTemplateItemsForWeekTemplate(
           weekInstance.weekTemplateId
         );
+        setLoadProgress(40);
 
         // Load session views for all completed sessions.
         const completedSessions = sessions.filter((s) => s.status === "completed");
@@ -131,6 +135,7 @@ export default function WeekSummaryPage() {
             completedSessions.map((s) => getSessionInstanceView(s.id))
           )
         ).filter((sv): sv is SessionInstanceView => sv != null);
+        setLoadProgress(55);
 
         setMetrics(computeWeekMetrics(weekInstance, templateItems, sessionViews));
         setWeekName(weekTemplate?.name ?? "Week summary");
@@ -158,6 +163,7 @@ export default function WeekSummaryPage() {
           const si = await getSeasonInstanceById(weekInstance.seasonInstanceId);
           if (si?.status === "completed") setSeasonInstance(si);
         }
+        setLoadProgress(65);
 
         // Sessions this week breadcrumb — show all sessions with their RAG status.
         const breadcrumbSessions: BreadcrumbSession[] = await Promise.all(
@@ -177,6 +183,7 @@ export default function WeekSummaryPage() {
           })
         );
         setSessionBreadcrumb(breadcrumbSessions);
+        setLoadProgress(80);
 
         // Weeks this season breadcrumb.
         const allWeeks = await getWeekInstancesForSeasonInstance(
@@ -210,6 +217,7 @@ export default function WeekSummaryPage() {
           })
         );
         setWeeksBreadcrumb(weekBreadcrumbItems);
+        setLoadProgress(100);
       } catch (err) {
         console.error("Failed to load week summary:", err);
         setErrorMessage("Could not load week summary.");
@@ -277,7 +285,12 @@ export default function WeekSummaryPage() {
 
       <section className="week-summary-shell">
         {isLoading ? (
-          <div className="page-spinner" />
+          <>
+            <div className="page-spinner" />
+            <div className="page-load-bar">
+              <div className="page-load-bar__fill" style={{ width: `${loadProgress}%` }} />
+            </div>
+          </>
         ) : (() => {
           const { totalSets, totalSessions, durationLabel, volumeScore, intensityScore, consistencyScore, weekScore, emojiRating } = metrics!;
           return (<>

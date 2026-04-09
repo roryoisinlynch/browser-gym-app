@@ -64,6 +64,7 @@ export default function SessionSummaryPage() {
   const [breadcrumbSessions, setBreadcrumbSessions] = useState<BreadcrumbSession[]>([]);
   const [prs, setPrs] = useState<SessionPR[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadProgress, setLoadProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -76,6 +77,7 @@ export default function SessionSummaryPage() {
 
       try {
         const view = await getSessionInstanceView(sessionInstanceId);
+        setLoadProgress(30);
 
         if (!view) {
           setErrorMessage("Session not found.");
@@ -89,6 +91,7 @@ export default function SessionSummaryPage() {
         const weekSessions = await getSessionInstancesForWeekInstance(
           view.weekInstance.id
         );
+        setLoadProgress(55);
 
         // Compute scores for completed sessions in parallel.
         const breadcrumbItems = await Promise.all(
@@ -115,9 +118,11 @@ export default function SessionSummaryPage() {
             }
           })
         );
+        setLoadProgress(80);
 
         setBreadcrumbSessions(breadcrumbItems);
         setPrs(await getSessionPRs(sessionInstanceId));
+        setLoadProgress(100);
       } catch (error) {
         console.error("Failed to load session summary:", error);
         setErrorMessage("Could not load session summary.");
@@ -157,7 +162,12 @@ export default function SessionSummaryPage() {
 
       <section className="summary-shell">
         {isLoading ? (
-          <div className="page-spinner" />
+          <>
+            <div className="page-spinner" />
+            <div className="page-load-bar">
+              <div className="page-load-bar__fill" style={{ width: `${loadProgress}%` }} />
+            </div>
+          </>
         ) : (() => {
           const sv = sessionView!;
           const m = metrics!;

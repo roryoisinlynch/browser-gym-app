@@ -27,6 +27,23 @@ body,
   animation: page-spin 0.7s linear infinite;
 }
 
+.page-load-bar {
+  width: 200px;
+  max-width: 60vw;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.10);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 14px;
+}
+
+.page-load-bar__fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.35s ease;
+}
+
 .text-link {
   color: var(--link);
   font-size: 0.98rem;
