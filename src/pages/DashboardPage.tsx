@@ -574,36 +574,51 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
-          <div className="dashboard-timeline__legend">
-            <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--green" />
-            <span className="dashboard-timeline__legend-label">On time</span>
-            <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--amber" />
-            <span className="dashboard-timeline__legend-label">Early</span>
-            <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--late" />
-            <span className="dashboard-timeline__legend-label">Done late</span>
-            <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--overdue" />
-            <span className="dashboard-timeline__legend-label">Overdue</span>
-            <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--grey" />
-            <span className="dashboard-timeline__legend-label">Upcoming</span>
-            <span className="dashboard-timeline__legend-dot dashboard-timeline__legend-dot--rest" />
-            <span className="dashboard-timeline__legend-label">Rest</span>
-            {(() => {
-              const todayDay = days.find((d) => d.scheduledDate === today);
-              if (!todayDay) return null;
+          {(() => {
+            const statuses = new Set(days.map((d) => d.status));
+            const hasRest = days.some((d) => d.type === "rest");
+            const todayDay = days.find((d) => d.scheduledDate === today);
+            const entries: React.ReactNode[] = [];
+            if (statuses.has("green")) entries.push(
+              <span key="green" className="dashboard-timeline__legend-item dashboard-timeline__legend-item--green" />,
+              <span key="green-l" className="dashboard-timeline__legend-label">On time</span>
+            );
+            if (statuses.has("amber")) entries.push(
+              <span key="amber" className="dashboard-timeline__legend-item dashboard-timeline__legend-item--amber" />,
+              <span key="amber-l" className="dashboard-timeline__legend-label">Early</span>
+            );
+            if (statuses.has("late")) entries.push(
+              <span key="late" className="dashboard-timeline__legend-item dashboard-timeline__legend-item--late" />,
+              <span key="late-l" className="dashboard-timeline__legend-label">Done late</span>
+            );
+            if (statuses.has("overdue")) entries.push(
+              <span key="overdue" className="dashboard-timeline__legend-item dashboard-timeline__legend-item--overdue" />,
+              <span key="overdue-l" className="dashboard-timeline__legend-label">Overdue</span>
+            );
+            if (statuses.has("grey")) entries.push(
+              <span key="grey" className="dashboard-timeline__legend-item dashboard-timeline__legend-item--grey" />,
+              <span key="grey-l" className="dashboard-timeline__legend-label">Upcoming</span>
+            );
+            if (hasRest) entries.push(
+              <span key="rest" className="dashboard-timeline__legend-dot dashboard-timeline__legend-dot--rest" />,
+              <span key="rest-l" className="dashboard-timeline__legend-label">Rest</span>
+            );
+            if (todayDay) {
               const todayClasses = [
                 "dashboard-timeline__legend-day--today",
                 `dashboard-timeline__day--${todayDay.status}`,
                 todayDay.type === "rest" ? "dashboard-timeline__day--rest" : "",
                 "dashboard-timeline__day--today",
               ].filter(Boolean).join(" ");
-              return (
-                <>
-                  <span className={todayClasses} />
-                  <span className="dashboard-timeline__legend-label">Today</span>
-                </>
+              entries.push(
+                <span key="today" className={todayClasses} />,
+                <span key="today-l" className="dashboard-timeline__legend-label">Today</span>
               );
-            })()}
-          </div>
+            }
+            return entries.length > 0 ? (
+              <div className="dashboard-timeline__legend">{entries}</div>
+            ) : null;
+          })()}
           <div className="dashboard-timeline__meta">
             <span className="dashboard-timeline__date">{shortDate(startDate)}</span>
             <span className="dashboard-timeline__status">
