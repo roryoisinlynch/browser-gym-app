@@ -361,7 +361,12 @@ export default function ExerciseInsights({
       }, null);
 
   const distinctSessions = new Set(filteredHistory.map((d) => d.date.split("T")[0])).size;
-  const hasChartData = filteredHistory.length > 0 && (minSessions == null || distinctSessions >= minSessions);
+  const meetsMinSessions = minSessions == null || distinctSessions >= minSessions;
+
+  // When a minimum sample threshold is set and not met, suppress the whole component.
+  if (!meetsMinSessions) return null;
+
+  const hasChartData = filteredHistory.length > 0;
   const hasHistory = historicalSessions.length > 0;
 
   return (
