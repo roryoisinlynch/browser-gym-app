@@ -9,9 +9,11 @@ import {
   getLastCompletedSeasonInstance,
   getLastCompletedSessionInstance,
   getLastCompletedWeekInstance,
+  getSessionInstanceById,
   getSessionInstanceView,
   getSessionInstancesForWeekInstance,
   getWeekInstanceItemsForCurrentWeek,
+  getWeekInstanceItemsForWeekInstance,
   getWeekInstancesForSeasonInstance,
   getWeekTemplateItemsForWeekTemplate,
 } from "../repositories/programRepository";
@@ -35,11 +37,19 @@ type UpNextState =
   | { type: "upcoming"; sessionId: string; sessionName: string; date: string; daysUntil: number }
   | { type: "week_complete" };
 
+type DaySquareStatus = "green" | "amber" | "red" | "grey" | "rest-past" | "rest-future";
+
+interface DaySquare {
+  type: "session" | "rest";
+  scheduledDate: string;
+  status: DaySquareStatus;
+}
+
 interface SeasonTimelineData {
   startDate: string;
   endDate: string;
   totalWeeks: number;
-  weeks: { order: number; status: "completed" | "in_progress" | "not_started"; id: string }[];
+  days: DaySquare[];
   currentWeekOrder: number;
   expectedWeekOrder: number;
 }
@@ -202,11 +212,12 @@ async function loadTimeline(
   const templateItems = await getWeekTemplateItemsForWeekTemplate(canonicalWeek.id);
   const weekLength = templateItems.length;
   if (weekLength === 0) return null;
-
   if (!season.startedAt) return null;
+
   const totalWeeks = weekInstances.length;
   const seasonStartIso = season.startedAt.split("T")[0];
-  const endMs = new Date(season.startedAt).getTime() + totalWeeks * weekLength * 86400000;
+  const seasonStartMs = new Date(seasonStartIso + "T00:00:00").getTime();
+  const endMs = seasonStartMs + totalWeeks * weekLength * 86400000;
   const endDate = localDateIso(new Date(endMs));
 
   const today = localDateIso();
@@ -217,13 +228,61 @@ async function loadTimeline(
   const completedCount = weekInstances.filter((w) => w.status === "completed").length;
   const currentWeekOrder = inProgressWeek?.order ?? Math.min(completedCount + 1, totalWeeks);
 
+  // Load week instance items for every week in parallel
+  const sortedWeeks = [...weekInstances].sort((a, b) => a.order - b.order);
+  const weekItemsPerWeek = await Promise.all(
+    sortedWeeks.map((w) => getWeekInstanceItemsForWeekInstance(w.id))
+  );
+
+  // Build per-day squares
+  const days: DaySquare[] = [];
+  for (let wi = 0; wi < sortedWeeks.length; wi++) {
+    const weekItems = weekItemsPerWeek[wi].sort((a, b) => a.order - b.order);
+    for (const item of weekItems) {
+      const dayIndex = wi * weekLength + (item.order - 1);
+      const scheduledDate = localDateIso(new Date(seasonStartMs + dayIndex * 86400000));
+
+      if (item.type === "rest") {
+        days.push({
+          type: "rest",
+          scheduledDate,
+          status: scheduledDate < today ? "rest-past" : "rest-future",
+        });
+        continue;
+      }
+
+      // Session day — resolve status
+      if (!item.sessionInstanceId) {
+        days.push({ type: "session", scheduledDate, status: scheduledDate <= today ? "red" : "grey" });
+        continue;
+      }
+      const session = await getSessionInstanceById(item.sessionInstanceId);
+      if (!session) {
+        days.push({ type: "session", scheduledDate, status: "grey" });
+        continue;
+      }
+
+      if (session.status !== "completed") {
+        days.push({ type: "session", scheduledDate, status: scheduledDate <= today ? "red" : "grey" });
+        continue;
+      }
+
+      const completedDate = session.completedAt
+        ? session.completedAt.split("T")[0]
+        : scheduledDate;
+      let status: DaySquareStatus;
+      if (completedDate < scheduledDate) status = "amber";
+      else if (completedDate > scheduledDate) status = "red";
+      else status = "green";
+      days.push({ type: "session", scheduledDate, status });
+    }
+  }
+
   return {
     startDate: seasonStartIso,
     endDate,
     totalWeeks,
-    weeks: weekInstances
-      .sort((a, b) => a.order - b.order)
-      .map((w) => ({ order: w.order, status: w.status, id: w.id })),
+    days,
     currentWeekOrder,
     expectedWeekOrder,
   };
@@ -473,7 +532,7 @@ export default function DashboardPage() {
 
   function renderTimeline() {
     if (!seasonTimeline) return null;
-    const { startDate, endDate, weeks, currentWeekOrder, expectedWeekOrder, totalWeeks } = seasonTimeline;
+    const { startDate, endDate, days, currentWeekOrder, expectedWeekOrder, totalWeeks } = seasonTimeline;
     const isAhead = currentWeekOrder > expectedWeekOrder;
     const isBehind = currentWeekOrder < expectedWeekOrder;
 
@@ -481,15 +540,24 @@ export default function DashboardPage() {
       <section className="dashboard-section">
         <h2 className="dashboard-section-title">Season progress</h2>
         <div className="dashboard-timeline">
-          <div className="dashboard-timeline__weeks">
-            {weeks.map((w) => (
+          <div className="dashboard-timeline__days">
+            {days.map((day, i) => (
               <div
-                key={w.id}
-                className={`dashboard-timeline__week dashboard-timeline__week--${w.status}${w.order === currentWeekOrder ? " dashboard-timeline__week--current" : ""}`}
-              >
-                <span className="dashboard-timeline__week-label">W{w.order}</span>
-              </div>
+                key={i}
+                className={`dashboard-timeline__day dashboard-timeline__day--${day.status}`}
+                title={day.scheduledDate}
+              />
             ))}
+          </div>
+          <div className="dashboard-timeline__legend">
+            <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--green" />
+            <span className="dashboard-timeline__legend-label">On time</span>
+            <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--amber" />
+            <span className="dashboard-timeline__legend-label">Early</span>
+            <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--red" />
+            <span className="dashboard-timeline__legend-label">Late / missed</span>
+            <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--rest-past" />
+            <span className="dashboard-timeline__legend-label">Rest</span>
           </div>
           <div className="dashboard-timeline__meta">
             <span className="dashboard-timeline__date">{shortDate(startDate)}</span>
@@ -598,14 +666,18 @@ export default function DashboardPage() {
               <span>{daysSincePrev} days after previous PR</span>
             )}
           </div>
-          <div className="dashboard-pr-spotlight__chart">
-            <ExerciseInsights
-              exerciseTemplateId={spotlight.exerciseName}
-              exerciseName={spotlight.exerciseName}
-              currentExerciseInstanceId=""
-              isBodyweight={spotlight.isBodyweight}
-            />
-          </div>
+          {spotlight.previousDate && (
+            <div className="dashboard-pr-spotlight__chart">
+              <ExerciseInsights
+                exerciseTemplateId={spotlight.exerciseName}
+                exerciseName={spotlight.exerciseName}
+                currentExerciseInstanceId=""
+                isBodyweight={spotlight.isBodyweight}
+                fromDate={spotlight.previousDate.split("T")[0]}
+                minSessions={5}
+              />
+            </div>
+          )}
         </div>
       </section>
     );

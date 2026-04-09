@@ -8,6 +8,10 @@ interface ExerciseInsightsProps {
   exerciseName: string;
   currentExerciseInstanceId: string;
   isBodyweight?: boolean;
+  /** ISO date string — only show history from this date onwards. */
+  fromDate?: string;
+  /** Minimum number of distinct session samples required to render the chart. */
+  minSessions?: number;
 }
 
 type BinType = "week" | "season" | "quarter" | "year";
@@ -317,6 +321,8 @@ export default function ExerciseInsights({
   exerciseName,
   currentExerciseInstanceId,
   isBodyweight = false,
+  fromDate,
+  minSessions,
 }: ExerciseInsightsProps) {
   const [history, setHistory] = useState<ExerciseSessionDataPoint[] | null>(null);
   const [binType, setBinType] = useState<BinType>("week");
@@ -329,9 +335,13 @@ export default function ExerciseInsights({
     return null;
   }
 
-  const chartPoints = binDataPoints(history, binType, currentExerciseInstanceId, isBodyweight);
+  const filteredHistory = fromDate
+    ? history.filter((d) => d.date >= fromDate)
+    : history;
 
-  const historicalSessions = history.filter(
+  const chartPoints = binDataPoints(filteredHistory, binType, currentExerciseInstanceId, isBodyweight);
+
+  const historicalSessions = filteredHistory.filter(
     (d) => d.exerciseInstanceId !== currentExerciseInstanceId
   );
 
@@ -350,7 +360,8 @@ export default function ExerciseInsights({
         return best;
       }, null);
 
-  const hasChartData = history.length > 0;
+  const distinctSessions = new Set(filteredHistory.map((d) => d.date.split("T")[0])).size;
+  const hasChartData = filteredHistory.length > 0 && (minSessions == null || distinctSessions >= minSessions);
   const hasHistory = historicalSessions.length > 0;
 
   return (

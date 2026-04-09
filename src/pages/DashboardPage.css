@@ -168,53 +168,51 @@
   gap: 10px;
 }
 
-.dashboard-timeline__weeks {
+.dashboard-timeline__days {
   display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.dashboard-timeline__day {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.dashboard-timeline__day--green      { background: #6bcb77; }
+.dashboard-timeline__day--amber      { background: #f4a261; }
+.dashboard-timeline__day--red        { background: #e76f51; }
+.dashboard-timeline__day--grey       { background: var(--panel-border); opacity: 0.5; }
+.dashboard-timeline__day--rest-past  { background: var(--panel-border); opacity: 0.25; }
+.dashboard-timeline__day--rest-future { background: transparent; border: 1px solid var(--panel-border); opacity: 0.4; }
+
+/* Legend */
+.dashboard-timeline__legend {
+  display: flex;
+  align-items: center;
   gap: 6px;
   flex-wrap: wrap;
 }
 
-.dashboard-timeline__week {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  border: 1.5px solid var(--panel-border);
-  background: transparent;
-  position: relative;
+.dashboard-timeline__legend-item {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
 }
 
-.dashboard-timeline__week--completed {
-  border-color: #6bcb77;
-  background: rgba(107, 203, 119, 0.1);
-}
+.dashboard-timeline__legend-item--green      { background: #6bcb77; }
+.dashboard-timeline__legend-item--amber      { background: #f4a261; }
+.dashboard-timeline__legend-item--red        { background: #e76f51; }
+.dashboard-timeline__legend-item--rest-past  { background: var(--panel-border); opacity: 0.5; }
 
-.dashboard-timeline__week--in_progress,
-.dashboard-timeline__week--current {
-  border-color: var(--accent);
-  background: rgba(216, 240, 106, 0.1);
-}
-
-.dashboard-timeline__week--not_started {
-  border-color: var(--panel-border);
-  background: transparent;
-}
-
-.dashboard-timeline__week-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--text-muted);
-}
-
-.dashboard-timeline__week--completed .dashboard-timeline__week-label {
-  color: #6bcb77;
-}
-
-.dashboard-timeline__week--in_progress .dashboard-timeline__week-label,
-.dashboard-timeline__week--current .dashboard-timeline__week-label {
-  color: var(--accent);
+.dashboard-timeline__legend-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  margin-right: 6px;
 }
 
 .dashboard-timeline__meta {
