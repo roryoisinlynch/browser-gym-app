@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
+import {
+  type BeforeInstallPromptEvent,
+  getCapturedInstallPrompt,
+  clearCapturedInstallPrompt,
+} from "../services/pwaInstall";
 import "./PWAInstallPrompt.css";
 
 type Platform = "android" | "ios" | null;
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
 
 function detectPlatform(): Platform {
   if (window.innerWidth >= 1024) return null;
@@ -33,6 +33,14 @@ export default function PWAInstallPrompt() {
     setVisible(true);
 
     if (detected === "android") {
+      // Check if the event was already captured before React mounted
+      const already = getCapturedInstallPrompt();
+      if (already) {
+        setDeferredPrompt(already);
+        return;
+      }
+
+      // Otherwise listen for it arriving late
       function handleBeforeInstallPrompt(e: Event) {
         e.preventDefault();
         setDeferredPrompt(e as BeforeInstallPromptEvent);
@@ -50,6 +58,7 @@ export default function PWAInstallPrompt() {
     if (!deferredPrompt) return;
     await deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
+    clearCapturedInstallPrompt();
     if (outcome === "accepted") {
       setVisible(false);
     } else {

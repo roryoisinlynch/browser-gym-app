@@ -1,3 +1,4 @@
+import "./services/pwaInstall"; // must be first — captures beforeinstallprompt before any async work
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
