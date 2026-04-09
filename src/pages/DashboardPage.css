@@ -239,7 +239,7 @@
   margin: 0 1px;
 }
 
-/* Sidebar: dates + status */
+/* Sidebar: status + dates */
 .dashboard-timeline__sidebar {
   flex: 1;
   display: flex;
@@ -247,7 +247,27 @@
   justify-content: space-between;
   padding-left: 12px;
   border-left: 1px solid var(--panel-border);
-  gap: 4px;
+  gap: 8px;
+}
+
+.dashboard-timeline__sidebar-status {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dashboard-timeline__sidebar-week {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.dashboard-timeline__sidebar-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .dashboard-timeline__sidebar-date {
@@ -268,19 +288,6 @@
   font-size: 0.82rem;
   font-weight: 700;
   color: var(--text-strong);
-}
-
-.dashboard-timeline__sidebar-status {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  text-align: center;
-}
-
-.dashboard-timeline__sidebar-week {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--text-muted);
 }
 
 /* Status colours — session squares */

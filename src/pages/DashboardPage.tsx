@@ -585,19 +585,21 @@ export default function DashboardPage() {
               ))}
             </div>
 
-            {/* Right: dates + status */}
+            {/* Right: status + dates */}
             <div className="dashboard-timeline__sidebar">
-              <div className="dashboard-timeline__sidebar-date">
-                <span className="dashboard-timeline__sidebar-caption">Start</span>
-                <span className="dashboard-timeline__sidebar-value">{shortDate(startDate)}</span>
-              </div>
               <div className="dashboard-timeline__sidebar-status">
-                <span className={statusClass}>{statusLabel}</span>
                 <span className="dashboard-timeline__sidebar-week">Week {currentWeekOrder} of {totalWeeks}</span>
+                <span className={statusClass}>{statusLabel}</span>
               </div>
-              <div className="dashboard-timeline__sidebar-date">
-                <span className="dashboard-timeline__sidebar-caption">Finish</span>
-                <span className="dashboard-timeline__sidebar-value">{shortDate(endDate)}</span>
+              <div className="dashboard-timeline__sidebar-dates">
+                <div className="dashboard-timeline__sidebar-date">
+                  <span className="dashboard-timeline__sidebar-caption">Start</span>
+                  <span className="dashboard-timeline__sidebar-value">{shortDate(startDate)}</span>
+                </div>
+                <div className="dashboard-timeline__sidebar-date">
+                  <span className="dashboard-timeline__sidebar-caption">Finish</span>
+                  <span className="dashboard-timeline__sidebar-value">{shortDate(endDate)}</span>
+                </div>
               </div>
             </div>
           </div>
