@@ -358,6 +358,7 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const cancelled = useRef(false);
 
+  const [isDesktop] = useState(() => window.innerWidth >= 1024);
   const [upNext, setUpNext] = useState<UpNextState>({ type: "loading" });
   const [seasonTimeline, setSeasonTimeline] = useState<SeasonTimelineData | null>(null);
   const [isPreviousSeason, setIsPreviousSeason] = useState(false);
@@ -849,6 +850,16 @@ export default function DashboardPage() {
     <main className="dashboard-page">
       <TopBar title="Dashboard" />
       <section className="dashboard-shell">
+        {isDesktop && (
+          <section className="dashboard-qr-banner">
+            <div className="dashboard-qr-banner__text">
+              <p className="dashboard-qr-banner__heading">Open on your phone</p>
+              <p className="dashboard-qr-banner__sub">Scan to use the app on mobile</p>
+            </div>
+            <img className="dashboard-qr-banner__img" src="/qr-code.png" alt="QR code to open app on mobile" />
+          </section>
+        )}
+
         <section className="dashboard-section">
           <h2 className="dashboard-section-title">Up next</h2>
           {renderUpNext()}

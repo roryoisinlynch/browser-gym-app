@@ -14,6 +14,44 @@
   gap: 28px;
 }
 
+/* ── QR Banner ── */
+.dashboard-qr-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--card-bg, rgba(255,255,255,0.06));
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.dashboard-qr-banner__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dashboard-qr-banner__heading {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.dashboard-qr-banner__sub {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-soft);
+}
+
+.dashboard-qr-banner__img {
+  width: 96px;
+  height: 96px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
 /* ── Section ── */
 .dashboard-section {
   display: flex;
