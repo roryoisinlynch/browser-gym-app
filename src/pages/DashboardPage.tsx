@@ -623,7 +623,7 @@ export default function DashboardPage() {
             if (statuses.has("green")) entries.push(chip("green",
               <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--green" />, "On time"));
             if (statuses.has("amber")) entries.push(chip("amber",
-              <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--amber" />, "Early"));
+              <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--amber" />, "Done early"));
             if (statuses.has("late")) entries.push(chip("late",
               <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--late" />, "Done late"));
             if (statuses.has("overdue")) entries.push(chip("overdue",

@@ -363,7 +363,7 @@ export default function WeekSummaryPage() {
         {weekDaySquares && weekDaySquares.length > 0 && (() => {
           const countItems = [
             { label: "On time",   color: "#6bcb77", n: weekDaySquares.filter(d => d.status === "green").length },
-            { label: "Early",     color: "#f4a261", n: weekDaySquares.filter(d => d.status === "amber").length },
+            { label: "Done early", color: "#f4a261", n: weekDaySquares.filter(d => d.status === "amber").length },
             { label: "Done late", color: "#e76f51", n: weekDaySquares.filter(d => d.status === "late").length },
             { label: "Missed",    color: "#9b2335", n: weekDaySquares.filter(d => d.status === "overdue").length },
             { label: "Upcoming",  color: null,      n: weekDaySquares.filter(d => d.status === "grey").length },
