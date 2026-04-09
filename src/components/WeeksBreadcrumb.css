@@ -3,6 +3,7 @@
   flex-direction: column;
   align-items: center;
   gap: 10px;
+  width: 100%;
 }
 
 .weeks-breadcrumb__label {
@@ -18,7 +19,7 @@
   display: flex;
   align-items: center;
   gap: 0;
-  min-width: min(66vw, 100%);
+  width: 100%;
 }
 
 .weeks-breadcrumb__item {
