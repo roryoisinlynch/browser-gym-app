@@ -70,14 +70,19 @@ function localDateIso(d: Date = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// Normalise any ISO date string to local midnight to avoid timezone drift.
+// e.g. "2026-04-08T23:00:00Z" in UTC+1 → local April 9, not April 8.
+function toLocalMidnight(iso: string): Date {
+  const d = new Date(iso);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
 function daysBetween(fromIso: string, toIso: string): number {
-  const a = new Date(fromIso.split("T")[0] + "T00:00:00").getTime();
-  const b = new Date(toIso.split("T")[0] + "T00:00:00").getTime();
-  return Math.round((b - a) / 86400000);
+  return Math.round((toLocalMidnight(toIso).getTime() - toLocalMidnight(fromIso).getTime()) / 86400000);
 }
 
 function friendlyDate(iso: string): string {
-  const d = new Date(iso.split("T")[0] + "T00:00:00");
+  const d = toLocalMidnight(iso);
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const ord = (n: number) => {
@@ -88,7 +93,7 @@ function friendlyDate(iso: string): string {
 }
 
 function shortDate(iso: string): string {
-  const d = new Date(iso.split("T")[0] + "T00:00:00");
+  const d = toLocalMidnight(iso);
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   return `${d.getDate()} ${months[d.getMonth()]} '${String(d.getFullYear()).slice(2)}`;
 }
@@ -122,7 +127,7 @@ function computeUpNext(
   // Anchor week start on the first session item's scheduled date
   const anchor = sessionItems[0];
   const weekStartMs =
-    new Date(anchor.sessionInstance!.date.split("T")[0] + "T00:00:00").getTime() -
+    toLocalMidnight(anchor.sessionInstance!.date).getTime() -
     (anchor.weekInstanceItem.order - 1) * 86400000;
 
   const itemDate = (item: WeekInstanceItemView) =>
@@ -216,8 +221,8 @@ async function loadTimeline(
   if (!season.startedAt) return null;
 
   const totalWeeks = weekInstances.length;
-  const seasonStartIso = season.startedAt.split("T")[0];
-  const seasonStartMs = new Date(seasonStartIso + "T00:00:00").getTime();
+  const seasonStartMs = toLocalMidnight(season.startedAt).getTime();
+  const seasonStartIso = localDateIso(new Date(seasonStartMs));
   const endMs = seasonStartMs + totalWeeks * weekLength * 86400000;
   const endDate = localDateIso(new Date(endMs));
 
@@ -269,7 +274,7 @@ async function loadTimeline(
       }
 
       const completedDate = session.completedAt
-        ? session.completedAt.split("T")[0]
+        ? localDateIso(toLocalMidnight(session.completedAt))
         : scheduledDate;
       let status: DaySquareStatus;
       if (completedDate < scheduledDate) status = "amber";
