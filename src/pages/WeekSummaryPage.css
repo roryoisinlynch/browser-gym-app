@@ -222,10 +222,18 @@
 /* ── Breadcrumb sections ── */
 .week-summary-section--breadcrumb {
   align-items: center;
-  padding: 20px;
-  border-radius: 14px;
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
+}
+
+/* ── Single-week schedule timeline — cap square size ── */
+.week-summary-section .dashboard-timeline__day:not(.dashboard-timeline__day--rest) {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  aspect-ratio: unset;
+}
+
+.week-summary-section .dashboard-timeline__days {
+  justify-content: flex-start;
 }
 
 /* ── Personal records ── */
