@@ -8,9 +8,11 @@ import {
   getSessionInstancesForWeekInstance,
   getSessionInstanceView,
   getWeekTemplateItemsForWeekTemplate,
+  getWeekInstanceItemsForWeekInstance,
   getSeasonPRs,
   getSeasonTemplateById,
 } from "../repositories/programRepository";
+import type { SessionInstance } from "../domain/models";
 import { computeWeekMetrics } from "../services/weekMetrics";
 import {
   computeSeasonMetrics,
@@ -23,6 +25,17 @@ import type { BreadcrumbWeek } from "../components/WeeksBreadcrumb";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import "./SeasonSummaryPage.css";
+
+type DaySquareStatus = "green" | "amber" | "late" | "overdue" | "grey" | "rest-past" | "rest-future";
+interface DaySquare { type: "session" | "rest"; scheduledDate: string; status: DaySquareStatus; }
+
+function localDateIso(d: Date = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function toLocalMidnight(iso: string): Date {
+  const d = new Date(iso);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
 
 function buildSeasonNarrative(metrics: SeasonMetrics): string {
   const { volumeScore, intensityScore, totalSkippedSessions } = metrics;
@@ -78,6 +91,7 @@ export default function SeasonSummaryPage() {
   const [prs, setPrs] = useState<SessionPR[]>([]);
   const [seasonRows, setSeasonRows] = useState<SeasonRow[]>([]);
   const [weeksBreadcrumb, setWeeksBreadcrumb] = useState<BreadcrumbWeek[]>([]);
+  const [seasonDaySquares, setSeasonDaySquares] = useState<DaySquare[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -108,12 +122,18 @@ export default function SeasonSummaryPage() {
 
         const completedWeeks = weeks.filter(w => w.status === "completed");
 
+        // Collect sessions per week (reused for both metrics and day squares)
+        const sessionsByWeek = new Map<string, SessionInstance[]>();
+        let weekLength = 0;
+
         const weekMetricsList = await Promise.all(
           completedWeeks.map(async (w) => {
             const [sessions, templateItems] = await Promise.all([
               getSessionInstancesForWeekInstance(w.id),
               getWeekTemplateItemsForWeekTemplate(w.weekTemplateId),
             ]);
+            sessionsByWeek.set(w.id, sessions);
+            if (weekLength === 0) weekLength = templateItems.length;
             const completedSessions = sessions.filter(s => s.status === "completed");
             const sessionViews: SessionInstanceView[] = (
               await Promise.all(completedSessions.map(s => getSessionInstanceView(s.id)))
@@ -126,6 +146,48 @@ export default function SeasonSummaryPage() {
         setMetrics(computed);
         setSeasonName(seasonTemplate?.name ?? "Season summary");
         setPrs(seasonPRs);
+
+        // Compute season-level day squares
+        if (seasonInstance.startedAt && weekLength > 0) {
+          const today = localDateIso();
+          const seasonStartMs = toLocalMidnight(seasonInstance.startedAt).getTime();
+          const sessionInfoMap = new Map<string, { date: string; status: string; completedAt: string | null }>();
+          for (const sessions of sessionsByWeek.values()) {
+            for (const s of sessions) {
+              sessionInfoMap.set(s.id, { date: s.date, status: s.status, completedAt: s.completedAt ?? null });
+            }
+          }
+          const sortedWeeks = [...weeks].sort((a, b) => a.order - b.order);
+          const weekInstanceItemsPerWeek = await Promise.all(
+            sortedWeeks.map(w => getWeekInstanceItemsForWeekInstance(w.id))
+          );
+          const squares: DaySquare[] = [];
+          for (let wi = 0; wi < sortedWeeks.length; wi++) {
+            const items = weekInstanceItemsPerWeek[wi].sort((a, b) => a.order - b.order);
+            for (const item of items) {
+              const dayIndex = wi * weekLength + (item.order - 1);
+              const scheduledDate = localDateIso(new Date(seasonStartMs + dayIndex * 86400000));
+              if (item.type === "rest") {
+                squares.push({ type: "rest", scheduledDate, status: scheduledDate < today ? "rest-past" : "rest-future" });
+                continue;
+              }
+              if (!item.sessionInstanceId) {
+                squares.push({ type: "session", scheduledDate, status: scheduledDate < today ? "overdue" : "grey" });
+                continue;
+              }
+              const session = sessionInfoMap.get(item.sessionInstanceId);
+              if (!session) { squares.push({ type: "session", scheduledDate, status: "grey" }); continue; }
+              if (session.status !== "completed") {
+                squares.push({ type: "session", scheduledDate, status: scheduledDate < today ? "overdue" : "grey" });
+                continue;
+              }
+              const completedDate = session.completedAt ? localDateIso(toLocalMidnight(session.completedAt)) : scheduledDate;
+              const status: DaySquareStatus = completedDate < scheduledDate ? "amber" : completedDate > scheduledDate ? "late" : "green";
+              squares.push({ type: "session", scheduledDate, status });
+            }
+          }
+          setSeasonDaySquares(squares);
+        }
 
         // Past seasons list (same template, completed, ordered oldest→newest).
         const allSeasons = await getAllSeasonInstances();
@@ -320,6 +382,39 @@ export default function SeasonSummaryPage() {
         </section>
 
         {/* ── Weeks this season ── */}
+        {/* ── Schedule day counts ── */}
+        {seasonDaySquares.length > 0 && (() => {
+          const countItems = [
+            { label: "On time",   color: "#6bcb77", n: seasonDaySquares.filter(d => d.status === "green").length },
+            { label: "Early",     color: "#f4a261", n: seasonDaySquares.filter(d => d.status === "amber").length },
+            { label: "Done late", color: "#e76f51", n: seasonDaySquares.filter(d => d.status === "late").length },
+            { label: "Missed",    color: "#9b2335", n: seasonDaySquares.filter(d => d.status === "overdue").length },
+            { label: "Upcoming",  color: null,      n: seasonDaySquares.filter(d => d.status === "grey").length },
+            { label: "Rest",      color: null,      n: seasonDaySquares.filter(d => d.type === "rest").length },
+          ].filter(i => i.n > 0);
+          if (countItems.length === 0) return null;
+          const rows = countItems.length <= 3
+            ? [countItems]
+            : [countItems.slice(0, Math.ceil(countItems.length / 2)), countItems.slice(Math.ceil(countItems.length / 2))];
+          return (
+            <div className="season-summary-stats-rows">
+              {rows.map((row, ri) => (
+                <div key={ri} className="season-summary-stats-row">
+                  {row.map((item, i) => (
+                    <div key={item.label} style={{ display: "contents" }}>
+                      {i > 0 && <div className="season-summary-stat-divider" />}
+                      <div className="season-summary-stat">
+                        <span className="season-summary-stat__value" style={item.color ? { color: item.color } : undefined}>{item.n}</span>
+                        <span className="season-summary-stat__label">{item.label}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+
         {weeksBreadcrumb.length > 0 && (
           <section className="season-summary-section season-summary-section--breadcrumb">
             <WeeksBreadcrumb weeks={weeksBreadcrumb} />
