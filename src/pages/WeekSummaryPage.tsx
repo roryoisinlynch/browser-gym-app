@@ -285,8 +285,8 @@ export default function WeekSummaryPage() {
     <main className="week-summary-page">
       <TopBar
         title="Week summary"
-        backTo="/week"
-        backLabel="Back to week"
+        backTo="/"
+        backLabel="Dashboard"
       />
 
       <section className="week-summary-shell">
@@ -371,22 +371,31 @@ export default function WeekSummaryPage() {
           ].filter(i => i.n > 0);
 
           if (countItems.length === 0) return null;
+
+          // Split into 1 or 2 rows: ≤3 items → one row; 4–6 → two balanced rows
+          const rows: typeof countItems[] = countItems.length <= 3
+            ? [countItems]
+            : [countItems.slice(0, Math.ceil(countItems.length / 2)), countItems.slice(Math.ceil(countItems.length / 2))];
+
           return (
-            <section className="week-summary-section">
-              <h2 className="week-summary-section-title">Schedule</h2>
-              <div className="week-summary-schedule-counts">
-                {countItems.map((item, i) => (
-                  <div key={item.label} className="week-summary-schedule-count">
-                    {i > 0 && <span className="week-summary-schedule-count__divider" />}
-                    <span
-                      className="week-summary-schedule-count__value"
-                      style={item.color ? { color: item.color } : undefined}
-                    >{item.n}</span>
-                    <span className="week-summary-schedule-count__label">{item.label}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
+            <div className="week-summary-stats-rows">
+              {rows.map((row, ri) => (
+                <div key={ri} className="week-summary-stats-row">
+                  {row.map((item, i) => (
+                    <div key={item.label} style={{ display: "contents" }}>
+                      {i > 0 && <div className="week-summary-stat-divider" />}
+                      <div className="week-summary-stat">
+                        <span
+                          className="week-summary-stat__value"
+                          style={item.color ? { color: item.color } : undefined}
+                        >{item.n}</span>
+                        <span className="week-summary-stat__label">{item.label}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
           );
         })()}
 

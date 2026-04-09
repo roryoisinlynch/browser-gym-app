@@ -37,6 +37,13 @@
   color: var(--text-strong);
 }
 
+/* ── Stats rows (multi-row container) ── */
+.week-summary-stats-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 /* ── Stats row ── */
 .week-summary-stats-row {
   display: flex;
