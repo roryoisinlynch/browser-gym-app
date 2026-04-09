@@ -360,6 +360,7 @@ export default function DashboardPage() {
 
   const [upNext, setUpNext] = useState<UpNextState>({ type: "loading" });
   const [seasonTimeline, setSeasonTimeline] = useState<SeasonTimelineData | null>(null);
+  const [isPreviousSeason, setIsPreviousSeason] = useState(false);
   const [recentSession, setRecentSession] = useState<RecentCard | null | typeof LOADING_CARD>(LOADING_CARD);
   const [recentWeek, setRecentWeek] = useState<RecentCard | null | typeof LOADING_CARD>(LOADING_CARD);
   const [recentSeason, setRecentSeason] = useState<RecentCard | null | typeof LOADING_CARD>(LOADING_CARD);
@@ -380,8 +381,12 @@ export default function DashboardPage() {
       const seasonToShow = activeSeason ?? (await getLastCompletedSeasonInstance());
       if (cancelled.current) return;
       if (seasonToShow) {
+        const isPrev = !activeSeason;
         loadTimeline(seasonToShow).then((tl) => {
-          if (!cancelled.current) setSeasonTimeline(tl);
+          if (!cancelled.current) {
+            setSeasonTimeline(tl);
+            setIsPreviousSeason(isPrev);
+          }
         });
       }
 
@@ -556,7 +561,7 @@ export default function DashboardPage() {
 
     return (
       <section className="dashboard-section">
-        <h2 className="dashboard-section-title">Season progress</h2>
+        <h2 className="dashboard-section-title">{isPreviousSeason ? "Previous season" : "Season progress"}</h2>
         <div className="dashboard-timeline">
           <div className="dashboard-timeline__body">
             {/* Left: week-row grid — auto-sizing squares to fill 50% width */}

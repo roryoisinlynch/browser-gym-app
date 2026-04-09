@@ -288,11 +288,11 @@
 .dashboard-timeline__day--amber   { background: #f4a261; }
 .dashboard-timeline__day--late    { background: #e76f51; }
 .dashboard-timeline__day--overdue { background: #9b2335; }
-.dashboard-timeline__day--grey    { background: var(--panel-border); opacity: 0.5; }
+.dashboard-timeline__day--grey    { background: var(--panel-border); opacity: 0.25; }
 
 /* Rest dot colours */
-.dashboard-timeline__day--rest.dashboard-timeline__day--rest-past   { background: var(--panel-border); opacity: 0.25; }
-.dashboard-timeline__day--rest.dashboard-timeline__day--rest-future  { background: var(--panel-border); opacity: 0.15; }
+.dashboard-timeline__day--rest.dashboard-timeline__day--rest-past   { background: var(--panel-border); opacity: 0.15; }
+.dashboard-timeline__day--rest.dashboard-timeline__day--rest-future  { background: var(--panel-border); opacity: 0.08; }
 
 /* Today accent ring */
 .dashboard-timeline__day--today {
@@ -313,7 +313,7 @@
   gap: 5px;
   padding: 3px 7px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.10);
   border: 1px solid var(--panel-border);
 }
 
