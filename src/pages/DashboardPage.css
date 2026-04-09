@@ -241,8 +241,18 @@
 .dashboard-timeline__legend {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   flex-wrap: wrap;
+}
+
+.dashboard-timeline__legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--panel-border);
 }
 
 .dashboard-timeline__legend-item {
@@ -281,7 +291,6 @@
   font-size: 0.68rem;
   font-weight: 600;
   color: var(--text-soft);
-  margin-right: 6px;
 }
 
 .dashboard-timeline__meta {

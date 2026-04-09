@@ -581,31 +581,29 @@ export default function DashboardPage() {
             const statuses = new Set(days.map((d) => d.status));
             const hasRest = days.some((d) => d.type === "rest");
             const todayDay = days.find((d) => d.scheduledDate === today);
+
+            function chip(key: string, icon: React.ReactNode, label: string) {
+              return (
+                <span key={key} className="dashboard-timeline__legend-chip">
+                  {icon}
+                  <span className="dashboard-timeline__legend-label">{label}</span>
+                </span>
+              );
+            }
+
             const entries: React.ReactNode[] = [];
-            if (statuses.has("green")) entries.push(
-              <span key="green" className="dashboard-timeline__legend-item dashboard-timeline__legend-item--green" />,
-              <span key="green-l" className="dashboard-timeline__legend-label">On time</span>
-            );
-            if (statuses.has("amber")) entries.push(
-              <span key="amber" className="dashboard-timeline__legend-item dashboard-timeline__legend-item--amber" />,
-              <span key="amber-l" className="dashboard-timeline__legend-label">Early</span>
-            );
-            if (statuses.has("late")) entries.push(
-              <span key="late" className="dashboard-timeline__legend-item dashboard-timeline__legend-item--late" />,
-              <span key="late-l" className="dashboard-timeline__legend-label">Done late</span>
-            );
-            if (statuses.has("overdue")) entries.push(
-              <span key="overdue" className="dashboard-timeline__legend-item dashboard-timeline__legend-item--overdue" />,
-              <span key="overdue-l" className="dashboard-timeline__legend-label">Overdue</span>
-            );
-            if (statuses.has("grey")) entries.push(
-              <span key="grey" className="dashboard-timeline__legend-item dashboard-timeline__legend-item--grey" />,
-              <span key="grey-l" className="dashboard-timeline__legend-label">Upcoming</span>
-            );
-            if (hasRest) entries.push(
-              <span key="rest" className="dashboard-timeline__legend-dot dashboard-timeline__legend-dot--rest" />,
-              <span key="rest-l" className="dashboard-timeline__legend-label">Rest</span>
-            );
+            if (statuses.has("green")) entries.push(chip("green",
+              <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--green" />, "On time"));
+            if (statuses.has("amber")) entries.push(chip("amber",
+              <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--amber" />, "Early"));
+            if (statuses.has("late")) entries.push(chip("late",
+              <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--late" />, "Done late"));
+            if (statuses.has("overdue")) entries.push(chip("overdue",
+              <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--overdue" />, "Overdue"));
+            if (statuses.has("grey")) entries.push(chip("grey",
+              <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--grey" />, "Upcoming"));
+            if (hasRest) entries.push(chip("rest",
+              <span className="dashboard-timeline__legend-dot dashboard-timeline__legend-dot--rest" />, "Rest"));
             if (todayDay) {
               const todayClasses = [
                 "dashboard-timeline__legend-day--today",
@@ -613,10 +611,7 @@ export default function DashboardPage() {
                 todayDay.type === "rest" ? "dashboard-timeline__day--rest" : "",
                 "dashboard-timeline__day--today",
               ].filter(Boolean).join(" ");
-              entries.push(
-                <span key="today" className={todayClasses} />,
-                <span key="today-l" className="dashboard-timeline__legend-label">Today</span>
-              );
+              entries.push(chip("today", <span className={todayClasses} />, "Today"));
             }
             return entries.length > 0 ? (
               <div className="dashboard-timeline__legend">{entries}</div>

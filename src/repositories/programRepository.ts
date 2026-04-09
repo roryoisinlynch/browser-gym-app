@@ -2320,13 +2320,19 @@ export interface PREvent {
 }
 
 export async function getAllTimePREvents(): Promise<PREvent[]> {
-  const allExerciseInstances = await getAll<ExerciseInstance>(STORE_NAMES.exerciseInstances);
+  const [allExerciseInstances, allImportedSets] = await Promise.all([
+    getAll<ExerciseInstance>(STORE_NAMES.exerciseInstances),
+    loadAllImportedSets(),
+  ]);
   const exerciseNames = [
-    ...new Set(
-      allExerciseInstances
+    ...new Set([
+      ...allExerciseInstances
         .map((ei) => ei.exerciseName)
-        .filter((n): n is string => typeof n === "string" && n.length > 0)
-    ),
+        .filter((n): n is string => typeof n === "string" && n.length > 0),
+      ...allImportedSets
+        .map((s) => s.exerciseName)
+        .filter((n): n is string => typeof n === "string" && n.length > 0),
+    ]),
   ];
 
   const allTemplates = await getAllExerciseTemplates();
