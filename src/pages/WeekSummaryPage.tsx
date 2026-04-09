@@ -258,7 +258,7 @@ export default function WeekSummaryPage() {
   if (isLoading) {
     return (
       <main className="week-summary-page">
-        <TopBar title="Week summary" backTo="/week" backLabel="Back to week" />
+        <TopBar title="Week summary" backTo="/" backLabel="Dashboard" />
         <section className="week-summary-shell">
           <p className="week-summary-loading">Loading summary...</p>
         </section>
@@ -270,7 +270,7 @@ export default function WeekSummaryPage() {
   if (errorMessage || !metrics) {
     return (
       <main className="week-summary-page">
-        <TopBar title="Week summary" backTo="/week" backLabel="Back to week" />
+        <TopBar title="Week summary" backTo="/" backLabel="Dashboard" />
         <section className="week-summary-shell">
           <p className="week-summary-error">{errorMessage ?? "Something went wrong."}</p>
         </section>

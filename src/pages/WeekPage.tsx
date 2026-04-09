@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import BottomNav from "../components/BottomNav";
 import DayCard, { type DayState } from "../components/DayCard";
 import StartSeasonModal from "../components/StartSeasonModal";
@@ -24,6 +25,7 @@ function getDayState(
 }
 
 export default function WeekPage() {
+  const navigate = useNavigate();
   const [items, setItems] = useState<WeekInstanceItemView[]>([]);
   const [seasonTemplates, setSeasonTemplates] = useState<SeasonTemplate[]>([]);
   const [totalWeeks, setTotalWeeks] = useState<number | null>(null);
@@ -143,34 +145,22 @@ export default function WeekPage() {
           <header className="week-page__header">
             <h1 className="week-page__title">No active program</h1>
             <p className="week-page__subtitle">
-              Start a program to begin tracking your sessions.
+              Start a season from the Season page to begin tracking your sessions.
             </p>
           </header>
-          {seasonTemplates.length > 0 && (
-            <section className="week-page__content">
-              <div className="week-page__list">
-                {seasonTemplates.map((template) => (
-                  <button
-                    key={template.id}
-                    className="week-start-card"
-                    onClick={() => setPendingStartTemplateId(template.id)}
-                  >
-                    <span className="day-card__text">
-                      <span className="day-card__title">{template.name}</span>
-                      {template.description && (
-                        <span className="day-card__subtitle">
-                          {template.description}
-                        </span>
-                      )}
-                    </span>
-                    <span className="day-card__action">
-                      <span className="day-pill day-pill--start">Start →</span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
+          <section className="week-page__content">
+            <button
+              className="week-start-card"
+              onClick={() => navigate("/season")}
+            >
+              <span className="day-card__text">
+                <span className="day-card__title">Back to Season</span>
+              </span>
+              <span className="day-card__action">
+                <span className="day-pill day-pill--start">Go →</span>
+              </span>
+            </button>
+          </section>
         </section>
         <BottomNav activeTab="session" />
       </main>

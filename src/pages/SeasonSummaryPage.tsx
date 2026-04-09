@@ -1,18 +1,15 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import type { SessionInstanceView, SessionPR } from "../repositories/programRepository";
 import {
   getSeasonInstanceById,
   getAllSeasonInstances,
-  getActiveSeasonInstance,
   getWeekInstancesForSeasonInstance,
   getSessionInstancesForWeekInstance,
   getSessionInstanceView,
   getWeekTemplateItemsForWeekTemplate,
   getSeasonPRs,
   getSeasonTemplateById,
-  getSeasonTemplates,
-  startSeasonFromTemplate,
 } from "../repositories/programRepository";
 import { computeWeekMetrics } from "../services/weekMetrics";
 import {
@@ -23,7 +20,6 @@ import type { SeasonMetrics, SeasonGrade } from "../services/seasonMetrics";
 import type { SeasonInstance } from "../domain/models";
 import WeeksBreadcrumb from "../components/WeeksBreadcrumb";
 import type { BreadcrumbWeek } from "../components/WeeksBreadcrumb";
-import StartSeasonModal from "../components/StartSeasonModal";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import "./SeasonSummaryPage.css";
@@ -77,16 +73,11 @@ interface SeasonRow {
 
 export default function SeasonSummaryPage() {
   const { seasonInstanceId } = useParams<{ seasonInstanceId: string }>();
-  const navigate = useNavigate();
   const [seasonName, setSeasonName] = useState<string | null>(null);
-  const [currentTemplateId, setCurrentTemplateId] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<SeasonMetrics | null>(null);
   const [prs, setPrs] = useState<SessionPR[]>([]);
   const [seasonRows, setSeasonRows] = useState<SeasonRow[]>([]);
   const [weeksBreadcrumb, setWeeksBreadcrumb] = useState<BreadcrumbWeek[]>([]);
-  const [allTemplates, setAllTemplates] = useState<{ id: string; name: string }[]>([]);
-  const [hasActiveSeason, setHasActiveSeason] = useState(false);
-  const [pendingStartTemplateId, setPendingStartTemplateId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -99,11 +90,9 @@ export default function SeasonSummaryPage() {
       }
 
       try {
-        const [seasonInstance, seasonPRs, templates, activeSeason] = await Promise.all([
+        const [seasonInstance, seasonPRs] = await Promise.all([
           getSeasonInstanceById(seasonInstanceId),
           getSeasonPRs(seasonInstanceId),
-          getSeasonTemplates(),
-          getActiveSeasonInstance(),
         ]);
 
         if (!seasonInstance) {
@@ -136,10 +125,7 @@ export default function SeasonSummaryPage() {
         const computed = computeSeasonMetrics(seasonInstance, weekMetricsList);
         setMetrics(computed);
         setSeasonName(seasonTemplate?.name ?? "Season summary");
-        setCurrentTemplateId(seasonInstance.seasonTemplateId);
         setPrs(seasonPRs);
-        setAllTemplates(templates.map((t) => ({ id: t.id, name: t.name })));
-        setHasActiveSeason(activeSeason != null);
 
         // Past seasons list (same template, completed, ordered oldest→newest).
         const allSeasons = await getAllSeasonInstances();
@@ -218,14 +204,6 @@ export default function SeasonSummaryPage() {
 
     load();
   }, [seasonInstanceId]);
-
-  async function handleConfirmStart(startedAt: string) {
-    if (!pendingStartTemplateId) return;
-    const id = pendingStartTemplateId;
-    setPendingStartTemplateId(null);
-    await startSeasonFromTemplate(id, startedAt);
-    navigate("/session");
-  }
 
   if (isLoading) {
     return (
@@ -416,45 +394,7 @@ export default function SeasonSummaryPage() {
           </section>
         )}
 
-        {/* ── Start next season ── */}
-        {!hasActiveSeason && allTemplates.length > 0 && (
-          <section className="season-summary-section season-summary-section--next">
-            <h2 className="season-summary-section-title">Start next season</h2>
-
-            {/* Primary CTA: same template */}
-            {currentTemplateId && allTemplates.find((t) => t.id === currentTemplateId) && (
-              <button
-                type="button"
-                className="season-summary-next-btn season-summary-next-btn--primary"
-                onClick={() => setPendingStartTemplateId(currentTemplateId)}
-              >
-                Continue with {allTemplates.find((t) => t.id === currentTemplateId)!.name}
-              </button>
-            )}
-
-            {/* Configure programs link */}
-            <div className="season-summary-next-alts">
-              <p className="season-summary-next-alts__label">Want a different program?</p>
-              <button
-                type="button"
-                className="season-summary-next-btn season-summary-next-btn--alt"
-                onClick={() => navigate("/config/programs")}
-              >
-                Configure programs →
-              </button>
-            </div>
-          </section>
-        )}
-
       </section>
-
-      {pendingStartTemplateId && (
-        <StartSeasonModal
-          programName={allTemplates.find((t) => t.id === pendingStartTemplateId)?.name ?? ""}
-          onConfirm={handleConfirmStart}
-          onCancel={() => setPendingStartTemplateId(null)}
-        />
-      )}
 
       <BottomNav activeTab="session" />
     </main>

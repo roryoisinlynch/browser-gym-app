@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { SessionInstanceView, SessionPR } from "../repositories/programRepository";
 import {
-  getActiveDestinationRoute,
   getSessionInstanceView,
   getSessionInstancesForWeekInstance,
   getSessionPRs,
@@ -138,7 +137,7 @@ export default function SessionSummaryPage() {
   if (isLoading) {
     return (
       <main className="summary-page">
-        <TopBar title="Session summary" backTo="/week" backLabel="Back to week" />
+        <TopBar title="Session summary" backTo="/" backLabel="Dashboard" />
         <section className="summary-shell">
           <p className="summary-loading">Loading summary...</p>
         </section>
@@ -150,7 +149,7 @@ export default function SessionSummaryPage() {
   if (errorMessage || !sessionView || !metrics) {
     return (
       <main className="summary-page">
-        <TopBar title="Session summary" backTo="/week" backLabel="Back to week" />
+        <TopBar title="Session summary" backTo="/" backLabel="Dashboard" />
         <section className="summary-shell">
           <p className="summary-error">{errorMessage ?? "Something went wrong."}</p>
         </section>
@@ -166,8 +165,8 @@ export default function SessionSummaryPage() {
     <main className="summary-page">
       <TopBar
         title="Session summary"
-        backLabel="Back"
-        onBack={async () => navigate(await getActiveDestinationRoute())}
+        backTo="/"
+        backLabel="Dashboard"
       />
 
       <section className="summary-shell">
