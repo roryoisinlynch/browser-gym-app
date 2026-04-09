@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import BottomNav from "../components/BottomNav";
 import DayCard, { type DayState } from "../components/DayCard";
+import StartSeasonModal from "../components/StartSeasonModal";
 import TopBar from "../components/TopBar";
 import type { SeasonTemplate } from "../domain/models";
 import type { WeekInstanceItemView } from "../repositories/programRepository";
@@ -29,6 +30,7 @@ export default function WeekPage() {
   const [rirSequence, setRirSequence] = useState<number[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [pendingStartTemplateId, setPendingStartTemplateId] = useState<string | null>(null);
 
   const loadWeekPage = useCallback(async () => {
     setIsLoading(true);
@@ -67,9 +69,11 @@ export default function WeekPage() {
     loadWeekPage();
   }, [loadWeekPage]);
 
-  async function handleStartSeason(seasonTemplateId: string) {
+  async function handleConfirmStart(startedAt: string) {
+    if (!pendingStartTemplateId) return;
+    setPendingStartTemplateId(null);
     try {
-      await startSeasonFromTemplate(seasonTemplateId);
+      await startSeasonFromTemplate(pendingStartTemplateId, startedAt);
       await loadWeekPage();
     } catch (error) {
       console.error(error);
@@ -149,7 +153,7 @@ export default function WeekPage() {
                   <button
                     key={template.id}
                     className="week-start-card"
-                    onClick={() => handleStartSeason(template.id)}
+                    onClick={() => setPendingStartTemplateId(template.id)}
                   >
                     <span className="day-card__text">
                       <span className="day-card__title">{template.name}</span>
@@ -175,7 +179,19 @@ export default function WeekPage() {
 
   let sessionIndex = 0;
 
+  const pendingTemplate = pendingStartTemplateId
+    ? seasonTemplates.find((t) => t.id === pendingStartTemplateId)
+    : null;
+
   return (
+    <>
+    {pendingTemplate && (
+      <StartSeasonModal
+        programName={pendingTemplate.name}
+        onConfirm={handleConfirmStart}
+        onCancel={() => setPendingStartTemplateId(null)}
+      />
+    )}
     <main className="week-page">
       <TopBar title="Week" backTo="/season" backLabel="Season" />
 
@@ -240,5 +256,6 @@ export default function WeekPage() {
 
       <BottomNav activeTab="session" />
     </main>
+    </>
   );
 }

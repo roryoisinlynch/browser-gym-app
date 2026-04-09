@@ -217,7 +217,8 @@ export async function getActiveSeasonInstance(): Promise<SeasonInstance | undefi
 }
 
 export async function activateProgram(
-  seasonTemplateId: string
+  seasonTemplateId: string,
+  startedAt?: string
 ): Promise<SeasonInstance | undefined> {
   const nowIso = new Date().toISOString();
 
@@ -259,7 +260,7 @@ export async function activateProgram(
     });
   }
 
-  return startSeasonFromTemplate(seasonTemplateId);
+  return startSeasonFromTemplate(seasonTemplateId, startedAt);
 }
 
 export async function getSeasonTemplateById(
@@ -367,7 +368,8 @@ async function replicateSeasonWeeks(
 }
 
 export async function startSeasonFromTemplate(
-  seasonTemplateId: string
+  seasonTemplateId: string,
+  startedAt?: string
 ): Promise<SeasonInstance | undefined> {
   const seasonTemplate = await getById<SeasonTemplate>(
     STORE_NAMES.seasonTemplates,
@@ -380,7 +382,7 @@ export async function startSeasonFromTemplate(
     .filter((s) => s.seasonTemplateId === seasonTemplateId)
     .reduce((max, s) => Math.max(max, s.order), 0);
 
-  const nowIso = new Date().toISOString();
+  const effectiveStartedAt = startedAt ?? new Date().toISOString();
   const newOrder = lastOrder + 1;
   const newSeasonInstanceId = `season-instance-${seasonTemplateId}-${Date.now()}`;
 
@@ -390,12 +392,12 @@ export async function startSeasonFromTemplate(
     name: `Season ${newOrder}`,
     order: newOrder,
     status: "in_progress",
-    startedAt: nowIso,
+    startedAt: effectiveStartedAt,
     completedAt: null,
   };
 
   await putItem(STORE_NAMES.seasonInstances, newSeasonInstance);
-  await replicateSeasonWeeks(seasonTemplate, newSeasonInstanceId, nowIso);
+  await replicateSeasonWeeks(seasonTemplate, newSeasonInstanceId, effectiveStartedAt);
 
   // Reset any prescribed weights that now exceed the effective e1RM.
   // A new season shifts the three-season window, so an older PR that was
@@ -1872,45 +1874,6 @@ export async function stopSessionInstance(
   };
 
   await putItem(STORE_NAMES.seasonInstances, completedSeasonInstance);
-
-  const allSeasonInstances = await getAll<SeasonInstance>(
-    STORE_NAMES.seasonInstances
-  );
-
-  const nextSeasonOrder =
-    allSeasonInstances
-      .filter(
-        (candidate) =>
-          candidate.seasonTemplateId === currentSeasonInstance.seasonTemplateId
-      )
-      .reduce((maxOrder, candidate) => Math.max(maxOrder, candidate.order), 0) + 1;
-
-  const newSeasonStartedAt = nowIso;
-  const newSeasonInstanceId = `season-instance-${currentSeasonInstance.seasonTemplateId}-${Date.now()}`;
-
-  const newSeasonInstance: SeasonInstance = {
-    id: newSeasonInstanceId,
-    seasonTemplateId: currentSeasonInstance.seasonTemplateId,
-    name: `Season ${nextSeasonOrder}`,
-    order: nextSeasonOrder,
-    label: currentSeasonInstance.label,
-    status: "in_progress",
-    startedAt: newSeasonStartedAt,
-    completedAt: null,
-  };
-
-  await putItem(STORE_NAMES.seasonInstances, newSeasonInstance);
-
-  const repeatSeasonTemplate = await getSeasonTemplateById(
-    currentSeasonInstance.seasonTemplateId
-  );
-  if (repeatSeasonTemplate) {
-    await replicateSeasonWeeks(
-      repeatSeasonTemplate,
-      newSeasonInstanceId,
-      newSeasonStartedAt
-    );
-  }
 
   return updatedSession;
 }

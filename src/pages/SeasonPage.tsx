@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import BottomNav from "../components/BottomNav";
+import StartSeasonModal from "../components/StartSeasonModal";
 import WeekCard, { type WeekCardState } from "../components/WeekCard";
 import TopBar from "../components/TopBar";
 import type { SeasonTemplate, WeekInstance } from "../domain/models";
@@ -32,6 +33,7 @@ export default function SeasonPage() {
   const [totalWeeks, setTotalWeeks] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [pendingStartTemplateId, setPendingStartTemplateId] = useState<string | null>(null);
 
   const loadSeasonPage = useCallback(async () => {
     setIsLoading(true);
@@ -81,9 +83,11 @@ export default function SeasonPage() {
     loadSeasonPage();
   }, [loadSeasonPage]);
 
-  async function handleStartSeason(seasonTemplateId: string) {
+  async function handleConfirmStart(startedAt: string) {
+    if (!pendingStartTemplateId) return;
+    setPendingStartTemplateId(null);
     try {
-      await startSeasonFromTemplate(seasonTemplateId);
+      await startSeasonFromTemplate(pendingStartTemplateId, startedAt);
       await loadSeasonPage();
     } catch (error) {
       console.error(error);
@@ -130,8 +134,20 @@ export default function SeasonPage() {
     );
   }
 
+  const pendingTemplate = pendingStartTemplateId
+    ? seasonTemplates.find((t) => t.id === pendingStartTemplateId)
+    : null;
+
   if (weeks.length === 0) {
     return (
+      <>
+      {pendingTemplate && (
+        <StartSeasonModal
+          programName={pendingTemplate.name}
+          onConfirm={handleConfirmStart}
+          onCancel={() => setPendingStartTemplateId(null)}
+        />
+      )}
       <main className="season-page">
         <TopBar title="Season" />
         <section className="season-shell">
@@ -148,7 +164,7 @@ export default function SeasonPage() {
                   <button
                     key={template.id}
                     className="week-start-card"
-                    onClick={() => handleStartSeason(template.id)}
+                    onClick={() => setPendingStartTemplateId(template.id)}
                   >
                     <span className="day-card__text">
                       <span className="day-card__title">{template.name}</span>
@@ -169,6 +185,7 @@ export default function SeasonPage() {
         </section>
         <BottomNav activeTab="session" />
       </main>
+      </>
     );
   }
 

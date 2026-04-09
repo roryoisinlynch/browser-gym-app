@@ -11,6 +11,7 @@ import {
 } from "../repositories/programRepository";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
+import StartSeasonModal from "../components/StartSeasonModal";
 import "./ConfigProgramsPage.css";
 
 export default function ConfigProgramsPage() {
@@ -23,6 +24,7 @@ export default function ConfigProgramsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmActivateId, setConfirmActivateId] = useState<string | null>(null);
+  const [pendingActivateId, setPendingActivateId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function loadData() {
@@ -83,9 +85,16 @@ export default function ConfigProgramsPage() {
     }
   }
 
-  async function handleActivate(id: string) {
-    await activateProgram(id);
+  function handleActivate(id: string) {
     setConfirmActivateId(null);
+    setPendingActivateId(id);
+  }
+
+  async function handleConfirmActivate(startedAt: string) {
+    if (!pendingActivateId) return;
+    const id = pendingActivateId;
+    setPendingActivateId(null);
+    await activateProgram(id, startedAt);
     await loadData();
   }
 
@@ -96,8 +105,19 @@ export default function ConfigProgramsPage() {
   }
 
   const activeTemplateId = activeInstance?.seasonTemplateId ?? null;
+  const pendingActivateTemplate = pendingActivateId
+    ? programs.find((p) => p.id === pendingActivateId)
+    : null;
 
   return (
+    <>
+    {pendingActivateTemplate && (
+      <StartSeasonModal
+        programName={pendingActivateTemplate.name}
+        onConfirm={handleConfirmActivate}
+        onCancel={() => setPendingActivateId(null)}
+      />
+    )}
     <main className="config-programs-page">
       <TopBar title="Program" backTo="/settings" backLabel="Settings" />
       <section className="config-programs-shell">
@@ -259,5 +279,6 @@ export default function ConfigProgramsPage() {
       </section>
       <BottomNav activeTab="settings" />
     </main>
+    </>
   );
 }

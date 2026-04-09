@@ -1,0 +1,104 @@
+.start-season-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.start-season-modal {
+  width: 100%;
+  max-width: 360px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 20px;
+  padding: 24px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.start-season-modal__title {
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+}
+
+.start-season-modal__body {
+  margin: 0;
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.start-season-modal__label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+
+.start-season-modal__input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--panel-border);
+  background: var(--bg-top);
+  color: var(--text-strong);
+  font-size: 0.96rem;
+  font-weight: 600;
+  font-family: inherit;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.start-season-modal__input:focus {
+  border-color: var(--accent);
+}
+
+.start-season-modal__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.start-season-modal__btn {
+  min-height: 42px;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  font-weight: 800;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+.start-season-modal__btn:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.start-season-modal__btn:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+.start-season-modal__btn--cancel {
+  color: var(--text-muted);
+  background: transparent;
+  border-color: var(--panel-border);
+}
+
+.start-season-modal__btn--confirm {
+  color: #101317;
+  background: var(--accent);
+  border-color: transparent;
+}
