@@ -290,15 +290,15 @@ export default function WeekSummaryPage() {
             <div className="week-summary-score-secondary">
               <div className="week-summary-score-item">
                 <span className="week-summary-score-item__pct">{volumeScore}%</span>
-                <span className="week-summary-score-item__label">Vol</span>
+                <span className="week-summary-score-item__label">Volume</span>
               </div>
               <div className="week-summary-score-item">
                 <span className="week-summary-score-item__pct">{intensityScore}%</span>
-                <span className="week-summary-score-item__label">Int</span>
+                <span className="week-summary-score-item__label">Intensity</span>
               </div>
               <div className="week-summary-score-item">
                 <span className="week-summary-score-item__pct">{consistencyScore}%</span>
-                <span className="week-summary-score-item__label">Cons</span>
+                <span className="week-summary-score-item__label">Consistency</span>
               </div>
             </div>
           </div>
