@@ -717,6 +717,14 @@ export default function DashboardPage() {
   const spotlight = prEvents?.[0] ?? null;
 
   function renderPRSpotlight() {
+    if (prEvents === null) {
+      return (
+        <section className="dashboard-section">
+          <h2 className="dashboard-section-title">Most recent PR</h2>
+          <div className="dashboard-spinner" />
+        </section>
+      );
+    }
     if (!spotlight) return null;
     const daysSincePrev =
       spotlight.previousDate
@@ -786,7 +794,15 @@ export default function DashboardPage() {
   // ─── All PRs ──────────────────────────────────────────────────────────────
 
   function renderAllPRs() {
-    if (!prEvents || prEvents.length === 0) return null;
+    if (prEvents === null) {
+      return (
+        <section className="dashboard-section">
+          <h2 className="dashboard-section-title">Personal records</h2>
+          <div className="dashboard-spinner" />
+        </section>
+      );
+    }
+    if (prEvents.length === 0) return null;
     return (
       <section className="dashboard-section">
         <h2 className="dashboard-section-title">Personal records</h2>
