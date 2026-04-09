@@ -514,15 +514,7 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
 ---
 
 # To do:
- - the progress bar doesnt work for bodyweight exercises
- - the exerciseSets component should auto populate the weight cell with an actual value rather than a preview value so that it doesn't need to be modified if you don't need to.
- - target RIR on the session page isn't populating. same story on the exercise page.
- - generate a target met green checkbox on the sets page when the intensity is met
- - on the session instance page, have the muscle group categories appear auto collapsed if they have met their volume target.
- - on the session instance page, have the cards fill their space instead of being floating card objects. Have them flush to the card above and below, flush to the section header, flush to the sides of the screen. Make their colour a touch lighter than current, to boost contrast a little.
  - Add a caption to the RIR indicator at the top of the week instance page. "RIR target: "
- - Tighten up the 'finish exercise' flow, it is just as easy to navigate back a page when finishing entering sets. It is however useful to have some mechanism to mark an exercise as active/finished (or is it? would you ever hit the + sign and want to go to an exercise directly? More likely you would want to go to the session page and pick the exercise). SOLUTION: Remove active status from exercise model, remove finish exercise button
- - on the week instance view, add a scheduled date to each day card. For 'done' sessions add an indicator to identify whether it was on schedule (green) early (amber) or late (red) and by +/- n days. For 'next' add a similar indicator to identify whether it's due in the past/present/future and by n days. For upcomming just have a due date with no indicators. Due dates should be formated like "Monday 5th".
  - add a confirmation before starting a season prompting the user to pick a start date, which will inform the consistency and due date targets for the remainder of the season.
  - figure out why the week consistency summary shows all days as 'on time' even if they were early, consider maybe just differentiating between late and on time where early is just on time.
  - can you add an 'up next' section at the top of the dashboard page? It should (in priority order) either: direct the user to select and activate a program, direct a user to an active exercise, an active session, or an active week. Anything else I might have missed on that list? it should be clickable to link through to the appropriate section. If the current day is scheduled to be a rest day (and the user is on track with the schedule) then it should just say today is a rest day, but identify the 'up next' gym day.

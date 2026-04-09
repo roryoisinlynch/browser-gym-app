@@ -46,6 +46,12 @@
   color: var(--text-muted);
 }
 
+.day-card__indicator {
+  margin: 3px 0 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
 .day-card__action {
   flex-shrink: 0;
 }

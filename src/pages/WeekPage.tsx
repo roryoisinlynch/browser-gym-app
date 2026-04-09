@@ -229,6 +229,8 @@ export default function WeekPage() {
                     order: index + 1,
                   }}
                   state={state}
+                  scheduledDate={item.sessionInstance.date}
+                  completedAt={item.sessionInstance.completedAt}
                 />
               );
             })}
