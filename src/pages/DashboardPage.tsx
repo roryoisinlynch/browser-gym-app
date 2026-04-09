@@ -16,6 +16,8 @@ import {
   getWeekTemplateItemsForWeekTemplate,
 } from "../repositories/programRepository";
 import ExerciseInsights from "../components/ExerciseInsights";
+import TrafficLight from "../components/TrafficLight";
+import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import { computeSessionMetrics } from "../services/sessionMetrics";
 import { computeWeekMetrics, emojiForRating } from "../services/weekMetrics";
@@ -47,6 +49,7 @@ interface RecentCard {
   name: string;
   grade: string | null;
   gradeColor: "green" | "amber" | "red" | null;
+  ragStatus?: "green" | "amber" | "red";
   link: string;
 }
 
@@ -232,12 +235,12 @@ async function buildSessionCard(session: SessionInstance): Promise<RecentCard | 
     if (!view) return null;
     const m = computeSessionMetrics(view);
     const color = m.ragStatus;
-    const ragEmoji = color === "green" ? "🟢" : color === "amber" ? "🟡" : "🔴";
     return {
       id: session.id,
       name: view.sessionTemplate?.name ?? "Session",
-      grade: ragEmoji,
+      grade: null,
       gradeColor: color,
+      ragStatus: color,
       link: `/session/${session.id}/summary`,
     };
   } catch {
@@ -523,13 +526,15 @@ export default function DashboardPage() {
         ) : (
           <>
             <span className="dashboard-recent-card__name">{data!.name}</span>
-            {data!.grade && (
+            {data!.ragStatus ? (
+              <TrafficLight status={data!.ragStatus} size="sm" />
+            ) : data!.grade ? (
               <span
                 className={`dashboard-recent-card__grade${data!.gradeColor ? ` dashboard-recent-card__grade--${data!.gradeColor}` : ""}`}
               >
                 {data!.grade}
               </span>
-            )}
+            ) : null}
           </>
         )}
       </div>
@@ -621,8 +626,9 @@ export default function DashboardPage() {
             <li key={i} className="dashboard-pr-item">
               <div className="dashboard-pr-item__top">
                 <span className="dashboard-pr-item__exercise">{pr.exerciseName}</span>
-                <span className="dashboard-pr-item__date">{agoLabel}</span>
+                <span className="dashboard-pr-item__date">{shortDate(pr.date)}</span>
               </div>
+              <span className="dashboard-pr-item__ago">{agoLabel}</span>
               {pr.prType === "e1rm" ? (
                 <span className="dashboard-pr-item__detail">
                   {pr.previousE1RM != null && (
@@ -653,6 +659,7 @@ export default function DashboardPage() {
 
   return (
     <main className="dashboard-page">
+      <TopBar title="Dashboard" />
       <section className="dashboard-shell">
         <header className="dashboard-header">
           <p className="dashboard-eyebrow">Overview</p>
