@@ -2302,13 +2302,9 @@ export async function getSeasonPRs(seasonInstanceId: string): Promise<SessionPR[
 
 /**
  * Returns the route of the first active instance, in priority order:
- * in-progress exercise → in-progress session → /week.
+ * in-progress session → /week.
  */
 export async function getActiveDestinationRoute(): Promise<string> {
-  const exerciseInstances = await getAll<ExerciseInstance>(STORE_NAMES.exerciseInstances);
-  const activeExercise = exerciseInstances.find((i) => i.status === "in_progress");
-  if (activeExercise) return `/exercise/${activeExercise.id}`;
-
   const sessionInstances = await getAll<SessionInstance>(STORE_NAMES.sessionInstances);
   const activeSession = sessionInstances.find((i) => i.status === "in_progress");
   if (activeSession) return `/session/${activeSession.id}`;

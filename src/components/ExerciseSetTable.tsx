@@ -16,6 +16,7 @@ interface ExerciseSetTableProps {
   onRowBlur: (rowId: string) => void;
   onRemoveRow: (rowId: string) => void;
   onAddRow: () => void;
+  onDone: () => void;
   isBodyweight?: boolean;
 }
 
@@ -47,6 +48,7 @@ export default function ExerciseSetTable({
   onRowBlur,
   onRemoveRow,
   onAddRow,
+  onDone,
   isBodyweight = false,
 }: ExerciseSetTableProps) {
   const targetLabel = getTargetLabel(targetWeight, targetReps, isBodyweight);
@@ -127,6 +129,13 @@ export default function ExerciseSetTable({
           onClick={onAddRow}
         >
           + Add set
+        </button>
+        <button
+          type="button"
+          className="exercise-set-table-card__done"
+          onClick={onDone}
+        >
+          Done
         </button>
       </div>
     </section>

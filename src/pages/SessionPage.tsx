@@ -36,13 +36,6 @@ function formatDateTime(value: string | null | undefined) {
   });
 }
 
-function getExerciseStatusLabel(
-  status: "not_started" | "in_progress" | "completed" | undefined
-) {
-  if (status === "completed") return "Completed";
-  if (status === "in_progress") return "In progress";
-  return "Not started";
-}
 
 type MovementTone = {
   bg: string;
@@ -635,8 +628,9 @@ export default function SessionPage() {
                       {!isCollapsed && (
                         <ul className="exercise-list">
                           {exercises.map(
-                            ({ exerciseTemplate, movementType, exerciseInstance }) => {
+                            ({ exerciseTemplate, movementType, exerciseInstance, sets }) => {
                               const tone = getMovementTypeTone(movementType.name);
+                              const setCount = sets.length;
 
                               return (
                                 <li
@@ -666,11 +660,11 @@ export default function SessionPage() {
                                           {exerciseTemplate.exerciseName}
                                         </h3>
 
-                                        <span className="exercise-card__status">
-                                          {getExerciseStatusLabel(
-                                            exerciseInstance?.status
-                                          )}
-                                        </span>
+                                        {setCount > 0 && (
+                                          <span className="exercise-card__status">
+                                            {setCount} {setCount === 1 ? "set" : "sets"}
+                                          </span>
+                                        )}
                                       </div>
 
                                       <span

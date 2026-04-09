@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { ExerciseInstanceView } from "../repositories/programRepository";
 import {
-  completeExerciseInstance,
   createExerciseSet,
   deleteExerciseSet,
   getExerciseInstanceView,
@@ -69,14 +68,6 @@ function withCalculatedEstimatedOneRepMax(row: EditableRow): EditableRow {
   };
 }
 
-function getExerciseStatusLabel(
-  status: "not_started" | "in_progress" | "completed"
-) {
-  if (status === "completed") return "Completed";
-  if (status === "in_progress") return "In progress";
-  return "Not started";
-}
-
 export default function ExercisePage() {
   const { exerciseInstanceId } = useParams<{ exerciseInstanceId: string }>();
   const navigate = useNavigate();
@@ -87,7 +78,6 @@ export default function ExercisePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRowSaving, setIsRowSaving] = useState(false);
-  const [isFinishing, setIsFinishing] = useState(false);
   const draftCounterRef = useRef(1);
 
   useEffect(() => {
@@ -287,41 +277,9 @@ export default function ExercisePage() {
     );
   }
 
-  async function handleFinishExercise() {
-    if (!exerciseView) {
-      return;
-    }
-
-    const populatedSetCount = rows.filter((row) => {
-      const weight = parseNullableNumber(row.weight);
-      const reps = parseNullableNumber(row.reps);
-      return weight != null || reps != null;
-    }).length;
-
-    if (populatedSetCount < 3) {
-      const confirmed = window.confirm(
-        `Only ${populatedSetCount} populated ${
-          populatedSetCount === 1 ? "set is" : "sets are"
-        } recorded. Finish exercise anyway?`
-      );
-
-      if (!confirmed) {
-        return;
-      }
-    }
-
-    try {
-      setIsFinishing(true);
-      setErrorMessage(null);
-
-      await completeExerciseInstance(exerciseView.exerciseInstance.id);
-      navigate(`/session/${exerciseView.sessionInstance.id}`);
-    } catch (error) {
-      console.error("Failed to finish exercise:", error);
-      setErrorMessage("Could not finish exercise.");
-    } finally {
-      setIsFinishing(false);
-    }
+  function handleDone() {
+    if (!exerciseView) return;
+    navigate(`/session/${exerciseView.sessionInstance.id}`);
   }
 
   if (isLoading) {
@@ -352,9 +310,6 @@ export default function ExercisePage() {
     return null;
   }
 
-  const exerciseStatus = exerciseView.exerciseInstance.status;
-  const isCompleted = exerciseStatus === "completed";
-
   return (
     <main className="exercise-page">
       <TopBar
@@ -372,13 +327,10 @@ export default function ExercisePage() {
             {exerciseView.sessionTemplate.name} ·{" "}
             {exerciseView.weekTemplate.label ?? exerciseView.weekTemplate.name}
           </p>
-          <p className="exercise-page__subtitle">
-            Status: {getExerciseStatusLabel(exerciseStatus)}
-          </p>
           {errorMessage && (
             <p className="exercise-page__message">{errorMessage}</p>
           )}
-          {(isRowSaving || isFinishing) && (
+          {isRowSaving && (
             <p className="exercise-page__message">Saving changes…</p>
           )}
         </header>
@@ -428,6 +380,7 @@ export default function ExercisePage() {
           onRowBlur={handleRowBlur}
           onRemoveRow={handleRemoveRow}
           onAddRow={handleAddRow}
+          onDone={handleDone}
           isBodyweight={isBodyweight}
         />
 
@@ -437,29 +390,6 @@ export default function ExercisePage() {
           currentExerciseInstanceId={exerciseView.exerciseInstance.id}
           isBodyweight={isBodyweight}
         />
-
-        <div style={{ margin: "0 14px 16px" }}>
-          <button
-            type="button"
-            onClick={handleFinishExercise}
-            disabled={isFinishing || isCompleted}
-            style={{
-              width: "100%",
-              minHeight: "42px",
-              borderRadius: "14px",
-              border: "1px solid rgba(216, 240, 106, 0.32)",
-              background: isCompleted
-                ? "var(--panel-bg)"
-                : "rgba(216, 240, 106, 0.08)",
-              color: isCompleted ? "var(--text-muted)" : "var(--accent)",
-              fontSize: "0.92rem",
-              fontWeight: 800,
-              cursor: isFinishing || isCompleted ? "default" : "pointer",
-            }}
-          >
-            {isCompleted ? "Exercise finished" : "Finish exercise"}
-          </button>
-        </div>
       </section>
 
       <BottomNav activeTab="session" />

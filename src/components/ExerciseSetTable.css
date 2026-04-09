@@ -91,17 +91,29 @@
 }
 
 .exercise-set-table-card__footer {
+  display: flex;
+  gap: 10px;
   padding: 12px 14px 14px;
 }
 
-.exercise-set-table-card__add {
-  width: 100%;
+.exercise-set-table-card__add,
+.exercise-set-table-card__done {
+  flex: 1;
   min-height: 42px;
-  border: 1px dashed rgba(216, 240, 106, 0.28);
   border-radius: 14px;
-  background: rgba(216, 240, 106, 0.04);
-  color: var(--accent);
   font-size: 0.92rem;
   font-weight: 800;
   cursor: pointer;
+}
+
+.exercise-set-table-card__add {
+  border: 1px dashed rgba(216, 240, 106, 0.28);
+  background: rgba(216, 240, 106, 0.04);
+  color: var(--accent);
+}
+
+.exercise-set-table-card__done {
+  border: 1px solid var(--panel-border);
+  background: var(--panel-bg);
+  color: var(--text-strong);
 }
