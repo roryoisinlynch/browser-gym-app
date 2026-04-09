@@ -18,6 +18,7 @@ interface ExerciseSetTableProps {
   onAddRow: () => void;
   onDone: () => void;
   isBodyweight?: boolean;
+  isAmrap?: boolean;
 }
 
 function formatEstimatedOneRepMax(value: number | null) {
@@ -31,8 +32,10 @@ function formatEstimatedOneRepMax(value: number | null) {
 function getTargetLabel(
   targetWeight: number | null,
   targetReps: number | null,
-  isBodyweight: boolean
+  isBodyweight: boolean,
+  isAmrap: boolean
 ) {
+  if (isAmrap) return "AMRAP";
   if (targetReps == null) return "—";
   if (isBodyweight) return `${targetReps} reps`;
   if (targetWeight == null) return "—";
@@ -50,8 +53,9 @@ export default function ExerciseSetTable({
   onAddRow,
   onDone,
   isBodyweight = false,
+  isAmrap = false,
 }: ExerciseSetTableProps) {
-  const targetLabel = getTargetLabel(targetWeight, targetReps, isBodyweight);
+  const targetLabel = getTargetLabel(targetWeight, targetReps, isBodyweight, isAmrap);
   const rowClass = `exercise-set-table__row${isBodyweight ? " exercise-set-table__row--bw" : ""}`;
 
   return (

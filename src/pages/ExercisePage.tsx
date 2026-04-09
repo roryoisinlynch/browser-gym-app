@@ -384,6 +384,7 @@ export default function ExercisePage() {
           onAddRow={handleAddRow}
           onDone={handleDone}
           isBodyweight={isBodyweight}
+          isAmrap={isAmrap}
         />
 
         <ExerciseInsights
