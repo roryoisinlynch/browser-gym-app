@@ -18,7 +18,7 @@ import {
 import ExerciseInsights from "../components/ExerciseInsights";
 import BottomNav from "../components/BottomNav";
 import { computeSessionMetrics } from "../services/sessionMetrics";
-import { computeWeekMetrics } from "../services/weekMetrics";
+import { computeWeekMetrics, emojiForRating } from "../services/weekMetrics";
 import { computeSeasonMetrics, gradeColor } from "../services/seasonMetrics";
 import "./DashboardPage.css";
 
@@ -57,13 +57,13 @@ function localDateIso(d: Date = new Date()): string {
 }
 
 function daysBetween(fromIso: string, toIso: string): number {
-  const a = new Date(fromIso + "T00:00:00").getTime();
-  const b = new Date(toIso + "T00:00:00").getTime();
+  const a = new Date(fromIso.split("T")[0] + "T00:00:00").getTime();
+  const b = new Date(toIso.split("T")[0] + "T00:00:00").getTime();
   return Math.round((b - a) / 86400000);
 }
 
 function friendlyDate(iso: string): string {
-  const d = new Date(iso + "T00:00:00");
+  const d = new Date(iso.split("T")[0] + "T00:00:00");
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const ord = (n: number) => {
@@ -74,7 +74,7 @@ function friendlyDate(iso: string): string {
 }
 
 function shortDate(iso: string): string {
-  const d = new Date(iso + "T00:00:00");
+  const d = new Date(iso.split("T")[0] + "T00:00:00");
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   return `${d.getDate()} ${months[d.getMonth()]} '${String(d.getFullYear()).slice(2)}`;
 }
@@ -108,7 +108,7 @@ function computeUpNext(
   // Anchor week start on the first session item's scheduled date
   const anchor = sessionItems[0];
   const weekStartMs =
-    new Date(anchor.sessionInstance!.date + "T00:00:00").getTime() -
+    new Date(anchor.sessionInstance!.date.split("T")[0] + "T00:00:00").getTime() -
     (anchor.weekInstanceItem.order - 1) * 86400000;
 
   const itemDate = (item: WeekInstanceItemView) =>
@@ -232,11 +232,11 @@ async function buildSessionCard(session: SessionInstance): Promise<RecentCard | 
     if (!view) return null;
     const m = computeSessionMetrics(view);
     const color = m.ragStatus;
-    const pct = m.sessionScore;
+    const ragEmoji = color === "green" ? "🟢" : color === "amber" ? "🟡" : "🔴";
     return {
       id: session.id,
       name: view.sessionTemplate?.name ?? "Session",
-      grade: `${Math.round(pct)}%`,
+      grade: ragEmoji,
       gradeColor: color,
       link: `/session/${session.id}/summary`,
     };
@@ -256,13 +256,12 @@ async function buildWeekCard(week: WeekInstance): Promise<RecentCard | null> {
       await Promise.all(completed.map((s) => getSessionInstanceView(s.id)))
     ).filter((v): v is SessionInstanceView => v != null);
     const wm = computeWeekMetrics(week, templateItems, views);
-    const emojiMap: Record<number, string> = { 1: "😍", 2: "🔥", 3: "✅", 4: "⚠️", 5: "😵" };
     const scoreColor: "green" | "amber" | "red" =
       wm.weekScore >= 96 ? "green" : wm.weekScore >= 88 ? "amber" : "red";
     return {
       id: week.id,
       name: `Week ${week.order}`,
-      grade: emojiMap[wm.emojiRating] ?? null,
+      grade: emojiForRating(wm.emojiRating),
       gradeColor: scoreColor,
       link: `/week/${week.id}/summary`,
     };
@@ -559,7 +558,7 @@ export default function DashboardPage() {
 
     return (
       <section className="dashboard-section">
-        <h2 className="dashboard-section-title dashboard-section-title--accent">Most recent PR</h2>
+        <h2 className="dashboard-section-title">Most recent PR</h2>
         <div className="dashboard-pr-spotlight">
           <p className="dashboard-pr-spotlight__exercise">{spotlight.exerciseName}</p>
           <div className="dashboard-pr-spotlight__values">
@@ -613,13 +612,16 @@ export default function DashboardPage() {
     if (!prEvents || prEvents.length === 0) return null;
     return (
       <section className="dashboard-section">
-        <h2 className="dashboard-section-title dashboard-section-title--accent">Personal records</h2>
+        <h2 className="dashboard-section-title">Personal records</h2>
         <ul className="dashboard-pr-list">
-          {prEvents.map((pr, i) => (
+          {prEvents.slice(0, 15).map((pr, i) => {
+            const daysAgo = daysBetween(pr.date, localDateIso());
+            const agoLabel = daysAgo === 0 ? "Today" : daysAgo === 1 ? "Yesterday" : `${daysAgo} days ago`;
+            return (
             <li key={i} className="dashboard-pr-item">
               <div className="dashboard-pr-item__top">
                 <span className="dashboard-pr-item__exercise">{pr.exerciseName}</span>
-                <span className="dashboard-pr-item__date">{shortDate(pr.date)}</span>
+                <span className="dashboard-pr-item__date">{agoLabel}</span>
               </div>
               {pr.prType === "e1rm" ? (
                 <span className="dashboard-pr-item__detail">
@@ -640,7 +642,8 @@ export default function DashboardPage() {
                 </span>
               )}
             </li>
-          ))}
+            );
+          })}
         </ul>
       </section>
     );
