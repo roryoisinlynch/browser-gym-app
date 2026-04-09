@@ -445,14 +445,16 @@ export default function DashboardPage() {
       case "active_session":
         return (
           <div
-            className="dashboard-up-next dashboard-up-next--active"
+            className="dashboard-up-next dashboard-up-next--active dashboard-up-next--with-cta"
             role="button"
             tabIndex={0}
             onClick={() => navigate(`/session/${upNext.sessionId}`)}
             onKeyDown={(e) => e.key === "Enter" && navigate(`/session/${upNext.sessionId}`)}
           >
-            <span className="dashboard-up-next__pill dashboard-up-next__pill--active">In progress</span>
-            <p className="dashboard-up-next__heading">{upNext.sessionName}</p>
+            <div className="dashboard-up-next__content">
+              <span className="dashboard-up-next__pill dashboard-up-next__pill--active">In progress</span>
+              <p className="dashboard-up-next__heading">{upNext.sessionName}</p>
+            </div>
             <span className="dashboard-up-next__cta dashboard-up-next__cta--active">Continue session →</span>
           </div>
         );
@@ -460,17 +462,19 @@ export default function DashboardPage() {
       case "overdue_session":
         return (
           <div
-            className="dashboard-up-next dashboard-up-next--overdue"
+            className="dashboard-up-next dashboard-up-next--overdue dashboard-up-next--with-cta"
             role="button"
             tabIndex={0}
             onClick={() => navigate(`/session/${upNext.sessionId}`)}
             onKeyDown={(e) => e.key === "Enter" && navigate(`/session/${upNext.sessionId}`)}
           >
-            <span className="dashboard-up-next__pill dashboard-up-next__pill--overdue">
-              {upNext.daysOverdue === 1 ? "1 day overdue" : `${upNext.daysOverdue} days overdue`}
-            </span>
-            <p className="dashboard-up-next__heading">{upNext.sessionName}</p>
-            <p className="dashboard-up-next__sub">{friendlyDate(upNext.date)}</p>
+            <div className="dashboard-up-next__content">
+              <span className="dashboard-up-next__pill dashboard-up-next__pill--overdue">
+                {upNext.daysOverdue === 1 ? "1 day overdue" : `${upNext.daysOverdue} days overdue`}
+              </span>
+              <p className="dashboard-up-next__heading">{upNext.sessionName}</p>
+              <p className="dashboard-up-next__sub">{friendlyDate(upNext.date)}</p>
+            </div>
             <span className="dashboard-up-next__cta dashboard-up-next__cta--overdue">Start session →</span>
           </div>
         );
@@ -478,14 +482,16 @@ export default function DashboardPage() {
       case "today_session":
         return (
           <div
-            className="dashboard-up-next dashboard-up-next--today"
+            className="dashboard-up-next dashboard-up-next--today dashboard-up-next--with-cta"
             role="button"
             tabIndex={0}
             onClick={() => navigate(`/session/${upNext.sessionId}`)}
             onKeyDown={(e) => e.key === "Enter" && navigate(`/session/${upNext.sessionId}`)}
           >
-            <span className="dashboard-up-next__pill dashboard-up-next__pill--today">Today</span>
-            <p className="dashboard-up-next__heading">{upNext.sessionName}</p>
+            <div className="dashboard-up-next__content">
+              <span className="dashboard-up-next__pill dashboard-up-next__pill--today">Today</span>
+              <p className="dashboard-up-next__heading">{upNext.sessionName}</p>
+            </div>
             <span className="dashboard-up-next__cta dashboard-up-next__cta--today">Start session →</span>
           </div>
         );

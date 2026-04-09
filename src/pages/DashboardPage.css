@@ -129,14 +129,30 @@
   font-family: inherit;
 }
 
-/* CTA pill — replaces the bare arrow */
+/* Two-column layout when a CTA is present */
+.dashboard-up-next--with-cta {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dashboard-up-next__content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* CTA pill — right column */
 .dashboard-up-next__cta {
-  align-self: flex-start;
-  margin-top: 6px;
-  padding: 5px 12px;
-  border-radius: 8px;
+  flex-shrink: 0;
+  margin-left: 12px;
+  padding: 8px 14px;
+  border-radius: 10px;
   font-size: 0.78rem;
   font-weight: 700;
+  text-align: center;
   pointer-events: none; /* card is the clickable target */
 }
 
