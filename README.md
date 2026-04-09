@@ -337,8 +337,10 @@ This approach allows:
 Set once at season creation by `replicateSeasonWeeks`. Never updated after that.
 
 ```
-date = SeasonInstance.startedAt + (weekIndex × 9 + (sessionOrder − 1)) days
+date = SeasonInstance.startedAt + (weekIndex × weekLength + (sessionOrder − 1)) days
 ```
+
+where `weekLength` is the total number of items (sessions + rest days) in the `WeekTemplate`.
 
 `SeasonInstance.startedAt` is the sole anchor: it is written as `new Date().toISOString()` when `startSeasonFromTemplate` is called (either explicitly or automatically when the last session of the previous season is completed). Every scheduled session date in the season is an offset from that value.
 
@@ -512,7 +514,6 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
 ---
 
 # To do:
- - fix weird hard-coded date logic that assumes 9 day weeks
  - bodyweight exercises should conditionally not render the adjust working weight button
  - the progress bar doesnt work for bodyweight exercises
  - the exerciseSets component should auto populate the weight cell with an actual value rather than a preview value so that it doesn't need to be modified if you don't need to.

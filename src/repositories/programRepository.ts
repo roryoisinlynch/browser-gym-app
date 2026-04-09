@@ -318,7 +318,7 @@ async function replicateSeasonWeeks(
       }
 
       const sessionDate = new Date(baseDate);
-      const offsetDays = weekIndex * 9 + (weekTemplateItem.order - 1);
+      const offsetDays = weekIndex * weekTemplateItems.length + (weekTemplateItem.order - 1);
       sessionDate.setUTCDate(sessionDate.getUTCDate() + offsetDays);
 
       const newSessionInstance: SessionInstance = {
