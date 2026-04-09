@@ -676,8 +676,8 @@ export default function SessionPage() {
 
                               // Build set count label parts
                               const labelParts: string[] = [];
-                              if (warmupSetCount > 0) labelParts.push(`${warmupSetCount} warmup`);
-                              if (workingSetCount > 0) labelParts.push(`${workingSetCount} working`);
+                              if (warmupSetCount > 0) labelParts.push(`${warmupSetCount} warmup ${warmupSetCount === 1 ? "set" : "sets"}`);
+                              if (workingSetCount > 0) labelParts.push(`${workingSetCount} working ${workingSetCount === 1 ? "set" : "sets"}`);
 
                               return (
                                 <li
