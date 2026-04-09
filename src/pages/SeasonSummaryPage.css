@@ -353,3 +353,52 @@
   color: var(--accent);
   font-weight: 700;
 }
+
+/* ── Start next season ── */
+.season-summary-section--next {
+  gap: 10px;
+}
+
+.season-summary-next-btn {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 16px;
+  border-radius: 14px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  font-family: inherit;
+  text-align: center;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+.season-summary-next-btn:hover {
+  transform: translateY(-1px);
+}
+
+.season-summary-next-btn--primary {
+  color: #101317;
+  background: var(--accent);
+  border-color: transparent;
+}
+
+.season-summary-next-btn--alt {
+  color: var(--text-strong);
+  background: transparent;
+  border-color: var(--panel-border);
+}
+
+.season-summary-next-alts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.season-summary-next-alts__label {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-soft);
+}
