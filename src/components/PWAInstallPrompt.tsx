@@ -71,35 +71,28 @@ export default function PWAInstallPrompt() {
 
   if (!visible) return null;
 
+  const iconUrl = `${import.meta.env.BASE_URL}icons/icon-192.png`;
+
   return (
     <div className="pwa-prompt" role="dialog" aria-label="Install app">
       <div className="pwa-prompt__inner">
-        <div className="pwa-prompt__text">
-          <span className="pwa-prompt__title">Add to Home Screen</span>
-          <span className="pwa-prompt__body">
-            {platform === "ios"
-              ? <>Tap the share icon <ShareIcon /> then <strong>Add to Home Screen</strong></>
-              : "Install Training Log for quick access — no browser bar, full screen."}
-          </span>
-        </div>
-
-        <div className="pwa-prompt__actions">
-          {platform === "android" && (
-            <button
-              type="button"
-              className="pwa-prompt__install-btn"
-              onClick={handleInstall}
-            >
-              Install
-            </button>
-          )}
+        <div className="pwa-prompt__top">
+          <img src={iconUrl} alt="" className="pwa-prompt__icon" aria-hidden="true" />
+          <div className="pwa-prompt__text">
+            <span className="pwa-prompt__title">Add to Home Screen</span>
+            <span className="pwa-prompt__body">
+              {platform === "ios"
+                ? <>Tap the share icon <ShareIcon /> then <strong>Add to Home Screen</strong></>
+                : "Install Training Log for quick access — no browser bar, full screen."}
+            </span>
+          </div>
           <button
             type="button"
             className="pwa-prompt__dismiss-btn"
             onClick={dismiss}
             aria-label="Dismiss"
           >
-            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
               <path
                 d="M18 6 6 18M6 6l12 12"
                 fill="none"
@@ -110,6 +103,16 @@ export default function PWAInstallPrompt() {
             </svg>
           </button>
         </div>
+
+        {platform === "android" && (
+          <button
+            type="button"
+            className="pwa-prompt__install-btn"
+            onClick={handleInstall}
+          >
+            Install app
+          </button>
+        )}
       </div>
     </div>
   );
