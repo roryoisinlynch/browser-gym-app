@@ -394,17 +394,19 @@ export default function ExercisePage() {
           needsWeightConfig={needsWeightConfig}
         />
 
-        <div className="exercise-page__config-cta-wrap">
-          <button
-            type="button"
-            className={`exercise-page__config-cta${
-              needsWeightConfig ? " exercise-page__config-cta--emphasised" : ""
-            }`}
-            onClick={handleConfigureExercise}
-          >
-            {needsWeightConfig ? "Set working weight" : "Adjust working weight"}
-          </button>
-        </div>
+        {!isBodyweight && (
+          <div className="exercise-page__config-cta-wrap">
+            <button
+              type="button"
+              className={`exercise-page__config-cta${
+                needsWeightConfig ? " exercise-page__config-cta--emphasised" : ""
+              }`}
+              onClick={handleConfigureExercise}
+            >
+              {needsWeightConfig ? "Set working weight" : "Adjust working weight"}
+            </button>
+          </div>
+        )}
 
         <ExerciseSetTable
           rows={rows}
