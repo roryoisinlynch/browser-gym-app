@@ -451,9 +451,9 @@ export default function DashboardPage() {
             onClick={() => navigate(`/session/${upNext.sessionId}`)}
             onKeyDown={(e) => e.key === "Enter" && navigate(`/session/${upNext.sessionId}`)}
           >
-            <span className="dashboard-up-next__pill dashboard-up-next__pill--active">Session active</span>
+            <span className="dashboard-up-next__pill dashboard-up-next__pill--active">In progress</span>
             <p className="dashboard-up-next__heading">{upNext.sessionName}</p>
-            <span className="dashboard-up-next__caret">→</span>
+            <span className="dashboard-up-next__cta dashboard-up-next__cta--active">Continue session →</span>
           </div>
         );
 
@@ -471,7 +471,7 @@ export default function DashboardPage() {
             </span>
             <p className="dashboard-up-next__heading">{upNext.sessionName}</p>
             <p className="dashboard-up-next__sub">{friendlyDate(upNext.date)}</p>
-            <span className="dashboard-up-next__caret">→</span>
+            <span className="dashboard-up-next__cta dashboard-up-next__cta--overdue">Start session →</span>
           </div>
         );
 
@@ -486,7 +486,7 @@ export default function DashboardPage() {
           >
             <span className="dashboard-up-next__pill dashboard-up-next__pill--today">Today</span>
             <p className="dashboard-up-next__heading">{upNext.sessionName}</p>
-            <span className="dashboard-up-next__caret">→</span>
+            <span className="dashboard-up-next__cta dashboard-up-next__cta--today">Start session →</span>
           </div>
         );
 
@@ -507,19 +507,12 @@ export default function DashboardPage() {
 
       case "upcoming":
         return (
-          <div
-            className="dashboard-up-next dashboard-up-next--upcoming"
-            role="button"
-            tabIndex={0}
-            onClick={() => navigate(`/session/${upNext.sessionId}`)}
-            onKeyDown={(e) => e.key === "Enter" && navigate(`/session/${upNext.sessionId}`)}
-          >
+          <div className="dashboard-up-next dashboard-up-next--upcoming">
             <span className="dashboard-up-next__pill">
-              {upNext.daysUntil === 0 ? "Today" : upNext.daysUntil === 1 ? "Tomorrow" : `In ${upNext.daysUntil} days`}
+              {upNext.daysUntil === 1 ? "Tomorrow" : `In ${upNext.daysUntil} days`}
             </span>
             <p className="dashboard-up-next__heading">{upNext.sessionName}</p>
             <p className="dashboard-up-next__sub">{friendlyDate(upNext.date)}</p>
-            <span className="dashboard-up-next__caret">→</span>
           </div>
         );
 
@@ -801,12 +794,10 @@ export default function DashboardPage() {
     <main className="dashboard-page">
       <TopBar title="Dashboard" />
       <section className="dashboard-shell">
-        <header className="dashboard-header">
-          <p className="dashboard-eyebrow">Overview</p>
-          <h1 className="dashboard-title">Dashboard</h1>
-        </header>
-
-        {renderUpNext()}
+        <section className="dashboard-section">
+          <h2 className="dashboard-section-title">Up next</h2>
+          {renderUpNext()}
+        </section>
 
         {renderTimeline()}
 

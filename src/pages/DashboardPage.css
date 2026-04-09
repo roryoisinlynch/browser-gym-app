@@ -14,30 +14,6 @@
   gap: 28px;
 }
 
-/* ── Header ── */
-.dashboard-header {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.dashboard-eyebrow {
-  margin: 0;
-  font-size: 0.76rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-soft);
-}
-
-.dashboard-title {
-  margin: 0;
-  font-size: 1.28rem;
-  font-weight: 800;
-  letter-spacing: -0.025em;
-  color: var(--text-strong);
-}
-
 /* ── Section ── */
 .dashboard-section {
   display: flex;
@@ -153,13 +129,28 @@
   font-family: inherit;
 }
 
-.dashboard-up-next__caret {
-  position: absolute;
-  right: 16px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 1.2rem;
-  color: var(--text-soft);
+/* CTA pill — replaces the bare arrow */
+.dashboard-up-next__cta {
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  pointer-events: none; /* card is the clickable target */
+}
+
+.dashboard-up-next__cta--today,
+.dashboard-up-next__cta--active {
+  background: rgba(216, 240, 106, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(216, 240, 106, 0.25);
+}
+
+.dashboard-up-next__cta--overdue {
+  background: rgba(231, 111, 81, 0.12);
+  color: #e76f51;
+  border: 1px solid rgba(231, 111, 81, 0.25);
 }
 
 .dashboard-up-next__label {
