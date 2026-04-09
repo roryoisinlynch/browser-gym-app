@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { SessionInstanceView, SessionPR } from "../repositories/programRepository";
 import {
@@ -24,6 +25,7 @@ import type { BreadcrumbWeek } from "../components/WeeksBreadcrumb";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import "./WeekSummaryPage.css";
+import "./DashboardPage.css";
 
 function buildWeekNarrative(metrics: WeekMetrics): string {
   const { volumeScore, intensityScore, skippedSessions } = metrics;
@@ -65,6 +67,18 @@ function buildWeekNarrative(metrics: WeekMetrics): string {
   return `You ${join(positives)}, but you ${join(negatives)}.`;
 }
 
+type DaySquareStatus = "green" | "amber" | "late" | "overdue" | "grey" | "rest-past" | "rest-future";
+interface DaySquare { type: "session" | "rest"; scheduledDate: string; status: DaySquareStatus; }
+
+function localDateIso(d: Date = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function toLocalMidnight(iso: string): Date {
+  const d = new Date(iso);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
 export default function WeekSummaryPage() {
   const { weekInstanceId } = useParams<{ weekInstanceId: string }>();
   const [weekName, setWeekName] = useState<string | null>(null);
@@ -74,8 +88,10 @@ export default function WeekSummaryPage() {
   const [prs, setPrs] = useState<SessionPR[]>([]);
   const [weekTemplateDays, setWeekTemplateDays] = useState<WeekTemplateItem[]>([]);
   const [weekInstanceItems, setWeekInstanceItems] = useState<WeekInstanceItem[]>([]);
-  const [completedSessionIds, setCompletedSessionIds] = useState<Set<string>>(new Set());
+  const [, setCompletedSessionIds] = useState<Set<string>>(new Set());
   const [seasonInstance, setSeasonInstance] = useState<SeasonInstance | null>(null);
+  const [weekStartIso, setWeekStartIso] = useState<string | null>(null);
+  const [sessionInfoMap, setSessionInfoMap] = useState<Map<string, { date: string; status: string; completedAt: string | null }>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -124,6 +140,21 @@ export default function WeekSummaryPage() {
         setWeekTemplateDays(templateItems);
         setWeekInstanceItems(wii);
         setCompletedSessionIds(new Set(sessions.filter(s => s.status === "completed").map(s => s.id)));
+
+        // Build session info map for day-square timeline
+        setSessionInfoMap(new Map(sessions.map(s => [s.id, { date: s.date, status: s.status, completedAt: s.completedAt ?? null }])));
+
+        // Derive week start date from any session's scheduled date minus its wii order offset
+        for (const item of wii) {
+          if (item.sessionInstanceId) {
+            const session = sessions.find(s => s.id === item.sessionInstanceId);
+            if (session) {
+              const startMs = toLocalMidnight(session.date).getTime() - (item.order - 1) * 86400000;
+              setWeekStartIso(localDateIso(new Date(startMs)));
+              break;
+            }
+          }
+        }
 
         if (weekInstance.status === "completed") {
           const si = await getSeasonInstanceById(weekInstance.seasonInstanceId);
@@ -201,6 +232,31 @@ export default function WeekSummaryPage() {
     );
   }, [weeksBreadcrumb, metrics]);
 
+  const weekDaySquares = useMemo<DaySquare[] | null>(() => {
+    if (!weekStartIso || weekTemplateDays.length === 0) return null;
+    const today = localDateIso();
+    const weekStartMs = toLocalMidnight(weekStartIso).getTime();
+    const sorted = [...weekTemplateDays].sort((a, b) => a.order - b.order);
+    return sorted.map((templateItem, index): DaySquare => {
+      const scheduledDate = localDateIso(new Date(weekStartMs + index * 86400000));
+      if (templateItem.type === "rest") {
+        return { type: "rest", scheduledDate, status: scheduledDate < today ? "rest-past" : "rest-future" };
+      }
+      const wiiItem = weekInstanceItems.find(i => i.weekTemplateItemId === templateItem.id);
+      if (!wiiItem?.sessionInstanceId) {
+        return { type: "session", scheduledDate, status: scheduledDate < today ? "overdue" : "grey" };
+      }
+      const session = sessionInfoMap.get(wiiItem.sessionInstanceId);
+      if (!session) return { type: "session", scheduledDate, status: "grey" };
+      if (session.status !== "completed") {
+        return { type: "session", scheduledDate, status: scheduledDate < today ? "overdue" : "grey" };
+      }
+      const completedDate = session.completedAt ? localDateIso(toLocalMidnight(session.completedAt)) : scheduledDate;
+      const status: DaySquareStatus = completedDate < scheduledDate ? "amber" : completedDate > scheduledDate ? "late" : "green";
+      return { type: "session", scheduledDate, status };
+    });
+  }, [weekStartIso, weekTemplateDays, weekInstanceItems, sessionInfoMap]);
+
   if (isLoading) {
     return (
       <main className="week-summary-page">
@@ -226,9 +282,6 @@ export default function WeekSummaryPage() {
   }
 
   const { totalSets, totalSessions, durationLabel, volumeScore, intensityScore, consistencyScore, weekScore, emojiRating } = metrics;
-
-  // Build lookup maps for the consistency visual.
-  const wiiByTemplateItemId = new Map(weekInstanceItems.map(i => [i.weekTemplateItemId, i]));
 
   return (
     <main className="week-summary-page">
@@ -308,48 +361,64 @@ export default function WeekSummaryPage() {
           </p>
         </section>
 
-        {/* ── Consistency visual ── */}
-        {weekTemplateDays.length > 0 && (
-          <section className="week-summary-section">
-            <h2 className="week-summary-section-title">Schedule</h2>
-            <div className="consistency-visual">
-              <div className="consistency-row">
-                <span className="consistency-row__label">Planned</span>
-                <div className="consistency-circles">
-                  {weekTemplateDays.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`consistency-circle ${item.type === "session" ? "consistency-circle--gym" : "consistency-circle--rest"}`}
-                    />
-                  ))}
+        {/* ── Schedule timeline ── */}
+        {weekDaySquares && weekDaySquares.length > 0 && (() => {
+          const today = localDateIso();
+          const statuses = new Set(weekDaySquares.map(d => d.status));
+          const hasRest = weekDaySquares.some(d => d.type === "rest");
+          const todayDay = weekDaySquares.find(d => d.scheduledDate === today);
+
+          function chip(key: string, icon: ReactNode, label: string) {
+            return (
+              <span key={key} className="dashboard-timeline__legend-chip">
+                {icon}
+                <span className="dashboard-timeline__legend-label">{label}</span>
+              </span>
+            );
+          }
+
+          const entries: ReactNode[] = [];
+          if (statuses.has("green")) entries.push(chip("green", <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--green" />, "On time"));
+          if (statuses.has("amber")) entries.push(chip("amber", <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--amber" />, "Early"));
+          if (statuses.has("late")) entries.push(chip("late", <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--late" />, "Done late"));
+          if (statuses.has("overdue")) entries.push(chip("overdue", <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--overdue" />, "Overdue"));
+          if (statuses.has("grey")) entries.push(chip("grey", <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--grey" />, "Upcoming"));
+          if (hasRest) entries.push(chip("rest", <span className="dashboard-timeline__legend-dot dashboard-timeline__legend-dot--rest" />, "Rest"));
+          if (todayDay) {
+            const todayClasses = [
+              "dashboard-timeline__legend-day--today",
+              `dashboard-timeline__day--${todayDay.status}`,
+              todayDay.type === "rest" ? "dashboard-timeline__day--rest" : "",
+              "dashboard-timeline__day--today",
+            ].filter(Boolean).join(" ");
+            entries.push(chip("today", <span className={todayClasses} />, "Today"));
+          }
+
+          return (
+            <section className="week-summary-section">
+              <h2 className="week-summary-section-title">Schedule</h2>
+              <div className="dashboard-timeline">
+                <div className="dashboard-timeline__week-row">
+                  <div className="dashboard-timeline__days">
+                    {weekDaySquares.map((day, di) => {
+                      const isToday = day.scheduledDate === today;
+                      const classes = [
+                        "dashboard-timeline__day",
+                        `dashboard-timeline__day--${day.status}`,
+                        day.type === "rest" ? "dashboard-timeline__day--rest" : "",
+                        isToday ? "dashboard-timeline__day--today" : "",
+                      ].filter(Boolean).join(" ");
+                      return <div key={di} className={classes} title={day.scheduledDate} />;
+                    })}
+                  </div>
                 </div>
+                {entries.length > 0 && (
+                  <div className="dashboard-timeline__legend">{entries}</div>
+                )}
               </div>
-              <div className="consistency-row">
-                <span className="consistency-row__label">Actual</span>
-                <div className="consistency-circles">
-                  {weekTemplateDays.map((item) => {
-                    if (item.type === "rest") {
-                      return <div key={item.id} className="consistency-circle consistency-circle--rest" />;
-                    }
-                    const wii = wiiByTemplateItemId.get(item.id);
-                    const sessionId = wii?.sessionInstanceId;
-                    // A session is completed if its instance exists and has completed status.
-                    // We rely on the breadcrumb sessions list to check status.
-                    const completed = sessionId != null && completedSessionIds.has(sessionId);
-                    return (
-                      <div
-                        key={item.id}
-                        className={`consistency-circle ${completed ? "consistency-circle--gym" : "consistency-circle--missed"}`}
-                      >
-                        {!completed && <span className="consistency-circle__x">×</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
+            </section>
+          );
+        })()}
 
         {/* ── Sessions this week ── */}
         {sessionBreadcrumb.length > 0 && (
