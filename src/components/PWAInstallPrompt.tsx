@@ -11,6 +11,7 @@ interface BeforeInstallPromptEvent extends Event {
 const DISMISSED_KEY = "pwa-install-dismissed";
 
 function detectPlatform(): Platform {
+  if (window.innerWidth >= 1024) return null;
   if (window.matchMedia("(display-mode: standalone)").matches) return null;
   if ("standalone" in window.navigator && (window.navigator as { standalone?: boolean }).standalone) return null;
 
@@ -34,6 +35,8 @@ export default function PWAInstallPrompt() {
       setVisible(true);
       return;
     }
+
+    if (window.innerWidth >= 1024) return;
 
     function handleBeforeInstallPrompt(e: Event) {
       e.preventDefault();
