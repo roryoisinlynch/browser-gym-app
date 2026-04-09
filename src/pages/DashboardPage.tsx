@@ -850,7 +850,7 @@ export default function DashboardPage() {
     <main className="dashboard-page">
       <TopBar title="Dashboard" />
       <section className="dashboard-shell">
-        {isDesktop && (
+        {isDesktop ? (
           <section className="dashboard-qr-banner">
             <div className="dashboard-qr-banner__text">
               <p className="dashboard-qr-banner__heading">Open on your phone</p>
@@ -858,41 +858,43 @@ export default function DashboardPage() {
             </div>
             <img className="dashboard-qr-banner__img" src="/qr.png" alt="QR code to open app on mobile" />
           </section>
-        )}
+        ) : (
+          <>
+            <section className="dashboard-section">
+              <h2 className="dashboard-section-title">Up next</h2>
+              {renderUpNext()}
+            </section>
 
-        <section className="dashboard-section">
-          <h2 className="dashboard-section-title">Up next</h2>
-          {renderUpNext()}
-        </section>
+            {renderTimeline()}
 
-        {renderTimeline()}
-
-        {hasAnyRecent && (
-          <section className="dashboard-section">
-            <div className="dashboard-section-header" ref={recentTooltipRef}>
-              <h2 className="dashboard-section-title">Recent activity</h2>
-              <button
-                className="dashboard-info-btn"
-                aria-expanded={recentTooltipOpen}
-                onClick={() => setRecentTooltipOpen((v) => !v)}
-              >?</button>
-              {recentTooltipOpen && (
-                <div className="dashboard-info-tooltip">
-                  Tap a session, week, or season icon to view its full summary.
+            {hasAnyRecent && (
+              <section className="dashboard-section">
+                <div className="dashboard-section-header" ref={recentTooltipRef}>
+                  <h2 className="dashboard-section-title">Recent activity</h2>
+                  <button
+                    className="dashboard-info-btn"
+                    aria-expanded={recentTooltipOpen}
+                    onClick={() => setRecentTooltipOpen((v) => !v)}
+                  >?</button>
+                  {recentTooltipOpen && (
+                    <div className="dashboard-info-tooltip">
+                      Tap a session, week, or season icon to view its full summary.
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            <div className="dashboard-recent-grid">
-              {renderRecentCard(recentSession, "Session")}
-              {renderRecentCard(recentWeek, "Week")}
-              {renderRecentCard(recentSeason, "Season")}
-            </div>
-          </section>
+                <div className="dashboard-recent-grid">
+                  {renderRecentCard(recentSession, "Session")}
+                  {renderRecentCard(recentWeek, "Week")}
+                  {renderRecentCard(recentSeason, "Season")}
+                </div>
+              </section>
+            )}
+
+            {renderPRSpotlight()}
+
+            {renderAllPRs()}
+          </>
         )}
-
-        {renderPRSpotlight()}
-
-        {renderAllPRs()}
       </section>
 
       <BottomNav activeTab="home" />
