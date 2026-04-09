@@ -21,19 +21,24 @@ type EditableRow = ExerciseSetTableRow & {
   persistedSetId: string | null;
 };
 
-function createDraftRow(index: number): EditableRow {
+function createDraftRow(index: number, defaultWeight = ""): EditableRow {
   return {
     id: `draft-${Date.now()}-${index}`,
     persistedSetId: null,
-    weight: "",
+    weight: defaultWeight,
     reps: "",
     estimatedOneRepMax: null,
   };
 }
 
 function hydrateRows(view: ExerciseInstanceView): EditableRow[] {
+  const defaultWeight =
+    view.exerciseInstance.prescribedWeight != null
+      ? String(view.exerciseInstance.prescribedWeight)
+      : "";
+
   if (view.sets.length === 0) {
-    return [createDraftRow(0)];
+    return [createDraftRow(0, defaultWeight)];
   }
 
   return view.sets.map(({ set, analysis }) => ({
@@ -185,9 +190,9 @@ export default function ExercisePage() {
 
     const performedWeight = parseNullableNumber(row.weight);
     const performedReps = parseNullableNumber(row.reps);
-    const hasAnyEnteredValue = performedWeight != null || performedReps != null;
+    const hasBothValues = performedWeight != null && performedReps != null;
 
-    if (!hasAnyEnteredValue && row.persistedSetId == null) {
+    if (!hasBothValues && row.persistedSetId == null) {
       return;
     }
 
@@ -259,9 +264,13 @@ export default function ExercisePage() {
   }
 
   function handleAddRow() {
+    const defaultWeight =
+      exerciseView?.exerciseInstance.prescribedWeight != null
+        ? String(exerciseView.exerciseInstance.prescribedWeight)
+        : "";
     setRows((currentRows) => [
       ...currentRows,
-      createDraftRow(draftCounterRef.current++),
+      createDraftRow(draftCounterRef.current++, defaultWeight),
     ]);
   }
 
