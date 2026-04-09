@@ -469,6 +469,18 @@
   letter-spacing: 0.01em;
 }
 
+.exercise-card__darts {
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.session-dart-key {
+  margin: 0 14px 14px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
 .exercise-chip {
   display: inline-flex;
   align-items: center;

@@ -10,6 +10,7 @@ import {
 } from "../repositories/programRepository";
 import BottomNav from "../components/BottomNav";
 import TopBar from "../components/TopBar";
+import { calculateEstimatedOneRepMax } from "../services/setAnalysis";
 import "./SessionPage.css";
 
 function clampPercentage(value: number) {
@@ -269,6 +270,28 @@ export default function SessionPage() {
         return a.sessionTemplateMuscleGroup.order - b.sessionTemplateMuscleGroup.order;
       });
   }, [sessionView]);
+
+  // True if any working set across the session met its intensity target — drives the dart key.
+  const anyDartsVisible = useMemo(() => {
+    return sortedMuscleGroups.some(({ exercises }) =>
+      exercises.some(({ exerciseTemplate, exerciseInstance, sets }) => {
+        const isBodyweight = exerciseTemplate.weightMode === "bodyweight";
+        const targetE1RM = isBodyweight
+          ? null
+          : calculateEstimatedOneRepMax(
+              exerciseInstance?.prescribedWeight ?? null,
+              exerciseInstance?.prescribedRepTarget ?? null
+            );
+        const targetReps = exerciseInstance?.prescribedRepTarget ?? null;
+        return sets.some((s) => {
+          if (s.analysis.setType !== "working") return false;
+          if (isBodyweight) return targetReps != null && (s.set.performedReps ?? 0) >= targetReps;
+          return targetE1RM != null && s.analysis.estimatedOneRepMax != null &&
+            s.analysis.estimatedOneRepMax >= targetE1RM - 0.0001;
+        });
+      })
+    );
+  }, [sortedMuscleGroups]);
 
   useEffect(() => {
     if (!sessionView) {
@@ -628,9 +651,33 @@ export default function SessionPage() {
                       {!isCollapsed && (
                         <ul className="exercise-list">
                           {exercises.map(
-                            ({ exerciseTemplate, movementType, exerciseInstance, sets }) => {
+                            ({ exerciseTemplate, movementType, exerciseInstance, sets, workingSetCount, warmupSetCount }) => {
                               const tone = getMovementTypeTone(movementType.name);
-                              const setCount = sets.length;
+                              const isBodyweight = exerciseTemplate.weightMode === "bodyweight";
+
+                              // Target e1RM for intensity comparison
+                              const targetE1RM = isBodyweight
+                                ? null
+                                : calculateEstimatedOneRepMax(
+                                    exerciseInstance?.prescribedWeight ?? null,
+                                    exerciseInstance?.prescribedRepTarget ?? null
+                                  );
+                              const targetReps = exerciseInstance?.prescribedRepTarget ?? null;
+
+                              // Count how many working sets met the intensity target
+                              const dartCount = sets.filter((s) => {
+                                if (s.analysis.setType !== "working") return false;
+                                if (isBodyweight) {
+                                  return targetReps != null && (s.set.performedReps ?? 0) >= targetReps;
+                                }
+                                return targetE1RM != null && s.analysis.estimatedOneRepMax != null &&
+                                  s.analysis.estimatedOneRepMax >= targetE1RM - 0.0001;
+                              }).length;
+
+                              // Build set count label parts
+                              const labelParts: string[] = [];
+                              if (warmupSetCount > 0) labelParts.push(`${warmupSetCount} warmup`);
+                              if (workingSetCount > 0) labelParts.push(`${workingSetCount} working`);
 
                               return (
                                 <li
@@ -660,11 +707,19 @@ export default function SessionPage() {
                                           {exerciseTemplate.exerciseName}
                                         </h3>
 
-                                        {setCount > 0 && (
-                                          <span className="exercise-card__status">
-                                            {setCount} {setCount === 1 ? "set" : "sets"}
-                                          </span>
-                                        )}
+                                        <span className="exercise-card__status">
+                                          {labelParts.length === 0
+                                            ? "Not started"
+                                            : <>
+                                                {labelParts.join(", ")}
+                                                {dartCount > 0 && (
+                                                  <span className="exercise-card__darts" aria-label={`${dartCount} sets met intensity target`}>
+                                                    {" "}{"🎯".repeat(dartCount)}
+                                                  </span>
+                                                )}
+                                              </>
+                                          }
+                                        </span>
                                       </div>
 
                                       <span
@@ -686,6 +741,10 @@ export default function SessionPage() {
                 }
               )}
             </div>
+          )}
+
+          {anyDartsVisible && (
+            <p className="session-dart-key">🎯 = RIR target met</p>
           )}
         </section>
 
