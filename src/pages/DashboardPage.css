@@ -14,42 +14,33 @@
   gap: 28px;
 }
 
-/* ── QR Banner ── */
-.dashboard-qr-banner {
+/* ── Desktop QR full-screen ── */
+.dashboard-page--desktop {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px;
-  border-radius: 16px;
-  background: var(--card-bg, rgba(255,255,255,0.06));
-  border: 1px solid rgba(255,255,255,0.1);
+  justify-content: center;
+  min-height: 100vh;
+  padding: 0;
 }
 
-.dashboard-qr-banner__text {
+.dashboard-qr-full {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: 20px;
 }
 
-.dashboard-qr-banner__heading {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--text-strong);
+.dashboard-qr-full__img {
+  width: min(60vmin, 400px);
+  height: min(60vmin, 400px);
+  border-radius: 12px;
 }
 
-.dashboard-qr-banner__sub {
+.dashboard-qr-full__url {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: 1rem;
   color: var(--text-soft);
-}
-
-.dashboard-qr-banner__img {
-  width: 96px;
-  height: 96px;
-  border-radius: 8px;
-  flex-shrink: 0;
+  letter-spacing: 0.02em;
 }
 
 /* ── Section ── */
