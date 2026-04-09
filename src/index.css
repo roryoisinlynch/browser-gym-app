@@ -13,6 +13,20 @@ body,
     sans-serif;
 }
 
+/* ── Shared spinner ── */
+@keyframes page-spin {
+  to { transform: rotate(360deg); }
+}
+
+.page-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-top-color: rgba(255, 255, 255, 0.45);
+  border-radius: 50%;
+  animation: page-spin 0.7s linear infinite;
+}
+
 .text-link {
   color: var(--link);
   font-size: 0.98rem;

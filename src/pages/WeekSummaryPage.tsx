@@ -255,19 +255,7 @@ export default function WeekSummaryPage() {
     });
   }, [weekStartIso, weekTemplateDays, weekInstanceItems, sessionInfoMap]);
 
-  if (isLoading) {
-    return (
-      <main className="week-summary-page">
-        <TopBar title="Week summary" backTo="/" backLabel="Dashboard" />
-        <section className="week-summary-shell">
-          <p className="week-summary-loading">Loading summary...</p>
-        </section>
-        <BottomNav activeTab="session" />
-      </main>
-    );
-  }
-
-  if (errorMessage || !metrics) {
+  if (!isLoading && (errorMessage || !metrics)) {
     return (
       <main className="week-summary-page">
         <TopBar title="Week summary" backTo="/" backLabel="Dashboard" />
@@ -279,8 +267,6 @@ export default function WeekSummaryPage() {
     );
   }
 
-  const { totalSets, totalSessions, durationLabel, volumeScore, intensityScore, consistencyScore, weekScore, emojiRating } = metrics;
-
   return (
     <main className="week-summary-page">
       <TopBar
@@ -290,6 +276,11 @@ export default function WeekSummaryPage() {
       />
 
       <section className="week-summary-shell">
+        {isLoading ? (
+          <div className="page-spinner" />
+        ) : (() => {
+          const { totalSets, totalSessions, durationLabel, volumeScore, intensityScore, consistencyScore, weekScore, emojiRating } = metrics!;
+          return (<>
         {/* ── Week name ── */}
         <header className="week-summary-header">
           <h1 className="week-summary-title">{weekName}</h1>
@@ -321,7 +312,7 @@ export default function WeekSummaryPage() {
         <section className="week-summary-section">
           <h2 className="week-summary-section-title">Results</h2>
 
-          <p className="week-summary-narrative">{buildWeekNarrative(metrics)}</p>
+          <p className="week-summary-narrative">{buildWeekNarrative(metrics!)}</p>
 
           <div className="week-summary-score-block">
             {/* Left: big emoji + week score */}
@@ -472,7 +463,8 @@ export default function WeekSummaryPage() {
             View season summary →
           </button>
         )}
-
+        </>);
+        })()}
       </section>
 
       <BottomNav activeTab="session" />

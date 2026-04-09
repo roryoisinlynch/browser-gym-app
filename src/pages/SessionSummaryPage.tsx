@@ -134,19 +134,7 @@ export default function SessionSummaryPage() {
     [sessionView]
   );
 
-  if (isLoading) {
-    return (
-      <main className="summary-page">
-        <TopBar title="Session summary" backTo="/" backLabel="Dashboard" />
-        <section className="summary-shell">
-          <p className="summary-loading">Loading summary...</p>
-        </section>
-        <BottomNav activeTab="session" />
-      </main>
-    );
-  }
-
-  if (errorMessage || !sessionView || !metrics) {
+  if (!isLoading && (errorMessage || !sessionView || !metrics)) {
     return (
       <main className="summary-page">
         <TopBar title="Session summary" backTo="/" backLabel="Dashboard" />
@@ -158,8 +146,6 @@ export default function SessionSummaryPage() {
     );
   }
 
-  const { ragStatus, sessionScore, volumeScore, intensityScore } = metrics;
-  const narrative = buildNarrative(metrics);
 
   return (
     <main className="summary-page">
@@ -170,24 +156,32 @@ export default function SessionSummaryPage() {
       />
 
       <section className="summary-shell">
+        {isLoading ? (
+          <div className="page-spinner" />
+        ) : (() => {
+          const sv = sessionView!;
+          const m = metrics!;
+          const { ragStatus, sessionScore, volumeScore, intensityScore, durationSeconds, totalSets } = m;
+          const narrative = buildNarrative(m);
+          return (<>
         {/* ── Session name ── */}
         <header className="summary-header">
-          <h1 className="summary-title">{sessionView.sessionTemplate.name}</h1>
+          <h1 className="summary-title">{sv.sessionTemplate.name}</h1>
         </header>
 
         {/* ── Descriptive stats ── */}
         <div className="summary-stats-row">
           <div className="summary-stat">
             <span className="summary-stat__value">
-              {metrics.durationSeconds != null
-                ? formatDuration(metrics.durationSeconds)
+              {durationSeconds != null
+                ? formatDuration(durationSeconds)
                 : "—"}
             </span>
             <span className="summary-stat__label">Duration</span>
           </div>
           <div className="summary-stat-divider" />
           <div className="summary-stat">
-            <span className="summary-stat__value">{metrics.totalSets}</span>
+            <span className="summary-stat__value">{totalSets}</span>
             <span className="summary-stat__label">Total sets</span>
           </div>
         </div>
@@ -286,15 +280,16 @@ export default function SessionSummaryPage() {
         )}
 
         {/* ── Week summary CTA (shown when this was the last session in the week) ── */}
-        {sessionView.weekInstance.status === "completed" && (
+        {sv.weekInstance.status === "completed" && (
           <button
             className="summary-week-cta"
-            onClick={() => navigate(`/week/${sessionView.weekInstance.id}/summary`)}
+            onClick={() => navigate(`/week/${sv.weekInstance.id}/summary`)}
           >
             View week summary →
           </button>
         )}
-
+        </>);
+        })()}
       </section>
 
       <BottomNav activeTab="session" />

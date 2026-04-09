@@ -267,19 +267,7 @@ export default function SeasonSummaryPage() {
     load();
   }, [seasonInstanceId]);
 
-  if (isLoading) {
-    return (
-      <main className="season-summary-page">
-        <TopBar title="Season summary" backTo="/" backLabel="Dashboard" />
-        <section className="season-summary-shell">
-          <p className="season-summary-loading">Loading summary...</p>
-        </section>
-        <BottomNav activeTab="session" />
-      </main>
-    );
-  }
-
-  if (errorMessage || !metrics) {
+  if (!isLoading && (errorMessage || !metrics)) {
     return (
       <main className="season-summary-page">
         <TopBar title="Season summary" backTo="/" backLabel="Dashboard" />
@@ -291,14 +279,17 @@ export default function SeasonSummaryPage() {
     );
   }
 
-  const { totalSets, totalSessions, totalWeeks, durationLabel, volumeScore, intensityScore, consistencyScore, seasonScore, grade } = metrics;
-  const color = gradeColor(grade);
-
   return (
     <main className="season-summary-page">
       <TopBar title="Season summary" backTo="/" backLabel="Dashboard" />
 
       <section className="season-summary-shell">
+        {isLoading ? (
+          <div className="page-spinner" />
+        ) : (() => {
+          const { totalSets, totalSessions, totalWeeks, durationLabel, volumeScore, intensityScore, consistencyScore, seasonScore, grade } = metrics!;
+          const color = gradeColor(grade);
+          return (<>
         {/* ── Season name ── */}
         <header className="season-summary-header">
           <h1 className="season-summary-title">{seasonName}</h1>
@@ -343,7 +334,7 @@ export default function SeasonSummaryPage() {
         <section className="season-summary-section">
           <h2 className="season-summary-section-title">Results</h2>
 
-          <p className="season-summary-narrative">{buildSeasonNarrative(metrics)}</p>
+          <p className="season-summary-narrative">{buildSeasonNarrative(metrics!)}</p>
 
           <div className="season-summary-score-block">
             {/* Left: grade badge + season score */}
@@ -488,7 +479,8 @@ export default function SeasonSummaryPage() {
             </ul>
           </section>
         )}
-
+        </>);
+        })()}
       </section>
 
       <BottomNav activeTab="session" />
