@@ -2407,6 +2407,9 @@ export async function getActiveDestinationRoute(): Promise<string> {
   const activeSession = sessionInstances.find((i) => i.status === "in_progress");
   if (activeSession) return `/session/${activeSession.id}`;
 
+  const activeSeason = await getActiveSeasonInstance();
+  if (!activeSeason) return "/";
+
   return "/week";
 }
 

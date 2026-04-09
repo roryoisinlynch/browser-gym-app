@@ -149,17 +149,19 @@ export default function WeekPage() {
             </p>
           </header>
           <section className="week-page__content">
-            <button
-              className="week-start-card"
-              onClick={() => navigate("/season")}
-            >
-              <span className="day-card__text">
-                <span className="day-card__title">Back to Season</span>
-              </span>
-              <span className="day-card__action">
-                <span className="day-pill day-pill--start">Go →</span>
-              </span>
-            </button>
+            <div className="week-page__list">
+              <button
+                className="week-start-card"
+                onClick={() => navigate("/season")}
+              >
+                <span className="day-card__text">
+                  <span className="day-card__title">Back to Season</span>
+                </span>
+                <span className="day-card__action">
+                  <span className="day-pill day-pill--start">Go →</span>
+                </span>
+              </button>
+            </div>
           </section>
         </section>
         <BottomNav activeTab="session" />
