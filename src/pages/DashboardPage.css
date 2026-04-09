@@ -168,9 +168,29 @@
   gap: 10px;
 }
 
+.dashboard-timeline__week-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.dashboard-timeline__week-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dashboard-timeline__week-label {
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: var(--text-soft);
+  width: 20px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
 .dashboard-timeline__days {
   display: flex;
-  flex-wrap: wrap;
   gap: 3px;
 }
 
@@ -181,12 +201,30 @@
   flex-shrink: 0;
 }
 
+/* Rest days are dots */
+.dashboard-timeline__day--rest {
+  border-radius: 50%;
+  width: 10px;
+  height: 10px;
+  align-self: center;
+  margin: 0 2px;
+}
+
+/* Status colours — session squares */
 .dashboard-timeline__day--green      { background: #6bcb77; }
 .dashboard-timeline__day--amber      { background: #f4a261; }
 .dashboard-timeline__day--red        { background: #e76f51; }
 .dashboard-timeline__day--grey       { background: var(--panel-border); opacity: 0.5; }
-.dashboard-timeline__day--rest-past  { background: var(--panel-border); opacity: 0.25; }
-.dashboard-timeline__day--rest-future { background: transparent; border: 1px solid var(--panel-border); opacity: 0.4; }
+
+/* Rest dot colours */
+.dashboard-timeline__day--rest.dashboard-timeline__day--rest-past   { background: var(--panel-border); opacity: 0.35; }
+.dashboard-timeline__day--rest.dashboard-timeline__day--rest-future  { background: var(--panel-border); opacity: 0.2; }
+
+/* Today accent ring */
+.dashboard-timeline__day--today {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
 
 /* Legend */
 .dashboard-timeline__legend {
@@ -203,10 +241,19 @@
   flex-shrink: 0;
 }
 
-.dashboard-timeline__legend-item--green      { background: #6bcb77; }
-.dashboard-timeline__legend-item--amber      { background: #f4a261; }
-.dashboard-timeline__legend-item--red        { background: #e76f51; }
-.dashboard-timeline__legend-item--rest-past  { background: var(--panel-border); opacity: 0.5; }
+.dashboard-timeline__legend-item--green  { background: #6bcb77; }
+.dashboard-timeline__legend-item--amber  { background: #f4a261; }
+.dashboard-timeline__legend-item--red    { background: #e76f51; }
+.dashboard-timeline__legend-item--grey   { background: var(--panel-border); opacity: 0.5; }
+
+.dashboard-timeline__legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dashboard-timeline__legend-dot--rest { background: var(--panel-border); opacity: 0.5; }
 
 .dashboard-timeline__legend-label {
   font-size: 0.68rem;

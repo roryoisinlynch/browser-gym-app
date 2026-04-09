@@ -49,6 +49,7 @@ interface SeasonTimelineData {
   startDate: string;
   endDate: string;
   totalWeeks: number;
+  weekLength: number;
   days: DaySquare[];
   currentWeekOrder: number;
   expectedWeekOrder: number;
@@ -282,6 +283,7 @@ async function loadTimeline(
     startDate: seasonStartIso,
     endDate,
     totalWeeks,
+    weekLength,
     days,
     currentWeekOrder,
     expectedWeekOrder,
@@ -532,21 +534,44 @@ export default function DashboardPage() {
 
   function renderTimeline() {
     if (!seasonTimeline) return null;
-    const { startDate, endDate, days, currentWeekOrder, expectedWeekOrder, totalWeeks } = seasonTimeline;
+    const { startDate, endDate, days, weekLength, currentWeekOrder, expectedWeekOrder, totalWeeks } = seasonTimeline;
     const isAhead = currentWeekOrder > expectedWeekOrder;
     const isBehind = currentWeekOrder < expectedWeekOrder;
+    const today = localDateIso();
+
+    // Chunk days into per-week rows
+    const weekRows: DaySquare[][] = [];
+    for (let i = 0; i < days.length; i += weekLength) {
+      weekRows.push(days.slice(i, i + weekLength));
+    }
 
     return (
       <section className="dashboard-section">
         <h2 className="dashboard-section-title">Season progress</h2>
         <div className="dashboard-timeline">
-          <div className="dashboard-timeline__days">
-            {days.map((day, i) => (
-              <div
-                key={i}
-                className={`dashboard-timeline__day dashboard-timeline__day--${day.status}`}
-                title={day.scheduledDate}
-              />
+          <div className="dashboard-timeline__week-rows">
+            {weekRows.map((week, wi) => (
+              <div key={wi} className="dashboard-timeline__week-row">
+                <span className="dashboard-timeline__week-label">W{wi + 1}</span>
+                <div className="dashboard-timeline__days">
+                  {week.map((day, di) => {
+                    const isToday = day.scheduledDate === today;
+                    const classes = [
+                      "dashboard-timeline__day",
+                      `dashboard-timeline__day--${day.status}`,
+                      day.type === "rest" ? "dashboard-timeline__day--rest" : "",
+                      isToday ? "dashboard-timeline__day--today" : "",
+                    ].filter(Boolean).join(" ");
+                    return (
+                      <div
+                        key={di}
+                        className={classes}
+                        title={day.scheduledDate}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
             ))}
           </div>
           <div className="dashboard-timeline__legend">
@@ -556,7 +581,9 @@ export default function DashboardPage() {
             <span className="dashboard-timeline__legend-label">Early</span>
             <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--red" />
             <span className="dashboard-timeline__legend-label">Late / missed</span>
-            <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--rest-past" />
+            <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--grey" />
+            <span className="dashboard-timeline__legend-label">Upcoming</span>
+            <span className="dashboard-timeline__legend-dot dashboard-timeline__legend-dot--rest" />
             <span className="dashboard-timeline__legend-label">Rest</span>
           </div>
           <div className="dashboard-timeline__meta">
