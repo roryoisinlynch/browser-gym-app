@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { SessionInstanceView, SessionPR } from "../repositories/programRepository";
 import {
@@ -25,7 +24,6 @@ import type { BreadcrumbWeek } from "../components/WeeksBreadcrumb";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import "./WeekSummaryPage.css";
-import "./DashboardPage.css";
 
 function buildWeekNarrative(metrics: WeekMetrics): string {
   const { volumeScore, intensityScore, skippedSessions } = metrics;
@@ -361,60 +359,32 @@ export default function WeekSummaryPage() {
           </p>
         </section>
 
-        {/* ── Schedule timeline ── */}
+        {/* ── Schedule counts ── */}
         {weekDaySquares && weekDaySquares.length > 0 && (() => {
-          const today = localDateIso();
-          const statuses = new Set(weekDaySquares.map(d => d.status));
-          const hasRest = weekDaySquares.some(d => d.type === "rest");
-          const todayDay = weekDaySquares.find(d => d.scheduledDate === today);
+          const countItems = [
+            { label: "On time",   color: "#6bcb77", n: weekDaySquares.filter(d => d.status === "green").length },
+            { label: "Early",     color: "#f4a261", n: weekDaySquares.filter(d => d.status === "amber").length },
+            { label: "Done late", color: "#e76f51", n: weekDaySquares.filter(d => d.status === "late").length },
+            { label: "Missed",    color: "#9b2335", n: weekDaySquares.filter(d => d.status === "overdue").length },
+            { label: "Upcoming",  color: null,      n: weekDaySquares.filter(d => d.status === "grey").length },
+            { label: "Rest",      color: null,      n: weekDaySquares.filter(d => d.type === "rest").length },
+          ].filter(i => i.n > 0);
 
-          function chip(key: string, icon: ReactNode, label: string) {
-            return (
-              <span key={key} className="dashboard-timeline__legend-chip">
-                {icon}
-                <span className="dashboard-timeline__legend-label">{label}</span>
-              </span>
-            );
-          }
-
-          const entries: ReactNode[] = [];
-          if (statuses.has("green")) entries.push(chip("green", <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--green" />, "On time"));
-          if (statuses.has("amber")) entries.push(chip("amber", <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--amber" />, "Early"));
-          if (statuses.has("late")) entries.push(chip("late", <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--late" />, "Done late"));
-          if (statuses.has("overdue")) entries.push(chip("overdue", <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--overdue" />, "Overdue"));
-          if (statuses.has("grey")) entries.push(chip("grey", <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--grey" />, "Upcoming"));
-          if (hasRest) entries.push(chip("rest", <span className="dashboard-timeline__legend-dot dashboard-timeline__legend-dot--rest" />, "Rest"));
-          if (todayDay) {
-            const todayClasses = [
-              "dashboard-timeline__legend-day--today",
-              `dashboard-timeline__day--${todayDay.status}`,
-              todayDay.type === "rest" ? "dashboard-timeline__day--rest" : "",
-              "dashboard-timeline__day--today",
-            ].filter(Boolean).join(" ");
-            entries.push(chip("today", <span className={todayClasses} />, "Today"));
-          }
-
+          if (countItems.length === 0) return null;
           return (
             <section className="week-summary-section">
               <h2 className="week-summary-section-title">Schedule</h2>
-              <div className="dashboard-timeline">
-                <div className="dashboard-timeline__week-row">
-                  <div className="dashboard-timeline__days">
-                    {weekDaySquares.map((day, di) => {
-                      const isToday = day.scheduledDate === today;
-                      const classes = [
-                        "dashboard-timeline__day",
-                        `dashboard-timeline__day--${day.status}`,
-                        day.type === "rest" ? "dashboard-timeline__day--rest" : "",
-                        isToday ? "dashboard-timeline__day--today" : "",
-                      ].filter(Boolean).join(" ");
-                      return <div key={di} className={classes} title={day.scheduledDate} />;
-                    })}
+              <div className="week-summary-schedule-counts">
+                {countItems.map((item, i) => (
+                  <div key={item.label} className="week-summary-schedule-count">
+                    {i > 0 && <span className="week-summary-schedule-count__divider" />}
+                    <span
+                      className="week-summary-schedule-count__value"
+                      style={item.color ? { color: item.color } : undefined}
+                    >{item.n}</span>
+                    <span className="week-summary-schedule-count__label">{item.label}</span>
                   </div>
-                </div>
-                {entries.length > 0 && (
-                  <div className="dashboard-timeline__legend">{entries}</div>
-                )}
+                ))}
               </div>
             </section>
           );

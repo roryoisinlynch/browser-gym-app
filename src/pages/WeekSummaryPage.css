@@ -224,16 +224,41 @@
   align-items: center;
 }
 
-/* ── Single-week schedule timeline — cap square size ── */
-.week-summary-section .dashboard-timeline__day:not(.dashboard-timeline__day--rest) {
-  flex: 0 0 28px;
-  width: 28px;
-  height: 28px;
-  aspect-ratio: unset;
+/* ── Schedule counts ── */
+.week-summary-schedule-counts {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+  row-gap: 8px;
 }
 
-.week-summary-section .dashboard-timeline__days {
-  justify-content: flex-start;
+.week-summary-schedule-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.week-summary-schedule-count__divider {
+  display: block;
+  width: 1px;
+  height: 24px;
+  background: var(--panel-border);
+  margin: 0 12px 0 0;
+}
+
+.week-summary-schedule-count__value {
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--text-strong);
+}
+
+.week-summary-schedule-count__label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-muted);
 }
 
 /* ── Personal records ── */

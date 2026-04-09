@@ -19,17 +19,24 @@
   align-items: center;
   gap: 0;
   padding-top: 14px; /* room for the absolutely-positioned arrow above */
+  min-width: min(66vw, 100%);
 }
 
 .weekly-breadcrumb__item {
   display: flex;
   align-items: center;
+  flex: 1;
+}
+
+.weekly-breadcrumb__item:first-child {
+  flex: 0 0 auto;
 }
 
 .weekly-breadcrumb__separator {
   display: block;
-  width: 18px;
+  flex: 1;
+  min-width: 8px;
   height: 1.5px;
   background: var(--panel-border);
-  margin: 0 2px;
+  margin: 0;
 }

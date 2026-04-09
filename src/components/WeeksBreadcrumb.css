@@ -17,22 +17,27 @@
 .weeks-breadcrumb__trail {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  justify-content: center;
   gap: 0;
+  min-width: min(66vw, 100%);
 }
 
 .weeks-breadcrumb__item {
   display: flex;
   align-items: center;
+  flex: 1;
+}
+
+.weeks-breadcrumb__item:first-child {
+  flex: 0 0 auto;
 }
 
 .weeks-breadcrumb__separator {
   display: block;
-  width: 14px;
+  flex: 1;
+  min-width: 8px;
   height: 1.5px;
   background: var(--panel-border);
-  margin: 0 2px;
+  margin: 0;
 }
 
 .weeks-breadcrumb__emoji {
