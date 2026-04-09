@@ -1908,7 +1908,7 @@ async function resolvePreviousDate(
  * Returns exercises where the session produced a genuine all-time PR.
  *
  * Rules:
- *  - Must have at least 3 prior exercise instances (1st–3rd are excluded).
+ *  - Must have at least 1 prior exercise instance (only the very first is excluded).
  *  - Weighted exercises: top set e1RM must beat all-time prior best e1RM.
  *  - Bodyweight exercises: max reps in a single set must beat all-time prior max reps.
  */
@@ -1924,7 +1924,7 @@ export async function getSessionPRs(sessionInstanceId: string): Promise<SessionP
       exerciseInstance.exerciseTemplateId
     );
     const priorInstances = allInstances.filter((i) => i.id !== exerciseInstance.id);
-    if (priorInstances.length < 3) continue;
+    if (priorInstances.length < 1) continue;
 
     const exerciseName = exerciseInstance.exerciseName ?? "Unknown exercise";
     const exerciseTemplate = await getExerciseTemplateById(exerciseInstance.exerciseTemplateId);
@@ -2023,7 +2023,7 @@ export async function getSessionPRs(sessionInstanceId: string): Promise<SessionP
  *
  * Same rules as getSessionPRs, but scoped to the full week:
  *  - Groups all exercise instances across every session in the week by template.
- *  - Must have at least 3 prior instances from OUTSIDE this week.
+ *  - Must have at least 1 prior instance from OUTSIDE this week.
  *  - The best e1RM achieved anywhere in the week must beat all prior history.
  *  - Multiple PRs for the same exercise within the week collapse into one entry.
  */
@@ -2056,7 +2056,7 @@ export async function getWeekPRs(weekInstanceId: string): Promise<SessionPR[]> {
       exerciseTemplateId
     );
     const priorInstances = allInstances.filter((i) => !weekInstanceIds.has(i.id));
-    if (priorInstances.length < 3) continue;
+    if (priorInstances.length < 1) continue;
 
     const exerciseTemplate = await getExerciseTemplateById(exerciseTemplateId);
     const isBodyweight = exerciseTemplate?.weightMode === "bodyweight";
@@ -2149,7 +2149,7 @@ export async function getWeekPRs(weekInstanceId: string): Promise<SessionPR[]> {
  *
  * Same rules as getWeekPRs, but scoped to the full season:
  *  - Groups all exercise instances across every session in every week of the season.
- *  - Must have at least 3 prior instances from OUTSIDE this season.
+ *  - Must have at least 1 prior instance from OUTSIDE this season.
  *  - The best e1RM achieved anywhere in the season must beat all prior history.
  *  - Multiple PRs for the same exercise within the season collapse into one entry.
  *  - previousE1RM is the all-time best BEFORE the season started.
@@ -2188,7 +2188,7 @@ export async function getSeasonPRs(seasonInstanceId: string): Promise<SessionPR[
       exerciseTemplateId
     );
     const priorInstances = allInstances.filter((i) => !seasonExInstanceIds.has(i.id));
-    if (priorInstances.length < 3) continue;
+    if (priorInstances.length < 1) continue;
 
     const exerciseTemplate = await getExerciseTemplateById(exerciseTemplateId);
     const isBodyweight = exerciseTemplate?.weightMode === "bodyweight";
@@ -2350,7 +2350,7 @@ export async function getAllTimePREvents(): Promise<PREvent[]> {
   const allEvents: PREvent[] = [];
 
   for (const { name: exerciseName, history } of histories) {
-    if (history.length < 4) continue;
+    if (history.length < 2) continue;
 
     const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
 
@@ -2373,7 +2373,7 @@ export async function getAllTimePREvents(): Promise<PREvent[]> {
       if (!currentValue || currentValue <= 0) continue;
 
       if (bestValue === null || currentValue > bestValue) {
-        if (sessionIndex > 3 && bestValue !== null) {
+        if (sessionIndex > 1 && bestValue !== null) {
           allEvents.push({
             prType: isBodyweight ? "reps" : "e1rm",
             exerciseName,
