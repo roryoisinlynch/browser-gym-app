@@ -98,6 +98,7 @@ export interface SessionInstanceView {
   sessionInstance: SessionInstance;
   sessionTemplate: SessionTemplate;
   muscleGroups: SessionInstanceMuscleGroupView[];
+  effectiveRir: number;
 }
 
 export interface ExerciseInstanceView {
@@ -1326,6 +1327,13 @@ export async function getSessionInstanceView(
     return undefined;
   }
 
+  const seasonTemplate = await getSeasonTemplateById(seasonInstance.seasonTemplateId);
+
+  const effectiveRir =
+    seasonTemplate?.rirSequence?.[weekInstance.order - 1] ??
+    weekTemplate.targetRir ??
+    0;
+
   const templateGroups = await getSessionTemplateGroupsWithExercises(
     sessionTemplate.id
   );
@@ -1398,6 +1406,7 @@ export async function getSessionInstanceView(
     sessionInstance,
     sessionTemplate,
     muscleGroups,
+    effectiveRir,
   };
 }
 

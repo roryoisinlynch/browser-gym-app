@@ -507,7 +507,7 @@ export default function SessionPage() {
             </div>
 
             <p className="session-context">
-              Target RIR: {sessionView.weekTemplate.targetRir ?? "—"}
+              Target RIR: {sessionView.effectiveRir}
             </p>
 
             <div className="session-controls" aria-label="Session controls">
