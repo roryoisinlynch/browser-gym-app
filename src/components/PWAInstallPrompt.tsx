@@ -8,7 +8,6 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
-const DISMISSED_KEY = "pwa-install-dismissed";
 
 function detectPlatform(): Platform {
   if (window.innerWidth >= 1024) return null;
@@ -27,7 +26,6 @@ export default function PWAInstallPrompt() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem(DISMISSED_KEY)) return;
 
     const detected = detectPlatform();
     if (detected === "ios") {
@@ -53,7 +51,6 @@ export default function PWAInstallPrompt() {
   }, []);
 
   function dismiss() {
-    localStorage.setItem(DISMISSED_KEY, "1");
     setVisible(false);
   }
 
