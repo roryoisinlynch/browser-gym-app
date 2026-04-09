@@ -548,35 +548,55 @@ export default function DashboardPage() {
       weekRows.push(days.slice(i, i + weekLength));
     }
 
+    const statusLabel = isAhead ? "Ahead of schedule" : isBehind ? "Behind schedule" : "On schedule";
+    const statusClass = isAhead ? "dashboard-timeline__status--ahead"
+      : isBehind ? "dashboard-timeline__status--behind"
+      : "dashboard-timeline__status--ok";
+
     return (
       <section className="dashboard-section">
         <h2 className="dashboard-section-title">Season progress</h2>
         <div className="dashboard-timeline">
-          <div className="dashboard-timeline__week-rows">
-            {weekRows.map((week, wi) => (
-              <div key={wi} className="dashboard-timeline__week-row">
-                <span className="dashboard-timeline__week-label">W{wi + 1}</span>
-                <div className="dashboard-timeline__days">
-                  {week.map((day, di) => {
-                    const isToday = day.scheduledDate === today;
-                    const classes = [
-                      "dashboard-timeline__day",
-                      `dashboard-timeline__day--${day.status}`,
-                      day.type === "rest" ? "dashboard-timeline__day--rest" : "",
-                      isToday ? "dashboard-timeline__day--today" : "",
-                    ].filter(Boolean).join(" ");
-                    return (
-                      <div
-                        key={di}
-                        className={classes}
-                        title={day.scheduledDate}
-                      />
-                    );
-                  })}
+          <div className="dashboard-timeline__body">
+            {/* Left: week-row grid — auto-sizing squares to fill 50% width */}
+            <div className="dashboard-timeline__grid">
+              {weekRows.map((week, wi) => (
+                <div key={wi} className="dashboard-timeline__week-row">
+                  <span className="dashboard-timeline__week-label">W{wi + 1}</span>
+                  <div className="dashboard-timeline__days">
+                    {week.map((day, di) => {
+                      const isToday = day.scheduledDate === today;
+                      const classes = [
+                        "dashboard-timeline__day",
+                        `dashboard-timeline__day--${day.status}`,
+                        day.type === "rest" ? "dashboard-timeline__day--rest" : "",
+                        isToday ? "dashboard-timeline__day--today" : "",
+                      ].filter(Boolean).join(" ");
+                      return <div key={di} className={classes} title={day.scheduledDate} />;
+                    })}
+                  </div>
                 </div>
+              ))}
+            </div>
+
+            {/* Right: dates + status */}
+            <div className="dashboard-timeline__sidebar">
+              <div className="dashboard-timeline__sidebar-date">
+                <span className="dashboard-timeline__sidebar-caption">Start</span>
+                <span className="dashboard-timeline__sidebar-value">{shortDate(startDate)}</span>
               </div>
-            ))}
+              <div className="dashboard-timeline__sidebar-status">
+                <span className={statusClass}>{statusLabel}</span>
+                <span className="dashboard-timeline__sidebar-week">Week {currentWeekOrder} of {totalWeeks}</span>
+              </div>
+              <div className="dashboard-timeline__sidebar-date">
+                <span className="dashboard-timeline__sidebar-caption">Finish</span>
+                <span className="dashboard-timeline__sidebar-value">{shortDate(endDate)}</span>
+              </div>
+            </div>
           </div>
+
+          {/* Legend */}
           {(() => {
             const statuses = new Set(days.map((d) => d.status));
             const hasRest = days.some((d) => d.type === "rest");
@@ -617,16 +637,6 @@ export default function DashboardPage() {
               <div className="dashboard-timeline__legend">{entries}</div>
             ) : null;
           })()}
-          <div className="dashboard-timeline__meta">
-            <span className="dashboard-timeline__date">{shortDate(startDate)}</span>
-            <span className="dashboard-timeline__status">
-              {isAhead && <span className="dashboard-timeline__status--ahead">Ahead of schedule</span>}
-              {isBehind && <span className="dashboard-timeline__status--behind">Behind schedule</span>}
-              {!isAhead && !isBehind && <span className="dashboard-timeline__status--ok">On schedule</span>}
-              {" · "}Week {currentWeekOrder} of {totalWeeks}
-            </span>
-            <span className="dashboard-timeline__date">{shortDate(endDate)}</span>
-          </div>
         </div>
       </section>
     );
