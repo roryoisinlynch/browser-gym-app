@@ -377,8 +377,10 @@ export default function DashboardPage() {
 
       setUpNext(computeUpNext(activeSeason, weekItems));
 
-      if (activeSeason) {
-        loadTimeline(activeSeason).then((tl) => {
+      const seasonToShow = activeSeason ?? (await getLastCompletedSeasonInstance());
+      if (cancelled.current) return;
+      if (seasonToShow) {
+        loadTimeline(seasonToShow).then((tl) => {
           if (!cancelled.current) setSeasonTimeline(tl);
         });
       }
