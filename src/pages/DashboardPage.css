@@ -365,58 +365,107 @@
 .dashboard-timeline__status--behind { color: #f4a261; font-size: 0.72rem; font-weight: 700; }
 .dashboard-timeline__status--ok { color: var(--text-muted); font-size: 0.72rem; font-weight: 700; }
 
+/* ── Section header (title + info button) ── */
+.dashboard-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.dashboard-info-btn {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-soft);
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 0.68rem;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+
+.dashboard-info-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 10;
+  width: min(260px, calc(100vw - 64px));
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--panel-border);
+  background: rgba(15, 19, 24, 0.98);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* ── Loading spinner ── */
+@keyframes dashboard-spin {
+  to { transform: rotate(360deg); }
+}
+
+.dashboard-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-top-color: var(--text-soft);
+  border-radius: 50%;
+  animation: dashboard-spin 0.7s linear infinite;
+}
+
 /* ── Recent summaries ── */
 .dashboard-recent-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 4px;
 }
 
 .dashboard-recent-card {
-  padding: 12px 10px;
-  border-radius: 12px;
-  border: 1px solid var(--panel-border);
-  background: var(--panel-bg);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 4px;
   min-width: 0;
 }
 
 .dashboard-recent-card--link {
   cursor: pointer;
-  transition: border-color 0.12s ease;
 }
 
-.dashboard-recent-card--link:hover {
-  border-color: var(--text-soft);
-}
-
-.dashboard-recent-card__label {
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-soft);
+.dashboard-recent-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
 }
 
 .dashboard-recent-card__name {
-  font-size: 0.84rem;
-  font-weight: 700;
-  color: var(--text-strong);
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.dashboard-recent-card__name--loading {
-  color: var(--text-soft);
+  width: 100%;
 }
 
 .dashboard-recent-card__grade {
-  font-size: 1rem;
+  font-size: 2rem;
   font-weight: 800;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+  line-height: 1;
 }
 
 .dashboard-recent-card__grade--green { color: #6bcb77; }

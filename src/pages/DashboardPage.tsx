@@ -361,10 +361,23 @@ export default function DashboardPage() {
   const [upNext, setUpNext] = useState<UpNextState>({ type: "loading" });
   const [seasonTimeline, setSeasonTimeline] = useState<SeasonTimelineData | null>(null);
   const [isPreviousSeason, setIsPreviousSeason] = useState(false);
+  const [timelineLoading, setTimelineLoading] = useState(true);
   const [recentSession, setRecentSession] = useState<RecentCard | null | typeof LOADING_CARD>(LOADING_CARD);
   const [recentWeek, setRecentWeek] = useState<RecentCard | null | typeof LOADING_CARD>(LOADING_CARD);
   const [recentSeason, setRecentSeason] = useState<RecentCard | null | typeof LOADING_CARD>(LOADING_CARD);
   const [prEvents, setPrEvents] = useState<PREvent[] | null>(null);
+  const [recentTooltipOpen, setRecentTooltipOpen] = useState(false);
+  const recentTooltipRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (!recentTooltipRef.current?.contains(e.target as Node)) {
+        setRecentTooltipOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   useEffect(() => {
     cancelled.current = false;
@@ -386,8 +399,11 @@ export default function DashboardPage() {
           if (!cancelled.current) {
             setSeasonTimeline(tl);
             setIsPreviousSeason(isPrev);
+            setTimelineLoading(false);
           }
         });
+      } else {
+        setTimelineLoading(false);
       }
 
       loadSecondary();
@@ -542,6 +558,14 @@ export default function DashboardPage() {
   // ─── Season timeline ──────────────────────────────────────────────────────
 
   function renderTimeline() {
+    if (timelineLoading) {
+      return (
+        <section className="dashboard-section">
+          <h2 className="dashboard-section-title">Season progress</h2>
+          <div className="dashboard-spinner" />
+        </section>
+      );
+    }
     if (!seasonTimeline) return null;
     const { startDate, endDate, days, weekLength, currentWeekOrder, expectedWeekOrder, totalWeeks } = seasonTimeline;
     const isAhead = currentWeekOrder > expectedWeekOrder;
@@ -659,27 +683,27 @@ export default function DashboardPage() {
     return (
       <div
         className={`dashboard-recent-card${data ? " dashboard-recent-card--link" : ""}`}
+        aria-label={label}
         role={data ? "button" : undefined}
         tabIndex={data ? 0 : undefined}
         onClick={() => data && navigate(data.link)}
         onKeyDown={(e) => e.key === "Enter" && data && navigate(data.link)}
       >
-        <span className="dashboard-recent-card__label">{label}</span>
-        {isLoading ? (
-          <span className="dashboard-recent-card__name dashboard-recent-card__name--loading">—</span>
-        ) : (
-          <>
-            <span className="dashboard-recent-card__name">{data!.name}</span>
-            {data!.ragStatus ? (
-              <TrafficLight status={data!.ragStatus} size="sm" />
-            ) : data!.grade ? (
-              <span
-                className={`dashboard-recent-card__grade${data!.gradeColor ? ` dashboard-recent-card__grade--${data!.gradeColor}` : ""}`}
-              >
-                {data!.grade}
-              </span>
-            ) : null}
-          </>
+        <div className="dashboard-recent-card__icon">
+          {isLoading ? (
+            <div className="dashboard-spinner" />
+          ) : data!.ragStatus ? (
+            <TrafficLight status={data!.ragStatus} size="lg" />
+          ) : data!.grade ? (
+            <span
+              className={`dashboard-recent-card__grade${data!.gradeColor ? ` dashboard-recent-card__grade--${data!.gradeColor}` : ""}`}
+            >
+              {data!.grade}
+            </span>
+          ) : null}
+        </div>
+        {!isLoading && (
+          <span className="dashboard-recent-card__name">{data!.name}</span>
         )}
       </div>
     );
@@ -818,7 +842,19 @@ export default function DashboardPage() {
 
         {hasAnyRecent && (
           <section className="dashboard-section">
-            <h2 className="dashboard-section-title">Recent</h2>
+            <div className="dashboard-section-header" ref={recentTooltipRef}>
+              <h2 className="dashboard-section-title">Recent activity</h2>
+              <button
+                className="dashboard-info-btn"
+                aria-expanded={recentTooltipOpen}
+                onClick={() => setRecentTooltipOpen((v) => !v)}
+              >?</button>
+              {recentTooltipOpen && (
+                <div className="dashboard-info-tooltip">
+                  Tap a session, week, or season icon to view its full summary.
+                </div>
+              )}
+            </div>
             <div className="dashboard-recent-grid">
               {renderRecentCard(recentSession, "Session")}
               {renderRecentCard(recentWeek, "Week")}
