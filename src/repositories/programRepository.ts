@@ -913,12 +913,15 @@ export async function getEffectiveE1RM(
 
 function buildAnalyzedSetList(
   currentSets: ExerciseSet[],
-  allHistoricalSets: ExerciseSet[]
+  allHistoricalSets: ExerciseSet[],
+  effectiveE1RM: number | null = null
 ): AnalyzedExerciseSet[] {
   return currentSets.map((set) => {
     const priorSets = allHistoricalSets.filter((candidate) => {
       if (candidate.exerciseInstanceId !== set.exerciseInstanceId) {
-        return true;
+        // When effectiveE1RM is supplied it replaces cross-session history as the
+        // intensity baseline, so there is no need to scan all prior sessions.
+        return effectiveE1RM == null;
       }
 
       return candidate.setIndex < set.setIndex;
@@ -926,7 +929,7 @@ function buildAnalyzedSetList(
 
     return {
       set,
-      analysis: analyzeSet(set, priorSets),
+      analysis: analyzeSet(set, priorSets, effectiveE1RM),
     };
   });
 }
@@ -1280,7 +1283,11 @@ export async function getExerciseInstanceView(
     recentMaxReps,
     recentMaxRepsDate,
     targetEstimatedOneRepMax,
-    sets: buildAnalyzedSetList(currentSets, allHistoricalSets),
+    sets: buildAnalyzedSetList(
+      currentSets,
+      allHistoricalSets,
+      recentMaxEstimatedOneRepMax ?? historicalBestEstimatedOneRepMax
+    ),
   };
 }
 
@@ -1349,7 +1356,13 @@ export async function getSessionInstanceView(
             .sort((a, b) => a.setIndex - b.setIndex)
         : [];
 
-      const analyzedSets = buildAnalyzedSetList(currentRawSets, allHistoricalSets);
+      const { historicalBest, recentMax } = await getEffectiveE1RM(
+        exerciseTemplate.exerciseName,
+        sessionInstance.seasonInstanceId
+      );
+      const effectiveE1RM = recentMax ?? historicalBest;
+
+      const analyzedSets = buildAnalyzedSetList(currentRawSets, allHistoricalSets, effectiveE1RM);
 
       const workingSetCount = analyzedSets.filter(
         (item) => item.analysis.setType === "working"

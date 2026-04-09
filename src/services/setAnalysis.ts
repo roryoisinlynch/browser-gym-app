@@ -95,15 +95,21 @@ export function getPriorBestEstimatedOneRepMax(
  */
 export function analyzeSet(
   currentSet: ExerciseSet,
-  priorSets: ExerciseSet[]
+  priorSets: ExerciseSet[],
+  effectiveBaselineE1RM: number | null = null
 ): SetAnalysis {
   const estimatedOneRepMax = calculateEstimatedOneRepMax(
     currentSet.performedWeight,
     currentSet.performedReps
   );
 
+  const rawPriorBest = getPriorBestEstimatedOneRepMax(priorSets);
+
+  // Use the higher of: within-session prior best vs the effective baseline (recent-max
+  // fallback when the all-time PR hasn't been matched recently). This ensures warmup
+  // classification is held to the user's current capacity, not a stale all-time high.
   const priorBestEstimatedOneRepMax =
-    getPriorBestEstimatedOneRepMax(priorSets);
+    Math.max(rawPriorBest ?? 0, effectiveBaselineE1RM ?? 0) || null;
 
   const intensity = calculateIntensity(
     estimatedOneRepMax,
