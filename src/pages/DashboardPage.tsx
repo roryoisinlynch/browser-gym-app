@@ -856,7 +856,7 @@ export default function DashboardPage() {
               <p className="dashboard-qr-banner__heading">Open on your phone</p>
               <p className="dashboard-qr-banner__sub">Scan to use the app on mobile</p>
             </div>
-            <img className="dashboard-qr-banner__img" src="/qr-code.png" alt="QR code to open app on mobile" />
+            <img className="dashboard-qr-banner__img" src="/qr.png" alt="QR code to open app on mobile" />
           </section>
         )}
 
