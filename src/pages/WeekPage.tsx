@@ -192,7 +192,9 @@ export default function WeekPage() {
           <h1 className="week-page__title">{weekLabel}</h1>
 
           {rirSequence && rirSequence.length > 0 && (
-            <div className="week-page__rir-track" aria-label="RIR progression">
+            <div className="week-page__rir-row">
+              <span className="week-page__rir-label">RIR target</span>
+              <div className="week-page__rir-track" aria-label="RIR progression">
               {rirSequence.map((rir, i) => (
                 <div
                   key={i}
@@ -202,6 +204,7 @@ export default function WeekPage() {
                   <span className="week-page__rir-value">{rir}</span>
                 </div>
               ))}
+              </div>
             </div>
           )}
         </header>

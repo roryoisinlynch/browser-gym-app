@@ -46,10 +46,25 @@
   margin-bottom: 8px;
 }
 
+.week-page__rir-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.week-page__rir-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
 .week-page__rir-track {
   display: flex;
   gap: 6px;
-  margin-top: 12px;
 }
 
 .week-page__rir-step {
