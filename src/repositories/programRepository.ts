@@ -2274,6 +2274,122 @@ export async function getSeasonPRs(seasonInstanceId: string): Promise<SessionPR[
   return prs;
 }
 
+// ─── Dashboard helpers ────────────────────────────────────────────────────────
+
+export async function getLastCompletedSessionInstance(): Promise<SessionInstance | null> {
+  const all = await getAll<SessionInstance>(STORE_NAMES.sessionInstances);
+  const sorted = all
+    .filter((s) => s.status === "completed" && s.completedAt != null)
+    .sort((a, b) => b.completedAt!.localeCompare(a.completedAt!));
+  return sorted[0] ?? null;
+}
+
+export async function getLastCompletedWeekInstance(): Promise<WeekInstance | null> {
+  const all = await getAll<WeekInstance>(STORE_NAMES.weekInstances);
+  const sorted = all
+    .filter((w) => w.status === "completed" && w.completedAt != null)
+    .sort((a, b) => b.completedAt!.localeCompare(a.completedAt!));
+  return sorted[0] ?? null;
+}
+
+export async function getLastCompletedSeasonInstance(): Promise<SeasonInstance | null> {
+  const all = await getAll<SeasonInstance>(STORE_NAMES.seasonInstances);
+  const sorted = all
+    .filter((s) => s.status === "completed" && s.completedAt != null)
+    .sort((a, b) => b.completedAt!.localeCompare(a.completedAt!));
+  return sorted[0] ?? null;
+}
+
+/**
+ * All-time personal-record events across every exercise, in descending date
+ * order.  Each entry represents a moment when the user set a new all-time best
+ * for an exercise.  Exercises with fewer than 4 logged sessions are excluded
+ * so that first-ever lifts do not inflate the list.
+ */
+export interface PREvent {
+  prType: "e1rm" | "reps";
+  exerciseName: string;
+  isBodyweight: boolean;
+  newE1RM: number | null;
+  newWeight: number | null;
+  newReps: number;
+  previousE1RM: number | null;
+  previousReps: number | null;
+  previousDate: string | null;
+  date: string; // YYYY-MM-DD local date when this PR was set
+}
+
+export async function getAllTimePREvents(): Promise<PREvent[]> {
+  const allExerciseInstances = await getAll<ExerciseInstance>(STORE_NAMES.exerciseInstances);
+  const exerciseNames = [
+    ...new Set(
+      allExerciseInstances
+        .map((ei) => ei.exerciseName)
+        .filter((n): n is string => typeof n === "string" && n.length > 0)
+    ),
+  ];
+
+  const allTemplates = await getAllExerciseTemplates();
+  const templateByName = new Map(
+    allTemplates.map((t) => [t.exerciseName.trim().toLowerCase(), t])
+  );
+
+  // Load all exercise histories in parallel
+  const histories = await Promise.all(
+    exerciseNames.map((name) =>
+      getExerciseSessionHistory(name).then((h) => ({ name, history: h }))
+    )
+  );
+
+  const allEvents: PREvent[] = [];
+
+  for (const { name: exerciseName, history } of histories) {
+    if (history.length < 4) continue;
+
+    const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
+
+    const templateKey = exerciseName.trim().toLowerCase();
+    const template = templateByName.get(templateKey);
+    const isBodyweight =
+      template?.weightMode === "bodyweight" ||
+      (!template && sorted.every((d) => !d.topWeight || d.topWeight === 0));
+
+    let bestValue: number | null = null;
+    let prevDate: string | null = null;
+    let sessionIndex = 0;
+
+    for (const dataPoint of sorted) {
+      sessionIndex++;
+      const currentValue = isBodyweight
+        ? (dataPoint.topRepCount ?? null)
+        : (dataPoint.topEstimatedOneRepMax ?? null);
+
+      if (!currentValue || currentValue <= 0) continue;
+
+      if (bestValue === null || currentValue > bestValue) {
+        if (sessionIndex > 3 && bestValue !== null) {
+          allEvents.push({
+            prType: isBodyweight ? "reps" : "e1rm",
+            exerciseName,
+            isBodyweight,
+            newE1RM: isBodyweight ? null : currentValue,
+            newWeight: isBodyweight ? null : (dataPoint.topWeight ?? null),
+            newReps: dataPoint.topReps ?? 0,
+            previousE1RM: isBodyweight ? null : bestValue,
+            previousReps: isBodyweight ? bestValue : null,
+            previousDate: prevDate,
+            date: dataPoint.date,
+          });
+        }
+        prevDate = dataPoint.date;
+        bestValue = currentValue;
+      }
+    }
+  }
+
+  return allEvents.sort((a, b) => b.date.localeCompare(a.date));
+}
+
 // ─── Active destination routing ───────────────────────────────────────────────
 
 /**

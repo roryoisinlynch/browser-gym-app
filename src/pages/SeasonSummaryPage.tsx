@@ -230,7 +230,7 @@ export default function SeasonSummaryPage() {
   if (isLoading) {
     return (
       <main className="season-summary-page">
-        <TopBar title="Season summary" backTo="/season" backLabel="Back to season" />
+        <TopBar title="Season summary" backTo="/" backLabel="Dashboard" />
         <section className="season-summary-shell">
           <p className="season-summary-loading">Loading summary...</p>
         </section>
@@ -242,7 +242,7 @@ export default function SeasonSummaryPage() {
   if (errorMessage || !metrics) {
     return (
       <main className="season-summary-page">
-        <TopBar title="Season summary" backTo="/season" backLabel="Back to season" />
+        <TopBar title="Season summary" backTo="/" backLabel="Dashboard" />
         <section className="season-summary-shell">
           <p className="season-summary-error">{errorMessage ?? "Something went wrong."}</p>
         </section>
@@ -256,7 +256,7 @@ export default function SeasonSummaryPage() {
 
   return (
     <main className="season-summary-page">
-      <TopBar title="Season summary" backTo="/season" backLabel="Back to season" />
+      <TopBar title="Season summary" backTo="/" backLabel="Dashboard" />
 
       <section className="season-summary-shell">
         {/* ── Season name ── */}
@@ -432,24 +432,17 @@ export default function SeasonSummaryPage() {
               </button>
             )}
 
-            {/* Secondary: other templates */}
-            {allTemplates.filter((t) => t.id !== currentTemplateId).length > 0 && (
-              <div className="season-summary-next-alts">
-                <p className="season-summary-next-alts__label">Or switch to a different program</p>
-                {allTemplates
-                  .filter((t) => t.id !== currentTemplateId)
-                  .map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      className="season-summary-next-btn season-summary-next-btn--alt"
-                      onClick={() => setPendingStartTemplateId(t.id)}
-                    >
-                      {t.name}
-                    </button>
-                  ))}
-              </div>
-            )}
+            {/* Configure programs link */}
+            <div className="season-summary-next-alts">
+              <p className="season-summary-next-alts__label">Want a different program?</p>
+              <button
+                type="button"
+                className="season-summary-next-btn season-summary-next-btn--alt"
+                onClick={() => navigate("/config/programs")}
+              >
+                Configure programs →
+              </button>
+            </div>
           </section>
         )}
 
