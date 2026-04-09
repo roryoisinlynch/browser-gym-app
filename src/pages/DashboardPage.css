@@ -335,7 +335,7 @@
 .dashboard-timeline__legend-item--amber   { background: #f4a261; }
 .dashboard-timeline__legend-item--late    { background: #e76f51; }
 .dashboard-timeline__legend-item--overdue { background: #9b2335; }
-.dashboard-timeline__legend-item--grey    { background: var(--panel-border); opacity: 0.5; }
+.dashboard-timeline__legend-item--grey    { background: rgba(255, 255, 255, 0.18); }
 
 /* Today legend — same shape/colour as the real day square */
 .dashboard-timeline__legend-day--today {
