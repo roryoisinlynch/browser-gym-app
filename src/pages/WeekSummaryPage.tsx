@@ -478,6 +478,7 @@ export default function WeekSummaryPage() {
         {movementGroupSummary.length > 0 && (
           <section className="week-summary-section">
             <h2 className="week-summary-section-title">Movement breakdown</h2>
+            <div className="week-mt-groups">
             {movementGroupSummary.map(({ muscleGroupName, movements }) => (
               <div key={muscleGroupName} className="week-mt-group">
                 <span className="week-mt-group__label">{muscleGroupName}</span>
@@ -495,6 +496,7 @@ export default function WeekSummaryPage() {
                 </div>
               </div>
             ))}
+            </div>
           </section>
         )}
 
