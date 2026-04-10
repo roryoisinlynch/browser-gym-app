@@ -488,9 +488,28 @@ These are handled under the `weightMode: "bodyweight"` flag on `ExerciseTemplate
 | Set logging | weight + reps | reps only |
 | Intensity metric | e1RM (Epley) | max reps |
 | Historical best | highest e1RM | highest rep count |
-| Working set threshold | 60% of best e1RM | always counted as working |
+| Working set threshold | 60% of best e1RM | 75% of local session max reps |
 | Season prescription | weight + rep target | rep target only |
 | Progress chart y-axis | e1RM over time | max reps over time |
+
+## Warmup classification for bodyweight exercises
+
+For weighted exercises, a set is a warmup if its e1RM falls below 60% of the best prior e1RM. This threshold cannot be applied directly to bodyweight exercises: since bodyweight is a constant, the Epley e1RM ratio is insensitive to changes in rep count — reducing reps from 20 to 12 only moves e1RM intensity from 100% to around 84%, so almost no bodyweight set would ever be classified as warmup under the weighted rule.
+
+Instead, warmup classification for bodyweight exercises uses **75% of the local session max reps**:
+
+```
+local_max_reps = highest rep count in any prior set this session
+warmup if performed_reps < local_max_reps × 0.75
+```
+
+A proportional threshold is used rather than a fixed rep gap (e.g. "4 reps short") because a fixed number behaves inconsistently at low rep maxes — being 4 short of 6 is very different from being 4 short of 20.
+
+75% was chosen rather than 60% because the two thresholds are not equivalent across domains. 60% of max reps corresponds to approximately 84–90% of e1RM intensity (depending on the rep range), which would classify almost nothing as a warmup. 75% sits at a more useful point: clearly sub-maximal, enough reps short of your peak that the set is preparatory rather than a genuine working effort.
+
+The comparison uses the **local (within-session) max** rather than the all-time or recent historical max, because bodyweight performance fluctuates more day-to-day than weighted lifts — a high-rep set early in the session establishes the reference point for that session, without penalising the user for not matching an all-time best on a given day.
+
+If no prior sets exist in the session yet, the first set defaults to working (consistent with the weighted exercise behaviour when there is no prior history to compare against).
 
 ## RIR and rep targets
 
@@ -539,29 +558,13 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
 ---
 
 # To do:
- - Add a caption to the RIR indicator at the top of the week instance page. "RIR target: "
- - add a confirmation before starting a season prompting the user to pick a start date, which will inform the consistency and due date targets for the remainder of the season.
- - figure out why the week consistency summary shows all days as 'on time' even if they were early, consider maybe just differentiating between late and on time where early is just on time.
- - can you add an 'up next' section at the top of the dashboard page? It should (in priority order) either: direct the user to select and activate a program, direct a user to an active exercise, an active session, or an active week. Anything else I might have missed on that list? it should be clickable to link through to the appropriate section. If the current day is scheduled to be a rest day (and the user is on track with the schedule) then it should just say today is a rest day, but identify the 'up next' gym day.
- - can you add a season timeline section after the 'up next' section on the dashboard page? it should appear conditionally based on whether a season is currently active. It should be a timeline which represents the scheduled start and finish of a season, it should identify where the user should be currently based on the schedule, and where they currently are.
- - can you add a PRs section at the end of the dashboard page? it should present exactly the same way as the PRs sections in the summary pages, showing all PRs in descending order. Unlike the summary pages however, if a given exercise has multiple PRs, they can show as separate records (though if this requires significant code change then it isn't the end of the world to keep it the same).
- - if this is feasible (is it?) can we add links from the dashboard page to view the most recent summary page for the last completed session, week, and season (conditionally appearing based on whether or not these instances exist yet). It would be cool if we could somehow include a visual of the rank for each entity (a traffic light, an emoji, a grade)
- - just above the PRs section on the dashboard page, can we add a section to spotlight the most recent PR, outlining the lift, the old and new e1RM, the date the PR was set, the days since the previous PR, and a line graph for the given exercise just like the one on the exercise sets page (with the same bin toggles etc)
- - is it possible to conditionally present a QR code if a user opens the application on a desktop browser? I have a PNG file of the QR code (which i can convert if needed to any other file type), where in the project files should i store it?
- - is it possible to identify whether or not a mobile user has opened the app as an installd PWA app as opposed to just opening it raw in their mobile browser? I'm wondering whether we can conditionally present instructions to install as PWA.
  - can you add an import/export feature to the settings screen which allows users to export all relevant data from the model as a file (json perhaps? whatever is best) so they can migrate to another device, or save for backup purposes. 
- - on the exercise sets instance page, can you conditionally add a button to take the user to the exercise settings page where they can select a working weight? Ideally, they would be redirected back to this exercise set instance after they make their changes. The conditions which should surface this button are: the exercise has no selected working weight yet, the exercise is prescribed target reps that are outside the range of 5-20. There may already be a conditional label prompting users to do this based on one of these conditions but i don't think it links to settings.
  - add tooltip on the exercise settings page to suggest bodyweight weight mode where working weight choices are less than 3, or where they have 30+ reps
- - have 'Target' read as AMRAP instead of emdash for AMRAP sets
- - fix the intensity target bar so that it's clear when the target is met
  - is it easy to add a 'share' button on the summary pages which takes a screenshot and allows you to post to whatsapp?
  - test program hopping, delete a full program and see if exercise history persists (test both as a new user and a user with csv imports)
  - on the edit exercise screen in the config screen there is no back button in the top nav bar, can we add one like we have on the other screens.
  - update readme to explain how working weight is set in config and its relation to RIR schemes, the philosophy behind consistent weights week to week
- - how are warmup sets classified for bodyweight exercises?
- - OR denote section markers: warmup, RIR target, local e1RM, max e1RM
  - fix the settings settings settings label
  - add an exercise detail screen where you can see a table of all exercises and their: last lift, e1RM local, e1RM max, total lifts, days since PR. Sortable by each column.
- - is seed data taken from mock data or does it have its own definiton, should it? what do we want the final seed data to look like
  - add clear directions when creating days, muscle groups, exercises and movement types
  - i think home page is no longer used, can you confirm? it's an old version of what has now become the week page.
