@@ -293,7 +293,7 @@ export default function SeasonPage() {
                 className="season-page__new-program-btn"
                 onClick={() => navigate("/config/programs")}
               >
-                + New Program
+                Manage programs
               </button>
             </div>
           </section>
