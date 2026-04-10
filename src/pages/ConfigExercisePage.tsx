@@ -410,9 +410,9 @@ export default function ConfigExercisePage() {
               >?</button>
               {weightModeTooltipOpen && (
                 <div className="config-exercise__info-tooltip">
-                  <strong>Increment</strong> — for exercises that increase by a consistent amount each time, such as a barbell lift that goes up in 2.5kg steps using 1.25kg plates on each side. This is the most common choice.<br /><br />
-                  <strong>Bodyweight</strong> — for exercises where the only variable you change week to week is the number of reps, such as pull-ups. Also useful for high-rep exercises where e1RM calculations become unreliable — for example, rather than tracking a 2.5kg lateral raise as a weighted exercise, you could name it "2.5kg Lateral Raise" and use bodyweight mode to track reps only.<br /><br />
-                  <strong>Weight list</strong> — a workaround for equipment with uneven increments, such as a cable machine that jumps from 1.25kg to 5kg to 8kg. You specify each available weight individually and select from that list each session.
+                  <strong>Increment</strong> — for exercises that increase by a consistent amount each time, such as a barbell lift that goes up in 2.5kg steps using 1.25kg plates on each side. This is the most common choice. <em>e.g. with an increment of 2.5kg the app can prescribe any weight in the sequence 2.5kg, 5kg, 7.5kg, 10kg…</em><br /><br />
+                  <strong>Bodyweight</strong> — for exercises where the only variable you change week to week is the number of reps, such as pull-ups. Also useful for high-rep exercises where e1RM calculations become unreliable — for example, rather than tracking a 2.5kg lateral raise as a weighted exercise, you could name it "2.5kg Lateral Raise" and use bodyweight mode to track reps only. <em>e.g. the app might prescribe 8 reps one session, then 9, then 10…</em><br /><br />
+                  <strong>Weight list</strong> — a workaround for equipment with uneven increments, such as a cable machine that jumps from 1.25kg to 5kg to 8kg. You specify each available weight individually and select from that list each session. <em>e.g. if you enter 5kg, 8kg, 12kg, the app will only ever prescribe one of those three weights.</em>
                 </div>
               )}
             </span>
