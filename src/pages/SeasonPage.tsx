@@ -65,7 +65,7 @@ export default function SeasonPage() {
         ]);
 
       if (!activeSeasonInstance) {
-        const sessionsBySeasonId = new Map<string, SessionTemplate[]>();
+        const sessionsBySeasonId = new Map<string, typeof allSessionTemplates>();
         for (const st of allSessionTemplates) {
           const bucket = sessionsBySeasonId.get(st.seasonTemplateId) ?? [];
           bucket.push(st);
