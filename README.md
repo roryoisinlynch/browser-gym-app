@@ -555,14 +555,34 @@ Imported sets for bodyweight exercises frequently appear as `0kg × n reps` sinc
 
 ---
 
+---
+
+# Cancelled Seasons
+
+When the user switches to a new program while a season is still in progress, the displaced season is marked `cancelled` (status `"cancelled"` on `SeasonInstance`). This is distinct from `"completed"`, which is reserved for seasons that ran to their natural end.
+
+## Effect on e1RM — no impact
+
+The e1RM recent-max window groups historical sets into **season buckets** by `seasonInstanceId`, sorted by the most-recent session date, and takes the three most-recent buckets. This grouping is purely by activity — it does not filter by season status. A cancelled season that had sets logged in it counts as a normal season bucket and contributes to the window exactly like a completed one.
+
+## Effect on the Season Summary list — excluded
+
+The All Seasons list on `SeasonSummaryPage` filters to `status === "completed"`. Cancelled seasons are excluded, so only genuinely finished blocks appear in the comparison table.
+
+## How cancellation happens
+
+`activateProgram()` in `programRepository.ts` handles the transition:
+
+1. Any in-progress sessions (and their exercises) within the displaced season are drained to `completed` so they do not appear as an active session after the switch.
+2. The in-progress week is marked `completed` for the same reason.
+3. The season itself is written back with `status: "cancelled"` and `completedAt: null`.
+4. A fresh season is then created from the new template.
+
+Not-started weeks in the displaced season are left as `not_started` — they are never touched.
+
+---
+
 # To do:
- - can you add an import/export feature to the settings screen which allows users to export all relevant data from the model as a file (json perhaps? whatever is best) so they can migrate to another device, or save for backup purposes. 
- - add tooltip on the exercise settings page to suggest bodyweight weight mode where working weight choices are less than 3, or where they have 30+ reps
  - is it easy to add a 'share' button on the summary pages which takes a screenshot and allows you to post to whatsapp?
- - test program hopping, delete a full program and see if exercise history persists (test both as a new user and a user with csv imports)
- - on the edit exercise screen in the config screen there is no back button in the top nav bar, can we add one like we have on the other screens.
- - update readme to explain how working weight is set in config and its relation to RIR schemes, the philosophy behind consistent weights week to week
- - fix the settings settings settings label
  - add an exercise detail screen where you can see a table of all exercises and their: last lift, e1RM local, e1RM max, total lifts, days since PR. Sortable by each column.
- - add clear directions when creating days, muscle groups, exercises and movement types
- - i think home page is no longer used, can you confirm? it's an old version of what has now become the week page.
+ - i should build unit tests which try to restore an old backup before every new deploy
