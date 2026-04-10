@@ -4,12 +4,14 @@
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
   box-shadow: var(--card-shadow);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .exercise-set-table-card__header {
   padding: 14px 14px 10px;
   border-bottom: 1px solid var(--panel-border);
+  border-radius: 18px 18px 0 0;
+  overflow: hidden;
 }
 
 .exercise-set-table-card__title {
@@ -150,6 +152,8 @@
   display: flex;
   gap: 10px;
   padding: 12px 14px 14px;
+  border-radius: 0 0 18px 18px;
+  overflow: hidden;
 }
 
 .exercise-set-table-card__add,
