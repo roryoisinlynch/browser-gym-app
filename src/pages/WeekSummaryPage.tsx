@@ -477,7 +477,6 @@ export default function WeekSummaryPage() {
         {/* ── Movement type breakdown ── */}
         {movementGroupSummary.length > 0 && (
           <section className="week-summary-section">
-            <h2 className="week-summary-section-title">Movement breakdown</h2>
             <div className="week-mt-groups">
             {movementGroupSummary.map(({ muscleGroupName, movements }) => (
               <div key={muscleGroupName} className="week-mt-group">
