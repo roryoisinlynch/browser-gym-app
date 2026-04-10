@@ -257,8 +257,8 @@ export async function activateProgram(
     }
     await putItem(STORE_NAMES.seasonInstances, {
       ...active,
-      status: "completed",
-      completedAt: active.completedAt ?? nowIso,
+      status: "cancelled",
+      completedAt: null,
     });
   }
 

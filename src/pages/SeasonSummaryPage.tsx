@@ -208,12 +208,6 @@ export default function SeasonSummaryPage() {
 
             try {
               const sWeeks = await getWeekInstancesForSeasonInstance(s.id);
-
-              // Only show seasons where every week was fully completed —
-              // this filters out seasons abandoned mid-way via a program switch.
-              const allWeeksCompleted = sWeeks.every(w => w.status === "completed");
-              if (!allWeeksCompleted) return null;
-
               const sCompletedWeeks = sWeeks.filter(w => w.status === "completed");
               const sWeekMetrics = await Promise.all(
                 sCompletedWeeks.map(async (w) => {

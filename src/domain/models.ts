@@ -1,6 +1,7 @@
 export type ID = string;
 
 export type InstanceStatus = "not_started" | "in_progress" | "completed";
+export type SeasonStatus = InstanceStatus | "cancelled";
 export type WeightMode = "increment" | "explicit_list" | "bodyweight";
 export type WeekItemType = "session" | "rest";
 
@@ -129,7 +130,7 @@ export interface SeasonInstance {
   order: number;
   label?: string;
 
-  status: InstanceStatus;
+  status: SeasonStatus;
 
   startedAt?: string | null;
   completedAt?: string | null;
