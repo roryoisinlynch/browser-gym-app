@@ -357,6 +357,13 @@ export default function ConfigProgramDetailPage() {
             );
           }
 
+          const highVolume = trainingItems.filter((i) => i.totalWorkingSets > 25);
+          if (highVolume.length > 0) {
+            warnings.push(
+              `${highVolume.length} training ${highVolume.length === 1 ? "day has" : "days have"} more than 25 target working sets`
+            );
+          }
+
           if (restItems.length === 0 && trainingItems.length > 0) {
             warnings.push("No rest days are scheduled");
           } else if (restItems.length > 0 && trainingItems.length / restItems.length > 6) {
@@ -374,7 +381,7 @@ export default function ConfigProgramDetailPage() {
           const outOfRange = rir.filter((v) => v < -1 || v > 5);
           if (outOfRange.length > 0) {
             warnings.push(
-              `RIR values outside the valid range (−1 to 5): ${outOfRange.join(", ")}`
+              `RIR values outside the typical range: ${outOfRange.join(", ")}`
             );
           }
 

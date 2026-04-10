@@ -334,3 +334,36 @@
 .config-session-detail__footer {
   margin: 16px 20px 0;
 }
+
+/* Warnings */
+
+.config-session-detail__warnings {
+  margin: 16px 20px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(244, 161, 97, 0.07);
+  border: 1px solid rgba(244, 161, 97, 0.25);
+}
+
+.config-session-detail__warnings-title {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #f4a161;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.config-session-detail__warnings-list {
+  margin: 0;
+  padding: 0 0 0 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.config-session-detail__warnings-list li {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
