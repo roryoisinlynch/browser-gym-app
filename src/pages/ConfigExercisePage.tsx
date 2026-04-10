@@ -66,10 +66,16 @@ export default function ConfigExercisePage() {
   const [movementTypeTooltipOpen, setMovementTypeTooltipOpen] = useState(false);
   const movementTypeTooltipRef = useRef<HTMLSpanElement | null>(null);
 
+  const [weightModeTooltipOpen, setWeightModeTooltipOpen] = useState(false);
+  const weightModeTooltipRef = useRef<HTMLSpanElement | null>(null);
+
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (!movementTypeTooltipRef.current?.contains(e.target as Node)) {
         setMovementTypeTooltipOpen(false);
+      }
+      if (!weightModeTooltipRef.current?.contains(e.target as Node)) {
+        setWeightModeTooltipOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClick);
@@ -393,7 +399,24 @@ export default function ConfigExercisePage() {
         </div>
 
         <div className="config-exercise__field-group">
-          <label className="config-exercise__label">Weight mode</label>
+          <div className="config-exercise__label-row">
+            <span className="config-exercise__label">Weight mode</span>
+            <span ref={weightModeTooltipRef} style={{ position: "relative" }}>
+              <button
+                type="button"
+                className="config-exercise__info-btn"
+                aria-expanded={weightModeTooltipOpen}
+                onClick={() => setWeightModeTooltipOpen((v) => !v)}
+              >?</button>
+              {weightModeTooltipOpen && (
+                <div className="config-exercise__info-tooltip">
+                  <strong>Increment</strong> — you load a barbell or machine with a specific weight that increases over time. Use this for most compound lifts like squat, bench, and deadlift.<br /><br />
+                  <strong>Bodyweight</strong> — no external load; the exercise uses your own bodyweight. Use this for pull-ups, dips, push-ups, and similar movements. Rep targets are tracked instead of weight.<br /><br />
+                  <strong>Weight list</strong> — you pick from a fixed set of available weights, such as a dumbbell rack or a cable stack with limited increments. Use this when the weight cannot increase by arbitrary amounts.
+                </div>
+              )}
+            </span>
+          </div>
           <div className="config-exercise__radio-group">
             {(["bodyweight", "increment", "explicit_list"] as WeightMode[]).map(
               (mode) => (
