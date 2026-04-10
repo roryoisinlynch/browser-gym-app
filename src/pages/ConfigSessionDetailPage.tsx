@@ -140,14 +140,14 @@ export default function ConfigSessionDetailPage() {
             0
           );
           if (sections.length > 0 && totalSets < 5) {
-            warnings.push(`Total target working sets is ${totalSets} — aim for at least 5`);
+            warnings.push("There are fewer than 5 target working sets (this should typically be around 15)");
           }
           if (sections.length > 0 && totalSets > 25) {
-            warnings.push(`Total target working sets is ${totalSets} — consider reducing below 25`);
+            warnings.push("There are more than 25 target working sets (this should typically be around 15)");
           }
 
           if (sections.length > 0 && sections.length < 2) {
-            warnings.push("Session has fewer than 2 muscle groups");
+            warnings.push("Session has fewer than 2 muscle groups (there would typically be 2 or 3)");
           }
 
           const lowSetGroups = sections.filter(

@@ -351,16 +351,16 @@ export default function ConfigProgramDetailPage() {
           const warnings: string[] = [];
 
           const lowVolume = trainingItems.filter((i) => i.totalWorkingSets < 5);
-          if (lowVolume.length > 0) {
+          for (const item of lowVolume) {
             warnings.push(
-              `${lowVolume.length} training ${lowVolume.length === 1 ? "day has" : "days have"} fewer than 5 target working sets`
+              `${item.sessionTemplate?.name ?? "Unnamed session"} has fewer than 5 target working sets (this should typically be around 15)`
             );
           }
 
           const highVolume = trainingItems.filter((i) => i.totalWorkingSets > 25);
-          if (highVolume.length > 0) {
+          for (const item of highVolume) {
             warnings.push(
-              `${highVolume.length} training ${highVolume.length === 1 ? "day has" : "days have"} more than 25 target working sets`
+              `${item.sessionTemplate?.name ?? "Unnamed session"} has more than 25 target working sets (this should typically be around 15)`
             );
           }
 
@@ -374,15 +374,13 @@ export default function ConfigProgramDetailPage() {
 
           if (rir.length > 0 && rir.length < 3) {
             warnings.push(
-              `RIR progression has only ${rir.length} ${rir.length === 1 ? "week" : "weeks"} — consider at least 3`
+              `RIR progression has only ${rir.length} ${rir.length === 1 ? "value" : "values"} (this would typically be around 3 to 6)`
             );
           }
 
           const outOfRange = rir.filter((v) => v < -1 || v > 5);
           if (outOfRange.length > 0) {
-            warnings.push(
-              `RIR values outside the typical range: ${outOfRange.join(", ")}`
-            );
+            warnings.push("RIR values outside the typical range (typically between 4 and 0)");
           }
 
           if (warnings.length === 0) return null;
