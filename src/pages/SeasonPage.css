@@ -42,3 +42,112 @@
   gap: 12px;
   padding: 0 14px;
 }
+
+/* ── Program selection cards (no active program state) ── */
+
+.program-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 18px;
+  padding: 16px 18px;
+  box-shadow: var(--card-shadow);
+}
+
+.program-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.program-card__name {
+  margin: 0;
+  font-size: 1.08rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.program-card__edit-btn {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--card-border);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.14s ease, border-color 0.14s ease;
+}
+
+.program-card__edit-btn:hover {
+  color: var(--text-strong);
+  border-color: var(--text-muted);
+}
+
+.program-card__meta {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.program-card__sessions {
+  margin: 5px 0 0;
+  font-size: 0.82rem;
+  color: var(--text-soft);
+  line-height: 1.4;
+}
+
+.program-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+
+.program-card__last-used-slot {
+  min-height: 22px;
+}
+
+.program-card__last-used {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.program-card__start-btn {
+  cursor: pointer;
+}
+
+/* ── New Program button ── */
+
+.season-page__new-program {
+  padding: 18px 14px 0;
+  text-align: center;
+}
+
+.season-page__new-program-btn {
+  background: transparent;
+  border: 1px dashed var(--card-border);
+  border-radius: 14px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 12px 24px;
+  width: 100%;
+  cursor: pointer;
+  transition: color 0.14s ease, border-color 0.14s ease;
+}
+
+.season-page__new-program-btn:hover {
+  color: var(--text-strong);
+  border-color: var(--text-muted);
+}

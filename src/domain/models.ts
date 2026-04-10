@@ -40,7 +40,6 @@ export interface SeasonTemplate {
   id: ID;
   name: string;
   plannedWeekCount: number;
-  description?: string;
   /** RIR target for each week in order, e.g. [4,3,2,1,0]. Overrides WeekTemplate.targetRir when set. */
   rirSequence?: number[];
 }

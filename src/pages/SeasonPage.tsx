@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import BottomNav from "../components/BottomNav";
 import StartSeasonModal from "../components/StartSeasonModal";
 import WeekCard, { type WeekCardState } from "../components/WeekCard";
 import TopBar from "../components/TopBar";
-import type { SeasonTemplate, WeekInstance } from "../domain/models";
+import type { SeasonTemplate, SessionTemplate, WeekInstance } from "../domain/models";
 import {
   getActiveSeasonInstance,
+  getLastCompletedSeasonInstance,
   getSeasonTemplates,
   getWeekInstancesForSeasonInstance,
   startSeasonFromTemplate,
+  getAllSessionTemplates,
 } from "../repositories/programRepository";
 import "./SeasonPage.css";
 
@@ -26,9 +29,16 @@ interface WeekRow {
   name: string;
 }
 
+interface ProgramCardData {
+  template: SeasonTemplate;
+  sessionNames: string[];
+  isLastUsed: boolean;
+}
+
 export default function SeasonPage() {
+  const navigate = useNavigate();
   const [weeks, setWeeks] = useState<WeekRow[]>([]);
-  const [seasonTemplates, setSeasonTemplates] = useState<SeasonTemplate[]>([]);
+  const [programCards, setProgramCards] = useState<ProgramCardData[]>([]);
   const [seasonLabel, setSeasonLabel] = useState<string>("Season");
   const [totalWeeks, setTotalWeeks] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,14 +49,34 @@ export default function SeasonPage() {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      const [activeSeasonInstance, templates] = await Promise.all([
-        getActiveSeasonInstance(),
-        getSeasonTemplates(),
-      ]);
-
-      setSeasonTemplates(templates);
+      const [activeSeasonInstance, templates, allSessionTemplates, lastCompleted] =
+        await Promise.all([
+          getActiveSeasonInstance(),
+          getSeasonTemplates(),
+          getAllSessionTemplates(),
+          getLastCompletedSeasonInstance(),
+        ]);
 
       if (!activeSeasonInstance) {
+        const sessionsBySeasonId = new Map<string, SessionTemplate[]>();
+        for (const st of allSessionTemplates) {
+          const bucket = sessionsBySeasonId.get(st.seasonTemplateId) ?? [];
+          bucket.push(st);
+          sessionsBySeasonId.set(st.seasonTemplateId, bucket);
+        }
+
+        const cards: ProgramCardData[] = templates.map((template) => {
+          const sessions = (sessionsBySeasonId.get(template.id) ?? []).sort(
+            (a, b) => a.order - b.order
+          );
+          return {
+            template,
+            sessionNames: sessions.map((s) => s.name),
+            isLastUsed: lastCompleted?.seasonTemplateId === template.id,
+          };
+        });
+
+        setProgramCards(cards);
         setWeeks([]);
         setIsLoading(false);
         return;
@@ -135,56 +165,93 @@ export default function SeasonPage() {
   }
 
   const pendingTemplate = pendingStartTemplateId
-    ? seasonTemplates.find((t) => t.id === pendingStartTemplateId)
+    ? programCards.find((c) => c.template.id === pendingStartTemplateId)?.template
     : null;
 
   if (weeks.length === 0) {
     return (
       <>
-      {pendingTemplate && (
-        <StartSeasonModal
-          programName={pendingTemplate.name}
-          onConfirm={handleConfirmStart}
-          onCancel={() => setPendingStartTemplateId(null)}
-        />
-      )}
-      <main className="season-page">
-        <TopBar title="Season" />
-        <section className="season-shell">
-          <header className="season-page__header">
-            <h1 className="season-page__title">No active program</h1>
-            <p className="season-page__subtitle">
-              Start a program to begin tracking your sessions.
-            </p>
-          </header>
-          {seasonTemplates.length > 0 && (
-            <section className="season-page__content">
-              <div className="season-page__list">
-                {seasonTemplates.map((template) => (
-                  <button
-                    key={template.id}
-                    className="week-start-card"
-                    onClick={() => setPendingStartTemplateId(template.id)}
-                  >
-                    <span className="day-card__text">
-                      <span className="day-card__title">{template.name}</span>
-                      {template.description && (
-                        <span className="day-card__subtitle">
-                          {template.description}
-                        </span>
-                      )}
-                    </span>
-                    <span className="day-card__action">
-                      <span className="day-pill day-pill--start">Start →</span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-        </section>
-        <BottomNav activeTab="session" />
-      </main>
+        {pendingTemplate && (
+          <StartSeasonModal
+            programName={pendingTemplate.name}
+            onConfirm={handleConfirmStart}
+            onCancel={() => setPendingStartTemplateId(null)}
+          />
+        )}
+        <main className="season-page">
+          <TopBar title="Season" />
+          <section className="season-shell">
+            <header className="season-page__header">
+              <h1 className="season-page__title">No active program</h1>
+              <p className="season-page__subtitle">
+                Start a program to begin tracking your sessions.
+              </p>
+            </header>
+            {programCards.length > 0 && (
+              <section className="season-page__content">
+                <div className="season-page__list">
+                  {programCards.map(({ template, sessionNames, isLastUsed }) => {
+                    const metaParts: string[] = [];
+                    metaParts.push(
+                      `${template.plannedWeekCount} ${template.plannedWeekCount === 1 ? "wk" : "wks"}`
+                    );
+                    if (template.rirSequence && template.rirSequence.length > 0) {
+                      metaParts.push(`RIR ${template.rirSequence.join(", ")}`);
+                    }
+
+                    return (
+                      <article key={template.id} className="program-card">
+                        <div className="program-card__header">
+                          <h2 className="program-card__name">{template.name}</h2>
+                          <button
+                            type="button"
+                            className="program-card__edit-btn"
+                            onClick={() => navigate(`/config/programs/${template.id}`)}
+                            aria-label={`Edit ${template.name}`}
+                          >
+                            Edit
+                          </button>
+                        </div>
+                        <p className="program-card__meta">{metaParts.join(" · ")}</p>
+                        {sessionNames.length > 0 && (
+                          <p className="program-card__sessions">
+                            {sessionNames.join(" · ")}
+                          </p>
+                        )}
+                        <div className="program-card__footer">
+                          <span className="program-card__last-used-slot">
+                            {isLastUsed && (
+                              <span className="program-card__last-used">
+                                Previously used
+                              </span>
+                            )}
+                          </span>
+                          <button
+                            type="button"
+                            className="day-pill day-pill--start program-card__start-btn"
+                            onClick={() => setPendingStartTemplateId(template.id)}
+                          >
+                            Start →
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+            <div className="season-page__new-program">
+              <button
+                type="button"
+                className="season-page__new-program-btn"
+                onClick={() => navigate("/config/programs")}
+              >
+                + New Program
+              </button>
+            </div>
+          </section>
+          <BottomNav activeTab="session" />
+        </main>
       </>
     );
   }
