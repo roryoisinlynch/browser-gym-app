@@ -30,4 +30,19 @@ export const mockSessionTemplateMuscleGroups: SessionTemplateMuscleGroup[] = [
   { id: "legs-b-hamstring", sessionTemplateId: "legs-b", muscleGroupId: "hamstring", order: 2, targetWorkingSets: 3 },
   { id: "legs-b-forearms", sessionTemplateId: "legs-b", muscleGroupId: "forearms", order: 3, targetWorkingSets: 3 },
   { id: "legs-b-core", sessionTemplateId: "legs-b", muscleGroupId: "core", order: 4, targetWorkingSets: 5 },
+
+  // ── PPL Push (Chest: 6, Shoulders: 6, Arms: 3) ────────────────────────────
+  { id: "ppl-push-chest", sessionTemplateId: "ppl-push", muscleGroupId: "chest", order: 1, targetWorkingSets: 6 },
+  { id: "ppl-push-shoulders", sessionTemplateId: "ppl-push", muscleGroupId: "shoulder", order: 2, targetWorkingSets: 6 },
+  { id: "ppl-push-arms", sessionTemplateId: "ppl-push", muscleGroupId: "arms", order: 3, targetWorkingSets: 3 },
+
+  // ── PPL Pull (Back: 6, Shoulders: 3, Arms: 6) ─────────────────────────────
+  { id: "ppl-pull-back", sessionTemplateId: "ppl-pull", muscleGroupId: "back", order: 1, targetWorkingSets: 6 },
+  { id: "ppl-pull-shoulders", sessionTemplateId: "ppl-pull", muscleGroupId: "shoulder", order: 2, targetWorkingSets: 3 },
+  { id: "ppl-pull-arms", sessionTemplateId: "ppl-pull", muscleGroupId: "arms", order: 3, targetWorkingSets: 6 },
+
+  // ── PPL Legs (Core: 6, Hamstring: 3, Quads: 3) ───────────────────────────
+  { id: "ppl-legs-core", sessionTemplateId: "ppl-legs", muscleGroupId: "core", order: 1, targetWorkingSets: 6 },
+  { id: "ppl-legs-hamstring", sessionTemplateId: "ppl-legs", muscleGroupId: "hamstring", order: 2, targetWorkingSets: 3 },
+  { id: "ppl-legs-quads", sessionTemplateId: "ppl-legs", muscleGroupId: "quads", order: 3, targetWorkingSets: 3 },
 ];

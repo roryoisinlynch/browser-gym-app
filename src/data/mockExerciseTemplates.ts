@@ -2,6 +2,9 @@ import type { ExerciseTemplate } from "../domain/models";
 
 const machineFlyWeights = [5, 7.5, 10, 12, 14.5, 17, 19, 21.5, 24, 26, 28.5, 31, 33, 35.5, 38, 40, 42.5, 45, 47, 49.5, 52, 54, 56.5, 59, 61, 63.5, 66, 68, 70.5, 73, 75, 77.5, 80, 82, 84.5, 87];
 const tricepCableWeights = [2.5, 5, 7.5, 10, 12.5, 15, 17.5, 21.25, 25, 28.75, 32.5, 36.25, 40, 43.75, 47.5];
+const latPulldownWeights = [2.5, 5, 7.5, 10, 12.5, 15, 17.5, 21.25, 25, 28.75, 32.5, 36.25, 40, 43.75, 47.5];
+const facePullWeights = [2.5, 5, 7.5, 10, 12.5, 15, 17.5, 21.25, 25, 28.75, 32.5, 36.25, 40, 43.75, 47.5];
+const reversePecDeckWeights = [5, 7.5, 10, 12, 14.5, 17, 19, 21.5, 24, 26, 28.5, 31, 33, 35.5, 38, 40, 42.5, 45, 47, 49.5, 52, 54, 56.5, 59, 61, 63.5, 66, 68, 70.5, 73, 75, 77.5, 80, 82, 84.5, 87];
 
 export const mockExerciseTemplates: ExerciseTemplate[] = [
   // ── Chest Back A ─────────────────────────────────────────────────────────
@@ -421,6 +424,240 @@ export const mockExerciseTemplates: ExerciseTemplate[] = [
     sessionTemplateMuscleGroupId: "legs-b-core",
     movementTypeId: "core-crunch",
     exerciseName: "Crunch Machine",
+    weightMode: "increment",
+    weightIncrement: 2.5,
+    prescribedWeight: null,
+  },
+
+  // ── PPL Push ──────────────────────────────────────────────────────────────
+  // Chest
+  {
+    id: "ppl-bench-press",
+    sessionTemplateMuscleGroupId: "ppl-push-chest",
+    movementTypeId: "chest-flat-press",
+    exerciseName: "Bench Press",
+    weightMode: "increment",
+    weightIncrement: 2.5,
+    prescribedWeight: null,
+  },
+  {
+    id: "ppl-chest-press",
+    sessionTemplateMuscleGroupId: "ppl-push-chest",
+    movementTypeId: "chest-flat-press",
+    exerciseName: "Chest Press",
+    weightMode: "increment",
+    weightIncrement: 2.5,
+    prescribedWeight: null,
+  },
+  {
+    id: "ppl-incline-db-press",
+    sessionTemplateMuscleGroupId: "ppl-push-chest",
+    movementTypeId: "chest-incline-press",
+    exerciseName: "Incline DB Press",
+    weightMode: "increment",
+    weightIncrement: 2,
+    prescribedWeight: null,
+  },
+  {
+    id: "ppl-machine-fly",
+    sessionTemplateMuscleGroupId: "ppl-push-chest",
+    movementTypeId: "chest-fly",
+    exerciseName: "Machine Fly",
+    weightMode: "explicit_list",
+    availableWeights: machineFlyWeights,
+    prescribedWeight: null,
+  },
+  // Shoulders
+  {
+    id: "ppl-ohp",
+    sessionTemplateMuscleGroupId: "ppl-push-shoulders",
+    movementTypeId: "shoulder-vertical-press",
+    exerciseName: "OHP",
+    weightMode: "increment",
+    weightIncrement: 2.5,
+    prescribedWeight: null,
+  },
+  {
+    id: "ppl-shoulder-press",
+    sessionTemplateMuscleGroupId: "ppl-push-shoulders",
+    movementTypeId: "shoulder-vertical-press",
+    exerciseName: "Shoulder Press",
+    weightMode: "increment",
+    weightIncrement: 2.5,
+    prescribedWeight: null,
+  },
+  {
+    id: "ppl-seated-db-press",
+    sessionTemplateMuscleGroupId: "ppl-push-shoulders",
+    movementTypeId: "shoulder-vertical-press",
+    exerciseName: "Seated DB Press",
+    weightMode: "increment",
+    weightIncrement: 2,
+    prescribedWeight: null,
+  },
+  // Arms (triceps)
+  {
+    id: "ppl-tricep-pushdown",
+    sessionTemplateMuscleGroupId: "ppl-push-arms",
+    movementTypeId: "arms-tricep",
+    exerciseName: "Tricep Pushdown",
+    weightMode: "explicit_list",
+    availableWeights: tricepCableWeights,
+    prescribedWeight: null,
+  },
+
+  // ── PPL Pull ──────────────────────────────────────────────────────────────
+  // Back
+  {
+    id: "ppl-pull-ups",
+    sessionTemplateMuscleGroupId: "ppl-pull-back",
+    movementTypeId: "back-vertical-pull",
+    exerciseName: "Pull Ups",
+    weightMode: "bodyweight",
+  },
+  {
+    id: "ppl-chin-ups",
+    sessionTemplateMuscleGroupId: "ppl-pull-back",
+    movementTypeId: "back-vertical-pull",
+    exerciseName: "Chin Ups",
+    weightMode: "bodyweight",
+  },
+  {
+    id: "ppl-lat-pulldown",
+    sessionTemplateMuscleGroupId: "ppl-pull-back",
+    movementTypeId: "back-vertical-pull",
+    exerciseName: "Lat Pulldown",
+    weightMode: "explicit_list",
+    availableWeights: latPulldownWeights,
+    prescribedWeight: null,
+  },
+  {
+    id: "ppl-cable-row",
+    sessionTemplateMuscleGroupId: "ppl-pull-back",
+    movementTypeId: "back-horizontal-row",
+    exerciseName: "Cable Row",
+    weightMode: "increment",
+    weightIncrement: 10,
+    prescribedWeight: null,
+  },
+  {
+    id: "ppl-seal-row",
+    sessionTemplateMuscleGroupId: "ppl-pull-back",
+    movementTypeId: "back-horizontal-row",
+    exerciseName: "Seal Row Benches",
+    weightMode: "increment",
+    weightIncrement: 2.5,
+    prescribedWeight: null,
+  },
+  {
+    id: "ppl-db-row",
+    sessionTemplateMuscleGroupId: "ppl-pull-back",
+    movementTypeId: "back-horizontal-row",
+    exerciseName: "DB Row",
+    weightMode: "increment",
+    weightIncrement: 2,
+    prescribedWeight: null,
+  },
+  // Shoulders (rear delts)
+  {
+    id: "ppl-face-pull",
+    sessionTemplateMuscleGroupId: "ppl-pull-shoulders",
+    movementTypeId: "shoulder-rear-delt",
+    exerciseName: "Face Pull",
+    weightMode: "explicit_list",
+    availableWeights: facePullWeights,
+    prescribedWeight: null,
+  },
+  {
+    id: "ppl-reverse-pec-deck",
+    sessionTemplateMuscleGroupId: "ppl-pull-shoulders",
+    movementTypeId: "shoulder-rear-delt",
+    exerciseName: "Reverse Pec Deck",
+    weightMode: "explicit_list",
+    availableWeights: reversePecDeckWeights,
+    prescribedWeight: null,
+  },
+  // Arms (biceps)
+  {
+    id: "ppl-bicep-curl",
+    sessionTemplateMuscleGroupId: "ppl-pull-arms",
+    movementTypeId: "arms-bicep",
+    exerciseName: "Bicep Curl",
+    weightMode: "increment",
+    weightIncrement: 2,
+    prescribedWeight: null,
+  },
+  {
+    id: "ppl-preacher-curl",
+    sessionTemplateMuscleGroupId: "ppl-pull-arms",
+    movementTypeId: "arms-bicep",
+    exerciseName: "Preacher Curl",
+    weightMode: "increment",
+    weightIncrement: 2.5,
+    prescribedWeight: null,
+  },
+
+  // ── PPL Legs ──────────────────────────────────────────────────────────────
+  // Core
+  {
+    id: "ppl-leg-raises",
+    sessionTemplateMuscleGroupId: "ppl-legs-core",
+    movementTypeId: "core-leg-raise",
+    exerciseName: "Leg Raises",
+    weightMode: "bodyweight",
+  },
+  {
+    id: "ppl-crunch",
+    sessionTemplateMuscleGroupId: "ppl-legs-core",
+    movementTypeId: "core-crunch",
+    exerciseName: "Crunch",
+    weightMode: "increment",
+    weightIncrement: 2.5,
+    prescribedWeight: null,
+  },
+  // Hamstring
+  {
+    id: "ppl-deadlift",
+    sessionTemplateMuscleGroupId: "ppl-legs-hamstring",
+    movementTypeId: "hamstring-hinge",
+    exerciseName: "Deadlift",
+    weightMode: "increment",
+    weightIncrement: 2.5,
+    prescribedWeight: null,
+  },
+  {
+    id: "ppl-leg-curl",
+    sessionTemplateMuscleGroupId: "ppl-legs-hamstring",
+    movementTypeId: "hamstring-curl",
+    exerciseName: "Leg Curl",
+    weightMode: "increment",
+    weightIncrement: 2.5,
+    prescribedWeight: null,
+  },
+  // Quads
+  {
+    id: "ppl-squat",
+    sessionTemplateMuscleGroupId: "ppl-legs-quads",
+    movementTypeId: "quads-squat",
+    exerciseName: "Squat",
+    weightMode: "increment",
+    weightIncrement: 2.5,
+    prescribedWeight: null,
+  },
+  {
+    id: "ppl-leg-press",
+    sessionTemplateMuscleGroupId: "ppl-legs-quads",
+    movementTypeId: "quads-squat",
+    exerciseName: "Leg Press",
+    weightMode: "increment",
+    weightIncrement: 2.5,
+    prescribedWeight: null,
+  },
+  {
+    id: "ppl-leg-extension",
+    sessionTemplateMuscleGroupId: "ppl-legs-quads",
+    movementTypeId: "quads-extension",
+    exerciseName: "Leg Extension",
     weightMode: "increment",
     weightIncrement: 2.5,
     prescribedWeight: null,

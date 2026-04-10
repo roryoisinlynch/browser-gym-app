@@ -25,11 +25,16 @@ export const mockMovementTypes: MovementType[] = [
   { id: "forearms-extension", muscleGroupId: "forearms", name: "Forearm Extension", order: 2 },
   { id: "forearms-grip", muscleGroupId: "forearms", name: "Grip Strength", order: 3 },
 
+  // Shoulder (additional)
+  { id: "shoulder-rear-delt", muscleGroupId: "shoulder", name: "Rear Delt", order: 3 },
+
   // Quads
   { id: "quads-squat", muscleGroupId: "quads", name: "Squat", order: 1 },
+  { id: "quads-extension", muscleGroupId: "quads", name: "Extension", order: 2 },
 
   // Hamstring
   { id: "hamstring-curl", muscleGroupId: "hamstring", name: "Hamstring", order: 1 },
+  { id: "hamstring-hinge", muscleGroupId: "hamstring", name: "Hinge", order: 2 },
 
   // Core
   { id: "core-leg-raise", muscleGroupId: "core", name: "Leg Raise", order: 1 },

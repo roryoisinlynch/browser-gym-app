@@ -7,4 +7,10 @@ export const mockSeasonTemplates: SeasonTemplate[] = [
     plannedWeekCount: 5,
     rirSequence: [3, 2, 1, 0, -1],
   },
+  {
+    id: "season-template-ppl",
+    name: "Push Pull Legs",
+    plannedWeekCount: 5,
+    rirSequence: [3, 2, 1, 0, -1],
+  },
 ];
