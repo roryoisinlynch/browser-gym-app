@@ -11,11 +11,6 @@ export default function SettingsPage() {
     <main className="settings-page">
       <TopBar title="Settings" />
       <section className="settings-shell">
-        <header className="settings-header">
-          <p className="settings-eyebrow">Settings</p>
-          <h1 className="settings-title">Settings</h1>
-        </header>
-
         <div className="settings-section">
           <p className="settings-section-label">Program</p>
           <div className="settings-card-list">
