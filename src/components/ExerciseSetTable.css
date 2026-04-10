@@ -49,6 +49,62 @@
   letter-spacing: 0.04em;
 }
 
+.exercise-set-table__e1rm-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+}
+
+.exercise-set-table__info-btn {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-soft);
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 0.6rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: 0;
+  transition: border-color 0.14s, color 0.14s;
+}
+
+.exercise-set-table__info-btn:hover {
+  border-color: var(--text-muted);
+  color: var(--text-muted);
+}
+
+.exercise-set-table__info-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 10;
+  width: 260px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--panel-shadow);
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.exercise-set-table__info-tooltip strong {
+  color: var(--text-strong);
+}
+
 .exercise-set-table__target,
 .exercise-set-table__e1rm {
   font-size: 0.84rem;

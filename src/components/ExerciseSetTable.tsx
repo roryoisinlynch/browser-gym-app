@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import "./ExerciseSetTable.css";
 
 export interface ExerciseSetTableRow {
@@ -58,6 +59,19 @@ export default function ExerciseSetTable({
   const targetLabel = getTargetLabel(targetWeight, targetReps, isBodyweight, isAmrap);
   const rowClass = `exercise-set-table__row${isBodyweight ? " exercise-set-table__row--bw" : ""}`;
 
+  const [e1rmTooltipOpen, setE1rmTooltipOpen] = useState(false);
+  const e1rmTooltipRef = useRef<HTMLSpanElement | null>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (!e1rmTooltipRef.current?.contains(e.target as Node)) {
+        setE1rmTooltipOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
   return (
     <section className="exercise-set-table-card">
       <div className="exercise-set-table-card__header">
@@ -69,7 +83,22 @@ export default function ExerciseSetTable({
           <span>Target</span>
           {!isBodyweight && <span>Weight</span>}
           <span>Reps</span>
-          {!isBodyweight && <span>e1RM</span>}
+          {!isBodyweight && (
+            <span className="exercise-set-table__e1rm-header" ref={e1rmTooltipRef}>
+              e1RM
+              <button
+                type="button"
+                className="exercise-set-table__info-btn"
+                aria-expanded={e1rmTooltipOpen}
+                onClick={() => setE1rmTooltipOpen((v) => !v)}
+              >?</button>
+              {e1rmTooltipOpen && (
+                <div className="exercise-set-table__info-tooltip">
+                  <strong>Estimated 1-Rep Max (e1RM)</strong> is a calculated estimate of the maximum weight you could lift for a single rep, derived from the weight and reps performed in each set. It is used to track strength progress over time and to prescribe your working weights in future sessions.
+                </div>
+              )}
+            </span>
+          )}
           <span aria-hidden="true" />
         </div>
 
