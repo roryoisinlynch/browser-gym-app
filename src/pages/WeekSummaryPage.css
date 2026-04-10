@@ -433,6 +433,7 @@
   font-weight: 600;
   letter-spacing: 0.01em;
   white-space: nowrap;
+  filter: brightness(0.78) saturate(1.2);
 }
 
 .week-mt-pill__count {
