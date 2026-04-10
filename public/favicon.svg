@@ -1,22 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- App background -->
+  <defs>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="28" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
   <rect width="512" height="512" rx="112" fill="#14181f"/>
 
-  <!-- Traffic light housing -->
-  <rect x="172" y="86" width="168" height="340" rx="84" fill="#21262e" stroke="#343b45" stroke-width="3"/>
-
-  <!-- Top bulb (dim) -->
-  <circle cx="256" cy="150" r="46" fill="#2b313a"/>
-  <circle cx="245" cy="139" r="13" fill="white" fill-opacity="0.05"/>
-
-  <!-- Middle bulb (lit — accent yellow) -->
-  <!-- Outer glow -->
-  <circle cx="256" cy="256" r="64" fill="#d8f06a" fill-opacity="0.15"/>
-  <circle cx="256" cy="256" r="46" fill="#d8f06a"/>
-  <!-- Inner highlight for glass look -->
-  <circle cx="245" cy="245" r="13" fill="white" fill-opacity="0.28"/>
-
-  <!-- Bottom bulb (dim) -->
-  <circle cx="256" cy="362" r="46" fill="#2b313a"/>
-  <circle cx="245" cy="351" r="13" fill="white" fill-opacity="0.05"/>
+  <!-- Glowing bulb -->
+  <circle cx="256" cy="256" r="118" fill="#d8f06a" filter="url(#glow)"/>
 </svg>
