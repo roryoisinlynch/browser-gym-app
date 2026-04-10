@@ -211,7 +211,7 @@ export default function SeasonPage() {
               <section className="season-page__content">
                 <div className="season-page__list">
                   {programCards.map(({ template, weekItems, isLastUsed }) => {
-                    const daysPerWeek = weekItems.length || 7;
+                    const daysPerWeek = weekItems.length;
                     const totalDays = template.plannedWeekCount * daysPerWeek;
                     const trainingDays = weekItems.filter((i) => i.type === "session").length;
                     const restDays = weekItems.filter((i) => i.type === "rest").length;
