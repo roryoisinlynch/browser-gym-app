@@ -17,6 +17,7 @@ import {
   getWeekInstancesForSeasonInstance,
   getWeekTemplateItemsForWeekTemplate,
 } from "../repositories/programRepository";
+import { getById, STORE_NAMES } from "../db/db";
 import ExerciseInsights from "../components/ExerciseInsights";
 import TrafficLight from "../components/TrafficLight";
 import TopBar from "../components/TopBar";
@@ -368,6 +369,7 @@ export default function DashboardPage() {
   const [recentSeason, setRecentSeason] = useState<RecentCard | null | typeof LOADING_CARD>(LOADING_CARD);
   const [prEvents, setPrEvents] = useState<PREvent[] | null>(null);
   const [recentTooltipOpen, setRecentTooltipOpen] = useState(false);
+  const [lastBackupAt, setLastBackupAt] = useState<string | null | "loading">("loading");
   const recentTooltipRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -438,6 +440,12 @@ export default function DashboardPage() {
     return () => {
       cancelled.current = true;
     };
+  }, []);
+
+  useEffect(() => {
+    getById<{ key: string; value: string }>(STORE_NAMES.meta, "lastBackupAt").then(
+      (record) => setLastBackupAt(record?.value ?? null)
+    );
   }, []);
 
   // ─── Up Next ──────────────────────────────────────────────────────────────
@@ -844,6 +852,36 @@ export default function DashboardPage() {
     );
   }
 
+  // ─── Backup nudge ─────────────────────────────────────────────────────────
+
+  function renderBackupNudge() {
+    if (lastBackupAt === "loading") return null;
+    const THRESHOLD_DAYS = 30;
+    let daysSince: number | null = null;
+    if (lastBackupAt !== null) {
+      const msPerDay = 86400000;
+      daysSince = Math.floor((Date.now() - new Date(lastBackupAt).getTime()) / msPerDay);
+      if (daysSince < THRESHOLD_DAYS) return null;
+    }
+    const label =
+      lastBackupAt === null
+        ? "You have never backed up your data."
+        : `Your last backup was ${daysSince} days ago.`;
+    return (
+      <button
+        type="button"
+        className="dashboard-backup-nudge"
+        onClick={() => navigate("/backup")}
+      >
+        <div className="dashboard-backup-nudge__body">
+          <span className="dashboard-backup-nudge__title">Back up your data</span>
+          <span className="dashboard-backup-nudge__desc">{label}</span>
+        </div>
+        <span className="dashboard-backup-nudge__chevron">›</span>
+      </button>
+    );
+  }
+
   // ─── Render ───────────────────────────────────────────────────────────────
 
   if (isDesktop) {
@@ -891,6 +929,8 @@ export default function DashboardPage() {
             </div>
           </section>
         )}
+
+        {renderBackupNudge()}
 
         {renderPRSpotlight()}
 

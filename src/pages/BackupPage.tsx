@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { openDatabase, STORE_NAMES, transactionDone } from "../db/db";
+import { openDatabase, STORE_NAMES, transactionDone, putItem } from "../db/db";
 import type { StoreName } from "../db/db";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
@@ -88,6 +88,7 @@ export default function BackupPage() {
       a.download = `gym-backup-${dateStr}.json`;
       a.click();
       URL.revokeObjectURL(url);
+      await putItem(STORE_NAMES.meta, { key: "lastBackupAt", value: backup.exportedAt });
       setExportState("done");
     } catch {
       setExportState("idle");

@@ -631,3 +631,55 @@
   color: var(--accent);
   font-weight: 700;
 }
+
+/* ── Backup nudge ── */
+
+.dashboard-backup-nudge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(244, 161, 97, 0.22);
+  background: rgba(244, 161, 97, 0.05);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s, transform 0.12s;
+  font-family: inherit;
+}
+
+.dashboard-backup-nudge:hover {
+  background: rgba(244, 161, 97, 0.09);
+  transform: translateY(-1px);
+}
+
+.dashboard-backup-nudge:active {
+  transform: scale(0.985);
+}
+
+.dashboard-backup-nudge__body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dashboard-backup-nudge__title {
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: #f4a161;
+}
+
+.dashboard-backup-nudge__desc {
+  font-size: 0.8rem;
+  color: var(--text-soft);
+}
+
+.dashboard-backup-nudge__chevron {
+  font-size: 1.2rem;
+  color: #f4a161;
+  line-height: 1;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
