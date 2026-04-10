@@ -45,6 +45,64 @@
   color: var(--text-soft);
 }
 
+.config-exercise__label-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.config-exercise__label-row .config-exercise__label {
+  margin-bottom: 0;
+}
+
+.config-exercise__info-btn {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-soft);
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 0.6rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  transition: border-color 0.14s, color 0.14s;
+}
+
+.config-exercise__info-btn:hover {
+  border-color: var(--text-muted);
+  color: var(--text-muted);
+}
+
+.config-exercise__info-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 10;
+  width: 260px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--panel-shadow);
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.config-exercise__info-tooltip strong {
+  color: var(--text-strong);
+}
+
 .config-exercise__input {
   display: block;
   width: 100%;

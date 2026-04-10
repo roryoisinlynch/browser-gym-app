@@ -63,6 +63,19 @@ export default function ConfigExercisePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [movementTypeTooltipOpen, setMovementTypeTooltipOpen] = useState(false);
+  const movementTypeTooltipRef = useRef<HTMLSpanElement | null>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (!movementTypeTooltipRef.current?.contains(e.target as Node)) {
+        setMovementTypeTooltipOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
   useEffect(() => {
     async function load() {
       const allTemplates = await getAllExerciseTemplates();
@@ -338,7 +351,22 @@ export default function ConfigExercisePage() {
         </div>
 
         <div className="config-exercise__field-group">
-          <label className="config-exercise__label">Movement type</label>
+          <div className="config-exercise__label-row">
+            <span className="config-exercise__label">Movement type</span>
+            <span ref={movementTypeTooltipRef} style={{ position: "relative" }}>
+              <button
+                type="button"
+                className="config-exercise__info-btn"
+                aria-expanded={movementTypeTooltipOpen}
+                onClick={() => setMovementTypeTooltipOpen((v) => !v)}
+              >?</button>
+              {movementTypeTooltipOpen && (
+                <div className="config-exercise__info-tooltip">
+                  Movement type is a secondary label within a muscle group — a way to organise exercises into subcategories. For example, under <strong>Chest</strong> you might create movement types like <strong>Flat</strong>, <strong>Incline</strong>, <strong>Dip</strong>, or <strong>Fly</strong>. It does not affect calculations or program management in any way.
+                </div>
+              )}
+            </span>
+          </div>
           <select
             className="config-exercise__select"
             value={movementTypeId}
