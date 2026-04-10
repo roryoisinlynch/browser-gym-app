@@ -9,21 +9,20 @@ import { mockSessionTemplates } from "../data/mockSessionTemplates";
 import { mockSessionTemplateMuscleGroups } from "../data/mockSessionTemplateMuscleGroups";
 import { mockExerciseTemplates } from "../data/mockExerciseTemplates";
 
-const SEED_KEY = "seed-v6";
-
 export async function seedDatabaseIfNeeded(): Promise<void> {
   const db = await openDatabase();
 
-  const existingSeed = await new Promise<{ key: string; value: boolean } | undefined>(
-    (resolve, reject) => {
-      const tx = db.transaction(STORE_NAMES.meta, "readonly");
-      const request = tx.objectStore(STORE_NAMES.meta).get(SEED_KEY);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    }
-  );
+  // Only seed a blank database. If any season templates already exist the user
+  // has real data — leave everything untouched. The seed runs again only after
+  // an explicit database reset (Settings → Reset database).
+  const hasData = await new Promise<boolean>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAMES.seasonTemplates, "readonly");
+    const request = tx.objectStore(STORE_NAMES.seasonTemplates).count();
+    request.onsuccess = () => resolve(request.result > 0);
+    request.onerror = () => reject(request.error);
+  });
 
-  if (existingSeed?.value) {
+  if (hasData) {
     return;
   }
 
@@ -60,12 +59,6 @@ export async function seedDatabaseIfNeeded(): Promise<void> {
   mockExerciseTemplates.forEach((item) =>
     tx.objectStore(STORE_NAMES.exerciseTemplates).put(item)
   );
-
-  tx.objectStore(STORE_NAMES.meta).put({
-    key: SEED_KEY,
-    value: true,
-    seededAt: new Date().toISOString(),
-  });
 
   await transactionDone(tx);
 }
