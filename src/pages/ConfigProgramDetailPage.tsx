@@ -313,8 +313,8 @@ export default function ConfigProgramDetailPage() {
             >?</button>
             {rirTooltipOpen && (
               <div className="config-program-detail__info-tooltip">
-                <strong>Reps In Reserve (RIR)</strong> is a measure of how close to failure each working set should be performed. A value of 3 means stopping with 3 reps still in the tank; 0 means going to technical failure; −1 means exceeding failure (e.g. forced reps).<br /><br />
-                The progression sequence defines the RIR target for each week of the program in order. A sequence of <em>3, 2, 1, 0</em> means Week 1 is performed at 3 RIR, Week 2 at 2 RIR, and so on — increasing intensity each week until failure is reached.
+                <strong>Reps In Reserve (RIR)</strong> is an effort metric describing how many reps you could still perform at the end of a working set. A value of 3 means stopping with 3 reps left in the tank; 0 means going to technical failure. In this app, −1 represents going beyond failure — in practice this means hitting a personal record. Values above 4 represent very easy effort and are typically only used during deload weeks.<br /><br />
+                The RIR sequence defines the target effort for each week of the program in order, which also determines the total number of weeks. A sequence of <em>3, 2, 1, 0</em> produces a 4-week program with intensity increasing each week.
               </div>
             )}
           </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { SeasonInstance, SeasonTemplate, WeekTemplate } from "../domain/models";
 import {
@@ -26,6 +26,8 @@ export default function ConfigProgramsPage() {
   const [confirmActivateId, setConfirmActivateId] = useState<string | null>(null);
   const [pendingActivateId, setPendingActivateId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [rirTooltipOpen, setRirTooltipOpen] = useState(false);
+  const rirTooltipRef = useRef<HTMLSpanElement | null>(null);
 
   async function loadData() {
     const [templates, active] = await Promise.all([
@@ -38,6 +40,16 @@ export default function ConfigProgramsPage() {
 
   useEffect(() => {
     loadData();
+  }, []);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (!rirTooltipRef.current?.contains(e.target as Node)) {
+        setRirTooltipOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
   function parseRir(input: string): number[] | null {
@@ -232,12 +244,26 @@ export default function ConfigProgramsPage() {
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                placeholder="e.g. Base Hypertrophy"
+                placeholder="e.g. Push, Pull, Legs"
                 autoFocus
               />
             </label>
             <label className="config-programs__create-label">
-              RIR sequence
+              <span className="config-programs__create-label-row" ref={rirTooltipRef}>
+                RIR sequence
+                <button
+                  type="button"
+                  className="config-programs__info-btn"
+                  aria-expanded={rirTooltipOpen}
+                  onClick={() => setRirTooltipOpen((v) => !v)}
+                >?</button>
+                {rirTooltipOpen && (
+                  <div className="config-programs__info-tooltip">
+                    <strong>Reps In Reserve (RIR)</strong> is an effort metric describing how many reps you could still perform at the end of a working set. A value of 3 means stopping with 3 reps left in the tank; 0 means going to technical failure. In this app, −1 represents going beyond failure — in practice this means hitting a personal record. Values above 4 represent very easy effort and are typically only used during deload weeks.<br /><br />
+                    The RIR sequence defines the target effort for each week of the program in order, which also determines the total number of weeks. A sequence of <em>3, 2, 1, 0</em> produces a 4-week program with intensity increasing each week.
+                  </div>
+                )}
+              </span>
               <input
                 className="config-programs__create-input"
                 type="text"

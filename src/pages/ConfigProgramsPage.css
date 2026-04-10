@@ -281,6 +281,67 @@
   border-color: var(--accent);
 }
 
+.config-programs__create-label-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.config-programs__info-btn {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-soft);
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 0.65rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: 0;
+  transition: border-color 0.14s, color 0.14s;
+}
+
+.config-programs__info-btn:hover {
+  border-color: var(--text-muted);
+  color: var(--text-muted);
+}
+
+.config-programs__info-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 10;
+  width: 280px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--panel-shadow);
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.config-programs__info-tooltip strong {
+  color: var(--text-strong);
+}
+
+.config-programs__info-tooltip em {
+  color: var(--accent);
+  font-style: normal;
+}
+
 .config-programs__create-hint {
   font-size: 0.72rem;
   font-weight: 400;
