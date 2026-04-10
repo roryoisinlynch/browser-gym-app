@@ -100,11 +100,11 @@ Deadlift,120,3,16/03/2024`}</pre>
               <ul className="import-guide__list">
                 <li>
                   <strong>Column 1 — Exercise name</strong><br />
-                  Any non-empty text. Matched against your program's exercise names, so spelling and capitalisation should be consistent.
+                  Any non-empty text. Matched against your program's exercise names — capitalisation is ignored, but spelling must match exactly.
                 </li>
                 <li>
                   <strong>Column 2 — Weight</strong><br />
-                  A number in whatever unit you train in (kg or lb — the app uses whichever you use consistently). For bodyweight exercises, use <code>0</code>. If more than 80% of the imported rows for a given exercise name have a weight of 0, the app automatically treats that exercise as bodyweight. Once you begin a training program, bodyweight exercises are evaluated simply on the number of reps you can do — there is no weight variable for them. Exercises can be toggled between bodyweight and normal mode in the exercise config page at any time.
+                  A number. For bodyweight exercises, use <code>0</code>. If more than 80% of the imported rows for a given exercise name have a weight of 0, the app automatically treats that exercise as bodyweight. Once you begin a training program, bodyweight exercises are evaluated simply on the number of reps you can do — there is no weight variable for them. Exercises can be toggled between bodyweight and normal mode in the exercise config page at any time.
                 </li>
                 <li>
                   <strong>Column 3 — Reps</strong><br />
