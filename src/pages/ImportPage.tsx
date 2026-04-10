@@ -104,7 +104,7 @@ Deadlift,120,3,16/03/2024`}</pre>
                 </li>
                 <li>
                   <strong>Column 2 — Weight</strong><br />
-                  A number in whatever unit you train in (kg or lb — the app uses whichever you use consistently). Write <code>bodyweight</code> to skip a row entirely; bodyweight sets are not imported.
+                  A number in whatever unit you train in (kg or lb — the app uses whichever you use consistently). For bodyweight exercises, use <code>0</code>. If more than 80% of the imported rows for a given exercise name have a weight of 0, the app automatically treats that exercise as bodyweight and ignores the weight column when calculating e1RM — so you do not need to do anything special beyond using 0 consistently.
                 </li>
                 <li>
                   <strong>Column 3 — Reps</strong><br />
