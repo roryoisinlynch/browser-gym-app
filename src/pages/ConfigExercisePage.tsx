@@ -288,7 +288,8 @@ export default function ConfigExercisePage() {
     <main className="config-exercise-page">
       <TopBar
         title={isNew ? "New exercise" : "Edit exercise"}
-        backLabel="Back"
+        backLabel="Session"
+        onBack={() => navigate(-1)}
       />
       <section className="config-exercise-shell">
         <header className="config-exercise-header">
