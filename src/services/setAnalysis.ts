@@ -90,18 +90,39 @@ export function getPriorBestEstimatedOneRepMax(
   return best;
 }
 
+const BODYWEIGHT_WARMUP_RIR_THRESHOLD = 4;
+
 /**
  * Full set analysis for one set, given earlier comparable sets.
+ *
+ * For bodyweight exercises (no weight recorded), pass effectiveBaselineReps
+ * (recentMaxReps ?? historicalBestReps). A set is warmup if the rep gap to
+ * that baseline exceeds 4 — the same RIR cutoff used for weighted exercises
+ * (60% e1RM ≈ 6 RPE ≈ 4 RIR).
  */
 export function analyzeSet(
   currentSet: ExerciseSet,
   priorSets: ExerciseSet[],
-  effectiveBaselineE1RM: number | null = null
+  effectiveBaselineE1RM: number | null = null,
+  effectiveBaselineReps: number | null = null
 ): SetAnalysis {
   const estimatedOneRepMax = calculateEstimatedOneRepMax(
     currentSet.performedWeight,
     currentSet.performedReps
   );
+
+  // Bodyweight path: no weight means e1RM is meaningless — classify by rep gap instead.
+  if (currentSet.performedWeight == null && effectiveBaselineReps != null) {
+    const reps = currentSet.performedReps ?? 0;
+    const setType: SetType =
+      effectiveBaselineReps - reps > BODYWEIGHT_WARMUP_RIR_THRESHOLD ? "warmup" : "working";
+    return {
+      estimatedOneRepMax: null,
+      priorBestEstimatedOneRepMax: null,
+      intensity: null,
+      setType,
+    };
+  }
 
   const rawPriorBest = getPriorBestEstimatedOneRepMax(priorSets);
 

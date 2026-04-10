@@ -918,7 +918,8 @@ export async function getEffectiveE1RM(
 function buildAnalyzedSetList(
   currentSets: ExerciseSet[],
   allHistoricalSets: ExerciseSet[],
-  effectiveE1RM: number | null = null
+  effectiveE1RM: number | null = null,
+  effectiveBaselineReps: number | null = null
 ): AnalyzedExerciseSet[] {
   return currentSets.map((set) => {
     const priorSets = allHistoricalSets.filter((candidate) => {
@@ -933,7 +934,7 @@ function buildAnalyzedSetList(
 
     return {
       set,
-      analysis: analyzeSet(set, priorSets, effectiveE1RM),
+      analysis: analyzeSet(set, priorSets, effectiveE1RM, effectiveBaselineReps),
     };
   });
 }
@@ -1291,7 +1292,8 @@ export async function getExerciseInstanceView(
     sets: buildAnalyzedSetList(
       currentSets,
       allHistoricalSets,
-      recentMaxEstimatedOneRepMax ?? historicalBestEstimatedOneRepMax
+      recentMaxEstimatedOneRepMax ?? historicalBestEstimatedOneRepMax,
+      recentMaxReps ?? historicalBestReps
     ),
   };
 }

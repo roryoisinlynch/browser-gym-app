@@ -488,7 +488,7 @@ These are handled under the `weightMode: "bodyweight"` flag on `ExerciseTemplate
 | Set logging | weight + reps | reps only |
 | Intensity metric | e1RM (Epley) | max reps |
 | Historical best | highest e1RM | highest rep count |
-| Working set threshold | 60% of best e1RM | 75% of local session max reps |
+| Working set threshold | 60% of best e1RM | effective max reps − performed reps ≤ 4 |
 | Season prescription | weight + rep target | rep target only |
 | Progress chart y-axis | e1RM over time | max reps over time |
 
@@ -496,20 +496,18 @@ These are handled under the `weightMode: "bodyweight"` flag on `ExerciseTemplate
 
 For weighted exercises, a set is a warmup if its e1RM falls below 60% of the best prior e1RM. This threshold cannot be applied directly to bodyweight exercises: since bodyweight is a constant, the Epley e1RM ratio is insensitive to changes in rep count — reducing reps from 20 to 12 only moves e1RM intensity from 100% to around 84%, so almost no bodyweight set would ever be classified as warmup under the weighted rule.
 
-Instead, warmup classification for bodyweight exercises uses **75% of the local session max reps**:
+Instead, warmup classification for bodyweight exercises uses a **rep gap threshold**, mirroring the same underlying RIR concept:
 
 ```
-local_max_reps = highest rep count in any prior set this session
-warmup if performed_reps < local_max_reps × 0.75
+effective_max_reps = recentMaxReps ?? historicalBestReps
+warmup if effective_max_reps − performed_reps > 4
 ```
 
-A proportional threshold is used rather than a fixed rep gap (e.g. "4 reps short") because a fixed number behaves inconsistently at low rep maxes — being 4 short of 6 is very different from being 4 short of 20.
+The connection to the weighted rule: 60% e1RM ≈ 6 RPE ≈ 4 RIR. A bodyweight set with more than 4 reps in reserve relative to the effective max represents the same general effort level as a weighted set below 60% e1RM — clearly preparatory rather than a genuine working effort.
 
-75% was chosen rather than 60% because the two thresholds are not equivalent across domains. 60% of max reps corresponds to approximately 84–90% of e1RM intensity (depending on the rep range), which would classify almost nothing as a warmup. 75% sits at a more useful point: clearly sub-maximal, enough reps short of your peak that the set is preparatory rather than a genuine working effort.
+The baseline uses **`recentMaxReps` (last 3 seasons) in preference to the all-time best**, using the same recent-max fallback logic as the prescription system. This keeps the warmup threshold fair after a long training gap without anchoring it to a stale all-time record.
 
-The comparison uses the **local (within-session) max** rather than the all-time or recent historical max, because bodyweight performance fluctuates more day-to-day than weighted lifts — a high-rep set early in the session establishes the reference point for that session, without penalising the user for not matching an all-time best on a given day.
-
-If no prior sets exist in the session yet, the first set defaults to working (consistent with the weighted exercise behaviour when there is no prior history to compare against).
+If no prior history exists, the set defaults to working — consistent with the weighted exercise behaviour.
 
 ## RIR and rep targets
 
