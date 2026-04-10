@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   DndContext,
@@ -26,6 +26,7 @@ import {
   getCanonicalWeekTemplateForSeason,
   getWeekTemplateItemsForWeekTemplate,
   getSessionTemplateById,
+  getSessionTemplateMuscleGroups,
   saveSeasonTemplate,
   saveSessionTemplate,
   saveWeekTemplateItem,
@@ -39,6 +40,7 @@ import "./ConfigProgramDetailPage.css";
 interface ProgramItem {
   weekTemplateItem: WeekTemplateItem;
   sessionTemplate: SessionTemplate | null;
+  totalWorkingSets: number;
 }
 
 // ── Sortable item wrapper ─────────────────────────────────────────────────────
@@ -99,6 +101,10 @@ export default function ConfigProgramDetailPage() {
   // Delete confirm
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
+  // RIR tooltip
+  const [rirTooltipOpen, setRirTooltipOpen] = useState(false);
+  const rirTooltipRef = useRef<HTMLDivElement | null>(null);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
@@ -121,11 +127,18 @@ export default function ConfigProgramDetailPage() {
     const templateItems = await getWeekTemplateItemsForWeekTemplate(wt.id);
     const programItems: ProgramItem[] = await Promise.all(
       templateItems.map(async (item) => {
-        const sessionTemplate =
-          item.type === "session" && item.sessionTemplateId
-            ? (await getSessionTemplateById(item.sessionTemplateId)) ?? null
-            : null;
-        return { weekTemplateItem: item, sessionTemplate };
+        if (item.type === "session" && item.sessionTemplateId) {
+          const [sessionTemplate, muscleGroups] = await Promise.all([
+            getSessionTemplateById(item.sessionTemplateId),
+            getSessionTemplateMuscleGroups(item.sessionTemplateId),
+          ]);
+          const totalWorkingSets = muscleGroups.reduce(
+            (sum, mg) => sum + mg.sessionTemplateMuscleGroup.targetWorkingSets,
+            0
+          );
+          return { weekTemplateItem: item, sessionTemplate: sessionTemplate ?? null, totalWorkingSets };
+        }
+        return { weekTemplateItem: item, sessionTemplate: null, totalWorkingSets: 0 };
       })
     );
     setItems(programItems);
@@ -134,6 +147,16 @@ export default function ConfigProgramDetailPage() {
   useEffect(() => {
     loadData();
   }, [seasonTemplateId]);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (!rirTooltipRef.current?.contains(e.target as Node)) {
+        setRirTooltipOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   function parseRir(input: string): number[] | null {
     const parts = input.split(",").map((s) => s.trim());
@@ -280,7 +303,21 @@ export default function ConfigProgramDetailPage() {
 
         {/* RIR sequence */}
         <div className="config-program-detail__section">
-          <p className="config-program-detail__section-label">RIR Progression</p>
+          <div className="config-program-detail__label-row" ref={rirTooltipRef}>
+            <p className="config-program-detail__section-label">RIR Progression</p>
+            <button
+              type="button"
+              className="config-program-detail__info-btn"
+              aria-expanded={rirTooltipOpen}
+              onClick={() => setRirTooltipOpen((v) => !v)}
+            >?</button>
+            {rirTooltipOpen && (
+              <div className="config-program-detail__info-tooltip">
+                <strong>Reps In Reserve (RIR)</strong> is a measure of how close to failure each working set should be performed. A value of 3 means stopping with 3 reps still in the tank; 0 means going to technical failure; −1 means exceeding failure (e.g. forced reps).<br /><br />
+                The progression sequence defines the RIR target for each week of the program in order. A sequence of <em>3, 2, 1, 0</em> means Week 1 is performed at 3 RIR, Week 2 at 2 RIR, and so on — increasing intensity each week until failure is reached.
+              </div>
+            )}
+          </div>
           <div className="config-program-detail__rir-row">
             <input
               className="config-program-detail__rir-input"
@@ -381,8 +418,13 @@ export default function ConfigProgramDetailPage() {
                                 navigate(`/config/sessions/${item.sessionTemplate?.id}`)
                               }
                             >
-                              <span className="config-program-detail__session-name">
-                                {item.sessionTemplate?.name ?? "Unnamed session"}
+                              <span className="config-program-detail__session-body">
+                                <span className="config-program-detail__session-name">
+                                  {item.sessionTemplate?.name ?? "Unnamed session"}
+                                </span>
+                                <span className="config-program-detail__session-volume">
+                                  Target working set volume: {item.totalWorkingSets}
+                                </span>
                               </span>
                               <span className="config-program-detail__session-chevron">›</span>
                             </button>
@@ -470,6 +512,59 @@ export default function ConfigProgramDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Warnings */}
+        {(() => {
+          const rir = seasonTemplate.rirSequence ?? [];
+          const trainingItems = items.filter((i) => i.weekTemplateItem.type === "session");
+          const restItems = items.filter((i) => i.weekTemplateItem.type === "rest");
+          const warnings: string[] = [];
+
+          const lowVolume = trainingItems.filter((i) => i.totalWorkingSets < 5);
+          if (lowVolume.length > 0) {
+            warnings.push(
+              `${lowVolume.length} training ${lowVolume.length === 1 ? "day has" : "days have"} fewer than 5 target working sets`
+            );
+          }
+
+          if (restItems.length === 0 && trainingItems.length > 0) {
+            warnings.push("No rest days are scheduled");
+          } else if (restItems.length > 0 && trainingItems.length / restItems.length > 6) {
+            warnings.push(
+              `High training-to-rest ratio: ${trainingItems.length} training ${trainingItems.length === 1 ? "day" : "days"} for every ${restItems.length} rest ${restItems.length === 1 ? "day" : "days"}`
+            );
+          }
+
+          if (rir.length > 0 && rir.length < 3) {
+            warnings.push(
+              `RIR progression has only ${rir.length} ${rir.length === 1 ? "week" : "weeks"} — consider at least 3`
+            );
+          }
+
+          const outOfRange = rir.filter((v) => v < -1 || v > 5);
+          if (outOfRange.length > 0) {
+            warnings.push(
+              `RIR values outside the valid range (−1 to 5): ${outOfRange.join(", ")}`
+            );
+          }
+
+          if (warnings.length === 0) return null;
+
+          return (
+            <div className="config-program-detail__section">
+              <div className="config-program-detail__warnings">
+                <p className="config-program-detail__warnings-title">
+                  {warnings.length} {warnings.length === 1 ? "warning" : "warnings"}
+                </p>
+                <ul className="config-program-detail__warnings-list">
+                  {warnings.map((w, i) => (
+                    <li key={i}>{w}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          );
+        })()}
       </section>
       <BottomNav activeTab="settings" />
     </main>

@@ -28,6 +28,101 @@
   color: var(--accent);
 }
 
+/* Section label with tooltip */
+
+.config-program-detail__label-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  margin-bottom: 10px;
+}
+
+.config-program-detail__label-row .config-program-detail__section-label {
+  margin: 0;
+}
+
+.config-program-detail__info-btn {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-soft);
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 0.65rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  transition: border-color 0.14s, color 0.14s;
+}
+
+.config-program-detail__info-btn:hover {
+  border-color: var(--text-muted);
+  color: var(--text-muted);
+}
+
+.config-program-detail__info-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 10;
+  width: 280px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--panel-shadow);
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.config-program-detail__info-tooltip strong {
+  color: var(--text-strong);
+}
+
+.config-program-detail__info-tooltip em {
+  color: var(--accent);
+  font-style: normal;
+}
+
+/* Warnings */
+
+.config-program-detail__warnings {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(244, 161, 97, 0.07);
+  border: 1px solid rgba(244, 161, 97, 0.25);
+}
+
+.config-program-detail__warnings-title {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #f4a161;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.config-program-detail__warnings-list {
+  margin: 0;
+  padding: 0 0 0 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.config-program-detail__warnings-list li {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
 /* Name */
 
 .config-program-detail__name-input {
@@ -162,15 +257,29 @@
   transform: scale(0.985);
 }
 
+.config-program-detail__session-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+}
+
 .config-program-detail__session-name {
   font-size: 0.92rem;
   font-weight: 700;
   color: var(--text-strong);
 }
 
+.config-program-detail__session-volume {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
 .config-program-detail__session-chevron {
   font-size: 1.1rem;
   color: var(--text-soft);
+  flex-shrink: 0;
 }
 
 /* Rest row */
