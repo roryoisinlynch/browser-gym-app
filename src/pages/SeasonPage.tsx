@@ -215,6 +215,10 @@ export default function SeasonPage() {
                     const totalDays = template.plannedWeekCount * daysPerWeek;
                     const trainingDays = weekItems.filter((i) => i.type === "session").length;
                     const restDays = weekItems.filter((i) => i.type === "rest").length;
+                    const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
+                    const divisor = trainingDays > 0 && restDays > 0 ? gcd(restDays, trainingDays) : 1;
+                    const restRatio = restDays / divisor;
+                    const trainingRatio = trainingDays / divisor;
                     const weekCount = template.plannedWeekCount;
 
                     return (
@@ -235,7 +239,7 @@ export default function SeasonPage() {
                         </p>
                         {trainingDays > 0 && restDays > 0 && (
                           <p className="program-card__meta">
-                            {restDays} {restDays === 1 ? "rest day" : "rest days"} for every {trainingDays} training {trainingDays === 1 ? "day" : "days"}
+                            {restRatio} {restRatio === 1 ? "rest day" : "rest days"} for every {trainingRatio} training {trainingRatio === 1 ? "day" : "days"}
                           </p>
                         )}
                         {template.rirSequence && template.rirSequence.length > 0 && (
