@@ -17,6 +17,7 @@ import type { SeasonInstance } from "../domain/models";
 import type { WeekTemplateItem, WeekInstanceItem } from "../domain/models";
 import { computeSessionMetrics } from "../services/sessionMetrics";
 import { computeWeekMetrics, emojiForRating } from "../services/weekMetrics";
+import { type MovementTone, PALETTE, buildGroupToneMap } from "../services/movementTones";
 import type { WeekMetrics } from "../services/weekMetrics";
 import WeeklyBreadcrumb from "../components/WeeklyBreadcrumb";
 import type { BreadcrumbSession } from "../components/WeeklyBreadcrumb";
@@ -89,6 +90,7 @@ export default function WeekSummaryPage() {
   const [weekInstanceItems, setWeekInstanceItems] = useState<WeekInstanceItem[]>([]);
   const [, setCompletedSessionIds] = useState<Set<string>>(new Set());
   const [seasonInstance, setSeasonInstance] = useState<SeasonInstance | null>(null);
+  const [movementTypeSummary, setMovementTypeSummary] = useState<Array<{ name: string; count: number; tone: MovementTone }>>([]);
   const [weekStartIso, setWeekStartIso] = useState<string | null>(null);
   const [sessionInfoMap, setSessionInfoMap] = useState<Map<string, { date: string; status: string; completedAt: string | null }>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
@@ -143,6 +145,20 @@ export default function WeekSummaryPage() {
         setLoadProgress(55);
 
         setMetrics(computeWeekMetrics(weekInstance, templateItems, sessionViews));
+
+        const allExercises = sessionViews.flatMap((sv) =>
+          sv.muscleGroups.flatMap((g) => g.exercises)
+        );
+        const toneMap = buildGroupToneMap(allExercises);
+        const countMap = new Map<string, number>();
+        for (const ex of allExercises) {
+          countMap.set(ex.movementType.name, (countMap.get(ex.movementType.name) ?? 0) + 1);
+        }
+        setMovementTypeSummary(
+          [...countMap.entries()]
+            .map(([name, count]) => ({ name, count, tone: toneMap.get(name) ?? PALETTE[0] }))
+            .sort((a, b) => b.count - a.count)
+        );
         const weekRir =
           seasonTemplateForRir?.rirSequence?.[weekInstance.order - 1] ??
           weekTemplate?.targetRir;
@@ -476,6 +492,25 @@ export default function WeekSummaryPage() {
                 );
               })}
             </ul>
+          </section>
+        )}
+
+        {/* ── Movement type breakdown ── */}
+        {movementTypeSummary.length > 0 && (
+          <section className="week-summary-section">
+            <h2 className="week-summary-section-title">Movement breakdown</h2>
+            <div className="week-mt-pills">
+              {movementTypeSummary.map(({ name, count, tone }) => (
+                <span
+                  key={name}
+                  className="week-mt-pill"
+                  style={{ backgroundColor: tone.bg, color: tone.text, borderColor: tone.border }}
+                >
+                  {name}
+                  <span className="week-mt-pill__count">{count}</span>
+                </span>
+              ))}
+            </div>
           </section>
         )}
 
