@@ -343,6 +343,59 @@ export default function ConfigProgramDetailPage() {
           </p>
         </div>
 
+        {/* Warnings */}
+        {(() => {
+          const rir = seasonTemplate.rirSequence ?? [];
+          const trainingItems = items.filter((i) => i.weekTemplateItem.type === "session");
+          const restItems = items.filter((i) => i.weekTemplateItem.type === "rest");
+          const warnings: string[] = [];
+
+          const lowVolume = trainingItems.filter((i) => i.totalWorkingSets < 5);
+          if (lowVolume.length > 0) {
+            warnings.push(
+              `${lowVolume.length} training ${lowVolume.length === 1 ? "day has" : "days have"} fewer than 5 target working sets`
+            );
+          }
+
+          if (restItems.length === 0 && trainingItems.length > 0) {
+            warnings.push("No rest days are scheduled");
+          } else if (restItems.length > 0 && trainingItems.length / restItems.length > 6) {
+            warnings.push(
+              `High training-to-rest ratio: ${trainingItems.length} training ${trainingItems.length === 1 ? "day" : "days"} for every ${restItems.length} rest ${restItems.length === 1 ? "day" : "days"}`
+            );
+          }
+
+          if (rir.length > 0 && rir.length < 3) {
+            warnings.push(
+              `RIR progression has only ${rir.length} ${rir.length === 1 ? "week" : "weeks"} — consider at least 3`
+            );
+          }
+
+          const outOfRange = rir.filter((v) => v < -1 || v > 5);
+          if (outOfRange.length > 0) {
+            warnings.push(
+              `RIR values outside the valid range (−1 to 5): ${outOfRange.join(", ")}`
+            );
+          }
+
+          if (warnings.length === 0) return null;
+
+          return (
+            <div className="config-program-detail__section">
+              <div className="config-program-detail__warnings">
+                <p className="config-program-detail__warnings-title">
+                  {warnings.length} {warnings.length === 1 ? "warning" : "warnings"}
+                </p>
+                <ul className="config-program-detail__warnings-list">
+                  {warnings.map((w, i) => (
+                    <li key={i}>{w}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Sessions & rest days */}
         <div className="config-program-detail__section">
           <p className="config-program-detail__section-label">Week Structure</p>
@@ -513,58 +566,6 @@ export default function ConfigProgramDetailPage() {
           )}
         </div>
 
-        {/* Warnings */}
-        {(() => {
-          const rir = seasonTemplate.rirSequence ?? [];
-          const trainingItems = items.filter((i) => i.weekTemplateItem.type === "session");
-          const restItems = items.filter((i) => i.weekTemplateItem.type === "rest");
-          const warnings: string[] = [];
-
-          const lowVolume = trainingItems.filter((i) => i.totalWorkingSets < 5);
-          if (lowVolume.length > 0) {
-            warnings.push(
-              `${lowVolume.length} training ${lowVolume.length === 1 ? "day has" : "days have"} fewer than 5 target working sets`
-            );
-          }
-
-          if (restItems.length === 0 && trainingItems.length > 0) {
-            warnings.push("No rest days are scheduled");
-          } else if (restItems.length > 0 && trainingItems.length / restItems.length > 6) {
-            warnings.push(
-              `High training-to-rest ratio: ${trainingItems.length} training ${trainingItems.length === 1 ? "day" : "days"} for every ${restItems.length} rest ${restItems.length === 1 ? "day" : "days"}`
-            );
-          }
-
-          if (rir.length > 0 && rir.length < 3) {
-            warnings.push(
-              `RIR progression has only ${rir.length} ${rir.length === 1 ? "week" : "weeks"} — consider at least 3`
-            );
-          }
-
-          const outOfRange = rir.filter((v) => v < -1 || v > 5);
-          if (outOfRange.length > 0) {
-            warnings.push(
-              `RIR values outside the valid range (−1 to 5): ${outOfRange.join(", ")}`
-            );
-          }
-
-          if (warnings.length === 0) return null;
-
-          return (
-            <div className="config-program-detail__section">
-              <div className="config-program-detail__warnings">
-                <p className="config-program-detail__warnings-title">
-                  {warnings.length} {warnings.length === 1 ? "warning" : "warnings"}
-                </p>
-                <ul className="config-program-detail__warnings-list">
-                  {warnings.map((w, i) => (
-                    <li key={i}>{w}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          );
-        })()}
       </section>
       <BottomNav activeTab="settings" />
     </main>
