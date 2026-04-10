@@ -61,6 +61,7 @@ function formatDate(iso: string): string {
 
 export default function BackupPage() {
   const [exportState, setExportState] = useState<"idle" | "busy" | "done">("idle");
+  const [exportedFileName, setExportedFileName] = useState("");
 
   const [importFile, setImportFile] = useState<BackupFile | null>(null);
   const [importFileName, setImportFileName] = useState("");
@@ -81,14 +82,16 @@ export default function BackupPage() {
       const blob = new Blob([JSON.stringify(backup, null, 2)], {
         type: "application/json",
       });
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const fileName = `gym-backup-${dateStr}.json`;
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      const dateStr = new Date().toISOString().slice(0, 10);
       a.href = url;
-      a.download = `gym-backup-${dateStr}.json`;
+      a.download = fileName;
       a.click();
       URL.revokeObjectURL(url);
       await putItem(STORE_NAMES.meta, { key: "lastBackupAt", value: backup.exportedAt });
+      setExportedFileName(fileName);
       setExportState("done");
     } catch {
       setExportState("idle");
@@ -158,7 +161,7 @@ export default function BackupPage() {
             </p>
             {exportState === "done" ? (
               <p className="backup-card__success">
-                Backup downloaded. Keep the file somewhere safe.
+                Backup downloaded, saved to your default browser downloads location with the name {exportedFileName}.
               </p>
             ) : (
               <button
