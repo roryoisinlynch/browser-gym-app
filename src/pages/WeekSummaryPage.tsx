@@ -154,7 +154,7 @@ export default function WeekSummaryPage() {
         const toneMap = buildGroupToneMap(allExercises);
         const countMap = new Map<string, number>();
         for (const ex of allExercises) {
-          countMap.set(ex.movementType.name, (countMap.get(ex.movementType.name) ?? 0) + 1);
+          countMap.set(ex.movementType.name, (countMap.get(ex.movementType.name) ?? 0) + ex.workingSetCount);
         }
         setMovementTypeSummary(
           [...countMap.entries()]
