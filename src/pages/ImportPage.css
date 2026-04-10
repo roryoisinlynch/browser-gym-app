@@ -28,6 +28,118 @@
   color: var(--text-muted);
 }
 
+/* ── Format guide ── */
+
+.import-guide {
+  margin-bottom: 20px;
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  background: var(--card-bg);
+  overflow: hidden;
+}
+
+.import-guide__summary {
+  display: block;
+  padding: 12px 14px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+
+.import-guide__summary::marker,
+.import-guide__summary::-webkit-details-marker {
+  display: none;
+}
+
+.import-guide__summary::before {
+  content: "▸ ";
+  font-size: 0.72rem;
+}
+
+details[open] .import-guide__summary::before {
+  content: "▾ ";
+}
+
+.import-guide__body {
+  padding: 0 14px 14px;
+  border-top: 1px solid var(--panel-border);
+}
+
+.import-guide__para {
+  margin: 12px 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.import-guide__para--note {
+  color: var(--text-soft);
+  font-style: italic;
+}
+
+.import-guide__example {
+  margin-top: 12px;
+}
+
+.import-guide__example-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.import-guide__code {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  font-size: 0.76rem;
+  color: var(--text-strong);
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.import-guide__list {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.import-guide__list li {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  padding-left: 10px;
+  border-left: 2px solid var(--panel-border);
+}
+
+.import-guide__list strong {
+  color: var(--text-strong);
+}
+
+.import-guide__list code {
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  font-size: 0.78rem;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--panel-bg);
+  color: var(--accent);
+}
+
+/* ── Drop zone ── */
+
 .import-drop-zone {
   display: flex;
   align-items: center;

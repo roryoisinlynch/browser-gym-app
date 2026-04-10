@@ -57,9 +57,47 @@ export default function ImportPage() {
         <header className="import-header">
           <h1 className="import-title">Import past sets</h1>
           <p className="import-subtitle">
-            CSV columns: Exercise Name, Weight, Reps, Date
+            Upload a CSV file of historical sets to seed your e1RM history.
           </p>
         </header>
+
+        <details className="import-guide">
+          <summary className="import-guide__summary">Format guide</summary>
+          <div className="import-guide__body">
+            <p className="import-guide__para">
+              Columns must appear in this exact order. The header row is required
+              but its content is ignored — column names do not matter.
+            </p>
+            <div className="import-guide__example">
+              <span className="import-guide__example-label">Example</span>
+              <pre className="import-guide__code">{`Exercise,Weight,Reps,Date
+Bench Press,80,8,15/03/2024
+Squat,100,5,15/03/2024
+Deadlift,120,3,16/03/2024`}</pre>
+            </div>
+            <ul className="import-guide__list">
+              <li>
+                <strong>Column 1 — Exercise name</strong><br />
+                Any non-empty text. Matched against your program's exercise names, so spelling and capitalisation should be consistent.
+              </li>
+              <li>
+                <strong>Column 2 — Weight</strong><br />
+                A number in whatever unit you train in (kg or lb — the app uses whichever you use consistently). Write <code>bodyweight</code> to skip a row entirely; bodyweight sets are not imported.
+              </li>
+              <li>
+                <strong>Column 3 — Reps</strong><br />
+                A whole number. Rows with 0 reps are silently skipped.
+              </li>
+              <li>
+                <strong>Column 4 — Date</strong><br />
+                Day-first format only: <code>DD/MM/YYYY</code> or <code>DD-MM-YYYY</code>. US format (MM/DD/YYYY) and ISO format (YYYY-MM-DD) are not supported.
+              </li>
+            </ul>
+            <p className="import-guide__para import-guide__para--note">
+              Extra columns after the fourth are ignored. Commas inside a field are not supported — there is no quoted-field handling.
+            </p>
+          </div>
+        </details>
 
         {step === "idle" && (
           <>
