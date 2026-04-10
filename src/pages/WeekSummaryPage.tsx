@@ -147,7 +147,9 @@ export default function WeekSummaryPage() {
         setMetrics(computeWeekMetrics(weekInstance, templateItems, sessionViews));
 
         const allExercises = sessionViews.flatMap((sv) =>
-          sv.muscleGroups.flatMap((g) => g.exercises)
+          sv.muscleGroups.flatMap((g) =>
+            g.exercises.filter((e) => e.workingSetCount > 0)
+          )
         );
         const toneMap = buildGroupToneMap(allExercises);
         const countMap = new Map<string, number>();
