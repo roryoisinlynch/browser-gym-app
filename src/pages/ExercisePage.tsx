@@ -117,6 +117,12 @@ export default function ExercisePage() {
     !isBodyweight &&
     exerciseView.historicalBestEstimatedOneRepMax == null;
 
+  // Bodyweight equivalent: no rep history — user needs to establish a baseline.
+  const isBodyweightAmrap =
+    exerciseView != null &&
+    isBodyweight &&
+    exerciseView.historicalBestReps == null;
+
   // Has history but no working weight configured in settings yet.
   const needsWeightConfig =
     exerciseView != null &&
@@ -356,6 +362,7 @@ export default function ExercisePage() {
           historicalBestReps={exerciseView.historicalBestReps}
           topSetReps={topSetReps}
           isAmrap={isAmrap}
+          isBodyweightAmrap={isBodyweightAmrap}
           needsWeightConfig={needsWeightConfig}
         />
 
@@ -385,6 +392,7 @@ export default function ExercisePage() {
           onDone={handleDone}
           isBodyweight={isBodyweight}
           isAmrap={isAmrap}
+          isBodyweightAmrap={isBodyweightAmrap}
         />
 
         <ExerciseInsights

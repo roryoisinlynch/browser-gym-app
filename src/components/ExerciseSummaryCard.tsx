@@ -19,6 +19,7 @@ interface ExerciseSummaryCardProps {
   recentMaxReps?: number | null;
   recentMaxRepsDate?: string | null;
   isAmrap?: boolean;
+  isBodyweightAmrap?: boolean;
   needsWeightConfig?: boolean;
 }
 
@@ -61,9 +62,10 @@ export default function ExerciseSummaryCard({
   recentMaxReps = null,
   recentMaxRepsDate = null,
   isAmrap = false,
+  isBodyweightAmrap = false,
   needsWeightConfig = false,
 }: ExerciseSummaryCardProps) {
-  if (isAmrap || needsWeightConfig) {
+  if (isAmrap || isBodyweightAmrap || needsWeightConfig) {
     return (
       <section className="exercise-summary-card">
         <div className="exercise-summary-card__header-row">
@@ -85,6 +87,16 @@ export default function ExerciseSummaryCard({
                 Choose a challenging weight and lift for as many reps as
                 possible (AMRAP). Your e1RM will be calculated from this
                 session and used to prescribe future sessions.
+              </p>
+            </>
+          ) : isBodyweightAmrap ? (
+            <>
+              <p className="exercise-summary-card__amrap-heading">
+                No baseline yet
+              </p>
+              <p className="exercise-summary-card__amrap-body">
+                Lift for as many reps as possible (AMRAP). Your best reps will
+                be recorded and used to prescribe future sessions.
               </p>
             </>
           ) : (

@@ -20,6 +20,7 @@ interface ExerciseSetTableProps {
   onDone: () => void;
   isBodyweight?: boolean;
   isAmrap?: boolean;
+  isBodyweightAmrap?: boolean;
 }
 
 function formatEstimatedOneRepMax(value: number | null) {
@@ -34,9 +35,10 @@ function getTargetLabel(
   targetWeight: number | null,
   targetReps: number | null,
   isBodyweight: boolean,
-  isAmrap: boolean
+  isAmrap: boolean,
+  isBodyweightAmrap: boolean
 ) {
-  if (isAmrap) return "AMRAP";
+  if (isAmrap || isBodyweightAmrap) return "AMRAP";
   if (targetReps == null) return "—";
   if (isBodyweight) return `${targetReps} reps`;
   if (targetWeight == null) return "—";
@@ -55,8 +57,9 @@ export default function ExerciseSetTable({
   onDone,
   isBodyweight = false,
   isAmrap = false,
+  isBodyweightAmrap = false,
 }: ExerciseSetTableProps) {
-  const targetLabel = getTargetLabel(targetWeight, targetReps, isBodyweight, isAmrap);
+  const targetLabel = getTargetLabel(targetWeight, targetReps, isBodyweight, isAmrap, isBodyweightAmrap);
   const rowClass = `exercise-set-table__row${isBodyweight ? " exercise-set-table__row--bw" : ""}`;
 
   const [e1rmTooltipOpen, setE1rmTooltipOpen] = useState(false);
