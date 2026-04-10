@@ -446,6 +446,25 @@ export default function WeekSummaryPage() {
           </section>
         )}
 
+        {/* ── Movement type breakdown ── */}
+        {movementTypeSummary.length > 0 && (
+          <section className="week-summary-section">
+            <h2 className="week-summary-section-title">Movement breakdown</h2>
+            <div className="week-mt-pills">
+              {movementTypeSummary.map(({ name, count, tone }) => (
+                <span
+                  key={name}
+                  className="week-mt-pill"
+                  style={{ backgroundColor: tone.bg, color: tone.text, borderColor: tone.border }}
+                >
+                  {name}
+                  <span className="week-mt-pill__count">{count}</span>
+                </span>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* ── Personal records ── */}
         {prs.length > 0 && (
           <section className="week-summary-section week-summary-section--pr">
@@ -493,25 +512,6 @@ export default function WeekSummaryPage() {
                 );
               })}
             </ul>
-          </section>
-        )}
-
-        {/* ── Movement type breakdown ── */}
-        {movementTypeSummary.length > 0 && (
-          <section className="week-summary-section">
-            <h2 className="week-summary-section-title">Movement breakdown</h2>
-            <div className="week-mt-pills">
-              {movementTypeSummary.map(({ name, count, tone }) => (
-                <span
-                  key={name}
-                  className="week-mt-pill"
-                  style={{ backgroundColor: tone.bg, color: tone.text, borderColor: tone.border }}
-                >
-                  {name}
-                  <span className="week-mt-pill__count">{count}</span>
-                </span>
-              ))}
-            </div>
           </section>
         )}
 
