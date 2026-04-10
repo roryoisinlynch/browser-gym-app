@@ -403,6 +403,7 @@
 .week-mt-group {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 8px;
 }
 
@@ -417,6 +418,7 @@
 .week-mt-pills {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 8px;
 }
 
