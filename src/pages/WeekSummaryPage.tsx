@@ -90,7 +90,10 @@ export default function WeekSummaryPage() {
   const [weekInstanceItems, setWeekInstanceItems] = useState<WeekInstanceItem[]>([]);
   const [, setCompletedSessionIds] = useState<Set<string>>(new Set());
   const [seasonInstance, setSeasonInstance] = useState<SeasonInstance | null>(null);
-  const [movementTypeSummary, setMovementTypeSummary] = useState<Array<{ name: string; count: number; tone: MovementTone }>>([]);
+  const [movementGroupSummary, setMovementGroupSummary] = useState<Array<{
+    muscleGroupName: string;
+    movements: Array<{ name: string; count: number; tone: MovementTone }>;
+  }>>([]);
   const [weekStartIso, setWeekStartIso] = useState<string | null>(null);
   const [sessionInfoMap, setSessionInfoMap] = useState<Map<string, { date: string; status: string; completedAt: string | null }>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
@@ -147,18 +150,43 @@ export default function WeekSummaryPage() {
 
         setMetrics(computeWeekMetrics(weekInstance, templateItems, sessionViews));
 
-        const allExercises = allSessionViews.flatMap((sv) =>
-          sv.muscleGroups.flatMap((g) => g.exercises)
-        );
-        const toneMap = buildGroupToneMap(allExercises);
-        const countMap = new Map<string, number>();
-        for (const ex of allExercises) {
-          countMap.set(ex.movementType.name, (countMap.get(ex.movementType.name) ?? 0) + ex.workingSetCount);
+        // Aggregate set counts per movement type, grouped by muscle group.
+        const mgMap = new Map<string, {
+          name: string;
+          order: number;
+          movementCounts: Map<string, number>;
+        }>();
+        for (const sv of allSessionViews) {
+          for (const group of sv.muscleGroups) {
+            const mgId = group.muscleGroup.id;
+            if (!mgMap.has(mgId)) {
+              mgMap.set(mgId, {
+                name: group.muscleGroup.name,
+                order: group.muscleGroup.order,
+                movementCounts: new Map(),
+              });
+            }
+            const entry = mgMap.get(mgId)!;
+            for (const ex of group.exercises) {
+              const mtName = ex.movementType.name;
+              entry.movementCounts.set(mtName, (entry.movementCounts.get(mtName) ?? 0) + ex.workingSetCount);
+            }
+          }
         }
-        setMovementTypeSummary(
-          [...countMap.entries()]
-            .map(([name, count]) => ({ name, count, tone: toneMap.get(name) ?? PALETTE[0] }))
-            .sort((a, b) => b.count - a.count)
+        setMovementGroupSummary(
+          [...mgMap.values()]
+            .sort((a, b) => a.order - b.order)
+            .map(({ name: muscleGroupName, movementCounts }) => {
+              const toneMap = buildGroupToneMap(
+                [...movementCounts.keys()].map((n) => ({ movementType: { name: n } }))
+              );
+              return {
+                muscleGroupName,
+                movements: [...movementCounts.entries()]
+                  .map(([mtName, count]) => ({ name: mtName, count, tone: toneMap.get(mtName) ?? PALETTE[0] }))
+                  .sort((a, b) => b.count - a.count),
+              };
+            })
         );
         const weekRir =
           seasonTemplateForRir?.rirSequence?.[weekInstance.order - 1] ??
@@ -447,21 +475,26 @@ export default function WeekSummaryPage() {
         )}
 
         {/* ── Movement type breakdown ── */}
-        {movementTypeSummary.length > 0 && (
+        {movementGroupSummary.length > 0 && (
           <section className="week-summary-section">
             <h2 className="week-summary-section-title">Movement breakdown</h2>
-            <div className="week-mt-pills">
-              {movementTypeSummary.map(({ name, count, tone }) => (
-                <span
-                  key={name}
-                  className="week-mt-pill"
-                  style={{ backgroundColor: tone.bg, color: tone.text, borderColor: tone.border }}
-                >
-                  {name}
-                  <span className="week-mt-pill__count">{count}</span>
-                </span>
-              ))}
-            </div>
+            {movementGroupSummary.map(({ muscleGroupName, movements }) => (
+              <div key={muscleGroupName} className="week-mt-group">
+                <span className="week-mt-group__label">{muscleGroupName}</span>
+                <div className="week-mt-pills">
+                  {movements.map(({ name, count, tone }) => (
+                    <span
+                      key={name}
+                      className="week-mt-pill"
+                      style={{ backgroundColor: tone.bg, color: tone.text, borderColor: tone.border }}
+                    >
+                      {name}
+                      <span className="week-mt-pill__count">{count}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
           </section>
         )}
 
