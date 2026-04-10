@@ -7,9 +7,11 @@ import TopBar from "../components/TopBar";
 import type { SeasonTemplate, SessionTemplate, WeekInstance } from "../domain/models";
 import {
   getActiveSeasonInstance,
+  getCanonicalWeekTemplateForSeason,
   getLastCompletedSeasonInstance,
   getSeasonTemplates,
   getWeekInstancesForSeasonInstance,
+  getWeekTemplateItemsForWeekTemplate,
   startSeasonFromTemplate,
   getAllSessionTemplates,
 } from "../repositories/programRepository";
@@ -33,6 +35,8 @@ interface ProgramCardData {
   template: SeasonTemplate;
   sessionNames: string[];
   isLastUsed: boolean;
+  trainingDaysPerWeek: number | null;
+  restDaysPerWeek: number | null;
 }
 
 export default function SeasonPage() {
@@ -65,7 +69,18 @@ export default function SeasonPage() {
           sessionsBySeasonId.set(st.seasonTemplateId, bucket);
         }
 
-        const cards: ProgramCardData[] = templates.map((template) => {
+        const weekStructures = await Promise.all(
+          templates.map(async (template) => {
+            const canonicalWeek = await getCanonicalWeekTemplateForSeason(template.id);
+            if (!canonicalWeek) return { trainingDays: null, restDays: null };
+            const items = await getWeekTemplateItemsForWeekTemplate(canonicalWeek.id);
+            const trainingDays = items.filter((i) => i.type === "session").length;
+            const restDays = items.filter((i) => i.type === "rest").length;
+            return { trainingDays, restDays };
+          })
+        );
+
+        const cards: ProgramCardData[] = templates.map((template, idx) => {
           const sessions = (sessionsBySeasonId.get(template.id) ?? []).sort(
             (a, b) => a.order - b.order
           );
@@ -73,6 +88,8 @@ export default function SeasonPage() {
             template,
             sessionNames: sessions.map((s) => s.name),
             isLastUsed: lastCompleted?.seasonTemplateId === template.id,
+            trainingDaysPerWeek: weekStructures[idx].trainingDays,
+            restDaysPerWeek: weekStructures[idx].restDays,
           };
         });
 
@@ -190,11 +207,15 @@ export default function SeasonPage() {
             {programCards.length > 0 && (
               <section className="season-page__content">
                 <div className="season-page__list">
-                  {programCards.map(({ template, sessionNames, isLastUsed }) => {
+                  {programCards.map(({ template, sessionNames, isLastUsed, trainingDaysPerWeek, restDaysPerWeek }) => {
+                    const totalDays = template.plannedWeekCount * 7;
                     const metaParts: string[] = [];
                     metaParts.push(
-                      `${template.plannedWeekCount} ${template.plannedWeekCount === 1 ? "wk" : "wks"}`
+                      `${template.plannedWeekCount} ${template.plannedWeekCount === 1 ? "wk" : "wks"} (${totalDays} days)`
                     );
+                    if (trainingDaysPerWeek !== null && restDaysPerWeek !== null) {
+                      metaParts.push(`${trainingDaysPerWeek} on · ${restDaysPerWeek} off per wk`);
+                    }
                     if (template.rirSequence && template.rirSequence.length > 0) {
                       metaParts.push(`RIR ${template.rirSequence.join(", ")}`);
                     }
