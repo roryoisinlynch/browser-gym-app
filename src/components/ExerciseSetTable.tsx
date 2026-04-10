@@ -172,7 +172,7 @@ export default function ExerciseSetTable({
           className="exercise-set-table-card__done"
           onClick={onDone}
         >
-          Done
+          Back
         </button>
       </div>
     </section>
