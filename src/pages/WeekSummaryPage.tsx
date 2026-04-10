@@ -11,6 +11,7 @@ import {
   getWeekPRs,
   getWeekInstanceItemsForWeekInstance,
   getSeasonInstanceById,
+  getSeasonTemplateById,
 } from "../repositories/programRepository";
 import type { SeasonInstance } from "../domain/models";
 import type { WeekTemplateItem, WeekInstanceItem } from "../domain/models";
@@ -116,10 +117,14 @@ export default function WeekSummaryPage() {
           return;
         }
 
-        const [weekTemplate, sessions, wii] = await Promise.all([
+        const seasonInstanceForRir = await getSeasonInstanceById(weekInstance.seasonInstanceId);
+        const [weekTemplate, sessions, wii, seasonTemplateForRir] = await Promise.all([
           getWeekTemplateById(weekInstance.weekTemplateId),
           getSessionInstancesForWeekInstance(weekInstanceId),
           getWeekInstanceItemsForWeekInstance(weekInstanceId),
+          seasonInstanceForRir
+            ? getSeasonTemplateById(seasonInstanceForRir.seasonTemplateId)
+            : Promise.resolve(undefined),
         ]);
         setLoadProgress(30);
 
@@ -138,7 +143,14 @@ export default function WeekSummaryPage() {
         setLoadProgress(55);
 
         setMetrics(computeWeekMetrics(weekInstance, templateItems, sessionViews));
-        setWeekName(weekTemplate?.name ?? "Week summary");
+        const weekRir =
+          seasonTemplateForRir?.rirSequence?.[weekInstance.order - 1] ??
+          weekTemplate?.targetRir;
+        setWeekName(
+          weekRir != null
+            ? `Week ${weekInstance.order}, ${weekRir} RIR`
+            : `Week ${weekInstance.order}`
+        );
         setPrs(weekPRs);
         setWeekTemplateDays(templateItems);
         setWeekInstanceItems(wii);

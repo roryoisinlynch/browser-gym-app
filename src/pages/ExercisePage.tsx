@@ -333,7 +333,11 @@ export default function ExercisePage() {
           </h1>
           <p className="exercise-page__subtitle">
             {exerciseView.sessionTemplate.name} ·{" "}
-            {exerciseView.weekTemplate.label ?? exerciseView.weekTemplate.name}
+            {exerciseView.weekTemplate.label ?? (
+              exerciseView.effectiveRir != null
+                ? `Week ${exerciseView.weekInstance.order}, ${exerciseView.effectiveRir} RIR`
+                : `Week ${exerciseView.weekInstance.order}`
+            )}
           </p>
           {errorMessage && (
             <p className="exercise-page__message">{errorMessage}</p>
