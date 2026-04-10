@@ -135,21 +135,20 @@ export default function WeekSummaryPage() {
         );
         setLoadProgress(40);
 
-        // Load session views for all completed sessions.
-        const completedSessions = sessions.filter((s) => s.status === "completed");
-        const sessionViews: SessionInstanceView[] = (
-          await Promise.all(
-            completedSessions.map((s) => getSessionInstanceView(s.id))
-          )
+        // Load views for all sessions: completed views drive metrics; all views
+        // drive the movement breakdown (so skipped/unstarted exercises show as 0).
+        const allSessionViews: SessionInstanceView[] = (
+          await Promise.all(sessions.map((s) => getSessionInstanceView(s.id)))
         ).filter((sv): sv is SessionInstanceView => sv != null);
+        const sessionViews = allSessionViews.filter(
+          (sv) => sv.sessionInstance.status === "completed"
+        );
         setLoadProgress(55);
 
         setMetrics(computeWeekMetrics(weekInstance, templateItems, sessionViews));
 
-        const allExercises = sessionViews.flatMap((sv) =>
-          sv.muscleGroups.flatMap((g) =>
-            g.exercises.filter((e) => e.workingSetCount > 0)
-          )
+        const allExercises = allSessionViews.flatMap((sv) =>
+          sv.muscleGroups.flatMap((g) => g.exercises)
         );
         const toneMap = buildGroupToneMap(allExercises);
         const countMap = new Map<string, number>();
