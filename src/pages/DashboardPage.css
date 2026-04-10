@@ -258,14 +258,11 @@
   min-width: 0;
 }
 
-/* Rest days: small fixed dots, don't grow */
+/* Rest days: circular dot scaled to 66% of a session square */
 .dashboard-timeline__day--rest {
-  flex: 0 0 5px;
-  width: 5px;
-  height: 5px;
+  flex: 0.66;
   border-radius: 50%;
   align-self: center;
-  margin: 0 1px;
 }
 
 /* Sidebar: status + dates */
