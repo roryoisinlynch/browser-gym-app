@@ -67,6 +67,20 @@ export default function SettingsPage() {
               </div>
               <span className="settings-nav-card__chevron">›</span>
             </button>
+
+            <button
+              type="button"
+              className="settings-nav-card"
+              onClick={() => navigate("/backup")}
+            >
+              <div className="settings-nav-card__body">
+                <span className="settings-nav-card__title">Backup &amp; restore</span>
+                <span className="settings-nav-card__desc">
+                  Export or import a full snapshot of your data
+                </span>
+              </div>
+              <span className="settings-nav-card__chevron">›</span>
+            </button>
           </div>
         </div>
 

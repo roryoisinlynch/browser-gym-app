@@ -1,0 +1,174 @@
+.backup-page {
+  min-height: 100vh;
+  padding: 64px 0 100px;
+  background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+}
+
+.backup-shell {
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 16px 0 28px;
+}
+
+.backup-header {
+  padding: 20px 20px 8px;
+}
+
+.backup-eyebrow {
+  margin: 0 0 4px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.backup-title {
+  margin: 0 0 10px;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text-strong);
+}
+
+.backup-intro {
+  margin: 0;
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+/* ── Sections ── */
+
+.backup-section {
+  padding: 20px 20px 0;
+}
+
+.backup-section-label {
+  margin: 0 0 10px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.backup-card {
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.backup-card__desc {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.backup-card__success {
+  margin: 0;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.backup-card__error {
+  margin: 0;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #f87171;
+}
+
+/* ── Buttons ── */
+
+.backup-btn {
+  width: 100%;
+  padding: 11px 16px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.12s;
+  font-family: inherit;
+  text-align: center;
+}
+
+.backup-btn:active {
+  transform: scale(0.97);
+}
+
+.backup-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.backup-btn--primary {
+  border: 1px solid rgba(216, 240, 106, 0.32);
+  background: rgba(216, 240, 106, 0.1);
+  color: var(--accent);
+}
+
+.backup-btn--primary:hover:not(:disabled) {
+  background: rgba(216, 240, 106, 0.16);
+}
+
+.backup-btn--ghost {
+  border: 1px dashed var(--panel-border);
+  background: transparent;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.backup-btn--ghost:hover {
+  border-color: rgba(216, 240, 106, 0.3);
+  color: var(--accent);
+}
+
+.backup-btn--danger {
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  background: rgba(248, 113, 113, 0.07);
+  color: #f87171;
+}
+
+.backup-btn--danger:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.13);
+}
+
+/* ── Import preview ── */
+
+.backup-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 4px;
+  border-top: 1px solid var(--panel-border);
+}
+
+.backup-preview__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0;
+  gap: 12px;
+}
+
+.backup-preview__key {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.backup-preview__val {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}

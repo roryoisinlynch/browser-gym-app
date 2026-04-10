@@ -15,6 +15,7 @@ import ConfigExercisePage from "./pages/ConfigExercisePage";
 import SessionSummaryPage from "./pages/SessionSummaryPage";
 import WeekSummaryPage from "./pages/WeekSummaryPage";
 import SeasonSummaryPage from "./pages/SeasonSummaryPage";
+import BackupPage from "./pages/BackupPage";
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/config/programs/:seasonTemplateId" element={<ConfigProgramDetailPage />} />
         <Route path="/config/sessions/:sessionTemplateId" element={<ConfigSessionDetailPage />} />
         <Route path="/config/exercises/:exerciseTemplateId" element={<ConfigExercisePage />} />
+        <Route path="/backup" element={<BackupPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
