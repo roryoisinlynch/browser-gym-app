@@ -4,7 +4,7 @@ import BottomNav from "../components/BottomNav";
 import StartSeasonModal from "../components/StartSeasonModal";
 import WeekCard, { type WeekCardState } from "../components/WeekCard";
 import TopBar from "../components/TopBar";
-import type { SeasonTemplate, SessionTemplate, WeekInstance } from "../domain/models";
+import type { SeasonTemplate, WeekInstance } from "../domain/models";
 import {
   getActiveSeasonInstance,
   getCanonicalWeekTemplateForSeason,
@@ -31,12 +31,15 @@ interface WeekRow {
   name: string;
 }
 
+interface WeekDayItem {
+  type: "session" | "rest";
+  name: string;
+}
+
 interface ProgramCardData {
   template: SeasonTemplate;
-  sessionNames: string[];
+  weekItems: WeekDayItem[];
   isLastUsed: boolean;
-  trainingDaysPerWeek: number | null;
-  restDaysPerWeek: number | null;
 }
 
 export default function SeasonPage() {
@@ -69,29 +72,29 @@ export default function SeasonPage() {
           sessionsBySeasonId.set(st.seasonTemplateId, bucket);
         }
 
-        const weekStructures = await Promise.all(
+        const weekItemSets = await Promise.all(
           templates.map(async (template) => {
             const canonicalWeek = await getCanonicalWeekTemplateForSeason(template.id);
-            if (!canonicalWeek) return { trainingDays: null, restDays: null };
+            if (!canonicalWeek) return [] as WeekDayItem[];
             const items = await getWeekTemplateItemsForWeekTemplate(canonicalWeek.id);
-            const trainingDays = items.filter((i) => i.type === "session").length;
-            const restDays = items.filter((i) => i.type === "rest").length;
-            return { trainingDays, restDays };
+            const sessionMap = new Map(
+              (sessionsBySeasonId.get(template.id) ?? []).map((s) => [s.id, s.name])
+            );
+            return items.map((item): WeekDayItem => ({
+              type: item.type,
+              name:
+                item.type === "session"
+                  ? (sessionMap.get(item.sessionTemplateId ?? "") ?? "Session")
+                  : (item.label ?? "Rest"),
+            }));
           })
         );
 
-        const cards: ProgramCardData[] = templates.map((template, idx) => {
-          const sessions = (sessionsBySeasonId.get(template.id) ?? []).sort(
-            (a, b) => a.order - b.order
-          );
-          return {
-            template,
-            sessionNames: sessions.map((s) => s.name),
-            isLastUsed: lastCompleted?.seasonTemplateId === template.id,
-            trainingDaysPerWeek: weekStructures[idx].trainingDays,
-            restDaysPerWeek: weekStructures[idx].restDays,
-          };
-        });
+        const cards: ProgramCardData[] = templates.map((template, idx) => ({
+          template,
+          weekItems: weekItemSets[idx],
+          isLastUsed: lastCompleted?.seasonTemplateId === template.id,
+        }));
 
         setProgramCards(cards);
         setWeeks([]);
@@ -207,18 +210,11 @@ export default function SeasonPage() {
             {programCards.length > 0 && (
               <section className="season-page__content">
                 <div className="season-page__list">
-                  {programCards.map(({ template, sessionNames, isLastUsed, trainingDaysPerWeek, restDaysPerWeek }) => {
+                  {programCards.map(({ template, weekItems, isLastUsed }) => {
                     const totalDays = template.plannedWeekCount * 7;
-                    const metaParts: string[] = [];
-                    metaParts.push(
-                      `${template.plannedWeekCount} ${template.plannedWeekCount === 1 ? "week" : "weeks"} (${totalDays} days)`
-                    );
-                    if (trainingDaysPerWeek !== null && restDaysPerWeek !== null) {
-                      metaParts.push(`${trainingDaysPerWeek} training · ${restDaysPerWeek} rest per week`);
-                    }
-                    if (template.rirSequence && template.rirSequence.length > 0) {
-                      metaParts.push(`RIR ${template.rirSequence.join(", ")}`);
-                    }
+                    const trainingDays = weekItems.filter((i) => i.type === "session").length;
+                    const restDays = weekItems.filter((i) => i.type === "rest").length;
+                    const weekCount = template.plannedWeekCount;
 
                     return (
                       <article key={template.id} className="program-card">
@@ -233,11 +229,36 @@ export default function SeasonPage() {
                             Edit
                           </button>
                         </div>
-                        <p className="program-card__meta">{metaParts.join(" · ")}</p>
-                        {sessionNames.length > 0 && (
-                          <p className="program-card__sessions">
-                            {sessionNames.join(" · ")}
+                        <p className="program-card__meta">
+                          {weekCount} {weekCount === 1 ? "training week" : "training weeks"}, 7 days each ({totalDays} days total)
+                        </p>
+                        {trainingDays > 0 && restDays > 0 && (
+                          <p className="program-card__meta">
+                            {restDays} {restDays === 1 ? "rest day" : "rest days"} for every {trainingDays} training {trainingDays === 1 ? "day" : "days"}
                           </p>
+                        )}
+                        {template.rirSequence && template.rirSequence.length > 0 && (
+                          <p className="program-card__meta">
+                            RIR {template.rirSequence.join(", ")}
+                          </p>
+                        )}
+                        {weekItems.length > 0 && (
+                          <details className="program-card__schedule">
+                            <summary className="program-card__schedule-summary">
+                              Weekly schedule
+                            </summary>
+                            <ol className="program-card__schedule-list">
+                              {weekItems.map((item, i) => (
+                                <li
+                                  key={i}
+                                  className={`program-card__schedule-day program-card__schedule-day--${item.type}`}
+                                >
+                                  <span className="program-card__schedule-day-num">Day {i + 1}</span>
+                                  <span className="program-card__schedule-day-name">{item.name}</span>
+                                </li>
+                              ))}
+                            </ol>
+                          </details>
                         )}
                         <div className="program-card__footer">
                           <span className="program-card__last-used-slot">

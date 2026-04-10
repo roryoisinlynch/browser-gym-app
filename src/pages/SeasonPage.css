@@ -94,11 +94,63 @@
   color: var(--text-muted);
 }
 
-.program-card__sessions {
-  margin: 5px 0 0;
+.program-card__schedule {
+  margin-top: 10px;
+}
+
+.program-card__schedule-summary {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+
+.program-card__schedule-summary::marker,
+.program-card__schedule-summary::-webkit-details-marker {
+  display: none;
+}
+
+.program-card__schedule-summary::before {
+  content: "▸ ";
+  font-size: 0.7rem;
+}
+
+details[open] .program-card__schedule-summary::before {
+  content: "▾ ";
+}
+
+.program-card__schedule-list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.program-card__schedule-day {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
   font-size: 0.82rem;
+}
+
+.program-card__schedule-day-num {
+  flex-shrink: 0;
+  font-weight: 600;
   color: var(--text-soft);
-  line-height: 1.4;
+  min-width: 42px;
+}
+
+.program-card__schedule-day--session .program-card__schedule-day-name {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.program-card__schedule-day--rest .program-card__schedule-day-name {
+  color: var(--text-soft);
 }
 
 .program-card__footer {
