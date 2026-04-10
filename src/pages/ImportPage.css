@@ -31,41 +31,7 @@
 /* ── Format guide ── */
 
 .import-guide {
-  margin-bottom: 20px;
-  border: 1px solid var(--card-border);
-  border-radius: 14px;
-  background: var(--card-bg);
-  overflow: hidden;
-}
-
-.import-guide__summary {
-  display: block;
-  padding: 12px 14px;
-  font-size: 0.84rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  cursor: pointer;
-  user-select: none;
-  list-style: none;
-}
-
-.import-guide__summary::marker,
-.import-guide__summary::-webkit-details-marker {
-  display: none;
-}
-
-.import-guide__summary::before {
-  content: "▸ ";
-  font-size: 0.72rem;
-}
-
-details[open] .import-guide__summary::before {
-  content: "▾ ";
-}
-
-.import-guide__body {
-  padding: 0 14px 14px;
-  border-top: 1px solid var(--panel-border);
+  margin-top: 28px;
 }
 
 .import-guide__para {
