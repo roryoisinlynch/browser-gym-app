@@ -211,10 +211,10 @@ export default function SeasonPage() {
                     const totalDays = template.plannedWeekCount * 7;
                     const metaParts: string[] = [];
                     metaParts.push(
-                      `${template.plannedWeekCount} ${template.plannedWeekCount === 1 ? "wk" : "wks"} (${totalDays} days)`
+                      `${template.plannedWeekCount} ${template.plannedWeekCount === 1 ? "week" : "weeks"} (${totalDays} days)`
                     );
                     if (trainingDaysPerWeek !== null && restDaysPerWeek !== null) {
-                      metaParts.push(`${trainingDaysPerWeek} on · ${restDaysPerWeek} off per wk`);
+                      metaParts.push(`${trainingDaysPerWeek} training · ${restDaysPerWeek} rest per week`);
                     }
                     if (template.rirSequence && template.rirSequence.length > 0) {
                       metaParts.push(`RIR ${template.rirSequence.join(", ")}`);
