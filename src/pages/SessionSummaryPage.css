@@ -165,6 +165,12 @@
   align-items: center;
 }
 
+.summary-score-secondary--stacked {
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+
 .summary-score-item {
   display: flex;
   flex-direction: column;

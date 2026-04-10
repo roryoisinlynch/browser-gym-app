@@ -219,7 +219,7 @@ export default function SessionSummaryPage() {
             <div className="summary-score-divider" />
 
             {/* Right: volume + intensity */}
-            <div className="summary-score-secondary">
+            <div className={`summary-score-secondary${volumeScore >= 100 && intensityScore >= 100 ? " summary-score-secondary--stacked" : ""}`}>
               <div className="summary-score-item">
                 <span className="summary-score-item__pct">{volumeScore}%</span>
                 <span className="summary-score-item__label">Volume</span>
