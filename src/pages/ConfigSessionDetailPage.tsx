@@ -131,6 +131,57 @@ export default function ConfigSessionDetailPage() {
           <h1 className="config-session-detail-title">{sessionTemplate.name}</h1>
         </header>
 
+        {/* Warnings */}
+        {(() => {
+          const warnings: string[] = [];
+
+          const totalSets = sections.reduce(
+            (sum, s) => sum + s.sessionTemplateMuscleGroup.targetWorkingSets,
+            0
+          );
+          if (sections.length > 0 && totalSets < 5) {
+            warnings.push(`Total target working sets is ${totalSets} — aim for at least 5`);
+          }
+          if (sections.length > 0 && totalSets > 25) {
+            warnings.push(`Total target working sets is ${totalSets} — consider reducing below 25`);
+          }
+
+          if (sections.length > 0 && sections.length < 2) {
+            warnings.push("Session has fewer than 2 muscle groups");
+          }
+
+          const lowSetGroups = sections.filter(
+            (s) => s.sessionTemplateMuscleGroup.targetWorkingSets < 3
+          );
+          if (lowSetGroups.length > 0) {
+            warnings.push(
+              `${lowSetGroups.length} muscle ${lowSetGroups.length === 1 ? "group has" : "groups have"} fewer than 3 target working sets: ${lowSetGroups.map((s) => s.muscleGroup.name).join(", ")}`
+            );
+          }
+
+          const noExerciseGroups = sections.filter((s) => s.exercises.length === 0);
+          if (noExerciseGroups.length > 0) {
+            warnings.push(
+              `${noExerciseGroups.length} muscle ${noExerciseGroups.length === 1 ? "group has" : "groups have"} no exercises: ${noExerciseGroups.map((s) => s.muscleGroup.name).join(", ")}`
+            );
+          }
+
+          if (warnings.length === 0) return null;
+
+          return (
+            <div className="config-session-detail__warnings">
+              <p className="config-session-detail__warnings-title">
+                {warnings.length} {warnings.length === 1 ? "warning" : "warnings"}
+              </p>
+              <ul className="config-session-detail__warnings-list">
+                {warnings.map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
+            </div>
+          );
+        })()}
+
         {sections.map((section) => {
           const stmg = section.sessionTemplateMuscleGroup;
           return (
@@ -229,57 +280,6 @@ export default function ConfigSessionDetailPage() {
             </div>
           );
         })}
-
-        {/* Warnings */}
-        {(() => {
-          const warnings: string[] = [];
-
-          const totalSets = sections.reduce(
-            (sum, s) => sum + s.sessionTemplateMuscleGroup.targetWorkingSets,
-            0
-          );
-          if (sections.length > 0 && totalSets < 5) {
-            warnings.push(`Total target working sets is ${totalSets} — aim for at least 5`);
-          }
-          if (sections.length > 0 && totalSets > 25) {
-            warnings.push(`Total target working sets is ${totalSets} — consider reducing below 25`);
-          }
-
-          if (sections.length > 0 && sections.length < 2) {
-            warnings.push("Session has fewer than 2 muscle groups");
-          }
-
-          const lowSetGroups = sections.filter(
-            (s) => s.sessionTemplateMuscleGroup.targetWorkingSets < 3
-          );
-          if (lowSetGroups.length > 0) {
-            warnings.push(
-              `${lowSetGroups.length} muscle ${lowSetGroups.length === 1 ? "group has" : "groups have"} fewer than 3 target working sets: ${lowSetGroups.map((s) => s.muscleGroup.name).join(", ")}`
-            );
-          }
-
-          const noExerciseGroups = sections.filter((s) => s.exercises.length === 0);
-          if (noExerciseGroups.length > 0) {
-            warnings.push(
-              `${noExerciseGroups.length} muscle ${noExerciseGroups.length === 1 ? "group has" : "groups have"} no exercises: ${noExerciseGroups.map((s) => s.muscleGroup.name).join(", ")}`
-            );
-          }
-
-          if (warnings.length === 0) return null;
-
-          return (
-            <div className="config-session-detail__warnings">
-              <p className="config-session-detail__warnings-title">
-                {warnings.length} {warnings.length === 1 ? "warning" : "warnings"}
-              </p>
-              <ul className="config-session-detail__warnings-list">
-                {warnings.map((w, i) => (
-                  <li key={i}>{w}</li>
-                ))}
-              </ul>
-            </div>
-          );
-        })()}
 
         {showAddSection ? (
           <div className="config-session-detail__add-section-form">
