@@ -30,6 +30,14 @@
   color: var(--text-strong);
 }
 
+.config-session-detail-intro {
+  margin: 10px 0 0;
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
 /* ── Muscle group section ── */
 
 .config-session-detail__section {
