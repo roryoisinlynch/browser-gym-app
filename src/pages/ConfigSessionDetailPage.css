@@ -159,6 +159,7 @@
   cursor: pointer;
   text-align: left;
   transition: background 0.15s, transform 0.12s;
+  touch-action: manipulation;
 }
 
 .config-session-detail__exercise-row:hover {
@@ -168,6 +169,41 @@
 
 .config-session-detail__exercise-row:active {
   transform: scale(0.985);
+}
+
+.config-session-detail__exercise-row--dragging {
+  opacity: 0.4;
+  transform: none !important;
+}
+
+.config-session-detail__exercise-row--overlay {
+  opacity: 0.95;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  cursor: grabbing;
+}
+
+.config-session-detail__drag-handle {
+  flex-shrink: 0;
+  font-size: 1rem;
+  color: var(--text-muted);
+  cursor: grab;
+  touch-action: none;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.config-session-detail__drag-handle:active {
+  cursor: grabbing;
+}
+
+.config-session-detail__exercise-list--over {
+  border-radius: 12px;
+  outline: 1px dashed rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.config-session-detail__exercise-list--empty {
+  min-height: 44px;
 }
 
 .config-session-detail__exercise-info {

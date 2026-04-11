@@ -1347,16 +1347,51 @@ export async function getSessionInstanceView(
     sessionInstance.id
   );
 
+  // Pre-load soft-deleted templates for instances not matched by any current
+  // template ID, so the fallback below can match them by exercise name.
+  const currentTemplateIds = new Set(
+    templateGroups.flatMap((g) => g.exercises.map((e) => e.exerciseTemplate.id))
+  );
+  const unmatchedInstances = exerciseInstances.filter(
+    (inst) => !currentTemplateIds.has(inst.exerciseTemplateId)
+  );
+  const softDeletedTemplates = new Map<string, ExerciseTemplate | null>();
+  for (const inst of unmatchedInstances) {
+    if (!softDeletedTemplates.has(inst.exerciseTemplateId)) {
+      softDeletedTemplates.set(
+        inst.exerciseTemplateId,
+        (await getExerciseTemplateById(inst.exerciseTemplateId)) ?? null
+      );
+    }
+  }
+  const claimedInstanceIds = new Set<string>();
+
   const muscleGroups: SessionInstanceMuscleGroupView[] = [];
 
   for (const { sessionTemplateMuscleGroup, muscleGroup, exercises } of templateGroups) {
     const hydratedExercises: SessionInstanceExerciseView[] = [];
 
     for (const { exerciseTemplate, movementType } of exercises) {
-      const exerciseInstance =
+      let exerciseInstance =
         exerciseInstances.find(
           (instance) => instance.exerciseTemplateId === exerciseTemplate.id
         ) ?? null;
+
+      if (exerciseInstance != null) {
+        claimedInstanceIds.add(exerciseInstance.id);
+      } else {
+        // Fallback: look for an unclaimed instance whose soft-deleted template
+        // has the same exercise name as the current template.
+        for (const inst of unmatchedInstances) {
+          if (claimedInstanceIds.has(inst.id)) continue;
+          const oldTemplate = softDeletedTemplates.get(inst.exerciseTemplateId);
+          if (oldTemplate?.exerciseName === exerciseTemplate.exerciseName) {
+            exerciseInstance = inst;
+            claimedInstanceIds.add(inst.id);
+            break;
+          }
+        }
+      }
 
       const allHistoricalSets = await mergeWithImportedSets(
         exerciseTemplate.exerciseName,
@@ -2545,7 +2580,17 @@ export async function deleteSessionTemplateMuscleGroupById(
     id
   );
   for (const exercise of exercises) {
-    await deleteItem(STORE_NAMES.exerciseTemplates, exercise.id);
+    // Soft-delete: preserve templates that have historical exercise instance
+    // data so the name-based fallback in getSessionInstanceView can still
+    // find them. Templates with no history are safe to hard-delete.
+    const instances = await getAllByIndex<ExerciseInstance>(
+      STORE_NAMES.exerciseInstances,
+      "byExerciseTemplateId",
+      exercise.id
+    );
+    if (instances.length === 0) {
+      await deleteItem(STORE_NAMES.exerciseTemplates, exercise.id);
+    }
   }
   await deleteItem(STORE_NAMES.sessionTemplateMuscleGroups, id);
 }
