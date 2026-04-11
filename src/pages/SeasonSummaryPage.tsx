@@ -438,7 +438,7 @@ export default function SeasonSummaryPage() {
                 return (
                   <li key={row.season.id} className={`season-summary-season-row${isCurrent ? " season-summary-season-row--current" : ""}`}>
                     <span className="season-summary-season-row__name">
-                      {row.programName && row.programName !== seasonName
+                      {row.programName
                         ? `${row.programName} · ${row.season.name}`
                         : row.season.name}
                     </span>
