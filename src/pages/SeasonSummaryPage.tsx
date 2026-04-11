@@ -245,7 +245,8 @@ export default function SeasonSummaryPage() {
               completedAt: s.completedAt ?? null,
             };
           })
-        )).filter((r): r is SeasonRow => r !== null);
+        )).filter((r): r is SeasonRow => r !== null)
+          .sort((a, b) => (b.completedAt ?? "").localeCompare(a.completedAt ?? ""));
 
         setSeasonRows(rows);
         setLoadProgress(85);
