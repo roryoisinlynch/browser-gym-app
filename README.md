@@ -434,6 +434,8 @@ Push 1
 SeasonInstance
 WeekInstance
 SessionInstance
+SessionInstanceMuscleGroup   ← snapshot of SessionTemplateMuscleGroup
+SessionInstanceExercise      ← snapshot of ExerciseTemplate
 ExerciseInstance
 ExerciseSet
 ```
@@ -448,6 +450,72 @@ WeekInstance → Week 2 performed
 SessionInstance → "Push 1 on March 14"
 ExerciseSet → 100kg × 8 reps
 ```
+
+---
+
+# Copy-on-Season-Start (Instance Isolation)
+
+## The problem
+
+Before this architecture was introduced, `ExerciseInstance` linked directly to `ExerciseTemplate` via `exerciseTemplateId`. This meant any template edit — renaming an exercise, changing its muscle-group assignment, deleting a template — would silently alter the display of historical sessions. A session completed six weeks ago would suddenly show different exercises or muscle-group breakdowns because the underlying templates had changed.
+
+## The solution
+
+When `startSeasonFromTemplate` is called, the app performs a **deep copy** of the full template structure into instance-level snapshot records:
+
+```
+SessionTemplateMuscleGroup  →  SessionInstanceMuscleGroup  (one per session, per muscle-group section)
+ExerciseTemplate            →  SessionInstanceExercise     (one per session, per exercise)
+```
+
+These records are written once at season-start and never modified by template edits. Each `SessionInstance` also gains a `sessionName` field, a frozen copy of `SessionTemplate.name` at the time the season started.
+
+## What the snapshot records contain
+
+**`SessionInstanceMuscleGroup`**
+
+| Field | Source |
+|---|---|
+| `id` | `simg-{sessionInstanceId}-{stmgId}` |
+| `sessionInstanceId` | the owning session instance |
+| `muscleGroupId` | copied from `SessionTemplateMuscleGroup` |
+| `order` | copied from `SessionTemplateMuscleGroup` |
+| `targetWorkingSets` | copied from `SessionTemplateMuscleGroup` |
+
+**`SessionInstanceExercise`**
+
+| Field | Source |
+|---|---|
+| `id` | `sie-{simgId}-{exerciseTemplateId}` |
+| `sessionInstanceMuscleGroupId` | the owning `SessionInstanceMuscleGroup` |
+| `sessionInstanceId` | the owning session instance |
+| `sourceExerciseTemplateId` | the original `ExerciseTemplate.id` |
+| `movementTypeId` | copied from `ExerciseTemplate` |
+| `exerciseName` | copied from `ExerciseTemplate` |
+| `weightMode` | copied from `ExerciseTemplate` |
+| `prescribedWeight` | copied from `ExerciseTemplate` |
+| `weightIncrement` / `availableWeights` | copied from `ExerciseTemplate` (when present) |
+
+## Effect on ExerciseInstance
+
+`ExerciseInstance` no longer holds an `exerciseTemplateId`. Instead it holds a `sessionInstanceExerciseId` pointing at the `SessionInstanceExercise` record for that exercise within that session. All metadata (exercise name, weight mode, movement type) is read from the `SessionInstanceExercise` snapshot rather than the live template.
+
+## Weight propagation
+
+Template edits are still useful going forward. When `saveExerciseTemplate` is called, it:
+
+1. Updates the `ExerciseTemplate` record as before.
+2. Propagates `prescribedWeight`, `weightMode`, `weightIncrement`, and `availableWeights` to **all existing `SessionInstanceExercise` records** that point to the same source template (via `sourceExerciseTemplateId`).
+
+This means changing the prescribed weight on a template retroactively updates all not-yet-started sessions in the active season while leaving the overall session-isolation model intact.
+
+## Backup version
+
+This change is a breaking schema change. The backup version was bumped from **1 → 2**. Backups produced before this change cannot be restored directly; the migration script `migrate-backup-v1-to-v2.js` transforms a v1 backup into v2 format by:
+
+- Generating `SessionInstanceMuscleGroup` and `SessionInstanceExercise` records from the template data for every existing session instance.
+- Rewriting each `ExerciseInstance`'s `exerciseTemplateId` to `sessionInstanceExerciseId`.
+- Adding `sessionName` to every `SessionInstance`.
 
 ---
 
@@ -583,6 +651,10 @@ Not-started weeks in the displaced season are left as `not_started` — they are
 ---
 
 # To do:
- - is it easy to add a 'share' button on the summary pages which takes a screenshot and allows you to post to whatsapp?
  - add an exercise detail screen where you can see a table of all exercises and their: last lift, e1RM local, e1RM max, total lifts, days since PR. Sortable by each column.
  - i should build unit tests which try to restore an old backup before every new deploy
+ - exercises move to the top of the list
+ - pre-define ordered list of exercises
+ - heuristics survey to track protein, calories, creatine, sleep, fibre, water
+ - feature to share program templates (send and recieve json)
+ - generate a backup import json file to upload to the desktop/pixel user which is prepopulated with data to use as a screenshot/screenrecord/demo 
