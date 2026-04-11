@@ -1118,10 +1118,15 @@ export async function getExerciseInstanceView(
     return undefined;
   }
 
-  const weekTemplate = await getWeekTemplateById(weekInstance.weekTemplateId);
-  if (!weekTemplate) {
-    return undefined;
-  }
+  // Week template may have been deleted (e.g. season template cascade). Synthesise
+  // a minimal stub so historical session views remain readable — targetRir is the
+  // only field used in computation and it is superseded by weekInstance.rirTarget.
+  const weekTemplate = await getWeekTemplateById(weekInstance.weekTemplateId) ?? {
+    id: weekInstance.weekTemplateId,
+    seasonTemplateId: "",
+    name: "",
+    order: weekInstance.order,
+  };
 
   const seasonInstance = await getSeasonInstanceById(
     sessionInstance.seasonInstanceId
@@ -1486,10 +1491,15 @@ export async function getSessionInstanceView(
     return undefined;
   }
 
-  const weekTemplate = await getWeekTemplateById(weekInstance.weekTemplateId);
-  if (!weekTemplate) {
-    return undefined;
-  }
+  // Week template may have been deleted (e.g. season template cascade). Synthesise
+  // a minimal stub so historical session views remain readable — targetRir is the
+  // only field used in computation and it is superseded by weekInstance.rirTarget.
+  const weekTemplate = await getWeekTemplateById(weekInstance.weekTemplateId) ?? {
+    id: weekInstance.weekTemplateId,
+    seasonTemplateId: "",
+    name: "",
+    order: weekInstance.order,
+  };
 
   const seasonInstance = await getSeasonInstanceById(
     sessionInstance.seasonInstanceId
