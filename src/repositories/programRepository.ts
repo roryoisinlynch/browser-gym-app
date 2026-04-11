@@ -2721,7 +2721,10 @@ export async function saveSessionTemplate(
 
 export async function deleteSessionTemplateById(id: string): Promise<void> {
   // Guard: refuse deletion if any non-completed session instance still references
-  // this template. Active sessions rely on it for navigation and display.
+  // this template. Each session template maps to one day type — once that day is
+  // completed its instance is frozen (SIE snapshots, snapshotted session name) and
+  // the template is no longer needed. Not-started/in-progress sessions still rely
+  // on the template for display and navigation, so block those.
   const allSessionInstances = await getAll<SessionInstance>(STORE_NAMES.sessionInstances);
   const activeRefs = allSessionInstances.filter(
     (s) => s.sessionTemplateId === id && s.status !== "completed"
