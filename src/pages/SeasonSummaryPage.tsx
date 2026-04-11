@@ -79,6 +79,7 @@ function buildSeasonNarrative(metrics: SeasonMetrics): string {
 
 interface SeasonRow {
   season: SeasonInstance;
+  programName: string | null;
   grade: SeasonGrade | null;
   prCount: number;
   completedAt: string | null;
@@ -194,19 +195,23 @@ export default function SeasonSummaryPage() {
         }
         setLoadProgress(65);
 
-        // Past seasons list (same template, completed, ordered oldest→newest).
+        // All completed seasons across all programs, ordered for display.
+        // Not filtered by template ID — seasons from deleted or different programs
+        // are still part of the user's training history and should be visible.
         const allSeasons = await getAllSeasonInstances();
-        const sameTemplate = allSeasons.filter(
-          s => s.seasonTemplateId === seasonInstance.seasonTemplateId && s.status === "completed"
-        );
+        const completedSeasons = allSeasons.filter(s => s.status === "completed");
 
         const rows: SeasonRow[] = (await Promise.all(
-          sameTemplate.map(async (s): Promise<SeasonRow | null> => {
+          completedSeasons.map(async (s): Promise<SeasonRow | null> => {
             const isCurrent = s.id === seasonInstanceId;
             let grade: SeasonGrade | null = null;
             let prCount = 0;
+            let programName: string | null = null;
 
             try {
+              const tmpl = await getSeasonTemplateById(s.seasonTemplateId);
+              programName = tmpl?.name ?? null;
+
               const sWeeks = await getWeekInstancesForSeasonInstance(s.id);
               const sCompletedWeeks = sWeeks.filter(w => w.status === "completed");
               const sWeekMetrics = await Promise.all(
@@ -229,11 +234,12 @@ export default function SeasonSummaryPage() {
               const sPRs = await getSeasonPRs(s.id);
               prCount = sPRs.length;
             } catch {
-              // leave as null
+              // leave grade/prCount as defaults
             }
 
             return {
               season: s,
+              programName,
               grade,
               prCount,
               completedAt: s.completedAt ?? null,
@@ -431,7 +437,11 @@ export default function SeasonSummaryPage() {
                   : null;
                 return (
                   <li key={row.season.id} className={`season-summary-season-row${isCurrent ? " season-summary-season-row--current" : ""}`}>
-                    <span className="season-summary-season-row__name">{row.season.name}</span>
+                    <span className="season-summary-season-row__name">
+                      {row.programName && row.programName !== seasonName
+                        ? `${row.programName} · ${row.season.name}`
+                        : row.season.name}
+                    </span>
                     <span className="season-summary-season-row__meta">
                       {row.grade && rowColor && (
                         <span className={`season-summary-season-row__grade season-summary-season-row__grade--${rowColor}`}>
