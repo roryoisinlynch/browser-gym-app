@@ -365,6 +365,7 @@ async function populateWeekFromTemplate(
     weekTemplateId: canonicalWeekTemplate.id,
     order: weekOrder,
     status: "in_progress",
+    rirTarget: seasonTemplate.rirSequence?.[weekIndex] ?? null,
     startedAt: weekOrder === 1 ? seasonStartedAt : nowIso,
     completedAt: null,
     summary: null,
@@ -1390,6 +1391,7 @@ export async function getExerciseInstanceView(
   // ─────────────────────────────────────────────────────────────────────────
 
   const weekRir =
+    weekInstance.rirTarget ??
     seasonTemplate.rirSequence?.[weekInstance.order - 1] ??
     weekTemplate.targetRir ??
     exerciseInstance.prescribedRir ??
@@ -1951,7 +1953,7 @@ export async function ensureExerciseInstance(
     completedAt: null,
     prescribedWeight: null,
     prescribedRepTarget: null,
-    prescribedRir: weekTemplate?.targetRir ?? null,
+    prescribedRir: weekInstance?.rirTarget ?? weekTemplate?.targetRir ?? null,
   };
 
   await putItem(STORE_NAMES.exerciseInstances, exerciseInstance);
@@ -2718,6 +2720,18 @@ export async function saveSessionTemplate(
 }
 
 export async function deleteSessionTemplateById(id: string): Promise<void> {
+  // Guard: refuse deletion if any non-completed session instance still references
+  // this template. Active sessions rely on it for navigation and display.
+  const allSessionInstances = await getAll<SessionInstance>(STORE_NAMES.sessionInstances);
+  const activeRefs = allSessionInstances.filter(
+    (s) => s.sessionTemplateId === id && s.status !== "completed"
+  );
+  if (activeRefs.length > 0) {
+    throw new Error(
+      "Cannot delete: this session template is used by one or more active sessions. Complete or cancel the current season first."
+    );
+  }
+
   const sections = await getAllByIndex<SessionTemplateMuscleGroup>(
     STORE_NAMES.sessionTemplateMuscleGroups,
     "bySessionTemplateId",

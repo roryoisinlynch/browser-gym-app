@@ -179,6 +179,9 @@ export interface WeekInstance {
 
   status: InstanceStatus;
 
+  /** RIR target snapshotted from the season template's rirSequence at the moment this week was generated. */
+  rirTarget?: number | null;
+
   startedAt?: string | null;
   completedAt?: string | null;
 

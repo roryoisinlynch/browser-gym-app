@@ -195,7 +195,11 @@ export default function WeekPage() {
                   className={`week-page__rir-step${i === currentRirIndex ? " week-page__rir-step--current" : ""}`}
                 >
                   <span className="week-page__rir-pip" />
-                  <span className="week-page__rir-value">{rir}</span>
+                  <span className="week-page__rir-value">
+                    {i === currentRirIndex
+                      ? (items[0]?.weekInstance.rirTarget ?? rir)
+                      : rir}
+                  </span>
                 </div>
               ))}
               </div>

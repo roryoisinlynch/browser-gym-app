@@ -19,6 +19,7 @@ export default function ConfigSessionsPage() {
   const [newName, setNewName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   async function loadData() {
     const [templates, seasons] = await Promise.all([
@@ -54,9 +55,15 @@ export default function ConfigSessionsPage() {
   }
 
   async function handleDelete(id: string) {
-    await deleteSessionTemplateById(id);
-    setConfirmDeleteId(null);
-    await loadData();
+    try {
+      await deleteSessionTemplateById(id);
+      setConfirmDeleteId(null);
+      setDeleteError(null);
+      await loadData();
+    } catch (error) {
+      setConfirmDeleteId(null);
+      setDeleteError(error instanceof Error ? error.message : "Could not delete session.");
+    }
   }
 
   return (
@@ -70,6 +77,10 @@ export default function ConfigSessionsPage() {
             Select a session to view and edit its exercises.
           </p>
         </header>
+
+        {deleteError && (
+          <p className="config-sessions__error">{deleteError}</p>
+        )}
 
         <div className="config-sessions__session-list">
           {sessions.map((session) => (

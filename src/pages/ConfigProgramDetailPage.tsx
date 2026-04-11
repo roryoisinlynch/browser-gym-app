@@ -100,6 +100,7 @@ export default function ConfigProgramDetailPage() {
 
   // Delete confirm
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // RIR tooltip
   const [rirTooltipOpen, setRirTooltipOpen] = useState(false);
@@ -269,12 +270,18 @@ export default function ConfigProgramDetailPage() {
   }
 
   async function handleDeleteItem(item: ProgramItem) {
-    if (item.weekTemplateItem.type === "session" && item.sessionTemplate) {
-      await deleteSessionTemplateById(item.sessionTemplate.id);
+    try {
+      if (item.weekTemplateItem.type === "session" && item.sessionTemplate) {
+        await deleteSessionTemplateById(item.sessionTemplate.id);
+      }
+      await deleteWeekTemplateItemById(item.weekTemplateItem.id);
+      setConfirmDeleteId(null);
+      setDeleteError(null);
+      await loadData();
+    } catch (error) {
+      setConfirmDeleteId(null);
+      setDeleteError(error instanceof Error ? error.message : "Could not delete session.");
     }
-    await deleteWeekTemplateItemById(item.weekTemplateItem.id);
-    setConfirmDeleteId(null);
-    await loadData();
   }
 
   if (!seasonTemplate) return null;
@@ -400,6 +407,10 @@ export default function ConfigProgramDetailPage() {
             </div>
           );
         })()}
+
+        {deleteError && (
+          <p className="config-program-detail__rir-error">{deleteError}</p>
+        )}
 
         {/* Sessions & rest days */}
         <div className="config-program-detail__section">
