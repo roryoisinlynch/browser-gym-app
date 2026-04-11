@@ -171,7 +171,12 @@ export default function SessionPage() {
             return aMovementTypeSets - bMovementTypeSets;
           }
 
-          // Tiebreak by highest historical e1RM descending (heavier compounds first).
+          // Within the same movement type, unstarted exercises appear before started ones.
+          if (a.workingSetCount !== b.workingSetCount) {
+            return a.workingSetCount - b.workingSetCount;
+          }
+
+          // Final tiebreak by highest historical e1RM descending (heavier compounds first).
           const aE1RM = a.effectiveE1RM ?? -1;
           const bE1RM = b.effectiveE1RM ?? -1;
           return bE1RM - aE1RM;
