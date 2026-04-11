@@ -274,20 +274,26 @@ export async function getSeasonTemplateById(
 }
 
 /**
- * Replicates the canonical week template N times (once per entry in
- * rirSequence) to create all WeekInstances, SessionInstances, and
- * WeekInstanceItems for a new season instance.
+ * Creates one week's worth of instance records (WeekInstance, WeekInstanceItems,
+ * SessionInstances, SessionInstanceMuscleGroups, SessionInstanceExercises) by
+ * reading the live template state at call time.
+ *
+ * Called at season start for week 1, and again at the end of each week for
+ * the next week. Reading templates fresh each time means structural changes
+ * made to the program mid-season are picked up by subsequent weeks while
+ * already-generated weeks remain frozen.
  */
-async function replicateSeasonWeeks(
+async function populateWeekFromTemplate(
   seasonTemplate: SeasonTemplate,
-  newSeasonInstanceId: string,
-  startedAt: string
-): Promise<void> {
+  seasonInstanceId: string,
+  seasonStartedAt: string,
+  weekOrder: number
+): Promise<WeekInstance> {
   const allWeekTemplates = await getAll<WeekTemplate>(STORE_NAMES.weekTemplates);
   const canonicalWeekTemplate = allWeekTemplates
     .filter((wt) => wt.seasonTemplateId === seasonTemplate.id)
     .sort((a, b) => a.order - b.order)[0];
-  if (!canonicalWeekTemplate) return;
+  if (!canonicalWeekTemplate) throw new Error("No canonical week template found");
 
   const weekTemplateItems = (
     await getAllByIndex<WeekTemplateItem>(
@@ -297,9 +303,9 @@ async function replicateSeasonWeeks(
     )
   ).sort((a, b) => a.order - b.order);
 
-  // Pre-load exercise structure for every session template referenced in this week.
-  // We do this once outside the week loop so the same snapshot is reused across
-  // all weeks (the template definition is the same for each repeat).
+  // Load the current exercise structure for every session template in this week.
+  // Reading live templates here is intentional — edits made since the last week
+  // was generated are picked up automatically.
   const sessionTemplateIds = [
     ...new Set(
       weekTemplateItems
@@ -341,123 +347,114 @@ async function replicateSeasonWeeks(
           "bySessionTemplateMuscleGroupId",
           stmg.id
         )
-      ).sort((a, b) => {
-        // Stable ordering: use natural insertion order (id string fallback)
-        return a.id.localeCompare(b.id);
-      });
+      ).sort((a, b) => a.id.localeCompare(b.id));
       groups.push({ stmg, exercises });
     }
 
     templateStructure.set(stId, { sessionName: sessionTemplate.name, groups });
   }
 
-  const weekCount =
-    seasonTemplate.rirSequence?.length ?? seasonTemplate.plannedWeekCount;
+  const weekInstanceId = `week-instance-${seasonInstanceId}-${weekOrder}`;
+  const nowIso = new Date().toISOString();
+  const weekIndex = weekOrder - 1;
+  const baseDate = new Date(seasonStartedAt);
 
-  const baseDate = new Date(startedAt);
+  const newWeekInstance: WeekInstance = {
+    id: weekInstanceId,
+    seasonInstanceId,
+    weekTemplateId: canonicalWeekTemplate.id,
+    order: weekOrder,
+    status: "in_progress",
+    startedAt: weekOrder === 1 ? seasonStartedAt : nowIso,
+    completedAt: null,
+    summary: null,
+    grade: null,
+  };
 
-  for (let weekIndex = 0; weekIndex < weekCount; weekIndex++) {
-    const weekOrder = weekIndex + 1;
-    const weekInstanceId = `week-instance-${newSeasonInstanceId}-${weekOrder}`;
+  await putItem(STORE_NAMES.weekInstances, newWeekInstance);
 
-    const newWeekInstance: WeekInstance = {
-      id: weekInstanceId,
-      seasonInstanceId: newSeasonInstanceId,
-      weekTemplateId: canonicalWeekTemplate.id,
-      order: weekOrder,
-      status: weekOrder === 1 ? "in_progress" : "not_started",
-      startedAt: weekOrder === 1 ? startedAt : null,
+  const sessionInstancesByTemplateItemId = new Map<string, SessionInstance>();
+
+  for (const weekTemplateItem of weekTemplateItems) {
+    if (weekTemplateItem.type !== "session" || !weekTemplateItem.sessionTemplateId) {
+      continue;
+    }
+
+    const sessionDate = new Date(baseDate);
+    const offsetDays = weekIndex * weekTemplateItems.length + (weekTemplateItem.order - 1);
+    sessionDate.setUTCDate(sessionDate.getUTCDate() + offsetDays);
+
+    const structure = templateStructure.get(weekTemplateItem.sessionTemplateId);
+
+    const newSessionInstance: SessionInstance = {
+      id: `session-instance-${seasonInstanceId}-${weekOrder}-${weekTemplateItem.id}`,
+      seasonInstanceId,
+      weekInstanceId,
+      sessionTemplateId: weekTemplateItem.sessionTemplateId,
+      sessionName: structure?.sessionName ?? "",
+      date: sessionDate.toISOString(),
+      status: "not_started",
+      startedAt: null,
       completedAt: null,
-      summary: null,
-      grade: null,
+      durationSeconds: null,
     };
 
-    await putItem(STORE_NAMES.weekInstances, newWeekInstance);
+    await putItem(STORE_NAMES.sessionInstances, newSessionInstance);
+    sessionInstancesByTemplateItemId.set(weekTemplateItem.id, newSessionInstance);
 
-    const sessionInstancesByTemplateItemId = new Map<string, SessionInstance>();
+    // Deep-copy the exercise structure into instance-level snapshot records so
+    // this session is fully isolated from future template edits.
+    if (structure) {
+      for (const { stmg, exercises } of structure.groups) {
+        const simgId = `simg-${newSessionInstance.id}-${stmg.id}`;
+        const simg: SessionInstanceMuscleGroup = {
+          id: simgId,
+          sessionInstanceId: newSessionInstance.id,
+          muscleGroupId: stmg.muscleGroupId,
+          order: stmg.order,
+          targetWorkingSets: stmg.targetWorkingSets,
+        };
+        await putItem(STORE_NAMES.sessionInstanceMuscleGroups, simg);
 
-    for (const weekTemplateItem of weekTemplateItems) {
-      if (
-        weekTemplateItem.type !== "session" ||
-        !weekTemplateItem.sessionTemplateId
-      ) {
-        continue;
-      }
-
-      const sessionDate = new Date(baseDate);
-      const offsetDays = weekIndex * weekTemplateItems.length + (weekTemplateItem.order - 1);
-      sessionDate.setUTCDate(sessionDate.getUTCDate() + offsetDays);
-
-      const structure = templateStructure.get(weekTemplateItem.sessionTemplateId);
-
-      const newSessionInstance: SessionInstance = {
-        id: `session-instance-${newSeasonInstanceId}-${weekOrder}-${weekTemplateItem.id}`,
-        seasonInstanceId: newSeasonInstanceId,
-        weekInstanceId,
-        sessionTemplateId: weekTemplateItem.sessionTemplateId,
-        sessionName: structure?.sessionName ?? "",
-        date: sessionDate.toISOString(),
-        status: "not_started",
-        startedAt: null,
-        completedAt: null,
-        durationSeconds: null,
-      };
-
-      await putItem(STORE_NAMES.sessionInstances, newSessionInstance);
-      sessionInstancesByTemplateItemId.set(weekTemplateItem.id, newSessionInstance);
-
-      // Deep-copy the exercise structure into instance records so this session
-      // is fully isolated from future template edits.
-      if (structure) {
-        for (const { stmg, exercises } of structure.groups) {
-          const simgId = `simg-${newSessionInstance.id}-${stmg.id}`;
-          const simg: SessionInstanceMuscleGroup = {
-            id: simgId,
+        for (const exercise of exercises) {
+          const sie: SessionInstanceExercise = {
+            id: `sie-${simgId}-${exercise.id}`,
+            sessionInstanceMuscleGroupId: simgId,
             sessionInstanceId: newSessionInstance.id,
-            muscleGroupId: stmg.muscleGroupId,
-            order: stmg.order,
-            targetWorkingSets: stmg.targetWorkingSets,
+            sourceExerciseTemplateId: exercise.id,
+            movementTypeId: exercise.movementTypeId,
+            exerciseName: exercise.exerciseName,
+            weightMode: exercise.weightMode,
+            prescribedWeight: exercise.prescribedWeight ?? null,
+            weightIncrement: exercise.weightIncrement,
+            availableWeights: exercise.availableWeights,
           };
-          await putItem(STORE_NAMES.sessionInstanceMuscleGroups, simg);
-
-          for (const exercise of exercises) {
-            const sie: SessionInstanceExercise = {
-              id: `sie-${simgId}-${exercise.id}`,
-              sessionInstanceMuscleGroupId: simgId,
-              sessionInstanceId: newSessionInstance.id,
-              sourceExerciseTemplateId: exercise.id,
-              movementTypeId: exercise.movementTypeId,
-              exerciseName: exercise.exerciseName,
-              weightMode: exercise.weightMode,
-              prescribedWeight: exercise.prescribedWeight ?? null,
-              weightIncrement: exercise.weightIncrement,
-              availableWeights: exercise.availableWeights,
-            };
-            await putItem(STORE_NAMES.sessionInstanceExercises, sie);
-          }
+          await putItem(STORE_NAMES.sessionInstanceExercises, sie);
         }
       }
     }
-
-    for (const weekTemplateItem of weekTemplateItems) {
-      const linkedSessionInstance =
-        weekTemplateItem.type === "session"
-          ? sessionInstancesByTemplateItemId.get(weekTemplateItem.id) ?? null
-          : null;
-
-      const newWeekInstanceItem: WeekInstanceItem = {
-        id: `week-instance-item-${weekInstanceId}-${weekTemplateItem.id}`,
-        weekInstanceId,
-        weekTemplateItemId: weekTemplateItem.id,
-        order: weekTemplateItem.order,
-        type: weekTemplateItem.type,
-        sessionInstanceId: linkedSessionInstance?.id,
-        label: weekTemplateItem.label ?? null,
-      };
-
-      await putItem(STORE_NAMES.weekInstanceItems, newWeekInstanceItem);
-    }
   }
+
+  for (const weekTemplateItem of weekTemplateItems) {
+    const linkedSessionInstance =
+      weekTemplateItem.type === "session"
+        ? sessionInstancesByTemplateItemId.get(weekTemplateItem.id) ?? null
+        : null;
+
+    const newWeekInstanceItem: WeekInstanceItem = {
+      id: `week-instance-item-${weekInstanceId}-${weekTemplateItem.id}`,
+      weekInstanceId,
+      weekTemplateItemId: weekTemplateItem.id,
+      order: weekTemplateItem.order,
+      type: weekTemplateItem.type,
+      sessionInstanceId: linkedSessionInstance?.id,
+      label: weekTemplateItem.label ?? null,
+    };
+
+    await putItem(STORE_NAMES.weekInstanceItems, newWeekInstanceItem);
+  }
+
+  return newWeekInstance;
 }
 
 export async function startSeasonFromTemplate(
@@ -490,7 +487,7 @@ export async function startSeasonFromTemplate(
   };
 
   await putItem(STORE_NAMES.seasonInstances, newSeasonInstance);
-  await replicateSeasonWeeks(seasonTemplate, newSeasonInstanceId, effectiveStartedAt);
+  await populateWeekFromTemplate(seasonTemplate, newSeasonInstanceId, effectiveStartedAt, 1);
 
   // Reset prescribed weights on any SessionInstanceExercise records that now
   // exceed the effective e1RM. A new season shifts the three-season window, so
@@ -1650,6 +1647,128 @@ export async function getWeekInstancesForSeasonInstance(
   return instances.sort((a, b) => a.order - b.order);
 }
 
+export interface SeasonCalendarWeek {
+  weekOrder: number;
+  /** Present for generated weeks; null for future weeks not yet created. */
+  weekInstance: WeekInstance | null;
+  sessions: Array<{
+    sessionName: string;
+    scheduledDate: string;
+    /** Present only for generated weeks. */
+    sessionInstance: SessionInstance | null;
+  }>;
+  restDayCount: number;
+}
+
+/**
+ * Returns a full-season calendar view mixing actual instance data (for
+ * generated weeks) with live-template projections (for future weeks).
+ *
+ * Future-week dates use the current week template item count so the calendar
+ * stays accurate after structural edits to the program. They are clearly
+ * approximate — the exact dates are fixed only when a week is generated.
+ */
+export async function getSeasonCalendarWeeks(
+  seasonInstanceId: string
+): Promise<SeasonCalendarWeek[]> {
+  const seasonInstance = await getSeasonInstanceById(seasonInstanceId);
+  if (!seasonInstance) return [];
+
+  const seasonTemplate = await getById<SeasonTemplate>(
+    STORE_NAMES.seasonTemplates,
+    seasonInstance.seasonTemplateId
+  );
+  if (!seasonTemplate) return [];
+
+  const weekCount = seasonTemplate.rirSequence?.length ?? seasonTemplate.plannedWeekCount ?? 0;
+
+  // Load all generated week instances and their sessions keyed by week order.
+  const generatedWeeks = await getWeekInstancesForSeasonInstance(seasonInstanceId);
+  const weekByOrder = new Map(generatedWeeks.map((w) => [w.order, w]));
+
+  const sessionsByWeekInstanceId = new Map<string, SessionInstance[]>();
+  await Promise.all(
+    generatedWeeks.map(async (w) => {
+      sessionsByWeekInstanceId.set(w.id, await getSessionInstancesForWeekInstance(w.id));
+    })
+  );
+
+  // Load current template structure for projecting future weeks.
+  const allWeekTemplates = await getAll<WeekTemplate>(STORE_NAMES.weekTemplates);
+  const canonicalWeekTemplate = allWeekTemplates
+    .filter((wt) => wt.seasonTemplateId === seasonTemplate.id)
+    .sort((a, b) => a.order - b.order)[0];
+
+  let weekTemplateItems: WeekTemplateItem[] = [];
+  const sessionTemplateById = new Map<string, SessionTemplate>();
+
+  if (canonicalWeekTemplate) {
+    weekTemplateItems = (
+      await getAllByIndex<WeekTemplateItem>(
+        STORE_NAMES.weekTemplateItems,
+        "byWeekTemplateId",
+        canonicalWeekTemplate.id
+      )
+    ).sort((a, b) => a.order - b.order);
+
+    const stIds = [
+      ...new Set(
+        weekTemplateItems
+          .filter((i) => i.type === "session" && i.sessionTemplateId)
+          .map((i) => i.sessionTemplateId!)
+      ),
+    ];
+    await Promise.all(
+      stIds.map(async (id) => {
+        const st = await getById<SessionTemplate>(STORE_NAMES.sessionTemplates, id);
+        if (st) sessionTemplateById.set(id, st);
+      })
+    );
+  }
+
+  const baseDate = new Date(seasonInstance.startedAt ?? new Date().toISOString());
+  const itemCount = weekTemplateItems.length;
+
+  const result: SeasonCalendarWeek[] = [];
+
+  for (let weekOrder = 1; weekOrder <= weekCount; weekOrder++) {
+    const weekInstance = weekByOrder.get(weekOrder) ?? null;
+    const weekIndex = weekOrder - 1;
+
+    if (weekInstance) {
+      const sessions = (sessionsByWeekInstanceId.get(weekInstance.id) ?? []).map(
+        (si) => ({
+          sessionName: si.sessionName,
+          scheduledDate: si.date,
+          sessionInstance: si,
+        })
+      );
+      const restDayCount =
+        weekTemplateItems.filter((i) => i.type === "rest").length;
+      result.push({ weekOrder, weekInstance, sessions, restDayCount });
+    } else {
+      // Project from the current template — dates are approximate.
+      const sessions = weekTemplateItems
+        .filter((i) => i.type === "session" && i.sessionTemplateId)
+        .map((i) => {
+          const projectedDate = new Date(baseDate);
+          const offsetDays = weekIndex * itemCount + (i.order - 1);
+          projectedDate.setUTCDate(projectedDate.getUTCDate() + offsetDays);
+          const st = sessionTemplateById.get(i.sessionTemplateId!);
+          return {
+            sessionName: st?.name ?? "",
+            scheduledDate: projectedDate.toISOString(),
+            sessionInstance: null,
+          };
+        });
+      const restDayCount = weekTemplateItems.filter((i) => i.type === "rest").length;
+      result.push({ weekOrder, weekInstance: null, sessions, restDayCount });
+    }
+  }
+
+  return result;
+}
+
 export async function getSessionInstancesForWeekInstance(
   weekInstanceId: string
 ): Promise<SessionInstance[]> {
@@ -2079,32 +2198,28 @@ export async function stopSessionInstance(
 
   await putItem(STORE_NAMES.weekInstances, completedWeek);
 
-  const allWeeks = await getAllByIndex<WeekInstance>(
-    STORE_NAMES.weekInstances,
-    "bySeasonInstanceId",
-    weekInstance.seasonInstanceId
-  );
-
-  const nextWeek = allWeeks
-    .filter((candidate) => candidate.order > completedWeek.order)
-    .sort((a, b) => a.order - b.order)[0];
-
-  if (nextWeek && nextWeek.status === "not_started") {
-    const activatedNextWeek: WeekInstance = {
-      ...nextWeek,
-      status: "in_progress",
-      startedAt: nextWeek.startedAt ?? nowIso,
-    };
-
-    await putItem(STORE_NAMES.weekInstances, activatedNextWeek);
-    return updatedSession;
-  }
-
   const currentSeasonInstance = await getSeasonInstanceById(
     weekInstance.seasonInstanceId
   );
+  if (!currentSeasonInstance) return updatedSession;
 
-  if (!currentSeasonInstance) {
+  const seasonTemplate = await getById<SeasonTemplate>(
+    STORE_NAMES.seasonTemplates,
+    currentSeasonInstance.seasonTemplateId
+  );
+  if (!seasonTemplate) return updatedSession;
+
+  const weekCount = seasonTemplate.rirSequence?.length ?? seasonTemplate.plannedWeekCount;
+
+  if (completedWeek.order < weekCount) {
+    // Generate the next week fresh from the current template state. Any edits
+    // made to the program since the last week was generated are picked up here.
+    await populateWeekFromTemplate(
+      seasonTemplate,
+      weekInstance.seasonInstanceId,
+      currentSeasonInstance.startedAt ?? new Date().toISOString(),
+      completedWeek.order + 1
+    );
     return updatedSession;
   }
 
