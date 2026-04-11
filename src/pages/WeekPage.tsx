@@ -10,7 +10,6 @@ import {
   getActiveSeasonInstance,
   getSeasonTemplates,
   getWeekInstanceItemsForCurrentWeek,
-  getWeekInstancesForSeasonInstance,
   startSeasonFromTemplate,
 } from "../repositories/programRepository";
 import "./WeekPage.css";
@@ -47,16 +46,11 @@ export default function WeekPage() {
       setItems(weekItems);
       setSeasonTemplates(templates);
 
-      if (weekItems.length > 0) {
-        const seasonInstanceId = weekItems[0].weekInstance.seasonInstanceId;
-        const allWeekInstances = await getWeekInstancesForSeasonInstance(seasonInstanceId);
-        setTotalWeeks(allWeekInstances.length);
-      }
-
       if (activeSeasonInstance) {
         const matchingTemplate = templates.find(
           (t) => t.id === activeSeasonInstance.seasonTemplateId
         );
+        setTotalWeeks(matchingTemplate?.rirSequence?.length ?? null);
         setRirSequence(matchingTemplate?.rirSequence ?? null);
       }
     } catch (error) {

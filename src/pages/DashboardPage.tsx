@@ -9,6 +9,7 @@ import {
   getLastCompletedSeasonInstance,
   getLastCompletedSessionInstance,
   getLastCompletedWeekInstance,
+  getSeasonCalendarWeeks,
   getSessionInstanceById,
   getSessionInstanceView,
   getSessionInstancesForWeekInstance,
@@ -190,18 +191,20 @@ function computeUpNext(
 async function loadTimeline(
   season: SeasonInstance
 ): Promise<SeasonTimelineData | null> {
-  const [weekInstances, canonicalWeek] = await Promise.all([
-    getWeekInstancesForSeasonInstance(season.id),
+  const [calendarWeeks, canonicalWeek] = await Promise.all([
+    getSeasonCalendarWeeks(season.id),
     getCanonicalWeekTemplateForSeason(season.seasonTemplateId),
   ]);
-  if (!canonicalWeek || weekInstances.length === 0) return null;
+  if (!canonicalWeek || calendarWeeks.length === 0) return null;
 
-  const templateItems = await getWeekTemplateItemsForWeekTemplate(canonicalWeek.id);
+  const templateItems = (
+    await getWeekTemplateItemsForWeekTemplate(canonicalWeek.id)
+  ).sort((a, b) => a.order - b.order);
   const weekLength = templateItems.length;
   if (weekLength === 0) return null;
   if (!season.startedAt) return null;
 
-  const totalWeeks = weekInstances.length;
+  const totalWeeks = calendarWeeks.length;
   const seasonStartMs = toLocalMidnight(season.startedAt).getTime();
   const seasonStartIso = localDateIso(new Date(seasonStartMs));
   const endMs = seasonStartMs + totalWeeks * weekLength * 86400000;
@@ -211,57 +214,68 @@ async function loadTimeline(
   const daysElapsed = Math.max(0, daysBetween(seasonStartIso, today));
   const expectedWeekOrder = Math.min(Math.floor(daysElapsed / weekLength) + 1, totalWeeks);
 
-  const inProgressWeek = weekInstances.find((w) => w.status === "in_progress");
-  const completedCount = weekInstances.filter((w) => w.status === "completed").length;
-  const currentWeekOrder = inProgressWeek?.order ?? Math.min(completedCount + 1, totalWeeks);
+  const inProgressWeek = calendarWeeks.find((w) => w.weekInstance?.status === "in_progress");
+  const completedCount = calendarWeeks.filter((w) => w.weekInstance?.status === "completed").length;
+  const currentWeekOrder = inProgressWeek?.weekOrder ?? Math.min(completedCount + 1, totalWeeks);
 
-  // Load week instance items for every week in parallel
-  const sortedWeeks = [...weekInstances].sort((a, b) => a.order - b.order);
-  const weekItemsPerWeek = await Promise.all(
-    sortedWeeks.map((w) => getWeekInstanceItemsForWeekInstance(w.id))
-  );
-
-  // Build per-day squares
+  // Build per-day squares.
+  // Generated weeks: read actual WeekInstanceItems so completion status is accurate.
+  // Projected (future) weeks: derive from template items — all squares are grey/rest-future.
   const days: DaySquare[] = [];
-  for (let wi = 0; wi < sortedWeeks.length; wi++) {
-    const weekItems = weekItemsPerWeek[wi].sort((a, b) => a.order - b.order);
-    for (const item of weekItems) {
-      const dayIndex = wi * weekLength + (item.order - 1);
-      const scheduledDate = localDateIso(new Date(seasonStartMs + dayIndex * 86400000));
 
-      if (item.type === "rest") {
-        days.push({
-          type: "rest",
-          scheduledDate,
-          status: scheduledDate < today ? "rest-past" : "rest-future",
-        });
-        continue;
-      }
+  for (const calendarWeek of calendarWeeks) {
+    const weekIndex = calendarWeek.weekOrder - 1;
 
-      // Session day — resolve status
-      if (!item.sessionInstanceId) {
-        days.push({ type: "session", scheduledDate, status: scheduledDate < today ? "overdue" : "grey" });
-        continue;
-      }
-      const session = await getSessionInstanceById(item.sessionInstanceId);
-      if (!session) {
-        days.push({ type: "session", scheduledDate, status: "grey" });
-        continue;
-      }
+    if (calendarWeek.weekInstance) {
+      const weekItems = (
+        await getWeekInstanceItemsForWeekInstance(calendarWeek.weekInstance.id)
+      ).sort((a, b) => a.order - b.order);
 
-      if (session.status !== "completed") {
-        days.push({ type: "session", scheduledDate, status: scheduledDate < today ? "overdue" : "grey" });
-        continue;
-      }
+      for (const item of weekItems) {
+        const dayIndex = weekIndex * weekLength + (item.order - 1);
+        const scheduledDate = localDateIso(new Date(seasonStartMs + dayIndex * 86400000));
 
-      const completedDate = session.completedAt
-        ? localDateIso(toLocalMidnight(session.completedAt))
-        : scheduledDate;
-      let status: DaySquareStatus;
-      if (completedDate < scheduledDate) status = "amber";
-      else if (completedDate > scheduledDate) status = "late";
-      else status = "green";
-      days.push({ type: "session", scheduledDate, status });
+        if (item.type === "rest") {
+          days.push({ type: "rest", scheduledDate, status: scheduledDate < today ? "rest-past" : "rest-future" });
+          continue;
+        }
+
+        if (!item.sessionInstanceId) {
+          days.push({ type: "session", scheduledDate, status: scheduledDate < today ? "overdue" : "grey" });
+          continue;
+        }
+
+        const session = await getSessionInstanceById(item.sessionInstanceId);
+        if (!session) {
+          days.push({ type: "session", scheduledDate, status: "grey" });
+          continue;
+        }
+
+        if (session.status !== "completed") {
+          days.push({ type: "session", scheduledDate, status: scheduledDate < today ? "overdue" : "grey" });
+          continue;
+        }
+
+        const completedDate = session.completedAt
+          ? localDateIso(toLocalMidnight(session.completedAt))
+          : scheduledDate;
+        let status: DaySquareStatus;
+        if (completedDate < scheduledDate) status = "amber";
+        else if (completedDate > scheduledDate) status = "late";
+        else status = "green";
+        days.push({ type: "session", scheduledDate, status });
+      }
+    } else {
+      // Future week not yet generated — project from current template.
+      for (const item of templateItems) {
+        const dayIndex = weekIndex * weekLength + (item.order - 1);
+        const scheduledDate = localDateIso(new Date(seasonStartMs + dayIndex * 86400000));
+        if (item.type === "rest") {
+          days.push({ type: "rest", scheduledDate, status: "rest-future" });
+        } else {
+          days.push({ type: "session", scheduledDate, status: "grey" });
+        }
+      }
     }
   }
 
