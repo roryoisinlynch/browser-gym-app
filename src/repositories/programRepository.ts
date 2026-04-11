@@ -83,6 +83,7 @@ export interface SessionInstanceExerciseView {
   sets: AnalyzedExerciseSet[];
   workingSetCount: number;
   warmupSetCount: number;
+  effectiveE1RM: number | null;
 }
 
 export interface SessionInstanceMuscleGroupView {
@@ -1393,6 +1394,7 @@ export async function getSessionInstanceView(
         sets: analyzedSets,
         workingSetCount,
         warmupSetCount,
+        effectiveE1RM,
       });
     }
 

@@ -171,13 +171,10 @@ export default function SessionPage() {
             return aMovementTypeSets - bMovementTypeSets;
           }
 
-          if (a.workingSetCount !== b.workingSetCount) {
-            return a.workingSetCount - b.workingSetCount;
-          }
-
-          return a.exerciseTemplate.exerciseName.localeCompare(
-            b.exerciseTemplate.exerciseName
-          );
+          // Tiebreak by highest historical e1RM descending (heavier compounds first).
+          const aE1RM = a.effectiveE1RM ?? -1;
+          const bE1RM = b.effectiveE1RM ?? -1;
+          return bE1RM - aE1RM;
         });
 
         const totalWorkingSets = group.exercises.reduce(
@@ -192,6 +189,13 @@ export default function SessionPage() {
         };
       })
       .sort((a, b) => {
+        // Groups that have met their volume target sink below incomplete groups.
+        const aComplete = a.totalWorkingSets >= a.sessionTemplateMuscleGroup.targetWorkingSets;
+        const bComplete = b.totalWorkingSets >= b.sessionTemplateMuscleGroup.targetWorkingSets;
+        if (aComplete !== bComplete) {
+          return aComplete ? 1 : -1;
+        }
+
         if (a.totalWorkingSets !== b.totalWorkingSets) {
           return a.totalWorkingSets - b.totalWorkingSets;
         }
