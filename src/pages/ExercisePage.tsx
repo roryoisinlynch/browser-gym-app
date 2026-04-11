@@ -370,6 +370,26 @@ export default function ExercisePage() {
           needsWeightConfig={needsWeightConfig}
         />
 
+        {!isBodyweight && (() => {
+          const reps = exerciseView.exerciseInstance.prescribedRepTarget;
+          if (reps == null) return null;
+          if (reps < 3) {
+            return (
+              <p className="exercise-page__rep-warning">
+                Your target reps for this lift are quite low, which suggests your working weight might be a little high. If you&apos;d like to change this, you can adjust your working weight to something lighter using the button below. You can ignore this warning if you&apos;re happy with the current target reps &amp; weight.
+              </p>
+            );
+          }
+          if (reps > 25) {
+            return (
+              <p className="exercise-page__rep-warning">
+                Your target reps for this lift are quite high, which suggests your working weight might be a little low. If you&apos;d like to change this, you can adjust your working weight to something heavier using the button below. You can ignore this warning if you&apos;re happy with the current target reps &amp; weight.
+              </p>
+            );
+          }
+          return null;
+        })()}
+
         {!isBodyweight && (
           <div className="exercise-page__config-cta-wrap">
             <button
