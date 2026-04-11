@@ -469,9 +469,15 @@ export async function startSeasonFromTemplate(
   if (!seasonTemplate) return undefined;
 
   const existingSeasons = await getAll<SeasonInstance>(STORE_NAMES.seasonInstances);
+
+  // Per-template order: tracks which run of this specific program this is.
   const lastOrder = existingSeasons
     .filter((s) => s.seasonTemplateId === seasonTemplateId)
     .reduce((max, s) => Math.max(max, s.order), 0);
+
+  // Global season number: counts all seasons across all templates so the name
+  // increments continuously even when switching programs or after template deletion.
+  const globalSeasonNumber = existingSeasons.length + 1;
 
   const effectiveStartedAt = startedAt ?? new Date().toISOString();
   const newOrder = lastOrder + 1;
@@ -480,7 +486,7 @@ export async function startSeasonFromTemplate(
   const newSeasonInstance: SeasonInstance = {
     id: newSeasonInstanceId,
     seasonTemplateId,
-    name: `Season ${newOrder}`,
+    name: `Season ${globalSeasonNumber}`,
     order: newOrder,
     status: "in_progress",
     startedAt: effectiveStartedAt,
