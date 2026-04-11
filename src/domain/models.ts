@@ -96,6 +96,38 @@ export interface SessionTemplateMuscleGroup {
 }
 
 /**
+ * Snapshot of a muscle-group section captured at the moment a season is
+ * started. Isolates each season's session structure from future template edits.
+ */
+export interface SessionInstanceMuscleGroup {
+  id: ID;
+  sessionInstanceId: ID;
+  muscleGroupId: ID;
+  order: number;
+  targetWorkingSets: number;
+}
+
+/**
+ * Snapshot of an exercise captured at the moment a season is started.
+ * Carries all attributes needed to prescribe and display the exercise,
+ * isolated from future template edits. prescribedWeight is propagated
+ * from the template whenever the user adjusts their working weight in
+ * settings so that mid-season weight changes still take effect.
+ */
+export interface SessionInstanceExercise {
+  id: ID;
+  sessionInstanceMuscleGroupId: ID;
+  sessionInstanceId: ID;
+  sourceExerciseTemplateId: ID;
+  movementTypeId: ID;
+  exerciseName: string;
+  weightMode: WeightMode;
+  prescribedWeight: number | null;
+  weightIncrement?: number;
+  availableWeights?: number[];
+}
+
+/**
  * Reusable template definition of an exercise.
  */
 export interface ExerciseTemplate {
@@ -175,6 +207,8 @@ export interface SessionInstance {
   seasonInstanceId: ID;
   weekInstanceId: ID;
   sessionTemplateId: ID;
+  /** Snapshot of the session name at season-start, independent of template renames. */
+  sessionName: string;
 
   date: string;
 
@@ -186,13 +220,15 @@ export interface SessionInstance {
 }
 
 /**
- * A performed occurrence of an exercise template inside a session instance.
+ * A performed occurrence of an exercise inside a session instance.
+ * References a SessionInstanceExercise (season-start snapshot) rather than
+ * the live template so historical sessions stay isolated from program edits.
  */
 export interface ExerciseInstance {
   id: ID;
   sessionInstanceId: ID;
-  exerciseTemplateId: ID;
-  exerciseName?: string; // denormalized at creation; enables history lookup after template deletion
+  sessionInstanceExerciseId: ID;
+  exerciseName: string; // denormalized for name-based history lookups
 
   status: InstanceStatus;
 

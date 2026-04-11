@@ -346,8 +346,8 @@ export default function SessionPage() {
   }
 
   async function handleOpenExercise(
-    exerciseTemplateId: string,
-    sessionExerciseInstanceId: string | null
+    sessionInstanceExerciseId: string,
+    existingExerciseInstanceId: string | null
   ) {
     if (!sessionView) {
       return;
@@ -356,9 +356,9 @@ export default function SessionPage() {
     try {
       setIsSaving(true);
 
-      const exerciseInstance = sessionExerciseInstanceId
-        ? { id: sessionExerciseInstanceId }
-        : await ensureExerciseInstance(sessionView.sessionInstance.id, exerciseTemplateId);
+      const exerciseInstance = existingExerciseInstanceId
+        ? { id: existingExerciseInstanceId }
+        : await ensureExerciseInstance(sessionView.sessionInstance.id, sessionInstanceExerciseId);
 
       if (!exerciseInstance) {
         setErrorMessage("Could not open exercise.");
@@ -591,7 +591,7 @@ export default function SessionPage() {
                       {!isCollapsed && (
                         <ul className="exercise-list">
                           {exercises.map(
-                            ({ exerciseTemplate, movementType, exerciseInstance, sets, workingSetCount, warmupSetCount }) => {
+                            ({ sessionInstanceExerciseId, exerciseTemplate, movementType, exerciseInstance, sets, workingSetCount, warmupSetCount }) => {
                               const tone = groupToneMap.get(movementType.name) ?? PALETTE[0];
                               const isBodyweight = exerciseTemplate.weightMode === "bodyweight";
 
@@ -635,7 +635,7 @@ export default function SessionPage() {
                                       .join(" ")}
                                     onClick={() =>
                                       handleOpenExercise(
-                                        exerciseTemplate.id,
+                                        sessionInstanceExerciseId,
                                         exerciseInstance?.id ?? null
                                       )
                                     }

@@ -1,5 +1,5 @@
 const DB_NAME = "browser-gym-app";
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 export const STORE_NAMES = {
   muscleGroups: "muscleGroups",
@@ -14,6 +14,8 @@ export const STORE_NAMES = {
   weekInstances: "weekInstances",
   weekInstanceItems: "weekInstanceItems",
   sessionInstances: "sessionInstances",
+  sessionInstanceMuscleGroups: "sessionInstanceMuscleGroups",
+  sessionInstanceExercises: "sessionInstanceExercises",
   exerciseInstances: "exerciseInstances",
   exerciseSets: "exerciseSets",
   meta: "meta",
@@ -156,13 +158,77 @@ export function openDatabase(): Promise<IDBDatabase> {
         store.createIndex("bySessionInstanceId", "sessionInstanceId", {
           unique: false,
         });
-        store.createIndex("byExerciseTemplateId", "exerciseTemplateId", {
+        store.createIndex("bySessionInstanceExerciseId", "sessionInstanceExerciseId", {
           unique: false,
         });
         store.createIndex(
-          "bySessionAndTemplate",
-          ["sessionInstanceId", "exerciseTemplateId"],
+          "bySessionAndExercise",
+          ["sessionInstanceId", "sessionInstanceExerciseId"],
           { unique: true }
+        );
+      }
+
+      if (oldVersion < 4 && db.objectStoreNames.contains(STORE_NAMES.exerciseInstances)) {
+        // v3→v4: exerciseInstances schema changed — drop old indexes and replace
+        // with the new sessionInstanceExerciseId-based ones. All instance data is
+        // wiped because the field rename is incompatible with the old records.
+        db.deleteObjectStore(STORE_NAMES.exerciseInstances);
+        const store = db.createObjectStore(STORE_NAMES.exerciseInstances, {
+          keyPath: "id",
+        });
+        store.createIndex("bySessionInstanceId", "sessionInstanceId", {
+          unique: false,
+        });
+        store.createIndex("bySessionInstanceExerciseId", "sessionInstanceExerciseId", {
+          unique: false,
+        });
+        store.createIndex(
+          "bySessionAndExercise",
+          ["sessionInstanceId", "sessionInstanceExerciseId"],
+          { unique: true }
+        );
+
+        // Clear all instance stores — season/week/session/set records reference
+        // exerciseInstances so they are all invalid under the new schema.
+        const tx = request.transaction!;
+        for (const storeName of [
+          STORE_NAMES.seasonInstances,
+          STORE_NAMES.weekInstances,
+          STORE_NAMES.weekInstanceItems,
+          STORE_NAMES.sessionInstances,
+          STORE_NAMES.exerciseSets,
+        ] as const) {
+          if (db.objectStoreNames.contains(storeName)) {
+            tx.objectStore(storeName).clear();
+          }
+        }
+      }
+
+      if (!db.objectStoreNames.contains(STORE_NAMES.sessionInstanceMuscleGroups)) {
+        const store = db.createObjectStore(STORE_NAMES.sessionInstanceMuscleGroups, {
+          keyPath: "id",
+        });
+        store.createIndex("bySessionInstanceId", "sessionInstanceId", {
+          unique: false,
+        });
+      }
+
+      if (!db.objectStoreNames.contains(STORE_NAMES.sessionInstanceExercises)) {
+        const store = db.createObjectStore(STORE_NAMES.sessionInstanceExercises, {
+          keyPath: "id",
+        });
+        store.createIndex(
+          "bySessionInstanceMuscleGroupId",
+          "sessionInstanceMuscleGroupId",
+          { unique: false }
+        );
+        store.createIndex("bySessionInstanceId", "sessionInstanceId", {
+          unique: false,
+        });
+        store.createIndex(
+          "bySourceExerciseTemplateId",
+          "sourceExerciseTemplateId",
+          { unique: false }
         );
       }
 

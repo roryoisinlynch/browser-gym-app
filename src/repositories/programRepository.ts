@@ -5,6 +5,8 @@ import type {
   SeasonInstance,
   SeasonTemplate,
   SessionInstance,
+  SessionInstanceExercise,
+  SessionInstanceMuscleGroup,
   SessionTemplate,
   SessionTemplateMuscleGroup,
   WeekInstance,
@@ -77,6 +79,9 @@ export interface AnalyzedExerciseSet {
 }
 
 export interface SessionInstanceExerciseView {
+  /** ID of the SessionInstanceExercise record (season-start snapshot). */
+  sessionInstanceExerciseId: string;
+  /** ExerciseTemplate-shaped object built from the session instance exercise snapshot. */
   exerciseTemplate: ExerciseTemplate;
   movementType: MovementType;
   exerciseInstance: ExerciseInstance | null;
@@ -160,31 +165,27 @@ export interface SetRecord {
 }
 
 export async function getAllSetRecords(): Promise<SetRecord[]> {
-  const [exerciseSets, exerciseInstances, exerciseTemplates, sessionInstances, importedSets] =
+  const [exerciseSets, exerciseInstances, sessionInstances, importedSets] =
     await Promise.all([
       getAll<ExerciseSet>(STORE_NAMES.exerciseSets),
       getAll<ExerciseInstance>(STORE_NAMES.exerciseInstances),
-      getAll<ExerciseTemplate>(STORE_NAMES.exerciseTemplates),
       getAll<SessionInstance>(STORE_NAMES.sessionInstances),
       loadAllImportedSets(),
     ]);
 
   const exerciseInstanceMap = new Map(exerciseInstances.map((i) => [i.id, i]));
-  const exerciseTemplateMap = new Map(exerciseTemplates.map((t) => [t.id, t]));
   const sessionInstanceMap = new Map(sessionInstances.map((s) => [s.id, s]));
 
   const nativeRecords: SetRecord[] = exerciseSets
     .map((set): SetRecord | null => {
       const instance = exerciseInstanceMap.get(set.exerciseInstanceId);
       if (!instance) return null;
-      const template = exerciseTemplateMap.get(instance.exerciseTemplateId);
-      if (!template) return null;
       const session = sessionInstanceMap.get(instance.sessionInstanceId);
       if (!session) return null;
       return {
         id: set.id,
         source: "native" as const,
-        exerciseName: template.exerciseName,
+        exerciseName: instance.exerciseName,
         weight: set.performedWeight ?? null,
         reps: set.performedReps ?? null,
         date: sessionCompletedDate(session),
@@ -296,6 +297,60 @@ async function replicateSeasonWeeks(
     )
   ).sort((a, b) => a.order - b.order);
 
+  // Pre-load exercise structure for every session template referenced in this week.
+  // We do this once outside the week loop so the same snapshot is reused across
+  // all weeks (the template definition is the same for each repeat).
+  const sessionTemplateIds = [
+    ...new Set(
+      weekTemplateItems
+        .filter((i) => i.type === "session" && i.sessionTemplateId)
+        .map((i) => i.sessionTemplateId!)
+    ),
+  ];
+
+  type TemplateStructure = {
+    sessionName: string;
+    groups: Array<{
+      stmg: SessionTemplateMuscleGroup;
+      exercises: ExerciseTemplate[];
+    }>;
+  };
+
+  const templateStructure = new Map<string, TemplateStructure>();
+
+  for (const stId of sessionTemplateIds) {
+    const sessionTemplate = await getById<SessionTemplate>(
+      STORE_NAMES.sessionTemplates,
+      stId
+    );
+    if (!sessionTemplate) continue;
+
+    const stmgs = (
+      await getAllByIndex<SessionTemplateMuscleGroup>(
+        STORE_NAMES.sessionTemplateMuscleGroups,
+        "bySessionTemplateId",
+        stId
+      )
+    ).sort((a, b) => a.order - b.order);
+
+    const groups: TemplateStructure["groups"] = [];
+    for (const stmg of stmgs) {
+      const exercises = (
+        await getAllByIndex<ExerciseTemplate>(
+          STORE_NAMES.exerciseTemplates,
+          "bySessionTemplateMuscleGroupId",
+          stmg.id
+        )
+      ).sort((a, b) => {
+        // Stable ordering: use natural insertion order (id string fallback)
+        return a.id.localeCompare(b.id);
+      });
+      groups.push({ stmg, exercises });
+    }
+
+    templateStructure.set(stId, { sessionName: sessionTemplate.name, groups });
+  }
+
   const weekCount =
     seasonTemplate.rirSequence?.length ?? seasonTemplate.plannedWeekCount;
 
@@ -333,11 +388,14 @@ async function replicateSeasonWeeks(
       const offsetDays = weekIndex * weekTemplateItems.length + (weekTemplateItem.order - 1);
       sessionDate.setUTCDate(sessionDate.getUTCDate() + offsetDays);
 
+      const structure = templateStructure.get(weekTemplateItem.sessionTemplateId);
+
       const newSessionInstance: SessionInstance = {
         id: `session-instance-${newSeasonInstanceId}-${weekOrder}-${weekTemplateItem.id}`,
         seasonInstanceId: newSeasonInstanceId,
         weekInstanceId,
         sessionTemplateId: weekTemplateItem.sessionTemplateId,
+        sessionName: structure?.sessionName ?? "",
         date: sessionDate.toISOString(),
         status: "not_started",
         startedAt: null,
@@ -347,6 +405,38 @@ async function replicateSeasonWeeks(
 
       await putItem(STORE_NAMES.sessionInstances, newSessionInstance);
       sessionInstancesByTemplateItemId.set(weekTemplateItem.id, newSessionInstance);
+
+      // Deep-copy the exercise structure into instance records so this session
+      // is fully isolated from future template edits.
+      if (structure) {
+        for (const { stmg, exercises } of structure.groups) {
+          const simgId = `simg-${newSessionInstance.id}-${stmg.id}`;
+          const simg: SessionInstanceMuscleGroup = {
+            id: simgId,
+            sessionInstanceId: newSessionInstance.id,
+            muscleGroupId: stmg.muscleGroupId,
+            order: stmg.order,
+            targetWorkingSets: stmg.targetWorkingSets,
+          };
+          await putItem(STORE_NAMES.sessionInstanceMuscleGroups, simg);
+
+          for (const exercise of exercises) {
+            const sie: SessionInstanceExercise = {
+              id: `sie-${simgId}-${exercise.id}`,
+              sessionInstanceMuscleGroupId: simgId,
+              sessionInstanceId: newSessionInstance.id,
+              sourceExerciseTemplateId: exercise.id,
+              movementTypeId: exercise.movementTypeId,
+              exerciseName: exercise.exerciseName,
+              weightMode: exercise.weightMode,
+              prescribedWeight: exercise.prescribedWeight ?? null,
+              weightIncrement: exercise.weightIncrement,
+              availableWeights: exercise.availableWeights,
+            };
+            await putItem(STORE_NAMES.sessionInstanceExercises, sie);
+          }
+        }
+      }
     }
 
     for (const weekTemplateItem of weekTemplateItems) {
@@ -402,25 +492,61 @@ export async function startSeasonFromTemplate(
   await putItem(STORE_NAMES.seasonInstances, newSeasonInstance);
   await replicateSeasonWeeks(seasonTemplate, newSeasonInstanceId, effectiveStartedAt);
 
-  // Reset any prescribed weights that now exceed the effective e1RM.
-  // A new season shifts the three-season window, so an older PR that was
-  // previously within range may no longer be "recent", lowering the effective
-  // e1RM below the configured working weight. Clear those weights so the user
-  // is prompted to re-select on the next session rather than being given a
-  // nonsensical (or silently suppressed) prescription.
-  const allTemplates = await getAllExerciseTemplates();
-  const weightedTemplates = allTemplates.filter(
-    (t) => t.weightMode !== "bodyweight" && t.prescribedWeight != null && t.prescribedWeight > 0
+  // Reset prescribed weights on any SessionInstanceExercise records that now
+  // exceed the effective e1RM. A new season shifts the three-season window, so
+  // an older PR that was previously within range may no longer be "recent",
+  // lowering the effective e1RM below the configured working weight. Clear those
+  // weights so the user is prompted to re-select on the next session.
+  // Also reset the canonical template so the next season start starts clean.
+  // Load all SIE records for the new season's sessions
+  const allNewSessionInstances = (await getAll<SessionInstance>(STORE_NAMES.sessionInstances))
+    .filter((s) => s.seasonInstanceId === newSeasonInstanceId);
+  const newSessionIds = new Set(allNewSessionInstances.map((s) => s.id));
+
+  const allNewSies = (
+    await Promise.all(
+      [...newSessionIds].map((sid) =>
+        getAllByIndex<SessionInstanceExercise>(
+          STORE_NAMES.sessionInstanceExercises,
+          "bySessionInstanceId",
+          sid
+        )
+      )
+    )
+  ).flat();
+
+  const weightedNewSies = allNewSies.filter(
+    (s) => s.weightMode !== "bodyweight" && s.prescribedWeight != null && s.prescribedWeight > 0
   );
+
+  const uniqueExerciseNames = [...new Set(weightedNewSies.map((s) => s.exerciseName))];
+  const e1rmByName = new Map<string, number | null>();
   await Promise.all(
-    weightedTemplates.map(async (t) => {
-      const { historicalBest, recentMax } = await getEffectiveE1RM(
-        t.exerciseName,
-        newSeasonInstanceId
-      );
-      const effectiveE1RM = recentMax ?? historicalBest;
-      if (effectiveE1RM == null || t.prescribedWeight! >= effectiveE1RM) {
-        await putItem(STORE_NAMES.exerciseTemplates, { ...t, prescribedWeight: null });
+    uniqueExerciseNames.map(async (name) => {
+      const { historicalBest, recentMax } = await getEffectiveE1RM(name, newSeasonInstanceId);
+      e1rmByName.set(name, recentMax ?? historicalBest);
+    })
+  );
+
+  await Promise.all(
+    weightedNewSies.map(async (sie) => {
+      const effectiveE1RM = e1rmByName.get(sie.exerciseName);
+      if (effectiveE1RM == null || sie.prescribedWeight! >= effectiveE1RM) {
+        await putItem(STORE_NAMES.sessionInstanceExercises, {
+          ...sie,
+          prescribedWeight: null,
+        });
+        // Also reset the canonical template so future seasons start clean.
+        const template = await getById<ExerciseTemplate>(
+          STORE_NAMES.exerciseTemplates,
+          sie.sourceExerciseTemplateId
+        );
+        if (template && template.prescribedWeight != null) {
+          await putItem(STORE_NAMES.exerciseTemplates, {
+            ...template,
+            prescribedWeight: null,
+          });
+        }
       }
     })
   );
@@ -690,19 +816,29 @@ export async function getExerciseSetsForExerciseInstance(
   return sets.sort((a, b) => a.setIndex - b.setIndex);
 }
 
+/**
+ * Returns all exercise sets ever performed for the given template, by:
+ * 1. Finding all SessionInstanceExercise snapshots referencing this template
+ * 2. Finding all ExerciseInstances linked to those snapshots
+ * 3. Collecting all sets for those instances
+ */
 export async function getExerciseSetsForExerciseTemplate(
   exerciseTemplateId: string
 ): Promise<ExerciseSet[]> {
-  const relevantExerciseInstances = await getAllByIndex<ExerciseInstance>(
-    STORE_NAMES.exerciseInstances,
-    "byExerciseTemplateId",
+  const sies = await getAllByIndex<SessionInstanceExercise>(
+    STORE_NAMES.sessionInstanceExercises,
+    "bySourceExerciseTemplateId",
     exerciseTemplateId
   );
 
+  const sieIds = new Set(sies.map((s) => s.id));
+  const allInstances = await getAll<ExerciseInstance>(STORE_NAMES.exerciseInstances);
+  const relevantInstances = allInstances.filter((i) =>
+    sieIds.has(i.sessionInstanceExerciseId)
+  );
+
   const setsByInstance = await Promise.all(
-    relevantExerciseInstances.map((exerciseInstance) =>
-      getExerciseSetsForExerciseInstance(exerciseInstance.id)
-    )
+    relevantInstances.map((i) => getExerciseSetsForExerciseInstance(i.id))
   );
 
   return setsByInstance
@@ -711,7 +847,31 @@ export async function getExerciseSetsForExerciseTemplate(
       if (a.exerciseInstanceId !== b.exerciseInstanceId) {
         return a.exerciseInstanceId.localeCompare(b.exerciseInstanceId);
       }
+      return a.setIndex - b.setIndex;
+    });
+}
 
+/**
+ * Returns all exercise sets ever performed for a given exercise name across
+ * all sessions and imported data. Used for name-based PR detection.
+ */
+async function getExerciseSetsByName(exerciseName: string): Promise<ExerciseSet[]> {
+  const normalizedName = exerciseName.trim().toLowerCase();
+  const allInstances = await getAll<ExerciseInstance>(STORE_NAMES.exerciseInstances);
+  const matching = allInstances.filter(
+    (i) => i.exerciseName.trim().toLowerCase() === normalizedName
+  );
+
+  const setsByInstance = await Promise.all(
+    matching.map((i) => getExerciseSetsForExerciseInstance(i.id))
+  );
+
+  return setsByInstance
+    .flat()
+    .sort((a, b) => {
+      if (a.exerciseInstanceId !== b.exerciseInstanceId) {
+        return a.exerciseInstanceId.localeCompare(b.exerciseInstanceId);
+      }
       return a.setIndex - b.setIndex;
     });
 }
@@ -948,8 +1108,6 @@ export async function getExerciseInstanceView(
     return undefined;
   }
 
-
-  
   const sessionInstance = await getSessionInstanceById(
     exerciseInstance.sessionInstanceId
   );
@@ -981,26 +1139,42 @@ export async function getExerciseInstanceView(
     return undefined;
   }
 
-  const sessionTemplate = await getSessionTemplateById(
-    sessionInstance.sessionTemplateId
+  // Load the session instance exercise snapshot (the season-start copy).
+  const sie = await getById<SessionInstanceExercise>(
+    STORE_NAMES.sessionInstanceExercises,
+    exerciseInstance.sessionInstanceExerciseId
   );
-  if (!sessionTemplate) {
+  if (!sie) {
     return undefined;
   }
 
-  const exerciseTemplate = await getExerciseTemplateById(
-    exerciseInstance.exerciseTemplateId
-  );
-  if (!exerciseTemplate) {
-    return undefined;
-  }
+  // Build a SessionTemplate-shaped view from the instance's stored session name.
+  const sessionTemplate: SessionTemplate = {
+    id: sessionInstance.sessionTemplateId,
+    seasonTemplateId: seasonInstance.seasonTemplateId,
+    name: sessionInstance.sessionName,
+    order: 0,
+  };
 
-  const movementType = await getMovementTypeById(exerciseTemplate.movementTypeId);
+  // Build an ExerciseTemplate-shaped object from the snapshot so all downstream
+  // consumers work without changes.
+  const exerciseTemplate: ExerciseTemplate = {
+    id: sie.sourceExerciseTemplateId,
+    sessionTemplateMuscleGroupId: sie.sessionInstanceMuscleGroupId,
+    movementTypeId: sie.movementTypeId,
+    exerciseName: sie.exerciseName,
+    weightMode: sie.weightMode,
+    prescribedWeight: sie.prescribedWeight,
+    weightIncrement: sie.weightIncrement,
+    availableWeights: sie.availableWeights,
+  };
+
+  const movementType = await getMovementTypeById(sie.movementTypeId);
   if (!movementType) {
     return undefined;
   }
 
-  const isBodyweight = exerciseTemplate.weightMode === "bodyweight";
+  const isBodyweight = sie.weightMode === "bodyweight";
 
   // History is matched by exercise name (not template ID) so that:
   // - Multiple templates for the same exercise (e.g. "Bench Press" in two
@@ -1325,12 +1499,14 @@ export async function getSessionInstanceView(
     return undefined;
   }
 
-  const sessionTemplate = await getSessionTemplateById(
-    sessionInstance.sessionTemplateId
-  );
-  if (!sessionTemplate) {
-    return undefined;
-  }
+  // Build a SessionTemplate-shaped view from the instance's frozen session name
+  // so the display stays correct even if the template is later renamed.
+  const sessionTemplate: SessionTemplate = {
+    id: sessionInstance.sessionTemplateId,
+    seasonTemplateId: seasonInstance.seasonTemplateId,
+    name: sessionInstance.sessionName,
+    order: 0,
+  };
 
   const seasonTemplate = await getSeasonTemplateById(seasonInstance.seasonTemplateId);
 
@@ -1339,75 +1515,86 @@ export async function getSessionInstanceView(
     weekTemplate.targetRir ??
     0;
 
-  const templateGroups = await getSessionTemplateGroupsWithExercises(
-    sessionTemplate.id
-  );
+  // Load the season-start snapshots — the source of truth for this session's
+  // exercise structure, fully isolated from future template edits.
+  const simgs = (
+    await getAllByIndex<SessionInstanceMuscleGroup>(
+      STORE_NAMES.sessionInstanceMuscleGroups,
+      "bySessionInstanceId",
+      sessionInstanceId
+    )
+  ).sort((a, b) => a.order - b.order);
+
+  const allMuscleGroups = await getAll<MuscleGroup>(STORE_NAMES.muscleGroups);
+  const muscleGroupMap = new Map(allMuscleGroups.map((g) => [g.id, g]));
+
+  const allMovementTypes = await getAll<MovementType>(STORE_NAMES.movementTypes);
+  const movementTypeMap = new Map(allMovementTypes.map((m) => [m.id, m]));
 
   const exerciseInstances = await getExerciseInstancesForSessionInstance(
     sessionInstance.id
   );
-
-  // Pre-load soft-deleted templates for instances not matched by any current
-  // template ID, so the fallback below can match them by exercise name.
-  const currentTemplateIds = new Set(
-    templateGroups.flatMap((g) => g.exercises.map((e) => e.exerciseTemplate.id))
+  const instanceBySieId = new Map(
+    exerciseInstances.map((ei) => [ei.sessionInstanceExerciseId, ei])
   );
-  const unmatchedInstances = exerciseInstances.filter(
-    (inst) => !currentTemplateIds.has(inst.exerciseTemplateId)
-  );
-  const softDeletedTemplates = new Map<string, ExerciseTemplate | null>();
-  for (const inst of unmatchedInstances) {
-    if (!softDeletedTemplates.has(inst.exerciseTemplateId)) {
-      softDeletedTemplates.set(
-        inst.exerciseTemplateId,
-        (await getExerciseTemplateById(inst.exerciseTemplateId)) ?? null
-      );
-    }
-  }
-  const claimedInstanceIds = new Set<string>();
 
   const muscleGroups: SessionInstanceMuscleGroupView[] = [];
 
-  for (const { sessionTemplateMuscleGroup, muscleGroup, exercises } of templateGroups) {
+  for (const simg of simgs) {
+    const muscleGroup = muscleGroupMap.get(simg.muscleGroupId);
+    if (!muscleGroup) continue;
+
+    // Build a SessionTemplateMuscleGroup-shaped object so consumers don't need
+    // to know about the instance-level record type.
+    const sessionTemplateMuscleGroup: SessionTemplateMuscleGroup = {
+      id: simg.id,
+      sessionTemplateId: sessionInstance.sessionTemplateId,
+      muscleGroupId: simg.muscleGroupId,
+      order: simg.order,
+      targetWorkingSets: simg.targetWorkingSets,
+    };
+
+    const sies = (
+      await getAllByIndex<SessionInstanceExercise>(
+        STORE_NAMES.sessionInstanceExercises,
+        "bySessionInstanceMuscleGroupId",
+        simg.id
+      )
+    ).sort((a, b) => a.id.localeCompare(b.id));
+
     const hydratedExercises: SessionInstanceExerciseView[] = [];
 
-    for (const { exerciseTemplate, movementType } of exercises) {
-      let exerciseInstance =
-        exerciseInstances.find(
-          (instance) => instance.exerciseTemplateId === exerciseTemplate.id
-        ) ?? null;
+    for (const sie of sies) {
+      const movementType = movementTypeMap.get(sie.movementTypeId);
+      if (!movementType) continue;
 
-      if (exerciseInstance != null) {
-        claimedInstanceIds.add(exerciseInstance.id);
-      } else {
-        // Fallback: look for an unclaimed instance whose soft-deleted template
-        // has the same exercise name as the current template.
-        for (const inst of unmatchedInstances) {
-          if (claimedInstanceIds.has(inst.id)) continue;
-          const oldTemplate = softDeletedTemplates.get(inst.exerciseTemplateId);
-          if (oldTemplate?.exerciseName === exerciseTemplate.exerciseName) {
-            exerciseInstance = inst;
-            claimedInstanceIds.add(inst.id);
-            break;
-          }
-        }
-      }
+      // Build ExerciseTemplate-shaped object from the snapshot.
+      const exerciseTemplate: ExerciseTemplate = {
+        id: sie.sourceExerciseTemplateId,
+        sessionTemplateMuscleGroupId: sie.sessionInstanceMuscleGroupId,
+        movementTypeId: sie.movementTypeId,
+        exerciseName: sie.exerciseName,
+        weightMode: sie.weightMode,
+        prescribedWeight: sie.prescribedWeight,
+        weightIncrement: sie.weightIncrement,
+        availableWeights: sie.availableWeights,
+      };
+
+      const exerciseInstance = instanceBySieId.get(sie.id) ?? null;
 
       const allHistoricalSets = await mergeWithImportedSets(
-        exerciseTemplate.exerciseName,
-        await getExerciseSetsForExerciseTemplate(exerciseTemplate.id)
+        sie.exerciseName,
+        await getExerciseSetsByName(sie.exerciseName)
       );
 
       const currentRawSets = exerciseInstance
         ? allHistoricalSets
-            .filter(
-              (exerciseSet) => exerciseSet.exerciseInstanceId === exerciseInstance.id
-            )
+            .filter((s) => s.exerciseInstanceId === exerciseInstance.id)
             .sort((a, b) => a.setIndex - b.setIndex)
         : [];
 
       const { historicalBest, recentMax } = await getEffectiveE1RM(
-        exerciseTemplate.exerciseName,
+        sie.exerciseName,
         sessionInstance.seasonInstanceId
       );
       const effectiveE1RM = recentMax ?? historicalBest;
@@ -1423,6 +1610,7 @@ export async function getSessionInstanceView(
       ).length;
 
       hydratedExercises.push({
+        sessionInstanceExerciseId: sie.id,
         exerciseTemplate,
         movementType,
         exerciseInstance,
@@ -1598,18 +1786,18 @@ export async function getSessionInstanceListItemsForCurrentWeek(): Promise<
     );
 }
 
-function createExerciseInstanceId(exerciseTemplateId: string) {
-  return `exercise-instance-${exerciseTemplateId}-${Date.now()}`;
+function createExerciseInstanceId(sessionInstanceExerciseId: string) {
+  return `exercise-instance-${sessionInstanceExerciseId}-${Date.now()}`;
 }
 
 export async function ensureExerciseInstance(
   sessionInstanceId: string,
-  exerciseTemplateId: string
+  sessionInstanceExerciseId: string
 ): Promise<ExerciseInstance | undefined> {
   const existing = await getAllByIndex<ExerciseInstance>(
     STORE_NAMES.exerciseInstances,
-    "bySessionAndTemplate",
-    [sessionInstanceId, exerciseTemplateId]
+    "bySessionAndExercise",
+    [sessionInstanceId, sessionInstanceExerciseId]
   );
 
   if (existing[0]) {
@@ -1621,8 +1809,11 @@ export async function ensureExerciseInstance(
     return undefined;
   }
 
-  const exerciseTemplate = await getExerciseTemplateById(exerciseTemplateId);
-  if (!exerciseTemplate) {
+  const sie = await getById<SessionInstanceExercise>(
+    STORE_NAMES.sessionInstanceExercises,
+    sessionInstanceExerciseId
+  );
+  if (!sie) {
     return undefined;
   }
 
@@ -1632,10 +1823,10 @@ export async function ensureExerciseInstance(
     : undefined;
 
   const exerciseInstance: ExerciseInstance = {
-    id: createExerciseInstanceId(exerciseTemplateId),
+    id: createExerciseInstanceId(sessionInstanceExerciseId),
     sessionInstanceId,
-    exerciseTemplateId,
-    exerciseName: exerciseTemplate.exerciseName,
+    sessionInstanceExerciseId,
+    exerciseName: sie.exerciseName,
     status: "not_started",
     startedAt: null,
     completedAt: null,
@@ -1962,107 +2153,167 @@ async function resolvePreviousDate(
  *  - Weighted exercises: top set e1RM must beat all-time prior best e1RM.
  *  - Bodyweight exercises: max reps in a single set must beat all-time prior max reps.
  */
-export async function getSessionPRs(sessionInstanceId: string): Promise<SessionPR[]> {
-  const exerciseInstances = await getExerciseInstancesForSessionInstance(sessionInstanceId);
+/**
+ * Shared PR-detection logic: given a set of exercise instances that are "in
+ * scope" (the session/week/season being checked) and the full corpus of all
+ * exercise instances for the same exercise name, find new all-time PRs.
+ */
+async function detectPRsForInstances(
+  _scopedInstances: ExerciseInstance[],
+  scopedInstanceIds: Set<string>,
+  exerciseName: string,
+  isBodyweight: boolean,
+  priorInstances: ExerciseInstance[]
+): Promise<SessionPR[]> {
   const prs: SessionPR[] = [];
+  const nativeSets = await getExerciseSetsByName(exerciseName);
+  const allSets = await mergeWithImportedSets(exerciseName, nativeSets, isBodyweight);
 
-  for (const exerciseInstance of exerciseInstances) {
-    // Count prior instances of this exercise (excluding current)
-    const allInstances = await getAllByIndex<ExerciseInstance>(
-      STORE_NAMES.exerciseInstances,
-      "byExerciseTemplateId",
-      exerciseInstance.exerciseTemplateId
-    );
-    const priorInstances = allInstances.filter((i) => i.id !== exerciseInstance.id);
-    if (priorInstances.length < 1) continue;
+  const scopedSets = allSets.filter((s) => scopedInstanceIds.has(s.exerciseInstanceId));
+  const priorInstanceIds = new Set(priorInstances.map((i) => i.id));
+  const priorSets = allSets.filter((s) => priorInstanceIds.has(s.exerciseInstanceId));
 
-    const exerciseName = exerciseInstance.exerciseName ?? "Unknown exercise";
-    const exerciseTemplate = await getExerciseTemplateById(exerciseInstance.exerciseTemplateId);
-    const isBodyweight = exerciseTemplate?.weightMode === "bodyweight";
-
-    const nativeSets = await getExerciseSetsForExerciseTemplate(
-      exerciseInstance.exerciseTemplateId
-    );
-    const allSets = await mergeWithImportedSets(exerciseName, nativeSets, isBodyweight);
-
-    const currentSets = allSets.filter((s) => s.exerciseInstanceId === exerciseInstance.id);
-    if (currentSets.length === 0) continue;
-
-    const priorSets = allSets.filter((s) => s.exerciseInstanceId !== exerciseInstance.id);
-
-    if (isBodyweight) {
-      // Bodyweight PR: max reps in a single set.
-      let newMaxReps: number | null = null;
-      let newTopSet: ExerciseSet | null = null;
-      for (const s of currentSets) {
-        if (s.performedReps != null && (newMaxReps === null || s.performedReps > newMaxReps)) {
-          newMaxReps = s.performedReps;
-          newTopSet = s;
-        }
+  if (isBodyweight) {
+    let newMaxReps: number | null = null;
+    let newTopSet: ExerciseSet | null = null;
+    for (const s of scopedSets) {
+      if (s.performedReps != null && (newMaxReps === null || s.performedReps > newMaxReps)) {
+        newMaxReps = s.performedReps;
+        newTopSet = s;
       }
-      if (newMaxReps === null || newTopSet === null) continue;
+    }
+    if (newMaxReps === null || newTopSet === null) return prs;
 
-      let previousMaxReps: number | null = null;
-      let previousTopSet: ExerciseSet | null = null;
-      for (const s of priorSets) {
-        if (s.performedReps != null && (previousMaxReps === null || s.performedReps > previousMaxReps)) {
-          previousMaxReps = s.performedReps;
-          previousTopSet = s;
-        }
+    let previousMaxReps: number | null = null;
+    let previousTopSet: ExerciseSet | null = null;
+    for (const s of priorSets) {
+      if (s.performedReps != null && (previousMaxReps === null || s.performedReps > previousMaxReps)) {
+        previousMaxReps = s.performedReps;
+        previousTopSet = s;
       }
+    }
 
-      if (previousMaxReps === null || newMaxReps > previousMaxReps) {
-        prs.push({
-          prType: "reps",
-          exerciseName,
-          newE1RM: null,
-          newWeight: null,
-          newReps: newMaxReps,
-          previousE1RM: null,
-          previousWeight: null,
-          previousReps: previousMaxReps,
-          previousDate: await resolvePreviousDate(previousTopSet, priorInstances),
-        });
+    if (previousMaxReps === null || newMaxReps > previousMaxReps) {
+      prs.push({
+        prType: "reps",
+        exerciseName,
+        newE1RM: null,
+        newWeight: null,
+        newReps: newMaxReps,
+        previousE1RM: null,
+        previousWeight: null,
+        previousReps: previousMaxReps,
+        previousDate: await resolvePreviousDate(previousTopSet, priorInstances),
+      });
+    }
+  } else {
+    let newE1RM: number | null = null;
+    let newTopSet: ExerciseSet | null = null;
+    for (const s of scopedSets) {
+      const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
+      if (e1rm != null && (newE1RM === null || e1rm > newE1RM)) {
+        newE1RM = e1rm;
+        newTopSet = s;
       }
-    } else {
-      // Weighted PR: best e1RM.
-      let newE1RM: number | null = null;
-      let newTopSet: ExerciseSet | null = null;
-      for (const s of currentSets) {
-        const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
-        if (e1rm != null && (newE1RM === null || e1rm > newE1RM)) {
-          newE1RM = e1rm;
-          newTopSet = s;
-        }
-      }
-      if (newE1RM === null || newTopSet === null) continue;
+    }
+    if (newE1RM === null || newTopSet === null) return prs;
 
-      let previousE1RM: number | null = null;
-      let previousTopSet: ExerciseSet | null = null;
-      for (const s of priorSets) {
-        const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
-        if (e1rm != null && (previousE1RM === null || e1rm > previousE1RM)) {
-          previousE1RM = e1rm;
-          previousTopSet = s;
-        }
+    let previousE1RM: number | null = null;
+    let previousTopSet: ExerciseSet | null = null;
+    for (const s of priorSets) {
+      const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
+      if (e1rm != null && (previousE1RM === null || e1rm > previousE1RM)) {
+        previousE1RM = e1rm;
+        previousTopSet = s;
       }
+    }
 
-      if (previousE1RM === null || newE1RM > previousE1RM) {
-        prs.push({
-          prType: "e1rm",
-          exerciseName,
-          newE1RM,
-          newWeight: newTopSet.performedWeight!,
-          newReps: newTopSet.performedReps!,
-          previousE1RM,
-          previousWeight: previousTopSet?.performedWeight ?? null,
-          previousReps: previousTopSet?.performedReps ?? null,
-          previousDate: await resolvePreviousDate(previousTopSet, priorInstances),
-        });
-      }
+    if (previousE1RM === null || newE1RM > previousE1RM) {
+      prs.push({
+        prType: "e1rm",
+        exerciseName,
+        newE1RM,
+        newWeight: newTopSet.performedWeight!,
+        newReps: newTopSet.performedReps!,
+        previousE1RM,
+        previousWeight: previousTopSet?.performedWeight ?? null,
+        previousReps: previousTopSet?.performedReps ?? null,
+        previousDate: await resolvePreviousDate(previousTopSet, priorInstances),
+      });
     }
   }
 
+  return prs;
+}
+
+/**
+ * Groups exercise instances by normalised exercise name and returns each group
+ * alongside the "prior" instances (all instances for that name NOT in the group)
+ * and whether the exercise is bodyweight.
+ */
+async function groupInstancesByName(
+  scopedInstances: ExerciseInstance[]
+): Promise<
+  Array<{
+    exerciseName: string;
+    scopedInstanceIds: Set<string>;
+    priorInstances: ExerciseInstance[];
+    isBodyweight: boolean;
+  }>
+> {
+  const byName = new Map<string, ExerciseInstance[]>();
+  for (const ei of scopedInstances) {
+    const key = ei.exerciseName.trim().toLowerCase();
+    const list = byName.get(key) ?? [];
+    list.push(ei);
+    byName.set(key, list);
+  }
+
+  const allInstances = await getAll<ExerciseInstance>(STORE_NAMES.exerciseInstances);
+
+  const groups: Awaited<ReturnType<typeof groupInstancesByName>> = [];
+
+  for (const [, instances] of byName) {
+    const exerciseName = instances[0].exerciseName;
+    const normalizedName = exerciseName.trim().toLowerCase();
+    const scopedInstanceIds = new Set(instances.map((i) => i.id));
+
+    const allForName = allInstances.filter(
+      (i) => i.exerciseName.trim().toLowerCase() === normalizedName
+    );
+    const priorInstances = allForName.filter((i) => !scopedInstanceIds.has(i.id));
+
+    if (priorInstances.length < 1) continue;
+
+    // Determine bodyweight status from the SessionInstanceExercise snapshot.
+    const sie = await getById<SessionInstanceExercise>(
+      STORE_NAMES.sessionInstanceExercises,
+      instances[0].sessionInstanceExerciseId
+    );
+    // Fall back to template lookup for robustness.
+    const isBodyweight = sie
+      ? sie.weightMode === "bodyweight"
+      : false;
+
+    groups.push({ exerciseName, scopedInstanceIds, priorInstances, isBodyweight });
+  }
+
+  return groups;
+}
+
+export async function getSessionPRs(sessionInstanceId: string): Promise<SessionPR[]> {
+  const exerciseInstances = await getExerciseInstancesForSessionInstance(sessionInstanceId);
+  const groups = await groupInstancesByName(exerciseInstances);
+  const prs: SessionPR[] = [];
+  for (const g of groups) {
+    prs.push(...await detectPRsForInstances(
+      exerciseInstances.filter((i) => g.scopedInstanceIds.has(i.id)),
+      g.scopedInstanceIds,
+      g.exerciseName,
+      g.isBodyweight,
+      g.priorInstances
+    ));
+  }
   return prs;
 }
 
@@ -2072,123 +2323,28 @@ export async function getSessionPRs(sessionInstanceId: string): Promise<SessionP
  * Returns exercises where the week produced a genuine all-time e1RM PR.
  *
  * Same rules as getSessionPRs, but scoped to the full week:
- *  - Groups all exercise instances across every session in the week by template.
+ *  - Groups all exercise instances across every session in the week by name.
  *  - Must have at least 1 prior instance from OUTSIDE this week.
  *  - The best e1RM achieved anywhere in the week must beat all prior history.
  *  - Multiple PRs for the same exercise within the week collapse into one entry.
  */
 export async function getWeekPRs(weekInstanceId: string): Promise<SessionPR[]> {
   const weekSessions = await getSessionInstancesForWeekInstance(weekInstanceId);
-
   const allWeekExerciseInstances: ExerciseInstance[] = (
-    await Promise.all(
-      weekSessions.map((s) => getExerciseInstancesForSessionInstance(s.id))
-    )
+    await Promise.all(weekSessions.map((s) => getExerciseInstancesForSessionInstance(s.id)))
   ).flat();
 
-  // Group by exercise template ID so multiple sessions for the same exercise collapse.
-  const byTemplate = new Map<string, ExerciseInstance[]>();
-  for (const ei of allWeekExerciseInstances) {
-    const list = byTemplate.get(ei.exerciseTemplateId) ?? [];
-    list.push(ei);
-    byTemplate.set(ei.exerciseTemplateId, list);
-  }
-
+  const groups = await groupInstancesByName(allWeekExerciseInstances);
   const prs: SessionPR[] = [];
-
-  for (const [exerciseTemplateId, weekExerciseInstances] of byTemplate) {
-    const exerciseName = weekExerciseInstances[0].exerciseName ?? "Unknown exercise";
-    const weekInstanceIds = new Set(weekExerciseInstances.map((ei) => ei.id));
-
-    const allInstances = await getAllByIndex<ExerciseInstance>(
-      STORE_NAMES.exerciseInstances,
-      "byExerciseTemplateId",
-      exerciseTemplateId
-    );
-    const priorInstances = allInstances.filter((i) => !weekInstanceIds.has(i.id));
-    if (priorInstances.length < 1) continue;
-
-    const exerciseTemplate = await getExerciseTemplateById(exerciseTemplateId);
-    const isBodyweight = exerciseTemplate?.weightMode === "bodyweight";
-
-    const nativeSets = await getExerciseSetsForExerciseTemplate(exerciseTemplateId);
-    const allSets = await mergeWithImportedSets(exerciseName, nativeSets, isBodyweight);
-
-    const weekSets = allSets.filter((s) => weekInstanceIds.has(s.exerciseInstanceId));
-    const priorInstanceIds = new Set(priorInstances.map((i) => i.id));
-    const priorSets = allSets.filter((s) => priorInstanceIds.has(s.exerciseInstanceId));
-
-    if (isBodyweight) {
-      let newMaxReps: number | null = null;
-      let newTopSet: ExerciseSet | null = null;
-      for (const s of weekSets) {
-        if (s.performedReps != null && (newMaxReps === null || s.performedReps > newMaxReps)) {
-          newMaxReps = s.performedReps;
-          newTopSet = s;
-        }
-      }
-      if (newMaxReps === null || newTopSet === null) continue;
-
-      let previousMaxReps: number | null = null;
-      let previousTopSet: ExerciseSet | null = null;
-      for (const s of priorSets) {
-        if (s.performedReps != null && (previousMaxReps === null || s.performedReps > previousMaxReps)) {
-          previousMaxReps = s.performedReps;
-          previousTopSet = s;
-        }
-      }
-
-      if (previousMaxReps === null || newMaxReps > previousMaxReps) {
-        prs.push({
-          prType: "reps",
-          exerciseName,
-          newE1RM: null,
-          newWeight: null,
-          newReps: newMaxReps,
-          previousE1RM: null,
-          previousWeight: null,
-          previousReps: previousMaxReps,
-          previousDate: await resolvePreviousDate(previousTopSet, priorInstances),
-        });
-      }
-    } else {
-      let newE1RM: number | null = null;
-      let newTopSet: ExerciseSet | null = null;
-      for (const s of weekSets) {
-        const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
-        if (e1rm != null && (newE1RM === null || e1rm > newE1RM)) {
-          newE1RM = e1rm;
-          newTopSet = s;
-        }
-      }
-      if (newE1RM === null || newTopSet === null) continue;
-
-      let previousE1RM: number | null = null;
-      let previousTopSet: ExerciseSet | null = null;
-      for (const s of priorSets) {
-        const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
-        if (e1rm != null && (previousE1RM === null || e1rm > previousE1RM)) {
-          previousE1RM = e1rm;
-          previousTopSet = s;
-        }
-      }
-
-      if (previousE1RM === null || newE1RM > previousE1RM) {
-        prs.push({
-          prType: "e1rm",
-          exerciseName,
-          newE1RM,
-          newWeight: newTopSet.performedWeight!,
-          newReps: newTopSet.performedReps!,
-          previousE1RM,
-          previousWeight: previousTopSet?.performedWeight ?? null,
-          previousReps: previousTopSet?.performedReps ?? null,
-          previousDate: await resolvePreviousDate(previousTopSet, priorInstances),
-        });
-      }
-    }
+  for (const g of groups) {
+    prs.push(...await detectPRsForInstances(
+      allWeekExerciseInstances.filter((i) => g.scopedInstanceIds.has(i.id)),
+      g.scopedInstanceIds,
+      g.exerciseName,
+      g.isBodyweight,
+      g.priorInstances
+    ));
   }
-
   return prs;
 }
 
@@ -2198,7 +2354,7 @@ export async function getWeekPRs(weekInstanceId: string): Promise<SessionPR[]> {
  * Returns exercises where the season produced a genuine all-time e1RM PR.
  *
  * Same rules as getWeekPRs, but scoped to the full season:
- *  - Groups all exercise instances across every session in every week of the season.
+ *  - Groups all exercise instances across every session in every week by name.
  *  - Must have at least 1 prior instance from OUTSIDE this season.
  *  - The best e1RM achieved anywhere in the season must beat all prior history.
  *  - Multiple PRs for the same exercise within the season collapse into one entry.
@@ -2206,121 +2362,24 @@ export async function getWeekPRs(weekInstanceId: string): Promise<SessionPR[]> {
  */
 export async function getSeasonPRs(seasonInstanceId: string): Promise<SessionPR[]> {
   const seasonWeeks = await getWeekInstancesForSeasonInstance(seasonInstanceId);
-
   const allSeasonSessions: SessionInstance[] = (
-    await Promise.all(
-      seasonWeeks.map((w) => getSessionInstancesForWeekInstance(w.id))
-    )
+    await Promise.all(seasonWeeks.map((w) => getSessionInstancesForWeekInstance(w.id)))
   ).flat();
-
   const allSeasonExerciseInstances: ExerciseInstance[] = (
-    await Promise.all(
-      allSeasonSessions.map((s) => getExerciseInstancesForSessionInstance(s.id))
-    )
+    await Promise.all(allSeasonSessions.map((s) => getExerciseInstancesForSessionInstance(s.id)))
   ).flat();
 
-  const byTemplate = new Map<string, ExerciseInstance[]>();
-  for (const ei of allSeasonExerciseInstances) {
-    const list = byTemplate.get(ei.exerciseTemplateId) ?? [];
-    list.push(ei);
-    byTemplate.set(ei.exerciseTemplateId, list);
-  }
-
+  const groups = await groupInstancesByName(allSeasonExerciseInstances);
   const prs: SessionPR[] = [];
-
-  for (const [exerciseTemplateId, seasonExerciseInstances] of byTemplate) {
-    const exerciseName = seasonExerciseInstances[0].exerciseName ?? "Unknown exercise";
-    const seasonExInstanceIds = new Set(seasonExerciseInstances.map((ei) => ei.id));
-
-    const allInstances = await getAllByIndex<ExerciseInstance>(
-      STORE_NAMES.exerciseInstances,
-      "byExerciseTemplateId",
-      exerciseTemplateId
-    );
-    const priorInstances = allInstances.filter((i) => !seasonExInstanceIds.has(i.id));
-    if (priorInstances.length < 1) continue;
-
-    const exerciseTemplate = await getExerciseTemplateById(exerciseTemplateId);
-    const isBodyweight = exerciseTemplate?.weightMode === "bodyweight";
-
-    const nativeSets = await getExerciseSetsForExerciseTemplate(exerciseTemplateId);
-    const allSets = await mergeWithImportedSets(exerciseName, nativeSets, isBodyweight);
-
-    const seasonSets = allSets.filter((s) => seasonExInstanceIds.has(s.exerciseInstanceId));
-    const priorInstanceIds = new Set(priorInstances.map((i) => i.id));
-    const priorSets = allSets.filter((s) => priorInstanceIds.has(s.exerciseInstanceId));
-
-    if (isBodyweight) {
-      let newMaxReps: number | null = null;
-      let newTopSet: ExerciseSet | null = null;
-      for (const s of seasonSets) {
-        if (s.performedReps != null && (newMaxReps === null || s.performedReps > newMaxReps)) {
-          newMaxReps = s.performedReps;
-          newTopSet = s;
-        }
-      }
-      if (newMaxReps === null || newTopSet === null) continue;
-
-      let previousMaxReps: number | null = null;
-      let previousTopSet: ExerciseSet | null = null;
-      for (const s of priorSets) {
-        if (s.performedReps != null && (previousMaxReps === null || s.performedReps > previousMaxReps)) {
-          previousMaxReps = s.performedReps;
-          previousTopSet = s;
-        }
-      }
-
-      if (previousMaxReps === null || newMaxReps > previousMaxReps) {
-        prs.push({
-          prType: "reps",
-          exerciseName,
-          newE1RM: null,
-          newWeight: null,
-          newReps: newMaxReps,
-          previousE1RM: null,
-          previousWeight: null,
-          previousReps: previousMaxReps,
-          previousDate: await resolvePreviousDate(previousTopSet, priorInstances),
-        });
-      }
-    } else {
-      let newE1RM: number | null = null;
-      let newTopSet: ExerciseSet | null = null;
-      for (const s of seasonSets) {
-        const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
-        if (e1rm != null && (newE1RM === null || e1rm > newE1RM)) {
-          newE1RM = e1rm;
-          newTopSet = s;
-        }
-      }
-      if (newE1RM === null || newTopSet === null) continue;
-
-      let previousE1RM: number | null = null;
-      let previousTopSet: ExerciseSet | null = null;
-      for (const s of priorSets) {
-        const e1rm = calculateEstimatedOneRepMax(s.performedWeight, s.performedReps);
-        if (e1rm != null && (previousE1RM === null || e1rm > previousE1RM)) {
-          previousE1RM = e1rm;
-          previousTopSet = s;
-        }
-      }
-
-      if (previousE1RM === null || newE1RM > previousE1RM) {
-        prs.push({
-          prType: "e1rm",
-          exerciseName,
-          newE1RM,
-          newWeight: newTopSet.performedWeight!,
-          newReps: newTopSet.performedReps!,
-          previousE1RM,
-          previousWeight: previousTopSet?.performedWeight ?? null,
-          previousReps: previousTopSet?.performedReps ?? null,
-          previousDate: await resolvePreviousDate(previousTopSet, priorInstances),
-        });
-      }
-    }
+  for (const g of groups) {
+    prs.push(...await detectPRsForInstances(
+      allSeasonExerciseInstances.filter((i) => g.scopedInstanceIds.has(i.id)),
+      g.scopedInstanceIds,
+      g.exerciseName,
+      g.isBodyweight,
+      g.priorInstances
+    ));
   }
-
   return prs;
 }
 
@@ -2580,15 +2639,15 @@ export async function deleteSessionTemplateMuscleGroupById(
     id
   );
   for (const exercise of exercises) {
-    // Soft-delete: preserve templates that have historical exercise instance
-    // data so the name-based fallback in getSessionInstanceView can still
-    // find them. Templates with no history are safe to hard-delete.
-    const instances = await getAllByIndex<ExerciseInstance>(
-      STORE_NAMES.exerciseInstances,
-      "byExerciseTemplateId",
+    // Only hard-delete templates that have never been snapshotted into a season.
+    // Templates with SessionInstanceExercise records are still referenced by
+    // historical session instance data and must be kept.
+    const sies = await getAllByIndex<SessionInstanceExercise>(
+      STORE_NAMES.sessionInstanceExercises,
+      "bySourceExerciseTemplateId",
       exercise.id
     );
-    if (instances.length === 0) {
+    if (sies.length === 0) {
       await deleteItem(STORE_NAMES.exerciseTemplates, exercise.id);
     }
   }
@@ -2599,8 +2658,44 @@ export async function saveExerciseTemplate(
   template: ExerciseTemplate
 ): Promise<void> {
   await putItem(STORE_NAMES.exerciseTemplates, template);
+
+  // Propagate weight-related changes to all SessionInstanceExercise snapshots
+  // so that mid-season weight adjustments take effect immediately.
+  const sies = await getAllByIndex<SessionInstanceExercise>(
+    STORE_NAMES.sessionInstanceExercises,
+    "bySourceExerciseTemplateId",
+    template.id
+  );
+  for (const sie of sies) {
+    const updated: SessionInstanceExercise = {
+      ...sie,
+      prescribedWeight: template.prescribedWeight ?? null,
+      weightMode: template.weightMode,
+      weightIncrement: template.weightIncrement,
+      availableWeights: template.availableWeights,
+    };
+    await putItem(STORE_NAMES.sessionInstanceExercises, updated);
+  }
 }
 
 export async function deleteExerciseTemplateById(id: string): Promise<void> {
   await deleteItem(STORE_NAMES.exerciseTemplates, id);
+}
+
+// ─── Session instance exercise store CRUD ────────────────────────────────────
+
+export async function getSessionInstanceExercisesForSession(
+  sessionInstanceId: string
+): Promise<SessionInstanceExercise[]> {
+  return getAllByIndex<SessionInstanceExercise>(
+    STORE_NAMES.sessionInstanceExercises,
+    "bySessionInstanceId",
+    sessionInstanceId
+  );
+}
+
+export async function saveSessionInstanceExercise(
+  sie: SessionInstanceExercise
+): Promise<void> {
+  await putItem(STORE_NAMES.sessionInstanceExercises, sie);
 }

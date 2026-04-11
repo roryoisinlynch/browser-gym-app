@@ -5,7 +5,7 @@ import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import "./BackupPage.css";
 
-const BACKUP_VERSION = 1;
+const BACKUP_VERSION = 2;
 
 type StoreData = Record<string, unknown[]>;
 
@@ -123,6 +123,15 @@ export default function BackupPage() {
 
   async function handleRestore() {
     if (!importFile) return;
+    if (importFile.version < BACKUP_VERSION) {
+      setImportError(
+        `This backup was created with an older version of the app (backup version ${importFile.version}, ` +
+        `current version ${BACKUP_VERSION}). The data model has changed in a way that is not ` +
+        `backward-compatible, so this backup cannot be restored automatically. ` +
+        `Please contact support or use the data migration tool.`
+      );
+      return;
+    }
     const confirmed = window.confirm(
       "This will replace all current data with the contents of the backup. This cannot be undone. Continue?"
     );
