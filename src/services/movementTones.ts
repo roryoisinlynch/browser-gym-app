@@ -2,23 +2,24 @@ export type MovementTone = {
   bg: string;
   text: string;
   border: string;
+  hue: number;
 };
 
 // 12 pastel tones spread across the colour wheel (~30° steps).
 // Slot index is the stable identity used to detect within-group collisions.
 export const PALETTE: MovementTone[] = [
-  { bg: "#fce6e4", text: "#8a4a40", border: "#f2ccc8" }, //  0 red-orange  ~10°
-  { bg: "#fff0e7", text: "#9a6b56", border: "#f2d9ca" }, //  1 orange      ~28°
-  { bg: "#fff4df", text: "#8c6d3f", border: "#efddba" }, //  2 amber       ~48°
-  { bg: "#eef8df", text: "#5a7840", border: "#cde8b0" }, //  3 lime        ~88°
-  { bg: "#e7f5ea", text: "#56785f", border: "#9fcbb0" }, //  4 green      ~125°
-  { bg: "#e0f5ec", text: "#4a7860", border: "#b8e8d0" }, //  5 seafoam    ~158°
-  { bg: "#e0f8f8", text: "#4a7878", border: "#b8e8e8" }, //  6 teal       ~182°
-  { bg: "#e4eefb", text: "#4f6a94", border: "#c8d8f5" }, //  7 sky        ~210°
-  { bg: "#eaeaf8", text: "#585888", border: "#c8c8f0" }, //  8 indigo     ~238°
-  { bg: "#eeeaff", text: "#6a5a90", border: "#ddd4f5" }, //  9 violet     ~262°
-  { bg: "#f8e0f5", text: "#884878", border: "#f0c0e8" }, // 10 fuchsia    ~300°
-  { bg: "#fce4ef", text: "#8a4860", border: "#f5c8dc" }, // 11 pink       ~328°
+  { bg: "#fce6e4", text: "#8a4a40", border: "#f2ccc8", hue:  10 }, //  0 red-orange
+  { bg: "#fff0e7", text: "#9a6b56", border: "#f2d9ca", hue:  28 }, //  1 orange
+  { bg: "#fff4df", text: "#8c6d3f", border: "#efddba", hue:  48 }, //  2 amber
+  { bg: "#eef8df", text: "#5a7840", border: "#cde8b0", hue:  88 }, //  3 lime
+  { bg: "#e7f5ea", text: "#56785f", border: "#9fcbb0", hue: 125 }, //  4 green
+  { bg: "#e0f5ec", text: "#4a7860", border: "#b8e8d0", hue: 158 }, //  5 seafoam
+  { bg: "#e0f8f8", text: "#4a7878", border: "#b8e8e8", hue: 182 }, //  6 teal
+  { bg: "#e4eefb", text: "#4f6a94", border: "#c8d8f5", hue: 210 }, //  7 sky
+  { bg: "#eaeaf8", text: "#585888", border: "#c8c8f0", hue: 238 }, //  8 indigo
+  { bg: "#eeeaff", text: "#6a5a90", border: "#ddd4f5", hue: 262 }, //  9 violet
+  { bg: "#f8e0f5", text: "#884878", border: "#f0c0e8", hue: 300 }, // 10 fuchsia
+  { bg: "#fce4ef", text: "#8a4860", border: "#f5c8dc", hue: 328 }, // 11 pink
 ];
 
 // Named movement type → palette slot.
@@ -61,8 +62,26 @@ export function normaliseMovementTypeKey(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, "_");
 }
 
+function hueDistance(a: number, b: number): number {
+  const diff = Math.abs(a - b) % 360;
+  return diff > 180 ? 360 - diff : diff;
+}
+
+// Returns the minimum angular hue distance from the given slot to any
+// already-used slot. Returns 360 if no slots are used yet.
+function minDistanceToUsed(slot: number, usedSlots: Set<number>): number {
+  if (usedSlots.size === 0) return 360;
+  let min = 360;
+  for (const used of usedSlots) {
+    const d = hueDistance(PALETTE[slot].hue, PALETTE[used].hue);
+    if (d < min) min = d;
+  }
+  return min;
+}
+
 // Build a tone map for a set of exercises, guaranteeing that no two
-// movement types share the same palette slot.
+// movement types share the same palette slot, and choosing fallback slots
+// to maximise contrast with already-assigned colours.
 export function buildGroupToneMap(
   exercises: Array<{ movementType: { name: string } }>
 ): Map<string, MovementTone> {
@@ -87,19 +106,28 @@ export function buildGroupToneMap(
     }
   }
 
-  // Second pass: assign remaining types (unknown names or preferred-slot conflicts)
-  // to the first unused palette slot.
+  // Second pass: assign remaining types (unknown names or preferred-slot
+  // conflicts) to whichever unused slot maximises contrast with the colours
+  // already assigned in this group.
   for (const name of distinctNames) {
     if (map.has(name)) continue;
+
+    let bestSlot = -1;
+    let bestDistance = -1;
     for (let i = 0; i < PALETTE.length; i++) {
-      if (!usedSlots.has(i)) {
-        map.set(name, PALETTE[i]);
-        usedSlots.add(i);
-        break;
+      if (usedSlots.has(i)) continue;
+      const dist = minDistanceToUsed(i, usedSlots);
+      if (dist > bestDistance) {
+        bestDistance = dist;
+        bestSlot = i;
       }
     }
-    // Safety fallback if all 12 slots are somehow exhausted.
-    if (!map.has(name)) {
+
+    if (bestSlot >= 0) {
+      map.set(name, PALETTE[bestSlot]);
+      usedSlots.add(bestSlot);
+    } else {
+      // Safety fallback if all 12 slots are somehow exhausted.
       map.set(name, PALETTE[distinctNames.indexOf(name) % PALETTE.length]);
     }
   }
