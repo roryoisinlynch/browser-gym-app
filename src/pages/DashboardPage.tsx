@@ -52,8 +52,7 @@ interface SeasonTimelineData {
   startDate: string;
   endDate: string;
   totalWeeks: number;
-  weekLength: number;
-  days: DaySquare[];
+  weeks: DaySquare[][];
   currentWeekOrder: number;
   expectedWeekOrder: number;
 }
@@ -200,31 +199,26 @@ async function loadTimeline(
   const templateItems = (
     await getWeekTemplateItemsForWeekTemplate(canonicalWeek.id)
   ).sort((a, b) => a.order - b.order);
-  const weekLength = templateItems.length;
-  if (weekLength === 0) return null;
+  if (templateItems.length === 0) return null;
   if (!season.startedAt) return null;
 
   const totalWeeks = calendarWeeks.length;
   const seasonStartMs = toLocalMidnight(season.startedAt).getTime();
   const seasonStartIso = localDateIso(new Date(seasonStartMs));
-  const endMs = seasonStartMs + totalWeeks * weekLength * 86400000;
-  const endDate = localDateIso(new Date(endMs));
-
   const today = localDateIso();
-  const daysElapsed = Math.max(0, daysBetween(seasonStartIso, today));
-  const expectedWeekOrder = Math.min(Math.floor(daysElapsed / weekLength) + 1, totalWeeks);
 
   const inProgressWeek = calendarWeeks.find((w) => w.weekInstance?.status === "in_progress");
   const completedCount = calendarWeeks.filter((w) => w.weekInstance?.status === "completed").length;
   const currentWeekOrder = inProgressWeek?.weekOrder ?? Math.min(completedCount + 1, totalWeeks);
 
-  // Build per-day squares.
-  // Generated weeks: read actual WeekInstanceItems so completion status is accurate.
-  // Projected (future) weeks: derive from template items — all squares are grey/rest-future.
-  const days: DaySquare[] = [];
+  // Build one DaySquare[] per week. Keeping weeks separate avoids the
+  // misalignment that occurs when generated and projected weeks have different
+  // lengths (e.g. a day was added to the template mid-season).
+  const weeks: DaySquare[][] = [];
+  let dayOffset = 0; // running total of days across all weeks (handles variable week lengths)
 
   for (const calendarWeek of calendarWeeks) {
-    const weekIndex = calendarWeek.weekOrder - 1;
+    const weekSquares: DaySquare[] = [];
 
     if (calendarWeek.weekInstance) {
       const weekItems = (
@@ -232,27 +226,28 @@ async function loadTimeline(
       ).sort((a, b) => a.order - b.order);
 
       for (const item of weekItems) {
-        const dayIndex = weekIndex * weekLength + (item.order - 1);
-        const scheduledDate = localDateIso(new Date(seasonStartMs + dayIndex * 86400000));
+        const scheduledDate = localDateIso(
+          new Date(seasonStartMs + (dayOffset + item.order - 1) * 86400000)
+        );
 
         if (item.type === "rest") {
-          days.push({ type: "rest", scheduledDate, status: scheduledDate < today ? "rest-past" : "rest-future" });
+          weekSquares.push({ type: "rest", scheduledDate, status: scheduledDate < today ? "rest-past" : "rest-future" });
           continue;
         }
 
         if (!item.sessionInstanceId) {
-          days.push({ type: "session", scheduledDate, status: scheduledDate < today ? "overdue" : "grey" });
+          weekSquares.push({ type: "session", scheduledDate, status: scheduledDate < today ? "overdue" : "grey" });
           continue;
         }
 
         const session = await getSessionInstanceById(item.sessionInstanceId);
         if (!session) {
-          days.push({ type: "session", scheduledDate, status: "grey" });
+          weekSquares.push({ type: "session", scheduledDate, status: "grey" });
           continue;
         }
 
         if (session.status !== "completed") {
-          days.push({ type: "session", scheduledDate, status: scheduledDate < today ? "overdue" : "grey" });
+          weekSquares.push({ type: "session", scheduledDate, status: scheduledDate < today ? "overdue" : "grey" });
           continue;
         }
 
@@ -263,28 +258,45 @@ async function loadTimeline(
         if (completedDate < scheduledDate) status = "amber";
         else if (completedDate > scheduledDate) status = "late";
         else status = "green";
-        days.push({ type: "session", scheduledDate, status });
+        weekSquares.push({ type: "session", scheduledDate, status });
       }
+
+      dayOffset += weekItems.length;
     } else {
-      // Future week not yet generated — project from current template.
+      // Future week not yet generated — project from the current template.
       for (const item of templateItems) {
-        const dayIndex = weekIndex * weekLength + (item.order - 1);
-        const scheduledDate = localDateIso(new Date(seasonStartMs + dayIndex * 86400000));
+        const scheduledDate = localDateIso(
+          new Date(seasonStartMs + (dayOffset + item.order - 1) * 86400000)
+        );
         if (item.type === "rest") {
-          days.push({ type: "rest", scheduledDate, status: "rest-future" });
+          weekSquares.push({ type: "rest", scheduledDate, status: "rest-future" });
         } else {
-          days.push({ type: "session", scheduledDate, status: "grey" });
+          weekSquares.push({ type: "session", scheduledDate, status: "grey" });
         }
       }
+
+      dayOffset += templateItems.length;
     }
+
+    weeks.push(weekSquares);
   }
+
+  const lastWeekSquares = weeks[weeks.length - 1] ?? [];
+  const endDate = lastWeekSquares[lastWeekSquares.length - 1]?.scheduledDate ?? seasonStartIso;
+
+  // expectedWeekOrder: find which week contains today by its first scheduled date.
+  let expectedWeekOrder = 1;
+  for (let i = 0; i < weeks.length; i++) {
+    const firstDate = weeks[i][0]?.scheduledDate;
+    if (firstDate && firstDate <= today) expectedWeekOrder = i + 1;
+  }
+  expectedWeekOrder = Math.min(expectedWeekOrder, totalWeeks);
 
   return {
     startDate: seasonStartIso,
     endDate,
     totalWeeks,
-    weekLength,
-    days,
+    weeks,
     currentWeekOrder,
     expectedWeekOrder,
   };
@@ -590,16 +602,10 @@ export default function DashboardPage() {
       );
     }
     if (!seasonTimeline) return null;
-    const { startDate, endDate, days, weekLength, currentWeekOrder, expectedWeekOrder, totalWeeks } = seasonTimeline;
+    const { startDate, endDate, weeks, currentWeekOrder, expectedWeekOrder, totalWeeks } = seasonTimeline;
     const isAhead = currentWeekOrder > expectedWeekOrder;
     const isBehind = currentWeekOrder < expectedWeekOrder;
     const today = localDateIso();
-
-    // Chunk days into per-week rows
-    const weekRows: DaySquare[][] = [];
-    for (let i = 0; i < days.length; i += weekLength) {
-      weekRows.push(days.slice(i, i + weekLength));
-    }
 
     const statusLabel = isAhead ? "Ahead of schedule" : isBehind ? "Behind schedule" : "On schedule";
     const statusClass = isAhead ? "dashboard-timeline__status--ahead"
@@ -613,7 +619,7 @@ export default function DashboardPage() {
           <div className="dashboard-timeline__body">
             {/* Left: week-row grid — auto-sizing squares to fill 50% width */}
             <div className="dashboard-timeline__grid">
-              {weekRows.map((week, wi) => (
+              {weeks.map((week, wi) => (
                 <div key={wi} className="dashboard-timeline__week-row">
                   <span className="dashboard-timeline__week-label">W{wi + 1}</span>
                   <div className="dashboard-timeline__days">
@@ -653,9 +659,10 @@ export default function DashboardPage() {
 
           {/* Legend */}
           {(() => {
-            const statuses = new Set(days.map((d) => d.status));
-            const hasRest = days.some((d) => d.type === "rest");
-            const todayDay = days.find((d) => d.scheduledDate === today);
+            const allSquares = weeks.flat();
+            const statuses = new Set(allSquares.map((d) => d.status));
+            const hasRest = allSquares.some((d) => d.type === "rest");
+            const todayDay = allSquares.find((d) => d.scheduledDate === today);
 
             function chip(key: string, icon: React.ReactNode, label: string) {
               return (
