@@ -1120,7 +1120,8 @@ function buildAnalyzedSetList(
   allHistoricalSets: ExerciseSet[],
   effectiveE1RM: number | null = null,
   effectiveBaselineReps: number | null = null,
-  prescribedRepTarget: number | null = null
+  prescribedRepTarget: number | null = null,
+  prescribedWeight: number | null = null
 ): AnalyzedExerciseSet[] {
   return currentSets.map((set) => {
     const priorSets = allHistoricalSets.filter((candidate) => {
@@ -1135,7 +1136,7 @@ function buildAnalyzedSetList(
 
     return {
       set,
-      analysis: analyzeSet(set, priorSets, effectiveE1RM, effectiveBaselineReps, prescribedRepTarget),
+      analysis: analyzeSet(set, priorSets, effectiveE1RM, effectiveBaselineReps, prescribedRepTarget, prescribedWeight),
     };
   });
 }
@@ -1515,7 +1516,8 @@ export async function getExerciseInstanceView(
       allHistoricalSets,
       recentMaxEstimatedOneRepMax ?? historicalBestEstimatedOneRepMax,
       recentMaxReps ?? historicalBestReps,
-      exerciseInstance.prescribedRepTarget ?? null
+      exerciseInstance.prescribedRepTarget ?? null,
+      exerciseInstance.prescribedWeight ?? null
     ),
   };
 }
@@ -1655,7 +1657,7 @@ export async function getSessionInstanceView(
       const effectiveBaselineReps =
         sie.weightMode === "bodyweight" ? (recentMaxReps ?? historicalBestReps) : null;
 
-      const analyzedSets = buildAnalyzedSetList(currentRawSets, allHistoricalSets, effectiveE1RM, effectiveBaselineReps, exerciseInstance?.prescribedRepTarget ?? null);
+      const analyzedSets = buildAnalyzedSetList(currentRawSets, allHistoricalSets, effectiveE1RM, effectiveBaselineReps, exerciseInstance?.prescribedRepTarget ?? null, exerciseInstance?.prescribedWeight ?? null);
 
       const workingSetCount = analyzedSets.filter(
         (item) => item.analysis.setType === "working"

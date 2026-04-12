@@ -100,17 +100,21 @@ const BODYWEIGHT_WARMUP_RIR_THRESHOLD = 4;
  * that baseline exceeds 4 — the same RIR cutoff used for weighted exercises
  * (60% e1RM ≈ 6 RPE ≈ 4 RIR).
  *
- * Pass prescribedRepTarget to use the session's rep target as the primary
- * warmup/working boundary. This prevents a set from being miscounted as warmup
- * when the prescribed target falls inside what the heuristic would call warmup
- * territory, and ensures any below-target set is always treated as ramp-up.
+ * Pass prescribedWeight + prescribedRepTarget to adjust the warmup threshold
+ * when the prescription falls in otherwise-warmup territory. For weighted
+ * exercises, the threshold is pulled down to the target's e1RM so any set
+ * whose e1RM meets or exceeds it counts as working (a heavier/lower-rep set
+ * that clears the same bar is still working). For bodyweight, the rep threshold
+ * is pulled down to the target so ramp-up sets below the target stay warmup
+ * while the target itself — and any set above it — counts as working.
  */
 export function analyzeSet(
   currentSet: ExerciseSet,
   priorSets: ExerciseSet[],
   effectiveBaselineE1RM: number | null = null,
   effectiveBaselineReps: number | null = null,
-  prescribedRepTarget: number | null = null
+  prescribedRepTarget: number | null = null,
+  prescribedWeight: number | null = null
 ): SetAnalysis {
   const estimatedOneRepMax = calculateEstimatedOneRepMax(
     currentSet.performedWeight,
@@ -121,11 +125,21 @@ export function analyzeSet(
   if (currentSet.performedWeight == null) {
     const reps = currentSet.performedReps ?? 0;
     let setType: SetType;
-    if (prescribedRepTarget != null && reps > 0) {
-      // Prescribed target is the authoritative boundary: hit it or better = working.
+    if (effectiveBaselineReps != null) {
+      const normalThreshold = effectiveBaselineReps - BODYWEIGHT_WARMUP_RIR_THRESHOLD;
+      // If the prescribed target is itself in warmup territory, pull the threshold
+      // down to the target so the target counts as working and below it as warmup.
+      // If the target is already in working territory, the normal threshold applies
+      // and below-target sets can still be working (e.g. slightly under target but
+      // above the normal boundary).
+      const effectiveThreshold =
+        prescribedRepTarget != null && prescribedRepTarget < normalThreshold
+          ? prescribedRepTarget
+          : normalThreshold;
+      setType = reps >= effectiveThreshold ? "working" : "warmup";
+    } else if (prescribedRepTarget != null && reps > 0) {
+      // No baseline yet — use prescribed target as the sole reference.
       setType = reps >= prescribedRepTarget ? "working" : "warmup";
-    } else if (effectiveBaselineReps != null) {
-      setType = effectiveBaselineReps - reps > BODYWEIGHT_WARMUP_RIR_THRESHOLD ? "warmup" : "working";
     } else {
       setType = "working";
     }
@@ -152,10 +166,22 @@ export function analyzeSet(
 
   let setType = classifySetType(intensity);
 
-  // Prescribed target override for weighted sets: if a target is known, use it as
-  // the boundary so sets that hit the target are never miscounted as warmup.
-  if (prescribedRepTarget != null && currentSet.performedReps != null && currentSet.performedReps > 0) {
-    setType = currentSet.performedReps >= prescribedRepTarget ? "working" : "warmup";
+  // If the prescribed target's e1RM falls below the normal 60% threshold, pull the
+  // threshold down to the target's e1RM. Any set whose e1RM meets or exceeds the
+  // target's e1RM counts as working — including heavier sets done at fewer reps.
+  if (
+    prescribedWeight != null &&
+    prescribedRepTarget != null &&
+    priorBestEstimatedOneRepMax != null &&
+    estimatedOneRepMax != null
+  ) {
+    const targetE1RM = calculateEstimatedOneRepMax(prescribedWeight, prescribedRepTarget);
+    if (targetE1RM != null) {
+      const targetIntensity = targetE1RM / priorBestEstimatedOneRepMax;
+      if (targetIntensity < WORKING_SET_INTENSITY_THRESHOLD) {
+        setType = estimatedOneRepMax >= targetE1RM ? "working" : "warmup";
+      }
+    }
   }
 
   return {
