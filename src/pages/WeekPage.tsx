@@ -16,7 +16,7 @@ import "./WeekPage.css";
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 
-const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const DAY_ABBR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function getDayState(
   status: "not_started" | "in_progress" | "completed",
@@ -49,22 +49,6 @@ function deriveDate(item: WeekInstanceItemView, allItems: WeekInstanceItemView[]
   const d = new Date(refDate);
   d.setDate(d.getDate() + diff);
   return d;
-}
-
-function formatDateShort(d: Date): string {
-  const dayNum = d.getDate();
-  const mod100 = dayNum % 100;
-  let suffix = "th";
-  if (mod100 >= 11 && mod100 <= 13) suffix = "th";
-  else {
-    switch (dayNum % 10) {
-      case 1: suffix = "st"; break;
-      case 2: suffix = "nd"; break;
-      case 3: suffix = "rd"; break;
-    }
-  }
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  return `${dayNum}${suffix} ${months[d.getMonth()]}`;
 }
 
 /* ─── Component ──────────────────────────────────────────────────────────── */
@@ -259,17 +243,19 @@ export default function WeekPage() {
                   ? new Date(item.sessionInstance.date)
                   : null;
 
-              const dayName = date ? DAY_NAMES[date.getDay()] : "";
-              const dateShort = date ? formatDateShort(date) : "";
+              const dayNum = date ? date.getDate() : 0;
+              const dayAbbr = date ? DAY_ABBR[date.getDay()] : "";
 
               if (isRest) {
                 return (
                   <div key={item.weekInstanceItem.id} className="week-day week-day--rest">
-                    <div className="week-day__header">
-                      <span className="week-day__name">{dayName}</span>
-                      <span className="week-day__date">{dateShort}</span>
+                    <div className="week-day__date-col">
+                      <span className="week-day__num">{dayNum}</span>
+                      <span className="week-day__abbr">{dayAbbr}</span>
                     </div>
-                    <span className="week-day__activity">Rest</span>
+                    <div className="week-day__body">
+                      <span className="week-day__activity">Rest</span>
+                    </div>
                   </div>
                 );
               }
@@ -323,11 +309,11 @@ export default function WeekPage() {
                   to={`/session/${item.sessionInstance.id}`}
                   className={`week-day week-day--session week-day--${state}`}
                 >
-                  <div className="week-day__left">
-                    <div className="week-day__header">
-                      <span className="week-day__name">{dayName}</span>
-                      <span className="week-day__date">{dateShort}</span>
-                    </div>
+                  <div className="week-day__date-col">
+                    <span className="week-day__num">{dayNum}</span>
+                    <span className="week-day__abbr">{dayAbbr}</span>
+                  </div>
+                  <div className="week-day__body">
                     <span className="week-day__activity">{item.sessionTemplate.name}</span>
                     {caption && (
                       <span className="week-day__caption" style={{ color: captionColor ?? undefined }}>
@@ -335,7 +321,7 @@ export default function WeekPage() {
                       </span>
                     )}
                   </div>
-                  <div className="week-day__right">
+                  <div className="week-day__pill">
                     {state === "completed" && (
                       <span className="day-pill day-pill--done">Done</span>
                     )}

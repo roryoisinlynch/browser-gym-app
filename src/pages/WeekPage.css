@@ -102,54 +102,83 @@
   margin: 0;
 }
 
-/* ─── Day list ───────────────────────────────────────────────────────────── */
+/* ─── Day list (calendar layout) ─────────────────────────────────────────── */
 
 .week-page__days {
   display: flex;
   flex-direction: column;
-  gap: 8px;
   padding: 0 14px;
 }
 
 .week-day {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 14px;
+  gap: 0;
   min-height: 72px;
-  padding: 14px 16px;
-  border-radius: 14px;
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
   text-decoration: none;
   color: inherit;
+  border-bottom: 1px solid var(--card-border);
 }
 
-/* Rest days — muted */
-.week-day--rest {
-  opacity: 0.55;
+.week-day:last-child {
+  border-bottom: none;
 }
 
-.week-day--rest .week-day__activity {
+/* ─── Date column (left spine) ───────────────────────────────────────────── */
+
+.week-day__date-col {
+  flex: 0 0 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  align-self: stretch;
+}
+
+.week-day__num {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--text-strong);
+}
+
+.week-day__abbr {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-soft);
+  margin-top: 2px;
+}
+
+/* Mute the date column for rest days */
+.week-day--rest .week-day__num {
   color: var(--text-muted);
+  opacity: 0.5;
 }
 
-/* Session days — clickable */
-.week-day--session {
-  transition: background 0.12s, transform 0.12s, box-shadow 0.12s;
+.week-day--rest .week-day__abbr {
+  opacity: 0.5;
 }
 
-.week-day--session:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--panel-shadow);
+/* ─── Activity body ──────────────────────────────────────────────────────── */
+
+.week-day__body {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px;
+  margin: 6px 0;
+  border-radius: 12px;
 }
 
-.week-day--session:active {
-  transform: scale(0.985);
+/* Session body gets a card-like background */
+.week-day--session .week-day__body {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
 }
 
 /* Next session highlight */
-.week-day--next {
+.week-day--next .week-day__body {
   background:
     linear-gradient(
       180deg,
@@ -159,40 +188,21 @@
     var(--card-bg);
 }
 
-.week-day__left {
-  min-width: 0;
-}
-
-.week-day__right {
-  flex-shrink: 0;
-}
-
-.week-day__header {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-bottom: 2px;
-}
-
-.week-day__name {
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-soft);
-}
-
-.week-day__date {
-  font-size: 0.74rem;
-  font-weight: 500;
-  color: var(--text-soft);
-  opacity: 0.7;
+/* Rest body — no card, just muted text */
+.week-day--rest .week-day__body {
+  padding-left: 14px;
 }
 
 .week-day__activity {
-  font-size: 1.04rem;
+  font-size: 1.02rem;
   font-weight: 700;
   color: var(--text-strong);
+}
+
+.week-day--rest .week-day__activity {
+  font-weight: 600;
+  color: var(--text-muted);
+  opacity: 0.6;
 }
 
 .week-day__caption {
@@ -200,6 +210,22 @@
   margin-top: 2px;
   font-size: 0.8rem;
   font-weight: 600;
+}
+
+/* ─── Pill (right side) ──────────────────────────────────────────────────── */
+
+.week-day__pill {
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+/* Session rows — clickable */
+.week-day--session {
+  transition: transform 0.12s;
+}
+
+.week-day--session:active {
+  transform: scale(0.985);
 }
 
 /* ─── Legacy: start card (no active program) ─────────────────────────────── */
