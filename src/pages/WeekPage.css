@@ -107,6 +107,7 @@
 .week-page__days {
   display: flex;
   flex-direction: column;
+  gap: 8px;
   padding: 0 14px;
 }
 
@@ -115,14 +116,13 @@
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--card-border);
+  min-height: 72px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   text-decoration: none;
   color: inherit;
-}
-
-.week-day:last-child {
-  border-bottom: none;
 }
 
 /* Rest days — muted */
@@ -136,20 +136,12 @@
 
 /* Session days — clickable */
 .week-day--session {
-  transition: background 0.12s, transform 0.12s;
-  border-radius: 14px;
-  padding: 14px 16px;
-  margin: 0 -16px;
-  border-bottom: none;
-}
-
-.week-day--session + .week-day {
-  border-top: none;
+  transition: background 0.12s, transform 0.12s, box-shadow 0.12s;
 }
 
 .week-day--session:hover {
-  background: rgba(255, 255, 255, 0.03);
   transform: translateY(-1px);
+  box-shadow: var(--panel-shadow);
 }
 
 .week-day--session:active {
@@ -163,7 +155,8 @@
       180deg,
       rgba(216, 240, 106, 0.08),
       rgba(216, 240, 106, 0.03)
-    );
+    ),
+    var(--card-bg);
 }
 
 .week-day__left {
