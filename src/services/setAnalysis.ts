@@ -99,12 +99,18 @@ const BODYWEIGHT_WARMUP_RIR_THRESHOLD = 4;
  * (recentMaxReps ?? historicalBestReps). A set is warmup if the rep gap to
  * that baseline exceeds 4 — the same RIR cutoff used for weighted exercises
  * (60% e1RM ≈ 6 RPE ≈ 4 RIR).
+ *
+ * Pass prescribedRepTarget to use the session's rep target as the primary
+ * warmup/working boundary. This prevents a set from being miscounted as warmup
+ * when the prescribed target falls inside what the heuristic would call warmup
+ * territory, and ensures any below-target set is always treated as ramp-up.
  */
 export function analyzeSet(
   currentSet: ExerciseSet,
   priorSets: ExerciseSet[],
   effectiveBaselineE1RM: number | null = null,
-  effectiveBaselineReps: number | null = null
+  effectiveBaselineReps: number | null = null,
+  prescribedRepTarget: number | null = null
 ): SetAnalysis {
   const estimatedOneRepMax = calculateEstimatedOneRepMax(
     currentSet.performedWeight,
@@ -112,10 +118,17 @@ export function analyzeSet(
   );
 
   // Bodyweight path: no weight means e1RM is meaningless — classify by rep gap instead.
-  if (currentSet.performedWeight == null && effectiveBaselineReps != null) {
+  if (currentSet.performedWeight == null) {
     const reps = currentSet.performedReps ?? 0;
-    const setType: SetType =
-      effectiveBaselineReps - reps > BODYWEIGHT_WARMUP_RIR_THRESHOLD ? "warmup" : "working";
+    let setType: SetType;
+    if (prescribedRepTarget != null && reps > 0) {
+      // Prescribed target is the authoritative boundary: hit it or better = working.
+      setType = reps >= prescribedRepTarget ? "working" : "warmup";
+    } else if (effectiveBaselineReps != null) {
+      setType = effectiveBaselineReps - reps > BODYWEIGHT_WARMUP_RIR_THRESHOLD ? "warmup" : "working";
+    } else {
+      setType = "working";
+    }
     return {
       estimatedOneRepMax: null,
       priorBestEstimatedOneRepMax: null,
@@ -137,7 +150,13 @@ export function analyzeSet(
     priorBestEstimatedOneRepMax
   );
 
-  const setType = classifySetType(intensity);
+  let setType = classifySetType(intensity);
+
+  // Prescribed target override for weighted sets: if a target is known, use it as
+  // the boundary so sets that hit the target are never miscounted as warmup.
+  if (prescribedRepTarget != null && currentSet.performedReps != null && currentSet.performedReps > 0) {
+    setType = currentSet.performedReps >= prescribedRepTarget ? "working" : "warmup";
+  }
 
   return {
     estimatedOneRepMax,
