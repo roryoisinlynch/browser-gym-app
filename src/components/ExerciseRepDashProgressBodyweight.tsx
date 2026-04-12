@@ -64,9 +64,12 @@ export default function ExerciseRepDashProgressBodyweight({
   // Warmup boundary: working requires RIR < 6 (gap ≤ 5).
   // Use the recency-adjusted baseline so stale PRs don't widen the warmup zone.
   const effectiveBaseline = recentMaxReps ?? historicalBestReps;
-  const normalCutoff = effectiveBaseline - 6; // last segment index still in warmup
-  // Pull cutoff down if the prescribed target is already in warmup territory.
-  const warmupCutoff = targetReps - 1 < normalCutoff ? targetReps - 1 : normalCutoff;
+  // Last warmup segment index: warmup requires RIR ≥ 6 (gap > THRESHOLD=5).
+  // Last warmup rep = baseline − 6; its 0-indexed segment = baseline − 7.
+  const normalCutoff = effectiveBaseline - 7;
+  // Pull cutoff down if the prescribed target is already in warmup territory,
+  // so the target segment (index targetReps−1) is working, not warmup.
+  const warmupCutoff = targetReps - 1 <= normalCutoff ? targetReps - 2 : normalCutoff;
 
   return (
     <div className="exercise-rep-dash-progress">
