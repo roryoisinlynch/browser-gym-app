@@ -1614,7 +1614,21 @@ export async function getSessionInstanceView(
       );
       const effectiveE1RM = recentMax ?? historicalBest;
 
-      const analyzedSets = buildAnalyzedSetList(currentRawSets, allHistoricalSets, effectiveE1RM);
+      // For bodyweight exercises, derive the rep baseline from prior sessions so
+      // the warmup classifier (rep gap > 4) fires correctly. Prior sets = all
+      // historical sets except those belonging to the current exercise instance.
+      const priorSets = allHistoricalSets.filter(
+        (s) => s.exerciseInstanceId !== exerciseInstance?.id
+      );
+      const effectiveBaselineReps =
+        sie.weightMode === "bodyweight"
+          ? priorSets.reduce<number | null>((best, s) => {
+              if (s.performedReps == null || s.performedReps <= 0) return best;
+              return best == null || s.performedReps > best ? s.performedReps : best;
+            }, null)
+          : null;
+
+      const analyzedSets = buildAnalyzedSetList(currentRawSets, allHistoricalSets, effectiveE1RM, effectiveBaselineReps);
 
       const workingSetCount = analyzedSets.filter(
         (item) => item.analysis.setType === "working"
