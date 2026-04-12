@@ -273,19 +273,15 @@ export default function WeekPage() {
 
               // Adherence (completed)
               let caption: string | null = null;
-              let captionColor: string | null = null;
               if (state === "completed" && scheduledDate && completedAt) {
                 const delta = daysBetween(completedAt, scheduledDate);
                 if (delta === 0) {
-                  caption = "On schedule";
-                  captionColor = "#4ade80";
+                  caption = "Completed on schedule";
                 } else if (delta < 0) {
                   const n = Math.abs(delta);
-                  caption = `${n} day${n === 1 ? "" : "s"} early`;
-                  captionColor = "#f59e0b";
+                  caption = `Completed ${n} day${n === 1 ? "" : "s"} early`;
                 } else {
-                  caption = `${delta} day${delta === 1 ? "" : "s"} late`;
-                  captionColor = "#f87171";
+                  caption = `Completed ${delta} day${delta === 1 ? "" : "s"} late`;
                 }
               }
 
@@ -295,13 +291,10 @@ export default function WeekPage() {
                 if (delta < 0) {
                   const n = Math.abs(delta);
                   caption = `${n} day${n === 1 ? "" : "s"} overdue`;
-                  captionColor = "#f87171";
                 } else if (delta === 0) {
                   caption = "Today";
-                  captionColor = "var(--accent)";
                 } else {
                   caption = `In ${delta} day${delta === 1 ? "" : "s"}`;
-                  captionColor = "var(--text-muted)";
                 }
               }
 
@@ -319,22 +312,16 @@ export default function WeekPage() {
                     <div className="week-day__body">
                       <span className="week-day__activity">{item.sessionTemplate.name}</span>
                       {caption && (
-                        <span className="week-day__caption" style={{ color: captionColor ?? undefined }}>
+                        <span className="week-day__caption">
                           {caption}
                         </span>
                       )}
                     </div>
-                    <div className="week-day__pill">
-                      {state === "completed" && (
-                        <span className="day-pill day-pill--done">Done</span>
-                      )}
-                      {state === "next" && (
+                    {state === "next" && (
+                      <div className="week-day__pill">
                         <span className="day-pill day-pill--start">Start</span>
-                      )}
-                      {state === "upcoming" && (
-                        <span className="day-pill day-pill--view">View ›</span>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </Link>
               );
