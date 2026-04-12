@@ -103,7 +103,7 @@ export default function ExerciseRepDashProgress({
     return null;
   }
 
-  const dashCount = Math.max(1, Math.floor(repsToHistoricalPr) + 1);
+  const dashCount = Math.max(1, Math.floor(repsToHistoricalPr + 0.0001) + 1);
   const allTimePrIndex = dashCount - 1;
   const targetIndex = clamp(Math.round(targetReps) - 1, 0, dashCount - 1);
 
@@ -114,7 +114,7 @@ export default function ExerciseRepDashProgress({
   const recentBestIndex =
     effectiveEquivalentReps == null
       ? null
-      : clamp(Math.floor(effectiveEquivalentReps), 0, dashCount - 1);
+      : clamp(Math.floor(effectiveEquivalentReps + 0.0001), 0, dashCount - 1);
   const showRecentBest =
     effectiveEstimatedOneRepMax != null &&
     targetRir !== 0 &&

@@ -1473,7 +1473,7 @@ export async function getExerciseInstanceView(
     if (exerciseTemplate.prescribedWeight < effectiveOneRepMax) {
       prescribedWeight = exerciseTemplate.prescribedWeight;
       const zeroRirReps = Math.floor(
-        (effectiveOneRepMax / prescribedWeight - 1) * 30
+        (effectiveOneRepMax / prescribedWeight - 1) * 30 + 0.0001
       );
       prescribedRepTarget = Math.max(1, zeroRirReps - weekRir);
     }
