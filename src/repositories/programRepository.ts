@@ -1021,7 +1021,12 @@ export async function getExerciseSessionHistory(
 export async function getEffectiveE1RM(
   exerciseName: string,
   currentSeasonInstanceId?: string
-): Promise<{ historicalBest: number | null; recentMax: number | null }> {
+): Promise<{
+  historicalBest: number | null;
+  recentMax: number | null;
+  historicalBestReps: number | null;
+  recentMaxReps: number | null;
+}> {
   const history = await getExerciseSessionHistory(exerciseName);
 
   const historicalBest = history.reduce<number | null>((best, dp) => {
@@ -1031,21 +1036,32 @@ export async function getEffectiveE1RM(
       : best;
   }, null);
 
-  if (historicalBest == null) return { historicalBest: null, recentMax: null };
+  const historicalBestReps = history.reduce<number | null>((best, dp) => {
+    if (dp.topRepCount == null) return best;
+    return best == null || dp.topRepCount > best ? dp.topRepCount : best;
+  }, null);
 
-  type SeasonBucket = { sortDate: string; bestE1RM: number | null };
+  if (historicalBest == null && historicalBestReps == null) {
+    return { historicalBest: null, recentMax: null, historicalBestReps: null, recentMaxReps: null };
+  }
+
+  type SeasonBucket = { sortDate: string; bestE1RM: number | null; bestReps: number | null };
   const seasonBuckets = new Map<string, SeasonBucket>();
 
   if (currentSeasonInstanceId) {
     const nowDate = new Date().toISOString().slice(0, 10);
-    seasonBuckets.set(currentSeasonInstanceId, { sortDate: nowDate, bestE1RM: null });
+    seasonBuckets.set(currentSeasonInstanceId, { sortDate: nowDate, bestE1RM: null, bestReps: null });
   }
 
   for (const dp of history) {
     const key = resolveExerciseSeasonKey(dp.seasonInstanceId, dp.date);
     const existing = seasonBuckets.get(key);
     if (!existing) {
-      seasonBuckets.set(key, { sortDate: dp.date, bestE1RM: dp.topEstimatedOneRepMax });
+      seasonBuckets.set(key, {
+        sortDate: dp.date,
+        bestE1RM: dp.topEstimatedOneRepMax,
+        bestReps: dp.topRepCount ?? null,
+      });
     } else {
       if (dp.date > existing.sortDate) existing.sortDate = dp.date;
       if (
@@ -1053,6 +1069,12 @@ export async function getEffectiveE1RM(
         (existing.bestE1RM == null || dp.topEstimatedOneRepMax > existing.bestE1RM)
       ) {
         existing.bestE1RM = dp.topEstimatedOneRepMax;
+      }
+      if (
+        dp.topRepCount != null &&
+        (existing.bestReps == null || dp.topRepCount > existing.bestReps)
+      ) {
+        existing.bestReps = dp.topRepCount;
       }
     }
   }
@@ -1073,11 +1095,24 @@ export async function getEffectiveE1RM(
   }
 
   // No substitution needed if recent max matches or exceeds the historical best.
-  if (recentMax != null && recentMax >= historicalBest) {
+  if (historicalBest != null && recentMax != null && recentMax >= historicalBest) {
     recentMax = null;
   }
 
-  return { historicalBest, recentMax };
+  let recentMaxReps: number | null = null;
+  for (const [key, bucket] of seasonBuckets.entries()) {
+    if (!recentSeasonKeys.has(key) || bucket.bestReps == null) continue;
+    if (recentMaxReps == null || bucket.bestReps > recentMaxReps) {
+      recentMaxReps = bucket.bestReps;
+    }
+  }
+
+  // No substitution needed if the all-time rep best was matched recently.
+  if (historicalBestReps != null && recentMaxReps != null && recentMaxReps >= historicalBestReps) {
+    recentMaxReps = null;
+  }
+
+  return { historicalBest, recentMax, historicalBestReps, recentMaxReps };
 }
 
 function buildAnalyzedSetList(
@@ -1608,25 +1643,15 @@ export async function getSessionInstanceView(
             .sort((a, b) => a.setIndex - b.setIndex)
         : [];
 
-      const { historicalBest, recentMax } = await getEffectiveE1RM(
+      const { historicalBest, recentMax, historicalBestReps, recentMaxReps } = await getEffectiveE1RM(
         sie.exerciseName,
         sessionInstance.seasonInstanceId
       );
       const effectiveE1RM = recentMax ?? historicalBest;
-
-      // For bodyweight exercises, derive the rep baseline from prior sessions so
-      // the warmup classifier (rep gap > 4) fires correctly. Prior sets = all
-      // historical sets except those belonging to the current exercise instance.
-      const priorSets = allHistoricalSets.filter(
-        (s) => s.exerciseInstanceId !== exerciseInstance?.id
-      );
+      // For bodyweight exercises, use the same recency-adjusted rep baseline as
+      // getExerciseInstanceView so stale PRs don't inflate the warmup threshold.
       const effectiveBaselineReps =
-        sie.weightMode === "bodyweight"
-          ? priorSets.reduce<number | null>((best, s) => {
-              if (s.performedReps == null || s.performedReps <= 0) return best;
-              return best == null || s.performedReps > best ? s.performedReps : best;
-            }, null)
-          : null;
+        sie.weightMode === "bodyweight" ? (recentMaxReps ?? historicalBestReps) : null;
 
       const analyzedSets = buildAnalyzedSetList(currentRawSets, allHistoricalSets, effectiveE1RM, effectiveBaselineReps);
 
