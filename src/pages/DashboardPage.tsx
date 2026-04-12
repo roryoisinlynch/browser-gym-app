@@ -922,7 +922,6 @@ export default function DashboardPage() {
       <TopBar title="Dashboard" />
       <section className="dashboard-shell">
         <section className="dashboard-section">
-          <h2 className="dashboard-section-title">Up next</h2>
           {renderUpNext()}
         </section>
 
