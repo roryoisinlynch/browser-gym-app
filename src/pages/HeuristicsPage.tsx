@@ -1,15 +1,14 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { HeuristicQuestion, HeuristicEntry } from "../domain/models";
 import {
   getQuestions,
-  getEntriesForDate,
-  bulkPutEntries,
+  getEntriesForDateRange,
+  putEntry,
   isHeuristicsEnabled,
   setHeuristicsEnabled,
   seedDefaultQuestions,
 } from "../repositories/heuristicsRepository";
-import HeuristicScaleInput from "../components/HeuristicScaleInput";
 import BottomNav from "../components/BottomNav";
 import TopBar from "../components/TopBar";
 import "./HeuristicsPage.css";
@@ -18,11 +17,16 @@ function localDateIso(d: Date = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function shiftDate(iso: string, days: number): string {
+  const d = new Date(iso + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  return localDateIso(d);
+}
+
 function friendlyDateLabel(iso: string): string {
   const today = localDateIso();
   if (iso === today) return "Today";
-  const yesterday = localDateIso(new Date(Date.now() - 86400000));
-  if (iso === yesterday) return "Yesterday";
+  if (iso === shiftDate(today, -1)) return "Yesterday";
   const d = new Date(iso + "T00:00:00");
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -33,81 +37,95 @@ function friendlyDateLabel(iso: string): string {
   return `${days[d.getDay()]} ${ord(d.getDate())} ${months[d.getMonth()]}`;
 }
 
-function shiftDate(iso: string, days: number): string {
-  const d = new Date(iso + "T00:00:00");
-  d.setDate(d.getDate() + days);
-  return localDateIso(d);
+interface PendingItem {
+  question: HeuristicQuestion;
+  date: string;
 }
 
-// Map of questionId -> value (undefined = not answered)
-type Answers = Map<string, number | null | undefined>;
+const LOOKBACK_DAYS = 3;
+const SCALE = [1, 2, 3, 4, 5] as const;
 
 export default function HeuristicsPage() {
   const navigate = useNavigate();
   const [enabled, setEnabled] = useState<boolean | null>(null);
-  const [questions, setQuestions] = useState<HeuristicQuestion[]>([]);
-  const [date, setDate] = useState(localDateIso());
-  const [answers, setAnswers] = useState<Answers>(new Map());
-  const [saved, setSaved] = useState(false);
-
-  const isFuture = date > localDateIso();
-
-  const load = useCallback(async () => {
-    const on = await isHeuristicsEnabled();
-    setEnabled(on);
-    if (!on) return;
-    const qs = await getQuestions();
-    setQuestions(qs);
-    const entries = await getEntriesForDate(date);
-    const map: Answers = new Map();
-    for (const q of qs) {
-      const entry = entries.find((e) => e.questionId === q.id);
-      map.set(q.id, entry !== undefined ? entry.value : undefined);
-    }
-    setAnswers(map);
-    setSaved(false);
-  }, [date]);
+  const [queue, setQueue] = useState<PendingItem[]>([]);
+  const [index, setIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    async function load() {
+      const on = await isHeuristicsEnabled();
+      setEnabled(on);
+      if (!on) { setLoading(false); return; }
+
+      const questions = await getQuestions();
+      if (questions.length === 0) { setLoading(false); return; }
+
+      const today = localDateIso();
+      const startDate = shiftDate(today, -(LOOKBACK_DAYS - 1));
+      const entries = await getEntriesForDateRange(startDate, today);
+
+      // Build set of answered (questionId_date)
+      const answered = new Set(entries.map((e) => `${e.questionId}_${e.date}`));
+
+      // Build queue: today first (descending), then by question order within each day
+      const pending: PendingItem[] = [];
+      for (let i = 0; i < LOOKBACK_DAYS; i++) {
+        const date = shiftDate(today, -i);
+        for (const q of questions) {
+          if (!answered.has(`${q.id}_${date}`)) {
+            pending.push({ question: q, date });
+          }
+        }
+      }
+
+      setQueue(pending);
+      setIndex(0);
+      setLoading(false);
+    }
     load();
-  }, [load]);
+  }, []);
 
   async function handleEnable() {
     await setHeuristicsEnabled(true);
     await seedDefaultQuestions();
     setEnabled(true);
-    load();
+    // Re-load to build the queue
+    const questions = await getQuestions();
+    const today = localDateIso();
+    const pending: PendingItem[] = questions.map((q) => ({ question: q, date: today }));
+    setQueue(pending);
+    setIndex(0);
+    setLoading(false);
   }
 
-  function handleChange(questionId: string, value: number | null) {
-    setAnswers((prev) => {
-      const next = new Map(prev);
-      // If value matches current, treat as toggle-off (back to unanswered)
-      next.set(questionId, value);
-      return next;
+  async function handleScore(value: number) {
+    const item = queue[index];
+    await putEntry({
+      id: `${item.question.id}_${item.date}`,
+      questionId: item.question.id,
+      date: item.date,
+      value,
     });
-    setSaved(false);
+    setIndex((i) => i + 1);
   }
 
-  async function handleSave() {
-    const entries: HeuristicEntry[] = [];
-    for (const [questionId, value] of answers) {
-      if (value === undefined) continue; // not answered, skip
-      entries.push({
-        id: `${questionId}_${date}`,
-        questionId,
-        date,
-        value,
-      });
-    }
-    await bulkPutEntries(entries);
-    setSaved(true);
+  async function handleUnknown() {
+    const item = queue[index];
+    await putEntry({
+      id: `${item.question.id}_${item.date}`,
+      questionId: item.question.id,
+      date: item.date,
+      value: null,
+    });
+    setIndex((i) => i + 1);
   }
 
-  const answeredCount = [...answers.values()].filter((v) => v !== undefined).length;
-  const allAnswered = answeredCount === questions.length && questions.length > 0;
+  function handleSkip() {
+    setIndex((i) => i + 1);
+  }
 
-  if (enabled === null) return null; // loading
+  if (enabled === null || loading) return null;
 
   if (!enabled) {
     return (
@@ -133,83 +151,96 @@ export default function HeuristicsPage() {
     );
   }
 
-  return (
-    <main className="heuristics-page">
-      <TopBar title="Heuristics" />
-      <section className="heuristics-shell">
-        {/* Date navigation */}
-        <div className="heuristics-date-nav">
-          <button
-            type="button"
-            className="heuristics-date-nav__arrow"
-            onClick={() => setDate((d) => shiftDate(d, -1))}
-            aria-label="Previous day"
-          >
-            <svg viewBox="0 0 24 24" width="20" height="20">
-              <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-          <span className="heuristics-date-nav__label">{friendlyDateLabel(date)}</span>
-          <button
-            type="button"
-            className="heuristics-date-nav__arrow"
-            onClick={() => setDate((d) => shiftDate(d, 1))}
-            disabled={isFuture || date === localDateIso()}
-            aria-label="Next day"
-          >
-            <svg viewBox="0 0 24 24" width="20" height="20">
-              <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Questions */}
-        {questions.length === 0 ? (
-          <div className="heuristics-empty">
-            <p className="heuristics-empty__text">No questions configured.</p>
+  // All done
+  if (queue.length === 0 || index >= queue.length) {
+    return (
+      <main className="heuristics-page">
+        <TopBar title="Heuristics" />
+        <section className="heuristics-shell">
+          <div className="heuristics-done">
+            <p className="heuristics-done__heading">
+              {queue.length === 0 ? "Nothing to log" : "All done"}
+            </p>
+            <p className="heuristics-done__desc">
+              {queue.length === 0
+                ? "No outstanding heuristics for the last few days."
+                : "You're all caught up."}
+            </p>
             <button
               type="button"
-              className="heuristics-empty__btn"
+              className="heuristics-done__link"
               onClick={() => navigate("/heuristics/questions")}
             >
               Manage questions →
             </button>
           </div>
-        ) : (
-          <>
-            <div className="heuristics-questions">
-              {questions.map((q) => (
-                <HeuristicScaleInput
-                  key={q.id}
-                  label={q.label}
-                  value={answers.get(q.id)}
-                  onChange={(v) => handleChange(q.id, v as number | null)}
-                />
-              ))}
-            </div>
+        </section>
+        <BottomNav activeTab="heuristics" />
+      </main>
+    );
+  }
 
-            <div className="heuristics-actions">
-              <button
-                type="button"
-                className={`heuristics-save${allAnswered ? " heuristics-save--ready" : ""}`}
-                onClick={handleSave}
-                disabled={answeredCount === 0}
-              >
-                {saved ? "Saved" : `Save${answeredCount > 0 ? ` (${answeredCount}/${questions.length})` : ""}`}
-              </button>
-            </div>
+  const current = queue[index];
+  const remaining = queue.length - index;
 
-            <div className="heuristics-footer">
+  return (
+    <main className="heuristics-page">
+      <TopBar title="Heuristics" />
+      <section className="heuristics-shell">
+        <div className="heuristics-prompt">
+          {/* Progress */}
+          <p className="heuristics-prompt__progress">
+            {index + 1} of {queue.length}
+          </p>
+
+          {/* Date context */}
+          <span className="heuristics-prompt__date">{friendlyDateLabel(current.date)}</span>
+
+          {/* Question */}
+          <p className="heuristics-prompt__question">{current.question.label}</p>
+
+          {/* 1-5 scale */}
+          <div className="heuristics-prompt__scale">
+            {SCALE.map((n) => (
               <button
+                key={n}
                 type="button"
-                className="heuristics-footer__link"
-                onClick={() => navigate("/heuristics/questions")}
+                className="heuristics-prompt__score-btn"
+                onClick={() => handleScore(n)}
               >
-                Manage questions →
+                {n}
               </button>
-            </div>
-          </>
-        )}
+            ))}
+          </div>
+
+          {/* Secondary actions */}
+          <div className="heuristics-prompt__actions">
+            <button
+              type="button"
+              className="heuristics-prompt__action-btn"
+              onClick={handleUnknown}
+            >
+              Unknown
+            </button>
+            <button
+              type="button"
+              className="heuristics-prompt__action-btn"
+              onClick={handleSkip}
+            >
+              Skip for now
+            </button>
+          </div>
+        </div>
+
+        <div className="heuristics-footer">
+          <button
+            type="button"
+            className="heuristics-footer__link"
+            onClick={() => navigate("/heuristics/questions")}
+          >
+            Manage questions →
+          </button>
+        </div>
       </section>
       <BottomNav activeTab="heuristics" />
     </main>

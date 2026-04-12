@@ -10,47 +10,6 @@
   padding: 16px 20px 28px;
 }
 
-/* ─── Date navigation ─────────────────────────────────────────────────────── */
-
-.heuristics-date-nav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  margin-bottom: 12px;
-}
-
-.heuristics-date-nav__arrow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid var(--card-border);
-  border-radius: 10px;
-  background: var(--card-bg);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: background 0.12s;
-}
-
-.heuristics-date-nav__arrow:hover {
-  background: #262c35;
-}
-
-.heuristics-date-nav__arrow:disabled {
-  opacity: 0.3;
-  cursor: default;
-}
-
-.heuristics-date-nav__label {
-  min-width: 120px;
-  text-align: center;
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--text-strong);
-}
-
 /* ─── Disabled state ──────────────────────────────────────────────────────── */
 
 .heuristics-disabled {
@@ -90,28 +49,27 @@
   transform: scale(0.96);
 }
 
-/* ─── Questions list ──────────────────────────────────────────────────────── */
+/* ─── Done / empty state ──────────────────────────────────────────────────── */
 
-.heuristics-questions {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-/* ─── Empty state ─────────────────────────────────────────────────────────── */
-
-.heuristics-empty {
+.heuristics-done {
   text-align: center;
   padding: 40px 20px;
 }
 
-.heuristics-empty__text {
-  margin: 0 0 16px;
-  font-size: 1rem;
+.heuristics-done__heading {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.heuristics-done__desc {
+  margin: 0 0 24px;
+  font-size: 0.92rem;
   color: var(--text-muted);
 }
 
-.heuristics-empty__btn {
+.heuristics-done__link {
   border: none;
   background: none;
   color: var(--link);
@@ -120,39 +78,103 @@
   cursor: pointer;
 }
 
-/* ─── Actions ─────────────────────────────────────────────────────────────── */
+/* ─── One-at-a-time prompt ────────────────────────────────────────────────── */
 
-.heuristics-actions {
-  margin-top: 20px;
-}
-
-.heuristics-save {
-  width: 100%;
-  padding: 14px;
-  border: none;
-  border-radius: 14px;
+.heuristics-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 16px 24px;
+  border-radius: 18px;
   background: var(--card-bg);
   border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
+}
+
+.heuristics-prompt__progress {
+  margin: 0 0 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  letter-spacing: 0.04em;
+}
+
+.heuristics-prompt__date {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--pill-muted-bg);
+  color: var(--pill-muted-text);
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+
+.heuristics-prompt__question {
+  margin: 0 0 24px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  text-align: center;
+}
+
+/* Score buttons (1-5) */
+.heuristics-prompt__scale {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.heuristics-prompt__score-btn {
+  width: 52px;
+  height: 52px;
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  background: var(--panel-bg);
   color: var(--text-muted);
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.14s, color 0.14s, transform 0.12s;
+  transition: background 0.12s, border-color 0.12s, color 0.12s, transform 0.1s;
 }
 
-.heuristics-save:disabled {
-  opacity: 0.4;
-  cursor: default;
+.heuristics-prompt__score-btn:hover {
+  background: var(--pill-muted-bg);
+  color: var(--text-strong);
 }
 
-.heuristics-save--ready {
+.heuristics-prompt__score-btn:active {
+  transform: scale(0.92);
   background: var(--accent);
   border-color: var(--accent);
   color: #0f1113;
 }
 
-.heuristics-save:active:not(:disabled) {
-  transform: scale(0.98);
+/* Secondary actions (Unknown / Skip) */
+.heuristics-prompt__actions {
+  display: flex;
+  gap: 10px;
+}
+
+.heuristics-prompt__action-btn {
+  padding: 9px 18px;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, transform 0.1s;
+}
+
+.heuristics-prompt__action-btn:hover {
+  background: var(--pill-muted-bg);
+  color: var(--text-muted);
+}
+
+.heuristics-prompt__action-btn:active {
+  transform: scale(0.95);
 }
 
 /* ─── Footer ──────────────────────────────────────────────────────────────── */
