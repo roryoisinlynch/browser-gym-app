@@ -85,17 +85,23 @@
 
 .dashboard-up-next--active {
   border-color: rgba(216, 240, 106, 0.38);
-  background: rgba(216, 240, 106, 0.06);
+  background: rgba(216, 240, 106, 0.11);
 }
 
 .dashboard-up-next--overdue {
   border-color: rgba(231, 111, 81, 0.50);
-  background: rgba(231, 111, 81, 0.06);
+  background: rgba(231, 111, 81, 0.11);
 }
 
 .dashboard-up-next--today {
   border-color: rgba(216, 240, 106, 0.32);
-  background: rgba(216, 240, 106, 0.04);
+  background: rgba(216, 240, 106, 0.11);
+}
+
+.dashboard-up-next--rest,
+.dashboard-up-next--upcoming,
+.dashboard-up-next--muted {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .dashboard-up-next--loading {
@@ -141,11 +147,11 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .dashboard-up-next--active,
-  .dashboard-up-next--today  { animation: up-next-orbit-lime    6s linear infinite; }
-  .dashboard-up-next--overdue { animation: up-next-orbit-red    6s linear infinite; }
+  .dashboard-up-next--today  { animation: up-next-orbit-lime     9s linear infinite; }
+  .dashboard-up-next--overdue { animation: up-next-orbit-red     9s linear infinite; }
   .dashboard-up-next--rest,
   .dashboard-up-next--upcoming,
-  .dashboard-up-next--muted  { animation: up-next-orbit-neutral 8s linear infinite; }
+  .dashboard-up-next--muted  { animation: up-next-orbit-neutral 12s linear infinite; }
 }
 
 .dashboard-up-next__pill {
