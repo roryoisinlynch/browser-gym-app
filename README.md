@@ -651,10 +651,17 @@ Not-started weeks in the displaced season are left as `not_started` — they are
 ---
 
 # To do:
+ - Filter exercise insights graph by period or date 
+ - Support treating abandoned seasons exactly as normal seasons, include then in the season list flagged as 'stopped early' and proportion their metrics in relation to the number of days cut short. Punish the user for any scheduled days missed before the skip, but not after.
  - add an exercise detail screen where you can see a table of all exercises and their: last lift, e1RM local, e1RM max, total lifts, days since PR. Sortable by each column.
  - i should build unit tests which try to restore an old backup before every new deploy
- - exercises move to the top of the list
- - pre-define ordered list of exercises
+ - max request: pre-define ordered list of exercises
  - heuristics survey to track protein, calories, creatine, sleep, fibre, water
  - feature to share program templates (send and recieve json)
- - generate a backup import json file to upload to the desktop/pixel user which is prepopulated with data to use as a screenshot/screenrecord/demo 
+ - generate a backup import json file to upload to the desktop/pixel user which is prepopulated with data to use as a screenshot/screenrecord/demo
+ - dashboard 'start sesion' mayb should read 'view sesion'
+ - redesign rest days on week instance screen (weekday name and visual border)
+ - locker number feature
+ - When initialising a new season, if no -1 day in the RIR scheme, offer it to the user before initialising. 
+ - superset support
+ - When i match my local e1rm, should the target auto adjust there and then?
