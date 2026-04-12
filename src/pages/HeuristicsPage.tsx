@@ -101,9 +101,24 @@ export default function HeuristicsPage() {
     await setHeuristicsEnabled(true);
     await seedDefaultQuestions();
     setEnabled(true);
+
     const questions = await getQuestions();
     const today = localDateIso();
-    setQueue(questions.map((q) => ({ question: q, date: today })));
+    const startDate = shiftDate(today, -(LOOKBACK_DAYS - 1));
+    const entries = await getEntriesForDateRange(startDate, today);
+    const answered = new Set(entries.map((e) => `${e.questionId}_${e.date}`));
+
+    const pending: PendingItem[] = [];
+    for (let i = 0; i < LOOKBACK_DAYS; i++) {
+      const date = shiftDate(today, -i);
+      for (const q of questions) {
+        if (!answered.has(`${q.id}_${date}`)) {
+          pending.push({ question: q, date });
+        }
+      }
+    }
+
+    setQueue(pending);
     setIndex(0);
     setLoading(false);
   }
