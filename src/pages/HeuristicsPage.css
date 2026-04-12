@@ -21,22 +21,29 @@
   letter-spacing: 0.04em;
 }
 
-/* ─── Card stack ──────────────────────────────────────────────────────────── */
+/* ─── Carousel ────────────────────────────────────────────────────────────── */
 
-.heuristics-stack {
+.heuristics-carousel {
   position: relative;
-  margin-bottom: 20px;
-  /* Reserve space for peek cards below */
-  padding-bottom: 20px;
+  overflow: hidden;
+  margin: 0 -20px 20px;
+  padding: 8px 20px;
+  min-height: 220px;
 }
 
 .heuristics-card {
-  padding: 28px 20px 24px;
+  position: absolute;
+  top: 8px;
+  left: 20px;
+  right: 20px;
+  padding: 24px 20px 20px;
   border-radius: 18px;
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   box-shadow: var(--card-shadow);
   text-align: center;
+  transition: transform 0.28s ease, opacity 0.28s ease;
+  will-change: transform, opacity;
 }
 
 .heuristics-card__date {
@@ -47,52 +54,89 @@
   color: var(--pill-muted-text);
   font-size: 0.78rem;
   font-weight: 700;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .heuristics-card__question {
-  margin: 0 0 24px;
+  margin: 0 0 20px;
   font-size: 1.3rem;
   font-weight: 700;
   color: var(--text-strong);
 }
 
-/* Active card */
+/* Active card — centered, full opacity */
 .heuristics-card--active {
   position: relative;
   z-index: 3;
-  transition: transform 0.25s ease, opacity 0.25s ease;
+  transform: translateX(0) scale(1);
+  opacity: 1;
 }
 
 .heuristics-card--exiting {
-  transform: translateX(-110%);
+  transform: translateX(-120%) scale(0.92);
   opacity: 0;
 }
 
-/* Peek cards */
-.heuristics-card--peek {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  pointer-events: none;
-  transition: transform 0.25s ease, opacity 0.25s ease;
-}
-
-.heuristics-card--peek .heuristics-card__question {
-  font-size: 1.1rem;
-}
-
-.heuristics-card--peek-1 {
-  z-index: 2;
-  transform: translateY(14px) scale(0.96);
-  opacity: 0.5;
-}
-
-.heuristics-card--peek-2 {
+/* Previous card — peeking on the left */
+.heuristics-card--prev {
   z-index: 1;
-  transform: translateY(26px) scale(0.92);
-  opacity: 0.25;
+  transform: translateX(calc(-85% - 12px)) scale(0.88);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* Next card — peeking on the right */
+.heuristics-card--next {
+  z-index: 2;
+  transform: translateX(calc(85% + 12px)) scale(0.88);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* Far next — barely visible further right */
+.heuristics-card--far-next {
+  z-index: 1;
+  transform: translateX(calc(170% + 24px)) scale(0.80);
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+/* ─── Dismiss button on card ──────────────────────────────────────────────── */
+
+.heuristics-card__dismiss {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  margin-top: 16px;
+  padding: 10px 0;
+  border: none;
+  border-top: 1px solid var(--card-border);
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.12s;
+}
+
+.heuristics-card__dismiss:hover {
+  color: var(--text-muted);
+}
+
+.heuristics-card__dismiss:active {
+  opacity: 0.7;
+}
+
+.heuristics-card__dismiss {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
+.heuristics-card__dismiss-note {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-soft);
+  opacity: 0.7;
 }
 
 /* ─── Colour scale ────────────────────────────────────────────────────────── */
@@ -108,7 +152,7 @@
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  padding: 12px 0 10px;
+  padding: 12px 0 8px;
   border: 2px solid transparent;
   border-radius: 12px;
   background: var(--segment-color-dim);
@@ -118,13 +162,14 @@
 
 .heuristics-scale__segment:hover {
   background: color-mix(in srgb, var(--segment-color) 25%, transparent);
+  transform: scale(1.04);
 }
 
-.heuristics-scale__segment--selected {
-  background: color-mix(in srgb, var(--segment-color) 30%, transparent);
+.heuristics-scale__segment:active {
+  background: color-mix(in srgb, var(--segment-color) 35%, transparent);
   border-color: var(--segment-color);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--segment-color) 30%, transparent);
-  transform: scale(1.06);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--segment-color) 35%, transparent);
+  transform: scale(1.08);
 }
 
 .heuristics-scale__number {
@@ -135,12 +180,13 @@
 }
 
 .heuristics-scale__label {
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--segment-color);
   line-height: 1;
+  opacity: 0.7;
 }
 
 /* ─── Control panel ───────────────────────────────────────────────────────── */
@@ -152,43 +198,14 @@
   margin-bottom: 16px;
 }
 
-.heuristics-controls__confirm {
-  width: 100%;
-  padding: 14px;
-  border: 1px solid var(--card-border);
-  border-radius: 14px;
-  background: var(--card-bg);
-  color: var(--text-soft);
-  font-size: 1rem;
-  font-weight: 700;
-  cursor: default;
-  transition: background 0.18s, color 0.18s, border-color 0.18s, transform 0.12s;
-}
-
-.heuristics-controls__confirm--ready {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #0f1113;
-  cursor: pointer;
-}
-
-.heuristics-controls__confirm--ready:active {
-  transform: scale(0.98);
-}
-
-.heuristics-controls__secondary {
-  display: flex;
-  gap: 8px;
-}
-
 .heuristics-controls__btn {
-  flex: 1;
-  padding: 10px 0;
+  width: 100%;
+  padding: 12px 0;
   border: 1px solid var(--card-border);
-  border-radius: 10px;
+  border-radius: 12px;
   background: transparent;
   color: var(--text-soft);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.12s, color 0.12s, transform 0.1s;
@@ -200,6 +217,57 @@
 }
 
 .heuristics-controls__btn:active {
+  transform: scale(0.98);
+}
+
+/* ─── Undo bar ────────────────────────────────────────────────────────────── */
+
+.heuristics-undo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+}
+
+.heuristics-undo__text {
+  font-size: 0.86rem;
+  color: var(--text-muted);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heuristics-undo__text strong {
+  color: var(--text-strong);
+}
+
+.heuristics-undo__label {
+  color: var(--text-soft);
+}
+
+.heuristics-undo__btn {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--link);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.heuristics-undo__btn:hover {
+  background: var(--pill-muted-bg);
+}
+
+.heuristics-undo__btn:active {
   transform: scale(0.96);
 }
 

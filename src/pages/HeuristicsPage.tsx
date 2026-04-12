@@ -9,6 +9,7 @@ import {
   setHeuristicsEnabled,
   seedDefaultQuestions,
 } from "../repositories/heuristicsRepository";
+import { deleteItem, STORE_NAMES } from "../db/db";
 import BottomNav from "../components/BottomNav";
 import TopBar from "../components/TopBar";
 import "./HeuristicsPage.css";
@@ -42,6 +43,12 @@ interface PendingItem {
   date: string;
 }
 
+interface LastAction {
+  item: PendingItem;
+  value: number;
+  entryId: string;
+}
+
 const LOOKBACK_DAYS = 3;
 const SCALE = [1, 2, 3, 4, 5] as const;
 const SCALE_COLORS = ["#e76f51", "#f4a261", "#f4d35e", "#a8d065", "#6bcb77"];
@@ -53,8 +60,8 @@ export default function HeuristicsPage() {
   const [queue, setQueue] = useState<PendingItem[]>([]);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<number | null>(null);
-  const [exiting, setExiting] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
+  const [lastAction, setLastAction] = useState<LastAction | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -68,7 +75,6 @@ export default function HeuristicsPage() {
       const today = localDateIso();
       const startDate = shiftDate(today, -(LOOKBACK_DAYS - 1));
       const entries = await getEntriesForDateRange(startDate, today);
-
       const answered = new Set(entries.map((e) => `${e.questionId}_${e.date}`));
 
       const pending: PendingItem[] = [];
@@ -94,34 +100,35 @@ export default function HeuristicsPage() {
     setEnabled(true);
     const questions = await getQuestions();
     const today = localDateIso();
-    const pending: PendingItem[] = questions.map((q) => ({ question: q, date: today }));
-    setQueue(pending);
+    setQueue(questions.map((q) => ({ question: q, date: today })));
     setIndex(0);
     setLoading(false);
   }
 
   function advance() {
-    setExiting(true);
+    setTransitioning(true);
     setTimeout(() => {
       setIndex((i) => i + 1);
-      setSelected(null);
-      setExiting(false);
-    }, 250);
+      setTransitioning(false);
+    }, 280);
   }
 
-  async function handleConfirm() {
-    if (selected === null) return;
+  async function handleScore(value: number) {
+    if (transitioning) return;
     const item = queue[index];
+    const entryId = `${item.question.id}_${item.date}`;
     await putEntry({
-      id: `${item.question.id}_${item.date}`,
+      id: entryId,
       questionId: item.question.id,
       date: item.date,
-      value: selected,
+      value,
     });
+    setLastAction({ item, value, entryId });
     advance();
   }
 
-  async function handleUnknown() {
+  async function handleDismiss() {
+    if (transitioning) return;
     const item = queue[index];
     await putEntry({
       id: `${item.question.id}_${item.date}`,
@@ -129,11 +136,21 @@ export default function HeuristicsPage() {
       date: item.date,
       value: null,
     });
+    setLastAction(null);
     advance();
   }
 
-  function handleSkip() {
+  function handleAnswerLater() {
+    if (transitioning) return;
+    setLastAction(null);
     advance();
+  }
+
+  async function handleUndo() {
+    if (!lastAction || transitioning) return;
+    await deleteItem(STORE_NAMES.heuristicEntries, lastAction.entryId);
+    setLastAction(null);
+    setIndex((i) => i - 1);
   }
 
   if (enabled === null || loading) return null;
@@ -186,9 +203,11 @@ export default function HeuristicsPage() {
     );
   }
 
-  const current = queue[index];
-  // Cards to peek behind the current one
-  const peekCards = queue.slice(index + 1, index + 3);
+  // Build visible carousel window: 1 previous + active + 2 next
+  const visibleOffsets = [-1, 0, 1, 2];
+  const carouselCards = visibleOffsets
+    .map((offset) => ({ offset, item: queue[index + offset] }))
+    .filter((c) => c.item !== undefined);
 
   return (
     <main className="heuristics-page">
@@ -199,70 +218,89 @@ export default function HeuristicsPage() {
           {index + 1} of {queue.length}
         </p>
 
-        {/* Card stack */}
-        <div className="heuristics-stack">
-          {/* Peek cards (rendered first = behind) */}
-          {peekCards.map((item, i) => (
-            <div
-              key={`${item.question.id}_${item.date}`}
-              className={`heuristics-card heuristics-card--peek heuristics-card--peek-${i + 1}`}
-              aria-hidden="true"
-            >
-              <span className="heuristics-card__date">{friendlyDateLabel(item.date)}</span>
-              <p className="heuristics-card__question">{item.question.label}</p>
-            </div>
-          ))}
+        {/* Carousel */}
+        <div className="heuristics-carousel">
+          {carouselCards.map(({ offset, item }) => {
+            const isActive = offset === 0;
+            const isExiting = offset === 0 && transitioning;
+            return (
+              <div
+                key={`${item.question.id}_${item.date}`}
+                className={[
+                  "heuristics-card",
+                  isActive && "heuristics-card--active",
+                  isExiting && "heuristics-card--exiting",
+                  offset === -1 && "heuristics-card--prev",
+                  offset === 1 && "heuristics-card--next",
+                  offset === 2 && "heuristics-card--far-next",
+                ].filter(Boolean).join(" ")}
+                aria-hidden={!isActive}
+              >
+                <span className="heuristics-card__date">{friendlyDateLabel(item.date)}</span>
+                <p className="heuristics-card__question">{item.question.label}</p>
 
-          {/* Active card */}
-          <div
-            className={`heuristics-card heuristics-card--active${exiting ? " heuristics-card--exiting" : ""}`}
-            key={`${current.question.id}_${current.date}`}
-          >
-            <span className="heuristics-card__date">{friendlyDateLabel(current.date)}</span>
-            <p className="heuristics-card__question">{current.question.label}</p>
+                {isActive && (
+                  <>
+                    {/* Score bar */}
+                    <div className="heuristics-scale">
+                      {SCALE.map((n, i) => (
+                        <button
+                          key={n}
+                          type="button"
+                          className="heuristics-scale__segment"
+                          style={{
+                            "--segment-color": SCALE_COLORS[i],
+                            "--segment-color-dim": SCALE_COLORS[i] + "33",
+                          } as React.CSSProperties}
+                          onClick={() => handleScore(n)}
+                          aria-label={`${n} — ${SCALE_LABELS[i]}`}
+                        >
+                          <span className="heuristics-scale__number">{n}</span>
+                          <span className="heuristics-scale__label">{SCALE_LABELS[i]}</span>
+                        </button>
+                      ))}
+                    </div>
 
-            {/* Score bar */}
-            <div className="heuristics-scale">
-              {SCALE.map((n, i) => (
-                <button
-                  key={n}
-                  type="button"
-                  className={`heuristics-scale__segment${selected === n ? " heuristics-scale__segment--selected" : ""}`}
-                  style={{
-                    "--segment-color": SCALE_COLORS[i],
-                    "--segment-color-dim": SCALE_COLORS[i] + "33",
-                  } as React.CSSProperties}
-                  onClick={() => setSelected(selected === n ? null : n)}
-                  aria-label={`${n} — ${SCALE_LABELS[i]}`}
-                >
-                  <span className="heuristics-scale__number">{n}</span>
-                  {selected === n && (
-                    <span className="heuristics-scale__label">{SCALE_LABELS[i]}</span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
+                    {/* Dismiss for today */}
+                    <button
+                      type="button"
+                      className="heuristics-card__dismiss"
+                      onClick={handleDismiss}
+                    >
+                      Dismiss for today
+                      <span className="heuristics-card__dismiss-note">no impact on scores</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            );
+          })}
         </div>
 
-        {/* Control panel — persists across card transitions */}
+        {/* Control panel */}
         <div className="heuristics-controls">
+          {/* Undo bar */}
+          {lastAction && (
+            <div className="heuristics-undo">
+              <span className="heuristics-undo__text">
+                {lastAction.item.question.label}: <strong>{lastAction.value}</strong>
+                <span className="heuristics-undo__label">
+                  {" "}({SCALE_LABELS[lastAction.value - 1]})
+                </span>
+              </span>
+              <button type="button" className="heuristics-undo__btn" onClick={handleUndo}>
+                Undo
+              </button>
+            </div>
+          )}
+
           <button
             type="button"
-            className={`heuristics-controls__confirm${selected !== null ? " heuristics-controls__confirm--ready" : ""}`}
-            onClick={handleConfirm}
-            disabled={selected === null}
+            className="heuristics-controls__btn"
+            onClick={handleAnswerLater}
           >
-            {selected !== null ? "Confirm" : "Select a score"}
+            Answer later
           </button>
-          <div className="heuristics-controls__secondary">
-            <button type="button" className="heuristics-controls__btn" onClick={handleUnknown}>
-              Unknown
-            </button>
-            <button type="button" className="heuristics-controls__btn" onClick={handleSkip}>
-              Skip for now
-            </button>
-          </div>
         </div>
 
         <div className="heuristics-footer">
