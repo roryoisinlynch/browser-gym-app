@@ -102,30 +102,120 @@
   margin: 0;
 }
 
+/* ─── Day list ───────────────────────────────────────────────────────────── */
+
+.week-page__days {
+  display: flex;
+  flex-direction: column;
+  padding: 0 14px;
+}
+
+.week-day {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--card-border);
+  text-decoration: none;
+  color: inherit;
+}
+
+.week-day:last-child {
+  border-bottom: none;
+}
+
+/* Rest days — muted */
+.week-day--rest {
+  opacity: 0.55;
+}
+
+.week-day--rest .week-day__activity {
+  color: var(--text-muted);
+}
+
+/* Session days — clickable */
+.week-day--session {
+  transition: background 0.12s, transform 0.12s;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin: 0 -16px;
+  border-bottom: none;
+}
+
+.week-day--session + .week-day {
+  border-top: none;
+}
+
+.week-day--session:hover {
+  background: rgba(255, 255, 255, 0.03);
+  transform: translateY(-1px);
+}
+
+.week-day--session:active {
+  transform: scale(0.985);
+}
+
+/* Next session highlight */
+.week-day--next {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(216, 240, 106, 0.08),
+      rgba(216, 240, 106, 0.03)
+    );
+}
+
+.week-day__left {
+  min-width: 0;
+}
+
+.week-day__right {
+  flex-shrink: 0;
+}
+
+.week-day__header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.week-day__name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-soft);
+}
+
+.week-day__date {
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: var(--text-soft);
+  opacity: 0.7;
+}
+
+.week-day__activity {
+  font-size: 1.04rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.week-day__caption {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* ─── Legacy: start card (no active program) ─────────────────────────────── */
+
 .week-page__list {
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 0 14px;
-}
-
-.week-rest-divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 10px 14px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  opacity: 0.75;
-}
-
-.week-rest-divider::before,
-.week-rest-divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--card-border);
 }
 
 .week-start-card {

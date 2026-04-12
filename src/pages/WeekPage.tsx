@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import BottomNav from "../components/BottomNav";
-import DayCard, { type DayState } from "../components/DayCard";
+import type { DayState } from "../components/DayCard";
 import StartSeasonModal from "../components/StartSeasonModal";
 import TopBar from "../components/TopBar";
 import type { SeasonTemplate } from "../domain/models";
@@ -14,6 +14,10 @@ import {
 } from "../repositories/programRepository";
 import "./WeekPage.css";
 
+/* ─── Helpers ────────────────────────────────────────────────────────────── */
+
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
 function getDayState(
   status: "not_started" | "in_progress" | "completed",
   hasSeenNext: boolean
@@ -22,6 +26,48 @@ function getDayState(
   if (!hasSeenNext) return "next";
   return "upcoming";
 }
+
+function localDayStart(iso: string): number {
+  const d = new Date(iso);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+
+function daysBetween(isoA: string, isoB: string): number {
+  return Math.round((localDayStart(isoA) - localDayStart(isoB)) / 86400000);
+}
+
+function todayIso(): string {
+  return new Date().toISOString();
+}
+
+/** Derive the calendar date for any item using a sibling session's date + order offset */
+function deriveDate(item: WeekInstanceItemView, allItems: WeekInstanceItemView[]): Date | null {
+  const ref = allItems.find((i) => i.sessionInstance?.date);
+  if (!ref?.sessionInstance) return null;
+  const refDate = new Date(ref.sessionInstance.date);
+  const diff = item.weekInstanceItem.order - ref.weekInstanceItem.order;
+  const d = new Date(refDate);
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
+function formatDateShort(d: Date): string {
+  const dayNum = d.getDate();
+  const mod100 = dayNum % 100;
+  let suffix = "th";
+  if (mod100 >= 11 && mod100 <= 13) suffix = "th";
+  else {
+    switch (dayNum % 10) {
+      case 1: suffix = "st"; break;
+      case 2: suffix = "nd"; break;
+      case 3: suffix = "rd"; break;
+    }
+  }
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${dayNum}${suffix} ${months[d.getMonth()]}`;
+}
+
+/* ─── Component ──────────────────────────────────────────────────────────── */
 
 export default function WeekPage() {
   const navigate = useNavigate();
@@ -84,13 +130,10 @@ export default function WeekPage() {
 
   const dayStates = useMemo<DayState[]>(() => {
     let hasSeenNext = false;
-
     return sessionItems.map(({ sessionInstance }) => {
       const status = sessionInstance?.status ?? "not_started";
       const state = getDayState(status, hasSeenNext);
-
       if (state === "next") hasSeenNext = true;
-
       return state;
     });
   }, [sessionItems]);
@@ -102,7 +145,6 @@ export default function WeekPage() {
 
   const weekLabel = useMemo(() => {
     if (items.length === 0 || totalWeeks == null) return "Week";
-
     const weekNumber = items[0].weekInstance.order;
     return `Week ${weekNumber} of ${totalWeeks}`;
   }, [items, totalWeeks]);
@@ -208,54 +250,103 @@ export default function WeekPage() {
         </header>
 
         <section className="week-page__content">
-          <div className="week-page__list">
+          <div className="week-page__days">
             {items.map((item) => {
-              if (item.weekInstanceItem.type === "rest") {
-                // Derive day name from a sibling session's date + order difference
-                let dayName = "";
-                const refItem = items.find(
-                  (i) => i.sessionInstance?.date
-                );
-                if (refItem?.sessionInstance) {
-                  const refDate = new Date(refItem.sessionInstance.date);
-                  const orderDiff = item.weekInstanceItem.order - refItem.weekInstanceItem.order;
-                  const restDate = new Date(refDate);
-                  restDate.setDate(restDate.getDate() + orderDiff);
-                  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-                  dayName = days[restDate.getDay()];
-                }
+              const isRest = item.weekInstanceItem.type === "rest";
+              const date = isRest
+                ? deriveDate(item, items)
+                : item.sessionInstance?.date
+                  ? new Date(item.sessionInstance.date)
+                  : null;
 
-                const label = item.weekInstanceItem.label ?? "Rest";
+              const dayName = date ? DAY_NAMES[date.getDay()] : "";
+              const dateShort = date ? formatDateShort(date) : "";
+
+              if (isRest) {
                 return (
-                  <div
-                    key={item.weekInstanceItem.id}
-                    className="week-rest-divider"
-                  >
-                    {dayName ? `${label} — ${dayName}` : label}
+                  <div key={item.weekInstanceItem.id} className="week-day week-day--rest">
+                    <div className="week-day__header">
+                      <span className="week-day__name">{dayName}</span>
+                      <span className="week-day__date">{dateShort}</span>
+                    </div>
+                    <span className="week-day__activity">Rest</span>
                   </div>
                 );
               }
 
+              // Session
               const state = dayStates[sessionIndex];
-              const index = sessionIndex;
               sessionIndex += 1;
 
-              if (!item.sessionInstance || !item.sessionTemplate) {
-                return null;
+              if (!item.sessionInstance || !item.sessionTemplate) return null;
+
+              const scheduledDate = item.sessionInstance.date;
+              const completedAt = item.sessionInstance.completedAt;
+
+              // Adherence (completed)
+              let caption: string | null = null;
+              let captionColor: string | null = null;
+              if (state === "completed" && scheduledDate && completedAt) {
+                const delta = daysBetween(completedAt, scheduledDate);
+                if (delta === 0) {
+                  caption = "On schedule";
+                  captionColor = "#4ade80";
+                } else if (delta < 0) {
+                  const n = Math.abs(delta);
+                  caption = `${n} day${n === 1 ? "" : "s"} early`;
+                  captionColor = "#f59e0b";
+                } else {
+                  caption = `${delta} day${delta === 1 ? "" : "s"} late`;
+                  captionColor = "#f87171";
+                }
+              }
+
+              // Urgency (next)
+              if (state === "next" && scheduledDate) {
+                const delta = daysBetween(scheduledDate, todayIso());
+                if (delta < 0) {
+                  const n = Math.abs(delta);
+                  caption = `${n} day${n === 1 ? "" : "s"} overdue`;
+                  captionColor = "#f87171";
+                } else if (delta === 0) {
+                  caption = "Today";
+                  captionColor = "var(--accent)";
+                } else {
+                  caption = `In ${delta} day${delta === 1 ? "" : "s"}`;
+                  captionColor = "var(--text-muted)";
+                }
               }
 
               return (
-                <DayCard
+                <Link
                   key={item.sessionInstance.id}
-                  day={{
-                    id: item.sessionInstance.id,
-                    name: item.sessionTemplate.name,
-                    order: index + 1,
-                  }}
-                  state={state}
-                  scheduledDate={item.sessionInstance.date}
-                  completedAt={item.sessionInstance.completedAt}
-                />
+                  to={`/session/${item.sessionInstance.id}`}
+                  className={`week-day week-day--session week-day--${state}`}
+                >
+                  <div className="week-day__left">
+                    <div className="week-day__header">
+                      <span className="week-day__name">{dayName}</span>
+                      <span className="week-day__date">{dateShort}</span>
+                    </div>
+                    <span className="week-day__activity">{item.sessionTemplate.name}</span>
+                    {caption && (
+                      <span className="week-day__caption" style={{ color: captionColor ?? undefined }}>
+                        {caption}
+                      </span>
+                    )}
+                  </div>
+                  <div className="week-day__right">
+                    {state === "completed" && (
+                      <span className="day-pill day-pill--done">Done</span>
+                    )}
+                    {state === "next" && (
+                      <span className="day-pill day-pill--start">Start</span>
+                    )}
+                    {state === "upcoming" && (
+                      <span className="day-pill day-pill--view">View ›</span>
+                    )}
+                  </div>
+                </Link>
               );
             })}
           </div>
