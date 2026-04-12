@@ -26,6 +26,10 @@ export async function deleteQuestion(id: string): Promise<void> {
 
 // ─── Entries ─────────────────────────────────────────────────────────────────
 
+export async function getAllEntries(): Promise<HeuristicEntry[]> {
+  return getAll<HeuristicEntry>(STORE_NAMES.heuristicEntries);
+}
+
 export async function getEntriesForDate(
   date: string
 ): Promise<HeuristicEntry[]> {

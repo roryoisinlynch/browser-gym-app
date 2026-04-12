@@ -213,7 +213,7 @@ export default function HeuristicsPage() {
               className="heuristics-done__link"
               onClick={() => navigate("/heuristics/questions")}
             >
-              Manage questions →
+              Heuristics settings →
             </button>
           </div>
         </section>
@@ -345,7 +345,7 @@ export default function HeuristicsPage() {
             className="heuristics-footer__link"
             onClick={() => navigate("/heuristics/questions")}
           >
-            Manage questions →
+            Heuristics settings →
           </button>
         </div>
 

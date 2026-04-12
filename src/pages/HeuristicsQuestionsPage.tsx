@@ -1,29 +1,41 @@
 import { useEffect, useState } from "react";
-import type { HeuristicQuestion } from "../domain/models";
+import type { HeuristicQuestion, HeuristicEntry } from "../domain/models";
 import {
   getQuestions,
   putQuestion,
   deleteQuestion,
+  getAllEntries,
+  putEntry,
 } from "../repositories/heuristicsRepository";
-import { bulkPutItems } from "../db/db";
-import { STORE_NAMES } from "../db/db";
+import { bulkPutItems, deleteItem, STORE_NAMES } from "../db/db";
 import BottomNav from "../components/BottomNav";
 import TopBar from "../components/TopBar";
 import "./HeuristicsQuestionsPage.css";
 
+const SCALE_LABELS = ["Poor", "Low", "OK", "Good", "Great"];
+
 export default function HeuristicsQuestionsPage() {
   const [questions, setQuestions] = useState<HeuristicQuestion[]>([]);
+  const [entries, setEntries] = useState<HeuristicEntry[]>([]);
   const [newLabel, setNewLabel] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState("");
 
+  // Answer editing
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+  const [editEntryValue, setEditEntryValue] = useState("");
+
   async function load() {
-    setQuestions(await getQuestions());
+    const [q, e] = await Promise.all([getQuestions(), getAllEntries()]);
+    setQuestions(q);
+    setEntries(e.sort((a, b) => b.date.localeCompare(a.date)));
   }
 
   useEffect(() => {
     load();
   }, []);
+
+  // ─── Question handlers ──────────────────────────────────────────────────
 
   async function handleAdd() {
     const label = newLabel.trim();
@@ -51,7 +63,6 @@ export default function HeuristicsQuestionsPage() {
     if (swapIdx < 0 || swapIdx >= questions.length) return;
     const updated = [...questions];
     [updated[idx], updated[swapIdx]] = [updated[swapIdx], updated[idx]];
-    // Reassign order values
     const reordered = updated.map((q, i) => ({ ...q, order: i + 1 }));
     await bulkPutItems(STORE_NAMES.heuristicQuestions, reordered);
     setQuestions(reordered);
@@ -68,11 +79,40 @@ export default function HeuristicsQuestionsPage() {
     load();
   }
 
+  // ─── Entry handlers ─────────────────────────────────────────────────────
+
+  async function handleDeleteEntry(id: string) {
+    const confirmed = window.confirm("Delete this answer?");
+    if (!confirmed) return;
+    await deleteItem(STORE_NAMES.heuristicEntries, id);
+    load();
+  }
+
+  async function handleEditEntry(entry: HeuristicEntry) {
+    setEditingEntryId(entry.id);
+    setEditEntryValue(entry.value !== null ? String(entry.value) : "");
+  }
+
+  async function handleSaveEntry(entry: HeuristicEntry) {
+    const trimmed = editEntryValue.trim();
+    const value = trimmed === "" ? null : Number(trimmed);
+    if (value !== null && (isNaN(value) || value < 1 || value > 5)) return;
+    await putEntry({ ...entry, value });
+    setEditingEntryId(null);
+    setEditEntryValue("");
+    load();
+  }
+
+  // Build a map from question id → label
+  const qMap = new Map(questions.map((q) => [q.id, q.label]));
+
   return (
     <main className="hq-page">
-      <TopBar title="Manage Questions" backTo="/heuristics" />
+      <TopBar title="Heuristics Settings" backTo="/heuristics" />
       <section className="hq-shell">
-        {/* Question list */}
+        {/* ─── Questions ────────────────────────────────────────────── */}
+        <h2 className="hq-section-heading">Questions</h2>
+
         <div className="hq-list">
           {questions.map((q, idx) => (
             <div key={q.id} className="hq-item">
@@ -172,6 +212,96 @@ export default function HeuristicsQuestionsPage() {
             Add
           </button>
         </div>
+
+        {/* ─── Answers ──────────────────────────────────────────────── */}
+        <h2 className="hq-section-heading">Answers</h2>
+
+        {entries.length === 0 ? (
+          <p className="hq-empty">No answers recorded yet.</p>
+        ) : (
+          <div className="hq-answers">
+            <div className="hq-answers__header">
+              <span className="hq-answers__col hq-answers__col--question">Question</span>
+              <span className="hq-answers__col hq-answers__col--date">Date</span>
+              <span className="hq-answers__col hq-answers__col--value">Score</span>
+              <span className="hq-answers__col hq-answers__col--actions" />
+            </div>
+            {entries.map((entry) => (
+              <div key={entry.id} className="hq-answers__row">
+                <span className="hq-answers__col hq-answers__col--question">
+                  {qMap.get(entry.questionId) ?? "—"}
+                </span>
+                <span className="hq-answers__col hq-answers__col--date">{entry.date}</span>
+                <span className="hq-answers__col hq-answers__col--value">
+                  {editingEntryId === entry.id ? (
+                    <input
+                      className="hq-answers__edit-input"
+                      value={editEntryValue}
+                      onChange={(e) => setEditEntryValue(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSaveEntry(entry)}
+                      placeholder="1-5"
+                      autoFocus
+                    />
+                  ) : entry.value !== null ? (
+                    `${entry.value} (${SCALE_LABELS[entry.value - 1]})`
+                  ) : (
+                    "N/A"
+                  )}
+                </span>
+                <span className="hq-answers__col hq-answers__col--actions">
+                  {editingEntryId === entry.id ? (
+                    <>
+                      <button
+                        type="button"
+                        className="hq-item__action-btn"
+                        onClick={() => handleSaveEntry(entry)}
+                        aria-label="Save"
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16">
+                          <path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        className="hq-item__action-btn"
+                        onClick={() => { setEditingEntryId(null); setEditEntryValue(""); }}
+                        aria-label="Cancel"
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16">
+                          <path d="M18 6L6 18M6 6l12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className="hq-item__action-btn"
+                        onClick={() => handleEditEntry(entry)}
+                        aria-label="Edit answer"
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16">
+                          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        className="hq-item__action-btn hq-item__action-btn--danger"
+                        onClick={() => handleDeleteEntry(entry.id)}
+                        aria-label="Delete answer"
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16">
+                          <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+                    </>
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
       <BottomNav activeTab="heuristics" />
     </main>

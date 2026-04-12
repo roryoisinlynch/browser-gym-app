@@ -10,13 +10,28 @@
   padding: 16px 20px 28px;
 }
 
+/* ─── Section headings ───────────────────────────────────────────────────── */
+
+.hq-section-heading {
+  margin: 24px 0 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-soft);
+}
+
+.hq-section-heading:first-of-type {
+  margin-top: 0;
+}
+
 /* ─── Question list ───────────────────────────────────────────────────────── */
 
 .hq-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .hq-item {
@@ -126,6 +141,7 @@
 .hq-add {
   display: flex;
   gap: 8px;
+  margin-bottom: 8px;
 }
 
 .hq-add__input {
@@ -166,4 +182,88 @@
 
 .hq-add__btn:active:not(:disabled) {
   transform: scale(0.96);
+}
+
+/* ─── Answers table ──────────────────────────────────────────────────────── */
+
+.hq-empty {
+  font-size: 0.9rem;
+  color: var(--text-soft);
+}
+
+.hq-answers {
+  display: flex;
+  flex-direction: column;
+}
+
+.hq-answers__header {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.hq-answers__header .hq-answers__col {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-soft);
+}
+
+.hq-answers__row {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.hq-answers__row:last-child {
+  border-bottom: none;
+}
+
+.hq-answers__col {
+  font-size: 0.86rem;
+  color: var(--text-muted);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hq-answers__col--question {
+  flex: 2;
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.hq-answers__col--date {
+  flex: 1.5;
+}
+
+.hq-answers__col--value {
+  flex: 1.5;
+}
+
+.hq-answers__col--actions {
+  flex: 0 0 72px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.hq-answers__edit-input {
+  width: 48px;
+  padding: 4px 8px;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  color: var(--text-strong);
+  font-size: 0.86rem;
+  outline: none;
+  text-align: center;
+}
+
+.hq-answers__edit-input:focus {
+  border-color: var(--accent);
 }

@@ -61,10 +61,10 @@ export default function SettingsPage() {
               >
                 <div className="settings-nav-card__body">
                   <span className="settings-nav-card__title">
-                    Manage questions
+                    Heuristics settings
                   </span>
                   <span className="settings-nav-card__desc">
-                    Add, edit, reorder, or remove questions
+                    Manage questions and answers
                   </span>
                 </div>
                 <span className="settings-nav-card__chevron">›</span>
