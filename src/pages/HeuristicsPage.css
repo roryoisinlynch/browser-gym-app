@@ -13,7 +13,7 @@
 /* ─── Progress ────────────────────────────────────────────────────────────── */
 
 .heuristics-progress {
-  margin: 0 0 16px;
+  margin: 0 0 12px;
   text-align: center;
   font-size: 0.78rem;
   font-weight: 600;
@@ -21,29 +21,27 @@
   letter-spacing: 0.04em;
 }
 
-/* ─── Carousel ────────────────────────────────────────────────────────────── */
+/* ─── Vertical carousel ──────────────────────────────────────────────────── */
 
 .heuristics-carousel {
   position: relative;
-  overflow: hidden;
-  margin: 0 -20px 20px;
-  padding: 8px 20px;
-  min-height: 220px;
+  /* enough room for active card + a few peeking below */
+  min-height: 420px;
 }
 
 .heuristics-card {
   position: absolute;
-  top: 8px;
-  left: 20px;
-  right: 20px;
+  left: 0;
+  right: 0;
   padding: 24px 20px 20px;
   border-radius: 18px;
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   box-shadow: var(--card-shadow);
   text-align: center;
-  transition: transform 0.28s ease, opacity 0.28s ease;
+  transition: transform 0.32s ease, opacity 0.32s ease;
   will-change: transform, opacity;
+  transform-origin: top center;
 }
 
 .heuristics-card__date {
@@ -64,40 +62,73 @@
   color: var(--text-strong);
 }
 
-/* Active card — centered, full opacity */
+/* Active card — at the top, full size */
 .heuristics-card--active {
-  position: relative;
-  z-index: 3;
-  transform: translateX(0) scale(1);
+  top: 0;
+  z-index: 5;
+  transform: translateY(0) scale(1);
   opacity: 1;
 }
 
+/* Exiting — slides up and fades */
 .heuristics-card--exiting {
-  transform: translateX(-120%) scale(0.92);
+  z-index: 6;
+  transform: translateY(-30%) scale(0.92);
   opacity: 0;
 }
 
-/* Previous card — peeking on the left */
+/* Previous card — gone above */
 .heuristics-card--prev {
   z-index: 1;
-  transform: translateX(calc(-85% - 12px)) scale(0.88);
-  opacity: 0.35;
+  transform: translateY(-50%) scale(0.88);
+  opacity: 0;
   pointer-events: none;
 }
 
-/* Next card — peeking on the right */
-.heuristics-card--next {
+/* ─── Upcoming cards peeking below ───────────────────────────────────────── */
+
+.heuristics-card--next-1 {
+  z-index: 4;
+  pointer-events: none;
+}
+
+.heuristics-card--next-2 {
+  z-index: 3;
+  pointer-events: none;
+}
+
+.heuristics-card--next-3 {
   z-index: 2;
-  transform: translateX(calc(85% + 12px)) scale(0.88);
-  opacity: 0.35;
   pointer-events: none;
 }
 
-/* Far next — barely visible further right */
-.heuristics-card--far-next {
+.heuristics-card--next-4 {
   z-index: 1;
-  transform: translateX(calc(170% + 24px)) scale(0.80);
-  opacity: 0.15;
+  pointer-events: none;
+}
+
+/* ─── Floating control panel ─────────────────────────────────────────────── */
+
+.heuristics-controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 16px;
+}
+
+/* Gradient mask to fade the upcoming cards behind the controls */
+.heuristics-controls::before {
+  content: "";
+  position: absolute;
+  top: -32px;
+  left: -20px;
+  right: -20px;
+  height: 48px;
+  background: linear-gradient(to bottom, transparent, var(--bg-bottom));
   pointer-events: none;
 }
 
@@ -114,6 +145,9 @@
   border: none;
   border-top: 1px solid var(--card-border);
   background: transparent;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-soft);
   cursor: pointer;
   transition: color 0.12s;
 }
@@ -124,12 +158,6 @@
 
 .heuristics-card__dismiss:active {
   opacity: 0.7;
-}
-
-.heuristics-card__dismiss {
-  font-size: 0.84rem;
-  font-weight: 600;
-  color: var(--text-soft);
 }
 
 .heuristics-card__dismiss-note {
@@ -189,37 +217,6 @@
   opacity: 0.7;
 }
 
-/* ─── Control panel ───────────────────────────────────────────────────────── */
-
-.heuristics-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.heuristics-controls__btn {
-  width: 100%;
-  padding: 12px 0;
-  border: 1px solid var(--card-border);
-  border-radius: 12px;
-  background: transparent;
-  color: var(--text-soft);
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.12s, color 0.12s, transform 0.1s;
-}
-
-.heuristics-controls__btn:hover {
-  background: var(--pill-muted-bg);
-  color: var(--text-muted);
-}
-
-.heuristics-controls__btn:active {
-  transform: scale(0.98);
-}
-
 /* ─── Undo bar ────────────────────────────────────────────────────────────── */
 
 .heuristics-undo {
@@ -269,6 +266,30 @@
 
 .heuristics-undo__btn:active {
   transform: scale(0.96);
+}
+
+/* ─── Answer later button ────────────────────────────────────────────────── */
+
+.heuristics-controls__btn {
+  width: 100%;
+  padding: 12px 0;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, transform 0.1s;
+}
+
+.heuristics-controls__btn:hover {
+  background: var(--pill-muted-bg);
+  color: var(--text-muted);
+}
+
+.heuristics-controls__btn:active {
+  transform: scale(0.98);
 }
 
 /* ─── Disabled state ──────────────────────────────────────────────────────── */
