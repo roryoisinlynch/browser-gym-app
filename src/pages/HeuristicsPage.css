@@ -21,12 +21,11 @@
   letter-spacing: 0.04em;
 }
 
-/* ─── Active card area ───────────────────────────────────────────────────── */
+/* ─── Card stack ─────────────────────────────────────────────────────────── */
 
-.heuristics-active-area {
+.heuristics-stack {
   position: relative;
-  overflow: hidden;
-  margin-bottom: 12px;
+  margin-bottom: 36px;  /* room for stacked card edges peeking below */
 }
 
 .heuristics-card {
@@ -59,70 +58,49 @@
   color: var(--text-strong);
 }
 
-/* Active card — in flow, full size */
+/* Active card — in flow, on top */
 .heuristics-card--active {
   position: relative;
-  z-index: 2;
+  z-index: 10;
   transform: translateY(0) scale(1);
   opacity: 1;
 }
 
-/* Exiting — slides up and fades */
+/* Exiting — slides up and shrinks */
 .heuristics-card--exiting {
   transform: translateY(-30%) scale(0.92);
   opacity: 0;
 }
 
-/* Previous card — hidden above */
-.heuristics-card--prev {
+/* Stacked cards — absolute, peeking out below */
+.heuristics-card--stacked {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1;
-  transform: translateY(-50%) scale(0.88);
-  opacity: 0;
   pointer-events: none;
+  height: 0;
+  padding: 0;
+  border-bottom: none;
+  border-radius: 0 0 18px 18px;
+  /* visible portion is just the bottom edge + border */
+  min-height: 16px;
 }
 
-/* ─── Control panel — normal flow, opaque ────────────────────────────────── */
+/* ─── Card actions (skip + N/A) ──────────────────────────────────────────── */
 
-.heuristics-controls {
+.heuristics-card__actions {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 0;
+  margin-top: 16px;
+  border-top: 1px solid var(--card-border);
 }
 
-/* ─── Upcoming cards peeking below ───────────────────────────────────────── */
-
-.heuristics-upcoming {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.heuristics-card--upcoming {
-  pointer-events: none;
-}
-
-.heuristics-card--upcoming .heuristics-card__question {
-  margin-bottom: 0;
-}
-
-/* ─── Dismiss button on card ──────────────────────────────────────────────── */
-
-.heuristics-card__dismiss {
+.heuristics-card__action {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  width: 100%;
-  margin-top: 16px;
   padding: 10px 0;
   border: none;
-  border-top: 1px solid var(--card-border);
   background: transparent;
   font-size: 0.84rem;
   font-weight: 600;
@@ -131,15 +109,19 @@
   transition: color 0.12s;
 }
 
-.heuristics-card__dismiss:hover {
+.heuristics-card__action + .heuristics-card__action {
+  border-left: 1px solid var(--card-border);
+}
+
+.heuristics-card__action:hover {
   color: var(--text-muted);
 }
 
-.heuristics-card__dismiss:active {
+.heuristics-card__action:active {
   opacity: 0.7;
 }
 
-.heuristics-card__dismiss-note {
+.heuristics-card__action-note {
   font-size: 0.72rem;
   font-weight: 500;
   color: var(--text-soft);
@@ -204,6 +186,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 14px;
+  margin-bottom: 12px;
   border-radius: 12px;
   background: var(--card-bg);
   border: 1px solid var(--card-border);
@@ -245,30 +228,6 @@
 
 .heuristics-undo__btn:active {
   transform: scale(0.96);
-}
-
-/* ─── Answer later button ────────────────────────────────────────────────── */
-
-.heuristics-controls__btn {
-  width: 100%;
-  padding: 12px 0;
-  border: 1px solid var(--card-border);
-  border-radius: 12px;
-  background: transparent;
-  color: var(--text-soft);
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.12s, color 0.12s, transform 0.1s;
-}
-
-.heuristics-controls__btn:hover {
-  background: var(--pill-muted-bg);
-  color: var(--text-muted);
-}
-
-.heuristics-controls__btn:active {
-  transform: scale(0.98);
 }
 
 /* ─── Disabled state ──────────────────────────────────────────────────────── */
