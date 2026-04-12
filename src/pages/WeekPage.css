@@ -166,31 +166,11 @@
 .week-day__body {
   flex: 1;
   min-width: 0;
-  padding: 12px 14px;
-  margin: 6px 0;
-  border-radius: 12px;
-}
-
-/* Session body gets a card-like background */
-.week-day--session .week-day__body {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-}
-
-/* Next session highlight */
-.week-day--next .week-day__body {
-  background:
-    linear-gradient(
-      180deg,
-      rgba(216, 240, 106, 0.08),
-      rgba(216, 240, 106, 0.03)
-    ),
-    var(--card-bg);
-}
-
-/* Rest body — no card, just muted text */
-.week-day--rest .week-day__body {
-  padding-left: 14px;
+  padding: 14px 14px;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .week-day__activity {
@@ -216,7 +196,32 @@
 
 .week-day__pill {
   flex-shrink: 0;
-  margin-left: 8px;
+  padding-right: 14px;
+}
+
+/* ─── Row state colours (fill the body + pill area) ──────────────────────── */
+
+/* Completed — subtle green tint */
+.week-day--completed .week-day__body,
+.week-day--completed .week-day__pill {
+  background: rgba(74, 222, 128, 0.06);
+}
+
+/* Next — accent tint */
+.week-day--next .week-day__body,
+.week-day--next .week-day__pill {
+  background: rgba(216, 240, 106, 0.10);
+}
+
+/* Upcoming — subtle neutral */
+.week-day--upcoming .week-day__body,
+.week-day--upcoming .week-day__pill {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* Rest — very faint */
+.week-day--rest .week-day__body {
+  background: rgba(255, 255, 255, 0.015);
 }
 
 /* Session rows — clickable */
