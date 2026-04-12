@@ -405,6 +405,7 @@ export default function DashboardPage() {
   const [recentTooltipOpen, setRecentTooltipOpen] = useState(false);
   const [lastBackupAt, setLastBackupAt] = useState<string | null | "loading">("loading");
   const [showHeuristicsOptIn, setShowHeuristicsOptIn] = useState(false);
+  const [heuristicsOptInDeferred, setHeuristicsOptInDeferred] = useState(false);
   const [pendingHeuristicDays, setPendingHeuristicDays] = useState(0);
   const recentTooltipRef = useRef<HTMLDivElement | null>(null);
 
@@ -508,19 +509,42 @@ export default function DashboardPage() {
 
   // ─── Heuristics opt-in ────────────────────────────────────────────────────
 
-  async function handleOptIn(response: "yes" | "no" | "later") {
-    await setHeuristicsPromptResponse(response);
-    if (response === "yes") {
-      await setHeuristicsEnabled(true);
-      await seedDefaultQuestions();
-      const pending = await getPendingHeuristicDates(3);
-      setPendingHeuristicDays(pending.length);
-    }
+  async function handleOptInEnable() {
+    await setHeuristicsPromptResponse("yes");
+    await setHeuristicsEnabled(true);
+    await seedDefaultQuestions();
+    const pending = await getPendingHeuristicDates(3);
+    setPendingHeuristicDays(pending.length);
+    setShowHeuristicsOptIn(false);
+  }
+
+  async function handleOptInDismiss() {
+    await setHeuristicsPromptResponse("later");
     setShowHeuristicsOptIn(false);
   }
 
   function renderHeuristicsOptIn() {
     if (!showHeuristicsOptIn) return null;
+
+    if (heuristicsOptInDeferred) {
+      return (
+        <div className="dashboard-heuristics-optin">
+          <p className="dashboard-heuristics-optin__desc">
+            No problem. You can enable heuristics any time from the Settings menu.
+          </p>
+          <div className="dashboard-heuristics-optin__actions">
+            <button
+              type="button"
+              className="dashboard-heuristics-optin__btn"
+              onClick={handleOptInDismiss}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="dashboard-heuristics-optin">
         <p className="dashboard-heuristics-optin__heading">Enable heuristics tracking?</p>
@@ -547,24 +571,17 @@ export default function DashboardPage() {
         <div className="dashboard-heuristics-optin__actions">
           <button
             type="button"
-            className="dashboard-heuristics-optin__btn dashboard-heuristics-optin__btn--yes"
-            onClick={() => handleOptIn("yes")}
+            className="dashboard-heuristics-optin__btn"
+            onClick={handleOptInEnable}
           >
-            Yes
+            Try it now
           </button>
           <button
             type="button"
-            className="dashboard-heuristics-optin__btn dashboard-heuristics-optin__btn--no"
-            onClick={() => handleOptIn("no")}
+            className="dashboard-heuristics-optin__btn"
+            onClick={() => setHeuristicsOptInDeferred(true)}
           >
-            No
-          </button>
-          <button
-            type="button"
-            className="dashboard-heuristics-optin__btn dashboard-heuristics-optin__btn--later"
-            onClick={() => handleOptIn("later")}
-          >
-            Later
+            Decide later
           </button>
         </div>
       </div>

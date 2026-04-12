@@ -340,6 +340,8 @@
   padding: 10px 0;
   border: 1px solid var(--card-border);
   border-radius: 10px;
+  background: var(--card-bg);
+  color: var(--text-muted);
   font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
@@ -348,21 +350,6 @@
 
 .dashboard-heuristics-optin__btn:active {
   transform: scale(0.96);
-}
-
-.dashboard-heuristics-optin__btn--yes {
-  background: var(--card-bg);
-  color: var(--text-strong);
-}
-
-.dashboard-heuristics-optin__btn--no {
-  background: var(--card-bg);
-  color: var(--text-muted);
-}
-
-.dashboard-heuristics-optin__btn--later {
-  background: var(--card-bg);
-  color: var(--text-soft);
 }
 
 /* ── Season timeline ── */
