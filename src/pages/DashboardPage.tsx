@@ -556,28 +556,8 @@ export default function DashboardPage() {
     );
   }
 
-  function renderHeuristicsPending() {
-    if (pendingHeuristicDays === 0) return null;
-    return (
-      <div
-        className="dashboard-up-next dashboard-up-next--heuristics dashboard-up-next--with-cta"
-        role="button"
-        tabIndex={0}
-        onClick={() => navigate("/heuristics")}
-        onKeyDown={(e) => e.key === "Enter" && navigate("/heuristics")}
-      >
-        <div className="dashboard-up-next__content">
-          <span className="dashboard-up-next__pill dashboard-up-next__pill--heuristics">Heuristics</span>
-          <p className="dashboard-up-next__heading">
-            {pendingHeuristicDays === 1
-              ? "1 unanswered day"
-              : `${pendingHeuristicDays} unanswered days`}
-          </p>
-        </div>
-        <span className="dashboard-up-next__cta dashboard-up-next__cta--heuristics">Log heuristics →</span>
-      </div>
-    );
-  }
+  const showHeuristicsUpNext = pendingHeuristicDays > 0 &&
+    (upNext.type === "rest_day" || upNext.type === "upcoming" || upNext.type === "week_complete");
 
   // ─── Up Next ──────────────────────────────────────────────────────────────
 
@@ -660,6 +640,28 @@ export default function DashboardPage() {
         );
 
       case "rest_day":
+        if (showHeuristicsUpNext) {
+          return (
+            <div
+              className="dashboard-up-next dashboard-up-next--heuristics dashboard-up-next--with-cta"
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate("/heuristics")}
+              onKeyDown={(e) => e.key === "Enter" && navigate("/heuristics")}
+            >
+              <div className="dashboard-up-next__content">
+                <span className="dashboard-up-next__pill dashboard-up-next__pill--heuristics">Rest day</span>
+                <p className="dashboard-up-next__heading">Log today's heuristics</p>
+                <p className="dashboard-up-next__sub">
+                  {pendingHeuristicDays === 1
+                    ? "1 day to fill in"
+                    : `${pendingHeuristicDays} days to fill in`}
+                </p>
+              </div>
+              <span className="dashboard-up-next__cta dashboard-up-next__cta--heuristics">Log heuristics →</span>
+            </div>
+          );
+        }
         return (
           <div className="dashboard-up-next dashboard-up-next--rest">
             <span className="dashboard-up-next__pill">Rest day</span>
@@ -675,6 +677,29 @@ export default function DashboardPage() {
         );
 
       case "upcoming":
+        if (showHeuristicsUpNext) {
+          return (
+            <div
+              className="dashboard-up-next dashboard-up-next--heuristics dashboard-up-next--with-cta"
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate("/heuristics")}
+              onKeyDown={(e) => e.key === "Enter" && navigate("/heuristics")}
+            >
+              <div className="dashboard-up-next__content">
+                <span className="dashboard-up-next__pill dashboard-up-next__pill--heuristics">Heuristics</span>
+                <p className="dashboard-up-next__heading">Log today's heuristics</p>
+                <p className="dashboard-up-next__sub">
+                  {pendingHeuristicDays === 1
+                    ? "1 day to fill in"
+                    : `${pendingHeuristicDays} days to fill in`}
+                  {" · "}Next session {upNext.daysUntil === 1 ? "tomorrow" : `in ${upNext.daysUntil} days`}
+                </p>
+              </div>
+              <span className="dashboard-up-next__cta dashboard-up-next__cta--heuristics">Log heuristics →</span>
+            </div>
+          );
+        }
         return (
           <div className="dashboard-up-next dashboard-up-next--upcoming">
             <span className="dashboard-up-next__pill">
@@ -686,6 +711,28 @@ export default function DashboardPage() {
         );
 
       case "week_complete":
+        if (showHeuristicsUpNext) {
+          return (
+            <div
+              className="dashboard-up-next dashboard-up-next--heuristics dashboard-up-next--with-cta"
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate("/heuristics")}
+              onKeyDown={(e) => e.key === "Enter" && navigate("/heuristics")}
+            >
+              <div className="dashboard-up-next__content">
+                <span className="dashboard-up-next__pill dashboard-up-next__pill--heuristics">Week complete</span>
+                <p className="dashboard-up-next__heading">Log today's heuristics</p>
+                <p className="dashboard-up-next__sub">
+                  {pendingHeuristicDays === 1
+                    ? "1 day to fill in"
+                    : `${pendingHeuristicDays} days to fill in`}
+                </p>
+              </div>
+              <span className="dashboard-up-next__cta dashboard-up-next__cta--heuristics">Log heuristics →</span>
+            </div>
+          );
+        }
         return (
           <div className="dashboard-up-next dashboard-up-next--muted">
             <span className="dashboard-up-next__pill">Week complete</span>
@@ -1028,7 +1075,6 @@ export default function DashboardPage() {
       <section className="dashboard-shell">
         <section className="dashboard-section">
           {renderUpNext()}
-          {renderHeuristicsPending()}
         </section>
 
         {renderHeuristicsOptIn()}

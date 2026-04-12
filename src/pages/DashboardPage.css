@@ -245,9 +245,8 @@
   color: var(--text-muted);
 }
 
-/* ── Heuristics pending card ── */
+/* ── Heuristics Up Next variant ── */
 .dashboard-up-next--heuristics {
-  margin-top: 10px;
   background: linear-gradient(
     135deg,
     rgba(127, 177, 255, 0.08),
