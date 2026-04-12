@@ -211,12 +211,27 @@ export default function WeekPage() {
           <div className="week-page__list">
             {items.map((item) => {
               if (item.weekInstanceItem.type === "rest") {
+                // Derive day name from a sibling session's date + order difference
+                let dayName = "";
+                const refItem = items.find(
+                  (i) => i.sessionInstance?.date
+                );
+                if (refItem?.sessionInstance) {
+                  const refDate = new Date(refItem.sessionInstance.date);
+                  const orderDiff = item.weekInstanceItem.order - refItem.weekInstanceItem.order;
+                  const restDate = new Date(refDate);
+                  restDate.setDate(restDate.getDate() + orderDiff);
+                  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+                  dayName = days[restDate.getDay()];
+                }
+
+                const label = item.weekInstanceItem.label ?? "Rest";
                 return (
                   <div
                     key={item.weekInstanceItem.id}
                     className="week-rest-divider"
                   >
-                    {item.weekInstanceItem.label ?? "Rest Day"}
+                    {dayName ? `${label} — ${dayName}` : label}
                   </div>
                 );
               }

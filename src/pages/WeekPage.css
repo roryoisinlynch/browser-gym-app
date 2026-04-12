@@ -110,12 +110,22 @@
 }
 
 .week-rest-divider {
-  margin: 6px 14px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 14px;
   font-size: 0.82rem;
   font-weight: 700;
   color: var(--text-muted);
   opacity: 0.75;
+}
+
+.week-rest-divider::before,
+.week-rest-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--card-border);
 }
 
 .week-start-card {
