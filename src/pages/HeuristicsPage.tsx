@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { HeuristicQuestion, HeuristicEntry } from "../domain/models";
+import type { HeuristicQuestion } from "../domain/models";
 import {
   getQuestions,
   getEntriesForDateRange,
@@ -181,8 +181,6 @@ export default function HeuristicsPage() {
   }
 
   const current = queue[index];
-  const remaining = queue.length - index;
-
   return (
     <main className="heuristics-page">
       <TopBar title="Heuristics" />
