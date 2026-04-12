@@ -189,55 +189,36 @@
   opacity: 0.7;
 }
 
-/* ─── Undo bar ────────────────────────────────────────────────────────────── */
+/* ─── Last action + undo ─────────────────────────────────────────────────── */
 
-.heuristics-undo {
+.heuristics-last-action {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 14px;
-  margin-bottom: 12px;
-  border-radius: 12px;
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
+  justify-content: center;
+  gap: 10px;
+  margin-top: 16px;
 }
 
-.heuristics-undo__text {
-  font-size: 0.86rem;
-  color: var(--text-muted);
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.heuristics-undo__text strong {
-  color: var(--text-strong);
-}
-
-.heuristics-undo__label {
+.heuristics-last-action__text {
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--text-soft);
 }
 
-.heuristics-undo__btn {
+.heuristics-last-action__undo {
   flex-shrink: 0;
-  padding: 6px 14px;
-  border: 1px solid var(--card-border);
+  padding: 4px 14px;
+  border: none;
   border-radius: 8px;
-  background: transparent;
-  color: var(--link);
+  background: var(--accent);
+  color: #0f1113;
   font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.12s;
+  transition: transform 0.12s;
 }
 
-.heuristics-undo__btn:hover {
-  background: var(--pill-muted-bg);
-}
-
-.heuristics-undo__btn:active {
+.heuristics-last-action__undo:active {
   transform: scale(0.96);
 }
 

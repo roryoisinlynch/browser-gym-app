@@ -339,28 +339,6 @@ export default function HeuristicsPage() {
           </div>
         </div>
 
-        {/* Undo bar */}
-        {lastAction && (
-          <div className="heuristics-undo">
-            <span className="heuristics-undo__text">
-              {lastAction.item.question.label}:{" "}
-              {lastAction.value !== null ? (
-                <>
-                  <strong>{lastAction.value}</strong>
-                  <span className="heuristics-undo__label">
-                    {" "}({SCALE_LABELS[lastAction.value - 1]})
-                  </span>
-                </>
-              ) : (
-                <span className="heuristics-undo__label">Dismissed</span>
-              )}
-            </span>
-            <button type="button" className="heuristics-undo__btn" onClick={handleUndo}>
-              Undo
-            </button>
-          </div>
-        )}
-
         <div className="heuristics-footer">
           <button
             type="button"
@@ -370,6 +348,26 @@ export default function HeuristicsPage() {
             Manage questions →
           </button>
         </div>
+
+        {/* Last action summary + undo */}
+        {lastAction && (
+          <div className="heuristics-last-action">
+            <span className="heuristics-last-action__text">
+              {lastAction.item.question.label}:{" "}
+              {lastAction.value !== null
+                ? `${lastAction.value} (${SCALE_LABELS[lastAction.value - 1]})`
+                : "N/A"}
+              {" · "}{friendlyDateLabel(lastAction.item.date)}
+            </span>
+            <button
+              type="button"
+              className="heuristics-last-action__undo"
+              onClick={handleUndo}
+            >
+              Undo
+            </button>
+          </div>
+        )}
       </section>
       <BottomNav activeTab="heuristics" />
     </main>
