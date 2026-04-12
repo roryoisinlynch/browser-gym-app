@@ -529,6 +529,14 @@ export default function DashboardPage() {
           don't affect your training program, prescriptions, or any other feature. They simply sit alongside
           your existing analytics as extra context. You can toggle this any time in Settings.
         </p>
+        <details className="dashboard-heuristics-optin__details">
+          <summary className="dashboard-heuristics-optin__summary">Why might I want this?</summary>
+          <p className="dashboard-heuristics-optin__details-text">
+            Log whenever it suits you — there's no pressure to fill it in every day. When you review your
+            progress at the end of a training block, you can refer back to your heuristics summary to see how
+            habits like sleep and nutrition may have impacted your outcomes.
+          </p>
+        </details>
         <div className="dashboard-heuristics-optin__actions">
           <button
             type="button"

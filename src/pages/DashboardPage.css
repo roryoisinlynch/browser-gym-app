@@ -299,6 +299,37 @@
   line-height: 1.45;
 }
 
+.dashboard-heuristics-optin__details {
+  margin: 0 0 16px;
+}
+
+.dashboard-heuristics-optin__summary {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--link);
+  cursor: pointer;
+  list-style: none;
+}
+
+.dashboard-heuristics-optin__summary::-webkit-details-marker {
+  display: none;
+}
+
+.dashboard-heuristics-optin__summary::before {
+  content: "▸ ";
+}
+
+.dashboard-heuristics-optin__details[open] > .dashboard-heuristics-optin__summary::before {
+  content: "▾ ";
+}
+
+.dashboard-heuristics-optin__details-text {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
 .dashboard-heuristics-optin__actions {
   display: flex;
   gap: 8px;
