@@ -2,6 +2,10 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* Warmup segment colours — referenced by inline styles for split segments */
+  --dash-bg: rgba(43, 49, 58, 0.95);
+  --dash-bg-warmup: rgba(38, 39, 40, 0.95);
+  --dash-fill-warmup: #b0be78;
 }
 
 .exercise-rep-dash-progress__track {

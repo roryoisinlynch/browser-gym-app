@@ -29,43 +29,25 @@ export default function ExerciseRepDashProgressBodyweight({
         setTooltipOpen(false);
       }
     }
-
     function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setTooltipOpen(false);
-      }
+      if (event.key === "Escape") setTooltipOpen(false);
     }
-
     document.addEventListener("mousedown", handleClick);
     document.addEventListener("keydown", handleEscape);
-
     return () => {
       document.removeEventListener("mousedown", handleClick);
       document.removeEventListener("keydown", handleEscape);
     };
   }, []);
 
-  /*
-    BAR LENGTH
-
-    Each segment = one rep. Segments 0…historicalBestReps-1 match the best.
-    +1 segment = the rep that would set a new all-time PR.
-  */
   const dashCount = Math.max(1, historicalBestReps + 1);
   const allTimePrIndex = dashCount - 1;
   const targetIndex = clamp(targetReps - 1, 0, dashCount - 1);
 
-  /*
-    RECENT BEST MARKER
-
-    recentMaxReps - 1 is the last segment that matches (but doesn't beat) the
-    recent best — the same floor logic used in the weighted component.
-  */
   const recentBestIndex =
     recentMaxReps != null
       ? clamp(recentMaxReps - 1, 0, dashCount - 1)
       : null;
-
   const showRecentBest =
     recentMaxReps != null &&
     targetRir !== 0 &&
@@ -73,12 +55,18 @@ export default function ExerciseRepDashProgressBodyweight({
     recentBestIndex !== targetIndex;
 
   const topSetFill = topSetReps ?? 0;
-
   const dashFillFractions = Array.from({ length: dashCount }, (_, i) =>
     clamp(topSetFill - i, 0, 1)
   );
 
   const hasMetTarget = topSetFill >= targetReps;
+
+  // Warmup boundary: working requires RIR < 6 (gap ≤ 5).
+  // Use the recency-adjusted baseline so stale PRs don't widen the warmup zone.
+  const effectiveBaseline = recentMaxReps ?? historicalBestReps;
+  const normalCutoff = effectiveBaseline - 6; // last segment index still in warmup
+  // Pull cutoff down if the prescribed target is already in warmup territory.
+  const warmupCutoff = targetReps - 1 < normalCutoff ? targetReps - 1 : normalCutoff;
 
   return (
     <div className="exercise-rep-dash-progress">
@@ -90,6 +78,10 @@ export default function ExerciseRepDashProgressBodyweight({
           const isTarget = index === targetIndex;
           const isRecentBest = showRecentBest && index === recentBestIndex;
           const isAllTime = index === allTimePrIndex;
+
+          // For bodyweight reps are integers so warmupCutoff is always an
+          // integer — segments are either fully warmup or fully working.
+          const isWarmup = index <= warmupCutoff;
 
           return (
             <span key={index} className="exercise-rep-dash-progress__dash-wrap">
@@ -105,11 +97,16 @@ export default function ExerciseRepDashProgressBodyweight({
                     .join(" ")}
                 />
               )}
-
-              <span className="exercise-rep-dash-progress__dash">
+              <span
+                className="exercise-rep-dash-progress__dash"
+                style={isWarmup ? { background: "var(--dash-bg-warmup)" } : undefined}
+              >
                 <span
                   className="exercise-rep-dash-progress__dash-fill"
-                  style={{ width: `${fraction * 100}%` }}
+                  style={{
+                    width: `${fraction * 100}%`,
+                    ...(isWarmup && fraction > 0 ? { background: "var(--dash-fill-warmup)" } : {}),
+                  }}
                 />
               </span>
             </span>
@@ -122,7 +119,6 @@ export default function ExerciseRepDashProgressBodyweight({
           <span className="exercise-rep-dash-progress__caption">
             Rep Target
           </span>
-
           {hasMetTarget && (
             <span
               className="exercise-rep-dash-progress__met-check"
@@ -142,7 +138,6 @@ export default function ExerciseRepDashProgressBodyweight({
           >
             ?
           </button>
-
           {tooltipOpen && (
             <div className="exercise-rep-dash-progress__tooltip">
               <p className="exercise-rep-dash-progress__tooltip-text">
