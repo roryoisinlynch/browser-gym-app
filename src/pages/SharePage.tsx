@@ -10,7 +10,7 @@ export default function SharePage() {
         <p className="share-heading">Share this app with a friend</p>
         <img
           className="share-qr"
-          src="/qr.png"
+          src={`${import.meta.env.BASE_URL}qr.png`}
           alt="QR code to share this app"
         />
       </section>
