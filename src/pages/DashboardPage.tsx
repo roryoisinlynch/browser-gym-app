@@ -523,18 +523,25 @@ export default function DashboardPage() {
     if (!showHeuristicsOptIn) return null;
     return (
       <div className="dashboard-heuristics-optin">
-        <p className="dashboard-heuristics-optin__heading">Track daily heuristics?</p>
+        <p className="dashboard-heuristics-optin__heading">Enable heuristics tracking?</p>
         <p className="dashboard-heuristics-optin__desc">
-          Rate factors like sleep, hydration, and diet each day. Heuristics are purely supplementary — they
-          don't affect your training program, prescriptions, or any other feature. They simply sit alongside
-          your existing analytics as extra context. You can toggle this any time in Settings.
+          Heuristics don't affect your training program or any other feature. You can toggle this
+          any time in Settings.
         </p>
         <details className="dashboard-heuristics-optin__details">
-          <summary className="dashboard-heuristics-optin__summary">Why might I want this?</summary>
+          <summary className="dashboard-heuristics-optin__summary">What are heuristics?</summary>
           <p className="dashboard-heuristics-optin__details-text">
-            Log whenever it suits you — there's no pressure to fill it in every day. When you review your
-            progress at the end of a training block, you can refer back to your heuristics summary to see how
-            habits like sleep and nutrition may have impacted your outcomes.
+            A way to track subjective, anecdotal scores on training-adjacent variables — things like sleep
+            quality, nutrition, hydration, stress, and anything else you choose. You define your own questions
+            and rate them on a simple 1–5 scale whenever it suits you.
+          </p>
+        </details>
+        <details className="dashboard-heuristics-optin__details">
+          <summary className="dashboard-heuristics-optin__summary">What's the benefit?</summary>
+          <p className="dashboard-heuristics-optin__details-text">
+            At the end of a training block, you can review your heuristics alongside your training analytics
+            to add another dimension to your results. See how factors like sleep consistency or creatine intake
+            may have contributed to the strength gains you did — or didn't — make over the period.
           </p>
         </details>
         <div className="dashboard-heuristics-optin__actions">
