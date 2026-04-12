@@ -525,7 +525,9 @@ export default function DashboardPage() {
       <div className="dashboard-heuristics-optin">
         <p className="dashboard-heuristics-optin__heading">Track daily heuristics?</p>
         <p className="dashboard-heuristics-optin__desc">
-          Rate factors like sleep, hydration, and diet alongside your training.
+          Rate factors like sleep, hydration, and diet each day. Heuristics are purely supplementary — they
+          don't affect your training program, prescriptions, or any other feature. They simply sit alongside
+          your existing analytics as extra context. You can toggle this any time in Settings.
         </p>
         <div className="dashboard-heuristics-optin__actions">
           <button
