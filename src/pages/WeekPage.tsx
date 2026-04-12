@@ -253,8 +253,10 @@ export default function WeekPage() {
                       <span className="week-day__num">{dayNum}</span>
                       <span className="week-day__abbr">{dayAbbr}</span>
                     </div>
-                    <div className="week-day__body">
-                      <span className="week-day__activity">Rest</span>
+                    <div className="week-day__content">
+                      <div className="week-day__body">
+                        <span className="week-day__activity">Rest</span>
+                      </div>
                     </div>
                   </div>
                 );
@@ -313,24 +315,26 @@ export default function WeekPage() {
                     <span className="week-day__num">{dayNum}</span>
                     <span className="week-day__abbr">{dayAbbr}</span>
                   </div>
-                  <div className="week-day__body">
-                    <span className="week-day__activity">{item.sessionTemplate.name}</span>
-                    {caption && (
-                      <span className="week-day__caption" style={{ color: captionColor ?? undefined }}>
-                        {caption}
-                      </span>
-                    )}
-                  </div>
-                  <div className="week-day__pill">
-                    {state === "completed" && (
-                      <span className="day-pill day-pill--done">Done</span>
-                    )}
-                    {state === "next" && (
-                      <span className="day-pill day-pill--start">Start</span>
-                    )}
-                    {state === "upcoming" && (
-                      <span className="day-pill day-pill--view">View ›</span>
-                    )}
+                  <div className="week-day__content">
+                    <div className="week-day__body">
+                      <span className="week-day__activity">{item.sessionTemplate.name}</span>
+                      {caption && (
+                        <span className="week-day__caption" style={{ color: captionColor ?? undefined }}>
+                          {caption}
+                        </span>
+                      )}
+                    </div>
+                    <div className="week-day__pill">
+                      {state === "completed" && (
+                        <span className="day-pill day-pill--done">Done</span>
+                      )}
+                      {state === "next" && (
+                        <span className="day-pill day-pill--start">Start</span>
+                      )}
+                      {state === "upcoming" && (
+                        <span className="day-pill day-pill--view">View ›</span>
+                      )}
+                    </div>
                   </div>
                 </Link>
               );

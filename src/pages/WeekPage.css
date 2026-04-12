@@ -161,13 +161,22 @@
   opacity: 0.5;
 }
 
+/* ─── Content wrapper (body + pill, receives the row colour) ─────────────── */
+
+.week-day__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+}
+
 /* ─── Activity body ──────────────────────────────────────────────────────── */
 
 .week-day__body {
   flex: 1;
   min-width: 0;
   padding: 14px 14px;
-  align-self: stretch;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -199,28 +208,21 @@
   padding-right: 14px;
 }
 
-/* ─── Row state colours (fill the body + pill area) ──────────────────────── */
+/* ─── Row state colours (on content wrapper for seamless fill) ────────────── */
 
-/* Completed — subtle green tint */
-.week-day--completed .week-day__body,
-.week-day--completed .week-day__pill {
+.week-day--completed .week-day__content {
   background: rgba(74, 222, 128, 0.06);
 }
 
-/* Next — accent tint */
-.week-day--next .week-day__body,
-.week-day--next .week-day__pill {
+.week-day--next .week-day__content {
   background: rgba(216, 240, 106, 0.10);
 }
 
-/* Upcoming — subtle neutral */
-.week-day--upcoming .week-day__body,
-.week-day--upcoming .week-day__pill {
+.week-day--upcoming .week-day__content {
   background: rgba(255, 255, 255, 0.03);
 }
 
-/* Rest — very faint */
-.week-day--rest .week-day__body {
+.week-day--rest .week-day__content {
   background: rgba(255, 255, 255, 0.015);
 }
 
