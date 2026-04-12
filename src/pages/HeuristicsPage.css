@@ -21,18 +21,15 @@
   letter-spacing: 0.04em;
 }
 
-/* ─── Vertical carousel ──────────────────────────────────────────────────── */
+/* ─── Active card area ───────────────────────────────────────────────────── */
 
-.heuristics-carousel {
+.heuristics-active-area {
   position: relative;
-  /* enough room for active card + a few peeking below */
-  min-height: 420px;
+  overflow: hidden;
+  margin-bottom: 12px;
 }
 
 .heuristics-card {
-  position: absolute;
-  left: 0;
-  right: 0;
   padding: 24px 20px 20px;
   border-radius: 18px;
   background: var(--card-bg);
@@ -62,74 +59,56 @@
   color: var(--text-strong);
 }
 
-/* Active card — at the top, full size */
+/* Active card — in flow, full size */
 .heuristics-card--active {
-  top: 0;
-  z-index: 5;
+  position: relative;
+  z-index: 2;
   transform: translateY(0) scale(1);
   opacity: 1;
 }
 
 /* Exiting — slides up and fades */
 .heuristics-card--exiting {
-  z-index: 6;
   transform: translateY(-30%) scale(0.92);
   opacity: 0;
 }
 
-/* Previous card — gone above */
+/* Previous card — hidden above */
 .heuristics-card--prev {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 1;
   transform: translateY(-50%) scale(0.88);
   opacity: 0;
   pointer-events: none;
 }
 
-/* ─── Upcoming cards peeking below ───────────────────────────────────────── */
-
-.heuristics-card--next-1 {
-  z-index: 4;
-  pointer-events: none;
-}
-
-.heuristics-card--next-2 {
-  z-index: 3;
-  pointer-events: none;
-}
-
-.heuristics-card--next-3 {
-  z-index: 2;
-  pointer-events: none;
-}
-
-.heuristics-card--next-4 {
-  z-index: 1;
-  pointer-events: none;
-}
-
-/* ─── Floating control panel ─────────────────────────────────────────────── */
+/* ─── Control panel — normal flow, opaque ────────────────────────────────── */
 
 .heuristics-controls {
-  position: absolute;
-  left: 0;
-  right: 0;
-  z-index: 10;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding-top: 16px;
+  margin-bottom: 12px;
 }
 
-/* Gradient mask to fade the upcoming cards behind the controls */
-.heuristics-controls::before {
-  content: "";
-  position: absolute;
-  top: -32px;
-  left: -20px;
-  right: -20px;
-  height: 48px;
-  background: linear-gradient(to bottom, transparent, var(--bg-bottom));
+/* ─── Upcoming cards peeking below ───────────────────────────────────────── */
+
+.heuristics-upcoming {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.heuristics-card--upcoming {
   pointer-events: none;
+}
+
+.heuristics-card--upcoming .heuristics-card__question {
+  margin-bottom: 0;
 }
 
 /* ─── Dismiss button on card ──────────────────────────────────────────────── */

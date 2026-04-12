@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { HeuristicQuestion } from "../domain/models";
 import {
@@ -45,7 +45,7 @@ interface PendingItem {
 
 interface LastAction {
   item: PendingItem;
-  value: number;
+  value: number | null;   // null = dismissed
   entryId: string;
 }
 
@@ -54,7 +54,7 @@ const SCALE = [1, 2, 3, 4, 5] as const;
 const SCALE_COLORS = ["#e76f51", "#f4a261", "#f4d35e", "#a8d065", "#6bcb77"];
 const SCALE_LABELS = ["Poor", "Low", "OK", "Good", "Great"];
 
-/** How many upcoming cards to peek below the active one */
+/** How many upcoming cards to peek below the controls */
 const PEEK_COUNT = 4;
 
 export default function HeuristicsPage() {
@@ -65,17 +65,6 @@ export default function HeuristicsPage() {
   const [loading, setLoading] = useState(true);
   const [transitioning, setTransitioning] = useState(false);
   const [lastAction, setLastAction] = useState<LastAction | null>(null);
-
-  /** Measure the active card so upcoming cards + controls stack below it */
-  const activeCardRef = useRef<HTMLDivElement>(null);
-  const [activeH, setActiveH] = useState(0);
-
-  useEffect(() => {
-    if (!activeCardRef.current) return;
-    const ro = new ResizeObserver(([entry]) => setActiveH(entry.contentRect.height + 50));
-    ro.observe(activeCardRef.current);
-    return () => ro.disconnect();
-  }, [index, queue.length]);
 
   useEffect(() => {
     async function load() {
@@ -144,13 +133,14 @@ export default function HeuristicsPage() {
   async function handleDismiss() {
     if (transitioning) return;
     const item = queue[index];
+    const entryId = `${item.question.id}_${item.date}`;
     await putEntry({
-      id: `${item.question.id}_${item.date}`,
+      id: entryId,
       questionId: item.question.id,
       date: item.date,
       value: null,
     });
-    setLastAction(null);
+    setLastAction({ item, value: null, entryId });
     advance();
   }
 
@@ -217,13 +207,16 @@ export default function HeuristicsPage() {
     );
   }
 
-  // Build visible cards: 1 previous + active + up to PEEK_COUNT upcoming
-  const offsets: number[] = [-1];
-  for (let i = 0; i <= PEEK_COUNT; i++) offsets.push(i);
+  // Upcoming cards that peek below the controls
+  const upcomingCards: { offset: number; item: PendingItem }[] = [];
+  for (let i = 1; i <= PEEK_COUNT; i++) {
+    const item = queue[index + i];
+    if (item) upcomingCards.push({ offset: i, item });
+  }
 
-  const carouselCards = offsets
-    .map((offset) => ({ offset, item: queue[index + offset] }))
-    .filter((c) => c.item !== undefined);
+  // Previous card (for exit animation context)
+  const prevItem = queue[index - 1];
+  const activeItem = queue[index];
 
   return (
     <main className="heuristics-page">
@@ -234,111 +227,126 @@ export default function HeuristicsPage() {
           {index + 1} of {queue.length}
         </p>
 
-        {/* Vertical carousel */}
-        <div className="heuristics-carousel">
-          {carouselCards.map(({ offset, item }) => {
-            const isActive = offset === 0;
-            const isExiting = offset === 0 && transitioning;
-            const isPrev = offset === -1;
-            const nextIndex = offset; // 1, 2, 3, 4 for upcoming
-
-            // Upcoming cards: stack below active with progressive shrink
-            let style: React.CSSProperties | undefined;
-            if (!isActive && !isPrev && !isExiting && offset >= 1) {
-              const gap = 14;
-              const scaleStep = 0.04;
-              const opacityStep = 0.12;
-              const scale = 1 - offset * scaleStep;
-              const yOffset = activeH + (offset - 1) * (56 + gap);
-              style = {
-                transform: `translateY(${yOffset}px) scale(${scale})`,
-                opacity: Math.max(0.1, 0.5 - (offset - 1) * opacityStep),
-              };
-            }
-
-            return (
-              <div
-                key={`${item.question.id}_${item.date}`}
-                ref={isActive && !isExiting ? activeCardRef : undefined}
-                className={[
-                  "heuristics-card",
-                  isActive && !isExiting && "heuristics-card--active",
-                  isExiting && "heuristics-card--exiting",
-                  isPrev && "heuristics-card--prev",
-                  !isActive && !isPrev && !isExiting && offset >= 1 && `heuristics-card--next-${nextIndex}`,
-                ].filter(Boolean).join(" ")}
-                style={style}
-                aria-hidden={!isActive}
-              >
-                <span className="heuristics-card__date">{friendlyDateLabel(item.date)}</span>
-                <p className="heuristics-card__question">{item.question.label}</p>
-
-                {isActive && (
-                  <>
-                    {/* Score bar */}
-                    <div className="heuristics-scale">
-                      {SCALE.map((n, i) => (
-                        <button
-                          key={n}
-                          type="button"
-                          className="heuristics-scale__segment"
-                          style={{
-                            "--segment-color": SCALE_COLORS[i],
-                            "--segment-color-dim": SCALE_COLORS[i] + "33",
-                          } as React.CSSProperties}
-                          onClick={() => handleScore(n)}
-                          aria-label={`${n} — ${SCALE_LABELS[i]}`}
-                        >
-                          <span className="heuristics-scale__number">{n}</span>
-                          <span className="heuristics-scale__label">{SCALE_LABELS[i]}</span>
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Dismiss for today */}
-                    <button
-                      type="button"
-                      className="heuristics-card__dismiss"
-                      onClick={handleDismiss}
-                    >
-                      Dismiss for today
-                      <span className="heuristics-card__dismiss-note">no impact on scores</span>
-                    </button>
-                  </>
-                )}
-              </div>
-            );
-          })}
-
-          {/* Floating control panel — positioned below active card */}
-          <div
-            className="heuristics-controls"
-            style={{ top: activeH || undefined }}
-          >
-            {/* Undo bar */}
-            {lastAction && (
-              <div className="heuristics-undo">
-                <span className="heuristics-undo__text">
-                  {lastAction.item.question.label}: <strong>{lastAction.value}</strong>
-                  <span className="heuristics-undo__label">
-                    {" "}({SCALE_LABELS[lastAction.value - 1]})
-                  </span>
-                </span>
-                <button type="button" className="heuristics-undo__btn" onClick={handleUndo}>
-                  Undo
-                </button>
-              </div>
-            )}
-
-            <button
-              type="button"
-              className="heuristics-controls__btn"
-              onClick={handleAnswerLater}
+        {/* Active card area — relative, in flow */}
+        <div className="heuristics-active-area">
+          {/* Previous card — exiting upward */}
+          {prevItem && (
+            <div
+              key={`${prevItem.question.id}_${prevItem.date}`}
+              className="heuristics-card heuristics-card--prev"
+              aria-hidden
             >
-              Answer later
-            </button>
+              <span className="heuristics-card__date">{friendlyDateLabel(prevItem.date)}</span>
+              <p className="heuristics-card__question">{prevItem.question.label}</p>
+            </div>
+          )}
+
+          {/* Active card */}
+          <div
+            key={`${activeItem.question.id}_${activeItem.date}`}
+            className={[
+              "heuristics-card heuristics-card--active",
+              transitioning && "heuristics-card--exiting",
+            ].filter(Boolean).join(" ")}
+          >
+            <span className="heuristics-card__date">{friendlyDateLabel(activeItem.date)}</span>
+            <p className="heuristics-card__question">{activeItem.question.label}</p>
+
+            {!transitioning && (
+              <>
+                {/* Score bar */}
+                <div className="heuristics-scale">
+                  {SCALE.map((n, i) => (
+                    <button
+                      key={n}
+                      type="button"
+                      className="heuristics-scale__segment"
+                      style={{
+                        "--segment-color": SCALE_COLORS[i],
+                        "--segment-color-dim": SCALE_COLORS[i] + "33",
+                      } as React.CSSProperties}
+                      onClick={() => handleScore(n)}
+                      aria-label={`${n} — ${SCALE_LABELS[i]}`}
+                    >
+                      <span className="heuristics-scale__number">{n}</span>
+                      <span className="heuristics-scale__label">{SCALE_LABELS[i]}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Dismiss for today */}
+                <button
+                  type="button"
+                  className="heuristics-card__dismiss"
+                  onClick={handleDismiss}
+                >
+                  Dismiss for today
+                  <span className="heuristics-card__dismiss-note">no impact on scores</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
+
+        {/* Control panel — normal flow, opaque */}
+        <div className="heuristics-controls">
+          {/* Undo bar */}
+          {lastAction && (
+            <div className="heuristics-undo">
+              <span className="heuristics-undo__text">
+                {lastAction.item.question.label}:{" "}
+                {lastAction.value !== null ? (
+                  <>
+                    <strong>{lastAction.value}</strong>
+                    <span className="heuristics-undo__label">
+                      {" "}({SCALE_LABELS[lastAction.value - 1]})
+                    </span>
+                  </>
+                ) : (
+                  <span className="heuristics-undo__label">Dismissed</span>
+                )}
+              </span>
+              <button type="button" className="heuristics-undo__btn" onClick={handleUndo}>
+                Undo
+              </button>
+            </div>
+          )}
+
+          <button
+            type="button"
+            className="heuristics-controls__btn"
+            onClick={handleAnswerLater}
+          >
+            Answer later
+          </button>
+        </div>
+
+        {/* Upcoming cards — peeking below controls */}
+        {upcomingCards.length > 0 && (
+          <div className="heuristics-upcoming">
+            {upcomingCards.map(({ offset, item }) => {
+              const scaleStep = 0.04;
+              const opacityStep = 0.15;
+              const scale = 1 - offset * scaleStep;
+              const opacity = Math.max(0.1, 0.6 - (offset - 1) * opacityStep);
+              return (
+                <div
+                  key={`${item.question.id}_${item.date}`}
+                  className="heuristics-card heuristics-card--upcoming"
+                  style={{
+                    transform: `scale(${scale})`,
+                    opacity,
+                    zIndex: PEEK_COUNT - offset,
+                  }}
+                  aria-hidden
+                >
+                  <span className="heuristics-card__date">{friendlyDateLabel(item.date)}</span>
+                  <p className="heuristics-card__question">{item.question.label}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <div className="heuristics-footer">
           <button
