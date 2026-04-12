@@ -1,0 +1,25 @@
+.share-page {
+  min-height: 100vh;
+  padding: 64px 0 100px;
+  background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+}
+
+.share-shell {
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 40px 20px 28px;
+  text-align: center;
+}
+
+.share-heading {
+  margin: 0 0 28px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.share-qr {
+  width: 220px;
+  height: 220px;
+  border-radius: 16px;
+}

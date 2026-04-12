@@ -18,6 +18,7 @@ import SeasonSummaryPage from "./pages/SeasonSummaryPage";
 import BackupPage from "./pages/BackupPage";
 import HeuristicsPage from "./pages/HeuristicsPage";
 import HeuristicsQuestionsPage from "./pages/HeuristicsQuestionsPage";
+import SharePage from "./pages/SharePage";
 
 export default function App() {
   return (
@@ -43,6 +44,7 @@ export default function App() {
         <Route path="/backup" element={<BackupPage />} />
         <Route path="/heuristics" element={<HeuristicsPage />} />
         <Route path="/heuristics/questions" element={<HeuristicsQuestionsPage />} />
+        <Route path="/share" element={<SharePage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

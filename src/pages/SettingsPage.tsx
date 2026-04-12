@@ -121,6 +121,24 @@ export default function SettingsPage() {
         </div>
 
         <div className="settings-section">
+          <div className="settings-card-list">
+            <button
+              type="button"
+              className="settings-nav-card"
+              onClick={() => navigate("/share")}
+            >
+              <div className="settings-nav-card__body">
+                <span className="settings-nav-card__title">Share</span>
+                <span className="settings-nav-card__desc">
+                  Share this app with a friend
+                </span>
+              </div>
+              <span className="settings-nav-card__chevron">›</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="settings-section">
           <p className="settings-section-label">Danger zone</p>
           <div className="settings-card-list">
             <button
