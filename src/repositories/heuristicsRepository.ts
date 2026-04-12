@@ -142,13 +142,10 @@ export async function setHeuristicsPromptResponse(
 // ─── Seed defaults ───────────────────────────────────────────────────────────
 
 const DEFAULT_QUESTIONS = [
-  "Sleep quality",
-  "Energy level",
-  "Stress level",
+  "Sleep",
   "Hydration",
-  "Diet quality",
-  "Soreness",
-  "Motivation",
+  "Creatine",
+  "Protein",
 ];
 
 export async function seedDefaultQuestions(): Promise<void> {
