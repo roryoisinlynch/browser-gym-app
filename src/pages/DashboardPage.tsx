@@ -533,7 +533,7 @@ export default function DashboardPage() {
               <p className="dashboard-up-next__heading">{upNext.sessionName}</p>
               <p className="dashboard-up-next__sub">{friendlyDate(upNext.date)}</p>
             </div>
-            <span className="dashboard-up-next__cta dashboard-up-next__cta--overdue">Start session →</span>
+            <span className="dashboard-up-next__cta dashboard-up-next__cta--overdue">View session →</span>
           </div>
         );
 
@@ -550,7 +550,7 @@ export default function DashboardPage() {
               <span className="dashboard-up-next__pill dashboard-up-next__pill--today">Today</span>
               <p className="dashboard-up-next__heading">{upNext.sessionName}</p>
             </div>
-            <span className="dashboard-up-next__cta dashboard-up-next__cta--today">Start session →</span>
+            <span className="dashboard-up-next__cta dashboard-up-next__cta--today">View session →</span>
           </div>
         );
 
