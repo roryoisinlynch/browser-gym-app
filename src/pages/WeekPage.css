@@ -210,8 +210,19 @@
 
 /* ─── Row state colours (on content wrapper for seamless fill) ────────────── */
 
-.week-day--completed .week-day__content {
+/* Completed: on schedule — green (#4ade80) */
+.week-day--completed-ontime .week-day__content {
   background: rgba(74, 222, 128, 0.06);
+}
+
+/* Completed: early — amber (#f59e0b) */
+.week-day--completed-early .week-day__content {
+  background: rgba(245, 158, 11, 0.06);
+}
+
+/* Completed: late — red (#f87171) */
+.week-day--completed-late .week-day__content {
+  background: rgba(248, 113, 113, 0.06);
 }
 
 .week-day--next .week-day__content {

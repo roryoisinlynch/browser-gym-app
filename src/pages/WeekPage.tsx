@@ -273,15 +273,19 @@ export default function WeekPage() {
 
               // Adherence (completed)
               let caption: string | null = null;
+              let rowState = state as string;
               if (state === "completed" && scheduledDate && completedAt) {
                 const delta = daysBetween(completedAt, scheduledDate);
                 if (delta === 0) {
                   caption = "Completed on schedule";
+                  rowState = "completed-ontime";
                 } else if (delta < 0) {
                   const n = Math.abs(delta);
                   caption = `Completed ${n} day${n === 1 ? "" : "s"} early`;
+                  rowState = "completed-early";
                 } else {
                   caption = `Completed ${delta} day${delta === 1 ? "" : "s"} late`;
+                  rowState = "completed-late";
                 }
               }
 
@@ -302,7 +306,7 @@ export default function WeekPage() {
                 <Link
                   key={item.sessionInstance.id}
                   to={`/session/${item.sessionInstance.id}`}
-                  className={`week-day week-day--session week-day--${state}`}
+                  className={`week-day week-day--session week-day--${rowState}`}
                 >
                   <div className="week-day__date-col">
                     <span className="week-day__num">{dayNum}</span>
