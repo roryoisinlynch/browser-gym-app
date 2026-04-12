@@ -509,17 +509,23 @@ export default function DashboardPage() {
 
   // ─── Heuristics opt-in ────────────────────────────────────────────────────
 
-  async function handleOptInEnable() {
-    await setHeuristicsPromptResponse("yes");
-    await setHeuristicsEnabled(true);
-    await seedDefaultQuestions();
-    const pending = await getPendingHeuristicDates(3);
-    setPendingHeuristicDays(pending.length);
-    setShowHeuristicsOptIn(false);
+  async function handleOptInChoice(enable: boolean) {
+    if (enable) {
+      await setHeuristicsPromptResponse("yes");
+      await setHeuristicsEnabled(true);
+      await seedDefaultQuestions();
+      const pending = await getPendingHeuristicDates(3);
+      setPendingHeuristicDays(pending.length);
+    }
+    setHeuristicsOptInDeferred(true);
   }
 
   async function handleOptInDismiss() {
-    await setHeuristicsPromptResponse("later");
+    if (!heuristicsOptInDeferred) return;
+    // Only persist the prompt response on final dismiss — if they enabled,
+    // the response was already saved in handleOptInChoice.
+    const alreadyResponded = await getHeuristicsPromptResponse();
+    if (!alreadyResponded) await setHeuristicsPromptResponse("later");
     setShowHeuristicsOptIn(false);
   }
 
@@ -530,7 +536,7 @@ export default function DashboardPage() {
       return (
         <div className="dashboard-heuristics-optin">
           <p className="dashboard-heuristics-optin__desc">
-            No problem. You can enable heuristics any time from the Settings menu.
+            OK! You can change your mind at any time by toggling heuristics in the Settings menu.
           </p>
           <div className="dashboard-heuristics-optin__actions">
             <button
@@ -572,14 +578,14 @@ export default function DashboardPage() {
           <button
             type="button"
             className="dashboard-heuristics-optin__btn"
-            onClick={handleOptInEnable}
+            onClick={() => handleOptInChoice(true)}
           >
             Try it now
           </button>
           <button
             type="button"
             className="dashboard-heuristics-optin__btn"
-            onClick={() => setHeuristicsOptInDeferred(true)}
+            onClick={() => handleOptInChoice(false)}
           >
             Decide later
           </button>
