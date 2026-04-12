@@ -16,6 +16,8 @@ import SessionSummaryPage from "./pages/SessionSummaryPage";
 import WeekSummaryPage from "./pages/WeekSummaryPage";
 import SeasonSummaryPage from "./pages/SeasonSummaryPage";
 import BackupPage from "./pages/BackupPage";
+import HeuristicsPage from "./pages/HeuristicsPage";
+import HeuristicsQuestionsPage from "./pages/HeuristicsQuestionsPage";
 
 export default function App() {
   return (
@@ -39,6 +41,8 @@ export default function App() {
         <Route path="/config/sessions/:sessionTemplateId" element={<ConfigSessionDetailPage />} />
         <Route path="/config/exercises/:exerciseTemplateId" element={<ConfigExercisePage />} />
         <Route path="/backup" element={<BackupPage />} />
+        <Route path="/heuristics" element={<HeuristicsPage />} />
+        <Route path="/heuristics/questions" element={<HeuristicsQuestionsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

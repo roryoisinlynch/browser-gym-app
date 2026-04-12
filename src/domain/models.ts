@@ -255,3 +255,23 @@ export interface ExerciseSet {
   performedReps?: number | null;
   performedRir?: number | null;
 }
+
+/**
+ * A user-defined heuristic question (e.g. "Sleep quality").
+ */
+export interface HeuristicQuestion {
+  id: ID;
+  label: string;
+  order: number;
+}
+
+/**
+ * A single answer to one heuristic question on one day.
+ * Absence of a row means "not yet answered"; value === null means "skipped".
+ */
+export interface HeuristicEntry {
+  id: ID;
+  questionId: ID;
+  date: string;
+  value: number | null;
+}

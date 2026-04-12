@@ -169,7 +169,7 @@ export default function ConfigSessionsPage() {
           </button>
         )}
       </section>
-      <BottomNav activeTab="settings" />
+      <BottomNav activeTab="program" />
     </main>
   );
 }

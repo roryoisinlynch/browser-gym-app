@@ -646,7 +646,7 @@ export default function ConfigExercisePage() {
           </button>
         </div>
       </section>
-      <BottomNav activeTab="settings" />
+      <BottomNav activeTab="program" />
     </main>
   );
 }

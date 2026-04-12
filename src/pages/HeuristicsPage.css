@@ -1,0 +1,172 @@
+.heuristics-page {
+  min-height: 100vh;
+  padding: 64px 0 100px;
+  background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+}
+
+.heuristics-shell {
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 16px 20px 28px;
+}
+
+/* ─── Date navigation ─────────────────────────────────────────────────────── */
+
+.heuristics-date-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.heuristics-date-nav__arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  background: var(--card-bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.heuristics-date-nav__arrow:hover {
+  background: #262c35;
+}
+
+.heuristics-date-nav__arrow:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.heuristics-date-nav__label {
+  min-width: 120px;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+/* ─── Disabled state ──────────────────────────────────────────────────────── */
+
+.heuristics-disabled {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.heuristics-disabled__heading {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.heuristics-disabled__desc {
+  margin: 0 0 24px;
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.heuristics-disabled__btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 28px;
+  border: none;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #0f1113;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+
+.heuristics-disabled__btn:active {
+  transform: scale(0.96);
+}
+
+/* ─── Questions list ──────────────────────────────────────────────────────── */
+
+.heuristics-questions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ─── Empty state ─────────────────────────────────────────────────────────── */
+
+.heuristics-empty {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.heuristics-empty__text {
+  margin: 0 0 16px;
+  font-size: 1rem;
+  color: var(--text-muted);
+}
+
+.heuristics-empty__btn {
+  border: none;
+  background: none;
+  color: var(--link);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ─── Actions ─────────────────────────────────────────────────────────────── */
+
+.heuristics-actions {
+  margin-top: 20px;
+}
+
+.heuristics-save {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-muted);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s, transform 0.12s;
+}
+
+.heuristics-save:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.heuristics-save--ready {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0f1113;
+}
+
+.heuristics-save:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* ─── Footer ──────────────────────────────────────────────────────────────── */
+
+.heuristics-footer {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.heuristics-footer__link {
+  border: none;
+  background: none;
+  color: var(--link);
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+}

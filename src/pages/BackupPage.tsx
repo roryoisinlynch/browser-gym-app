@@ -5,7 +5,8 @@ import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import "./BackupPage.css";
 
-const BACKUP_VERSION = 2;
+const BACKUP_VERSION = 3;
+const MIN_COMPATIBLE_VERSION = 2;
 
 type StoreData = Record<string, unknown[]>;
 
@@ -123,10 +124,10 @@ export default function BackupPage() {
 
   async function handleRestore() {
     if (!importFile) return;
-    if (importFile.version < BACKUP_VERSION) {
+    if (importFile.version < MIN_COMPATIBLE_VERSION) {
       setImportError(
         `This backup was created with an older version of the app (backup version ${importFile.version}, ` +
-        `current version ${BACKUP_VERSION}). The data model has changed in a way that is not ` +
+        `minimum compatible version ${MIN_COMPATIBLE_VERSION}). The data model has changed in a way that is not ` +
         `backward-compatible, so this backup cannot be restored automatically. ` +
         `Please contact support or use the data migration tool.`
       );

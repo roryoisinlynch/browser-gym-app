@@ -583,7 +583,7 @@ export default function ConfigProgramDetailPage() {
         </div>
 
       </section>
-      <BottomNav activeTab="settings" />
+      <BottomNav activeTab="program" />
     </main>
   );
 }

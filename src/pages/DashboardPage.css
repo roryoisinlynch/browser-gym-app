@@ -245,6 +245,87 @@
   color: var(--text-muted);
 }
 
+/* ── Heuristics pending card ── */
+.dashboard-up-next--heuristics {
+  margin-top: 10px;
+  background: linear-gradient(
+    135deg,
+    rgba(127, 177, 255, 0.08),
+    rgba(127, 177, 255, 0.03)
+  ), var(--card-bg);
+  border-color: rgba(127, 177, 255, 0.2);
+}
+
+.dashboard-up-next__pill--heuristics {
+  background: rgba(127, 177, 255, 0.14);
+  color: var(--link);
+}
+
+.dashboard-up-next__cta--heuristics {
+  background: rgba(127, 177, 255, 0.12);
+  color: var(--link);
+  border: 1px solid rgba(127, 177, 255, 0.25);
+}
+
+/* ── Heuristics opt-in card ── */
+.dashboard-heuristics-optin {
+  margin: 0 0 16px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+}
+
+.dashboard-heuristics-optin__heading {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.dashboard-heuristics-optin__desc {
+  margin: 0 0 16px;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.dashboard-heuristics-optin__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.dashboard-heuristics-optin__btn {
+  flex: 1;
+  padding: 10px 0;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+
+.dashboard-heuristics-optin__btn:active {
+  transform: scale(0.96);
+}
+
+.dashboard-heuristics-optin__btn--yes {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0f1113;
+}
+
+.dashboard-heuristics-optin__btn--no {
+  background: var(--card-bg);
+  color: var(--text-muted);
+}
+
+.dashboard-heuristics-optin__btn--later {
+  background: var(--card-bg);
+  color: var(--text-soft);
+}
+
 /* ── Season timeline ── */
 .dashboard-timeline {
   background: var(--panel-bg);

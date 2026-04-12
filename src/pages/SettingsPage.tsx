@@ -1,34 +1,75 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { resetDatabase } from "../db/db";
+import {
+  isHeuristicsEnabled,
+  setHeuristicsEnabled,
+  seedDefaultQuestions,
+} from "../repositories/heuristicsRepository";
 import BottomNav from "../components/BottomNav";
 import TopBar from "../components/TopBar";
 import "./SettingsPage.css";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
+  const [heuristicsOn, setHeuristicsOn] = useState(false);
+
+  useEffect(() => {
+    isHeuristicsEnabled().then(setHeuristicsOn);
+  }, []);
+
+  async function handleToggleHeuristics() {
+    const next = !heuristicsOn;
+    await setHeuristicsEnabled(next);
+    if (next) await seedDefaultQuestions();
+    setHeuristicsOn(next);
+  }
 
   return (
     <main className="settings-page">
       <TopBar title="Settings" />
       <section className="settings-shell">
         <div className="settings-section">
-          <p className="settings-section-label">Program</p>
+          <p className="settings-section-label">Heuristics</p>
           <div className="settings-card-list">
-            <button
-              type="button"
-              className="settings-nav-card"
-              onClick={() => navigate("/config/programs")}
-            >
+            <div className="settings-nav-card settings-nav-card--toggle">
               <div className="settings-nav-card__body">
                 <span className="settings-nav-card__title">
-                  Configure programs
+                  Enable heuristics tracking
                 </span>
                 <span className="settings-nav-card__desc">
-                  Manage sessions, exercises, weights, and progression
+                  Track daily factors like sleep, hydration, and diet
                 </span>
               </div>
-              <span className="settings-nav-card__chevron">›</span>
-            </button>
+              <button
+                type="button"
+                className={`settings-toggle${heuristicsOn ? " settings-toggle--on" : ""}`}
+                onClick={handleToggleHeuristics}
+                role="switch"
+                aria-checked={heuristicsOn}
+                aria-label="Enable heuristics tracking"
+              >
+                <span className="settings-toggle__knob" />
+              </button>
+            </div>
+
+            {heuristicsOn && (
+              <button
+                type="button"
+                className="settings-nav-card"
+                onClick={() => navigate("/heuristics/questions")}
+              >
+                <div className="settings-nav-card__body">
+                  <span className="settings-nav-card__title">
+                    Manage questions
+                  </span>
+                  <span className="settings-nav-card__desc">
+                    Add, edit, reorder, or remove questions
+                  </span>
+                </div>
+                <span className="settings-nav-card__chevron">›</span>
+              </button>
+            )}
           </div>
         </div>
 

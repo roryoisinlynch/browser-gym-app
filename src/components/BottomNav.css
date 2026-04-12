@@ -5,7 +5,7 @@
   width: 100%;
   height: 64px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   align-items: center;
   border-top: 1px solid var(--card-border);
   background: var(--panel-bg);
@@ -27,13 +27,17 @@
   color: var(--text-strong);
 }
 
-/* subtle inward movement */
+/* subtle inward movement for outer tabs */
 .bottom-nav__link--left {
   transform: translate(4px, -2px);
 }
 
 .bottom-nav__link--right {
   transform: translate(-4px, -2px);
+}
+
+.bottom-nav__link--inner {
+  transform: translateY(-2px);
 }
 
 .bottom-nav__icon {

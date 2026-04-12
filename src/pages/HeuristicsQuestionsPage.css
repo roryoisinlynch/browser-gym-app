@@ -1,0 +1,169 @@
+.hq-page {
+  min-height: 100vh;
+  padding: 64px 0 100px;
+  background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+}
+
+.hq-shell {
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 16px 20px 28px;
+}
+
+/* ─── Question list ───────────────────────────────────────────────────────── */
+
+.hq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.hq-item {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+}
+
+.hq-item__display-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hq-item__label {
+  font-size: 0.96rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hq-item__actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.hq-item__action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.hq-item__action-btn:hover {
+  background: var(--pill-muted-bg);
+  color: var(--text-muted);
+}
+
+.hq-item__action-btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.hq-item__action-btn--danger:hover {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.08);
+}
+
+/* ─── Inline edit ─────────────────────────────────────────────────────────── */
+
+.hq-item__edit-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.hq-item__input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  background: var(--panel-bg);
+  color: var(--text-strong);
+  font-size: 0.94rem;
+  outline: none;
+}
+
+.hq-item__input:focus {
+  border-color: var(--accent);
+}
+
+.hq-item__save-btn,
+.hq-item__cancel-btn {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.hq-item__save-btn {
+  background: var(--accent);
+  color: #0f1113;
+}
+
+.hq-item__cancel-btn {
+  background: var(--pill-muted-bg);
+  color: var(--text-muted);
+}
+
+/* ─── Add new ─────────────────────────────────────────────────────────────── */
+
+.hq-add {
+  display: flex;
+  gap: 8px;
+}
+
+.hq-add__input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  background: var(--card-bg);
+  color: var(--text-strong);
+  font-size: 0.94rem;
+  outline: none;
+}
+
+.hq-add__input:focus {
+  border-color: var(--accent);
+}
+
+.hq-add__input::placeholder {
+  color: var(--text-soft);
+}
+
+.hq-add__btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 14px;
+  background: var(--accent);
+  color: #0f1113;
+  font-size: 0.94rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+
+.hq-add__btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.hq-add__btn:active:not(:disabled) {
+  transform: scale(0.96);
+}

@@ -18,7 +18,15 @@ import {
   getWeekInstancesForSeasonInstance,
   getWeekTemplateItemsForWeekTemplate,
 } from "../repositories/programRepository";
-import { getById, STORE_NAMES } from "../db/db";
+import { getAll, getById, STORE_NAMES } from "../db/db";
+import {
+  isHeuristicsEnabled,
+  getHeuristicsPromptResponse,
+  setHeuristicsPromptResponse,
+  setHeuristicsEnabled,
+  seedDefaultQuestions,
+  getPendingHeuristicDates,
+} from "../repositories/heuristicsRepository";
 import ExerciseInsights from "../components/ExerciseInsights";
 import TrafficLight from "../components/TrafficLight";
 import TopBar from "../components/TopBar";
@@ -396,6 +404,8 @@ export default function DashboardPage() {
   const [prEvents, setPrEvents] = useState<PREvent[] | null>(null);
   const [recentTooltipOpen, setRecentTooltipOpen] = useState(false);
   const [lastBackupAt, setLastBackupAt] = useState<string | null | "loading">("loading");
+  const [showHeuristicsOptIn, setShowHeuristicsOptIn] = useState(false);
+  const [pendingHeuristicDays, setPendingHeuristicDays] = useState(0);
   const recentTooltipRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -473,6 +483,99 @@ export default function DashboardPage() {
       (record) => setLastBackupAt(record?.value ?? null)
     );
   }, []);
+
+  useEffect(() => {
+    async function loadHeuristics() {
+      const [enabled, promptResponse] = await Promise.all([
+        isHeuristicsEnabled(),
+        getHeuristicsPromptResponse(),
+      ]);
+
+      if (enabled) {
+        const pending = await getPendingHeuristicDates(3);
+        setPendingHeuristicDays(pending.length);
+      } else if (!promptResponse) {
+        // Show opt-in only if user hasn't responded AND has completed >= 2 sessions
+        const sessions = await getAll<SessionInstance>(STORE_NAMES.sessionInstances);
+        const completedCount = sessions.filter((s) => s.status === "completed").length;
+        if (completedCount >= 2) {
+          setShowHeuristicsOptIn(true);
+        }
+      }
+    }
+    loadHeuristics();
+  }, []);
+
+  // ─── Heuristics opt-in ────────────────────────────────────────────────────
+
+  async function handleOptIn(response: "yes" | "no" | "later") {
+    await setHeuristicsPromptResponse(response);
+    if (response === "yes") {
+      await setHeuristicsEnabled(true);
+      await seedDefaultQuestions();
+      const pending = await getPendingHeuristicDates(3);
+      setPendingHeuristicDays(pending.length);
+    }
+    setShowHeuristicsOptIn(false);
+  }
+
+  function renderHeuristicsOptIn() {
+    if (!showHeuristicsOptIn) return null;
+    return (
+      <div className="dashboard-heuristics-optin">
+        <p className="dashboard-heuristics-optin__heading">Track daily heuristics?</p>
+        <p className="dashboard-heuristics-optin__desc">
+          Rate factors like sleep, hydration, and diet alongside your training.
+        </p>
+        <div className="dashboard-heuristics-optin__actions">
+          <button
+            type="button"
+            className="dashboard-heuristics-optin__btn dashboard-heuristics-optin__btn--yes"
+            onClick={() => handleOptIn("yes")}
+          >
+            Yes
+          </button>
+          <button
+            type="button"
+            className="dashboard-heuristics-optin__btn dashboard-heuristics-optin__btn--no"
+            onClick={() => handleOptIn("no")}
+          >
+            No
+          </button>
+          <button
+            type="button"
+            className="dashboard-heuristics-optin__btn dashboard-heuristics-optin__btn--later"
+            onClick={() => handleOptIn("later")}
+          >
+            Later
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  function renderHeuristicsPending() {
+    if (pendingHeuristicDays === 0) return null;
+    return (
+      <div
+        className="dashboard-up-next dashboard-up-next--heuristics dashboard-up-next--with-cta"
+        role="button"
+        tabIndex={0}
+        onClick={() => navigate("/heuristics")}
+        onKeyDown={(e) => e.key === "Enter" && navigate("/heuristics")}
+      >
+        <div className="dashboard-up-next__content">
+          <span className="dashboard-up-next__pill dashboard-up-next__pill--heuristics">Heuristics</span>
+          <p className="dashboard-up-next__heading">
+            {pendingHeuristicDays === 1
+              ? "1 unanswered day"
+              : `${pendingHeuristicDays} unanswered days`}
+          </p>
+        </div>
+        <span className="dashboard-up-next__cta dashboard-up-next__cta--heuristics">Log heuristics →</span>
+      </div>
+    );
+  }
 
   // ─── Up Next ──────────────────────────────────────────────────────────────
 
@@ -923,7 +1026,10 @@ export default function DashboardPage() {
       <section className="dashboard-shell">
         <section className="dashboard-section">
           {renderUpNext()}
+          {renderHeuristicsPending()}
         </section>
+
+        {renderHeuristicsOptIn()}
 
         {renderTimeline()}
 

@@ -303,7 +303,7 @@ export default function ConfigProgramsPage() {
           </button>
         )}
       </section>
-      <BottomNav activeTab="settings" />
+      <BottomNav activeTab="program" />
     </main>
     </>
   );
