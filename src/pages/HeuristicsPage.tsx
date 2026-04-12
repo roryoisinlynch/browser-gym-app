@@ -44,6 +44,8 @@ interface PendingItem {
 
 const LOOKBACK_DAYS = 3;
 const SCALE = [1, 2, 3, 4, 5] as const;
+const SCALE_COLORS = ["#e76f51", "#f4a261", "#f4d35e", "#a8d065", "#6bcb77"];
+const SCALE_LABELS = ["Poor", "Low", "OK", "Good", "Great"];
 
 export default function HeuristicsPage() {
   const navigate = useNavigate();
@@ -51,6 +53,8 @@ export default function HeuristicsPage() {
   const [queue, setQueue] = useState<PendingItem[]>([]);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [exiting, setExiting] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -65,10 +69,8 @@ export default function HeuristicsPage() {
       const startDate = shiftDate(today, -(LOOKBACK_DAYS - 1));
       const entries = await getEntriesForDateRange(startDate, today);
 
-      // Build set of answered (questionId_date)
       const answered = new Set(entries.map((e) => `${e.questionId}_${e.date}`));
 
-      // Build queue: today first (descending), then by question order within each day
       const pending: PendingItem[] = [];
       for (let i = 0; i < LOOKBACK_DAYS; i++) {
         const date = shiftDate(today, -i);
@@ -90,7 +92,6 @@ export default function HeuristicsPage() {
     await setHeuristicsEnabled(true);
     await seedDefaultQuestions();
     setEnabled(true);
-    // Re-load to build the queue
     const questions = await getQuestions();
     const today = localDateIso();
     const pending: PendingItem[] = questions.map((q) => ({ question: q, date: today }));
@@ -99,15 +100,25 @@ export default function HeuristicsPage() {
     setLoading(false);
   }
 
-  async function handleScore(value: number) {
+  function advance() {
+    setExiting(true);
+    setTimeout(() => {
+      setIndex((i) => i + 1);
+      setSelected(null);
+      setExiting(false);
+    }, 250);
+  }
+
+  async function handleConfirm() {
+    if (selected === null) return;
     const item = queue[index];
     await putEntry({
       id: `${item.question.id}_${item.date}`,
       questionId: item.question.id,
       date: item.date,
-      value,
+      value: selected,
     });
-    setIndex((i) => i + 1);
+    advance();
   }
 
   async function handleUnknown() {
@@ -118,11 +129,11 @@ export default function HeuristicsPage() {
       date: item.date,
       value: null,
     });
-    setIndex((i) => i + 1);
+    advance();
   }
 
   function handleSkip() {
-    setIndex((i) => i + 1);
+    advance();
   }
 
   if (enabled === null || loading) return null;
@@ -137,11 +148,7 @@ export default function HeuristicsPage() {
             <p className="heuristics-disabled__desc">
               Track daily factors like sleep, hydration, and diet alongside your training.
             </p>
-            <button
-              type="button"
-              className="heuristics-disabled__btn"
-              onClick={handleEnable}
-            >
+            <button type="button" className="heuristics-disabled__btn" onClick={handleEnable}>
               Enable heuristics
             </button>
           </div>
@@ -151,7 +158,6 @@ export default function HeuristicsPage() {
     );
   }
 
-  // All done
   if (queue.length === 0 || index >= queue.length) {
     return (
       <main className="heuristics-page">
@@ -181,50 +187,79 @@ export default function HeuristicsPage() {
   }
 
   const current = queue[index];
+  // Cards to peek behind the current one
+  const peekCards = queue.slice(index + 1, index + 3);
+
   return (
     <main className="heuristics-page">
       <TopBar title="Heuristics" />
       <section className="heuristics-shell">
-        <div className="heuristics-prompt">
-          {/* Progress */}
-          <p className="heuristics-prompt__progress">
-            {index + 1} of {queue.length}
-          </p>
+        {/* Progress */}
+        <p className="heuristics-progress">
+          {index + 1} of {queue.length}
+        </p>
 
-          {/* Date context */}
-          <span className="heuristics-prompt__date">{friendlyDateLabel(current.date)}</span>
-
-          {/* Question */}
-          <p className="heuristics-prompt__question">{current.question.label}</p>
-
-          {/* 1-5 scale */}
-          <div className="heuristics-prompt__scale">
-            {SCALE.map((n) => (
-              <button
-                key={n}
-                type="button"
-                className="heuristics-prompt__score-btn"
-                onClick={() => handleScore(n)}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-
-          {/* Secondary actions */}
-          <div className="heuristics-prompt__actions">
-            <button
-              type="button"
-              className="heuristics-prompt__action-btn"
-              onClick={handleUnknown}
+        {/* Card stack */}
+        <div className="heuristics-stack">
+          {/* Peek cards (rendered first = behind) */}
+          {peekCards.map((item, i) => (
+            <div
+              key={`${item.question.id}_${item.date}`}
+              className={`heuristics-card heuristics-card--peek heuristics-card--peek-${i + 1}`}
+              aria-hidden="true"
             >
+              <span className="heuristics-card__date">{friendlyDateLabel(item.date)}</span>
+              <p className="heuristics-card__question">{item.question.label}</p>
+            </div>
+          ))}
+
+          {/* Active card */}
+          <div
+            className={`heuristics-card heuristics-card--active${exiting ? " heuristics-card--exiting" : ""}`}
+            key={`${current.question.id}_${current.date}`}
+          >
+            <span className="heuristics-card__date">{friendlyDateLabel(current.date)}</span>
+            <p className="heuristics-card__question">{current.question.label}</p>
+
+            {/* Score bar */}
+            <div className="heuristics-scale">
+              {SCALE.map((n, i) => (
+                <button
+                  key={n}
+                  type="button"
+                  className={`heuristics-scale__segment${selected === n ? " heuristics-scale__segment--selected" : ""}`}
+                  style={{
+                    "--segment-color": SCALE_COLORS[i],
+                    "--segment-color-dim": SCALE_COLORS[i] + "33",
+                  } as React.CSSProperties}
+                  onClick={() => setSelected(selected === n ? null : n)}
+                  aria-label={`${n} — ${SCALE_LABELS[i]}`}
+                >
+                  <span className="heuristics-scale__number">{n}</span>
+                  {selected === n && (
+                    <span className="heuristics-scale__label">{SCALE_LABELS[i]}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Control panel — persists across card transitions */}
+        <div className="heuristics-controls">
+          <button
+            type="button"
+            className={`heuristics-controls__confirm${selected !== null ? " heuristics-controls__confirm--ready" : ""}`}
+            onClick={handleConfirm}
+            disabled={selected === null}
+          >
+            {selected !== null ? "Confirm" : "Select a score"}
+          </button>
+          <div className="heuristics-controls__secondary">
+            <button type="button" className="heuristics-controls__btn" onClick={handleUnknown}>
               Unknown
             </button>
-            <button
-              type="button"
-              className="heuristics-prompt__action-btn"
-              onClick={handleSkip}
-            >
+            <button type="button" className="heuristics-controls__btn" onClick={handleSkip}>
               Skip for now
             </button>
           </div>

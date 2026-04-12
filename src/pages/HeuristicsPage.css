@@ -10,6 +10,199 @@
   padding: 16px 20px 28px;
 }
 
+/* ─── Progress ────────────────────────────────────────────────────────────── */
+
+.heuristics-progress {
+  margin: 0 0 16px;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  letter-spacing: 0.04em;
+}
+
+/* ─── Card stack ──────────────────────────────────────────────────────────── */
+
+.heuristics-stack {
+  position: relative;
+  margin-bottom: 20px;
+  /* Reserve space for peek cards below */
+  padding-bottom: 20px;
+}
+
+.heuristics-card {
+  padding: 28px 20px 24px;
+  border-radius: 18px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
+  text-align: center;
+}
+
+.heuristics-card__date {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--pill-muted-bg);
+  color: var(--pill-muted-text);
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+
+.heuristics-card__question {
+  margin: 0 0 24px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+/* Active card */
+.heuristics-card--active {
+  position: relative;
+  z-index: 3;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.heuristics-card--exiting {
+  transform: translateX(-110%);
+  opacity: 0;
+}
+
+/* Peek cards */
+.heuristics-card--peek {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  pointer-events: none;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.heuristics-card--peek .heuristics-card__question {
+  font-size: 1.1rem;
+}
+
+.heuristics-card--peek-1 {
+  z-index: 2;
+  transform: translateY(14px) scale(0.96);
+  opacity: 0.5;
+}
+
+.heuristics-card--peek-2 {
+  z-index: 1;
+  transform: translateY(26px) scale(0.92);
+  opacity: 0.25;
+}
+
+/* ─── Colour scale ────────────────────────────────────────────────────────── */
+
+.heuristics-scale {
+  display: flex;
+  gap: 6px;
+}
+
+.heuristics-scale__segment {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 12px 0 10px;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: var(--segment-color-dim);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.12s, box-shadow 0.15s;
+}
+
+.heuristics-scale__segment:hover {
+  background: color-mix(in srgb, var(--segment-color) 25%, transparent);
+}
+
+.heuristics-scale__segment--selected {
+  background: color-mix(in srgb, var(--segment-color) 30%, transparent);
+  border-color: var(--segment-color);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--segment-color) 30%, transparent);
+  transform: scale(1.06);
+}
+
+.heuristics-scale__number {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--segment-color);
+  line-height: 1;
+}
+
+.heuristics-scale__label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--segment-color);
+  line-height: 1;
+}
+
+/* ─── Control panel ───────────────────────────────────────────────────────── */
+
+.heuristics-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.heuristics-controls__confirm {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  background: var(--card-bg);
+  color: var(--text-soft);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: default;
+  transition: background 0.18s, color 0.18s, border-color 0.18s, transform 0.12s;
+}
+
+.heuristics-controls__confirm--ready {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0f1113;
+  cursor: pointer;
+}
+
+.heuristics-controls__confirm--ready:active {
+  transform: scale(0.98);
+}
+
+.heuristics-controls__secondary {
+  display: flex;
+  gap: 8px;
+}
+
+.heuristics-controls__btn {
+  flex: 1;
+  padding: 10px 0;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, transform 0.1s;
+}
+
+.heuristics-controls__btn:hover {
+  background: var(--pill-muted-bg);
+  color: var(--text-muted);
+}
+
+.heuristics-controls__btn:active {
+  transform: scale(0.96);
+}
+
 /* ─── Disabled state ──────────────────────────────────────────────────────── */
 
 .heuristics-disabled {
@@ -78,109 +271,10 @@
   cursor: pointer;
 }
 
-/* ─── One-at-a-time prompt ────────────────────────────────────────────────── */
-
-.heuristics-prompt {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 32px 16px 24px;
-  border-radius: 18px;
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  box-shadow: var(--card-shadow);
-}
-
-.heuristics-prompt__progress {
-  margin: 0 0 20px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--text-soft);
-  letter-spacing: 0.04em;
-}
-
-.heuristics-prompt__date {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: var(--pill-muted-bg);
-  color: var(--pill-muted-text);
-  font-size: 0.78rem;
-  font-weight: 700;
-  margin-bottom: 14px;
-}
-
-.heuristics-prompt__question {
-  margin: 0 0 24px;
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: var(--text-strong);
-  text-align: center;
-}
-
-/* Score buttons (1-5) */
-.heuristics-prompt__scale {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 18px;
-}
-
-.heuristics-prompt__score-btn {
-  width: 52px;
-  height: 52px;
-  border: 1px solid var(--card-border);
-  border-radius: 14px;
-  background: var(--panel-bg);
-  color: var(--text-muted);
-  font-size: 1.1rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.12s, border-color 0.12s, color 0.12s, transform 0.1s;
-}
-
-.heuristics-prompt__score-btn:hover {
-  background: var(--pill-muted-bg);
-  color: var(--text-strong);
-}
-
-.heuristics-prompt__score-btn:active {
-  transform: scale(0.92);
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #0f1113;
-}
-
-/* Secondary actions (Unknown / Skip) */
-.heuristics-prompt__actions {
-  display: flex;
-  gap: 10px;
-}
-
-.heuristics-prompt__action-btn {
-  padding: 9px 18px;
-  border: 1px solid var(--card-border);
-  border-radius: 10px;
-  background: transparent;
-  color: var(--text-soft);
-  font-size: 0.84rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.12s, color 0.12s, transform 0.1s;
-}
-
-.heuristics-prompt__action-btn:hover {
-  background: var(--pill-muted-bg);
-  color: var(--text-muted);
-}
-
-.heuristics-prompt__action-btn:active {
-  transform: scale(0.95);
-}
-
 /* ─── Footer ──────────────────────────────────────────────────────────────── */
 
 .heuristics-footer {
-  margin-top: 20px;
+  margin-top: 4px;
   text-align: center;
 }
 
