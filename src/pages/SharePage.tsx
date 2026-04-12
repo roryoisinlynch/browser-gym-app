@@ -9,7 +9,6 @@ export default function SharePage() {
     <main className="share-page">
       <TopBar title="Share" backTo="/settings" />
       <section className="share-shell">
-        <p className="share-heading">Share this app with a friend</p>
         <img
           className="share-qr"
           src={`${import.meta.env.BASE_URL}qr.png`}
