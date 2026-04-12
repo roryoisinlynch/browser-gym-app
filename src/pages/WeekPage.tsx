@@ -298,7 +298,6 @@ export default function WeekPage() {
                   rowState = "overdue";
                 } else if (delta === 0) {
                   caption = "Today";
-                  rowState = "overdue";
                 } else {
                   caption = `In ${delta} day${delta === 1 ? "" : "s"}`;
                 }
