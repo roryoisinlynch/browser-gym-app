@@ -170,7 +170,14 @@ export default function ExerciseSetTable({
         <button
           type="button"
           className="exercise-set-table-card__done"
-          onClick={onDone}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            if (document.activeElement instanceof HTMLInputElement) {
+              document.activeElement.blur();
+            } else {
+              onDone();
+            }
+          }}
         >
           Back
         </button>
