@@ -66,10 +66,21 @@
   opacity: 1;
 }
 
-/* Exiting — slides up and shrinks */
+/* Exiting — slides up and shrinks, no interaction */
 .heuristics-card--exiting {
   transform: translateY(-30%) scale(0.92);
   opacity: 0;
+  pointer-events: none;
+}
+
+/* Next card — absolute, behind active, revealed as it exits */
+.heuristics-card--next {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  pointer-events: none;
 }
 
 /* Stacked cards — absolute, peeking out below */

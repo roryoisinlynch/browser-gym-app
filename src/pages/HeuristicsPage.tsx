@@ -216,6 +216,60 @@ export default function HeuristicsPage() {
   }
 
   const activeItem = queue[index];
+  const nextItem = queue[index + 1];
+
+  /** Render the full interactive card content for a given item */
+  function renderCardContent(item: PendingItem, interactive: boolean) {
+    return (
+      <>
+        <span className="heuristics-card__date">{friendlyDateLabel(item.date)}</span>
+        <p className="heuristics-card__question">{item.question.label}</p>
+
+        {/* Score bar */}
+        <div className="heuristics-scale">
+          {SCALE.map((n, i) => (
+            <button
+              key={n}
+              type="button"
+              className="heuristics-scale__segment"
+              style={{
+                "--segment-color": SCALE_COLORS[i],
+                "--segment-color-dim": SCALE_COLORS[i] + "33",
+              } as React.CSSProperties}
+              onClick={interactive ? () => handleScore(n) : undefined}
+              tabIndex={interactive ? 0 : -1}
+              aria-label={`${n} — ${SCALE_LABELS[i]}`}
+            >
+              <span className="heuristics-scale__number">{n}</span>
+              <span className="heuristics-scale__label">{SCALE_LABELS[i]}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Card actions */}
+        <div className="heuristics-card__actions">
+          <button
+            type="button"
+            className="heuristics-card__action"
+            onClick={interactive ? handleAnswerLater : undefined}
+            tabIndex={interactive ? 0 : -1}
+          >
+            Skip for now
+            <span className="heuristics-card__action-note">answer later</span>
+          </button>
+          <button
+            type="button"
+            className="heuristics-card__action"
+            onClick={interactive ? handleDismiss : undefined}
+            tabIndex={interactive ? 0 : -1}
+          >
+            N/A
+            <span className="heuristics-card__action-note">no impact on scores</span>
+          </button>
+        </div>
+      </>
+    );
+  }
 
   return (
     <main className="heuristics-page">
@@ -247,6 +301,17 @@ export default function HeuristicsPage() {
             );
           })}
 
+          {/* Next card — sits behind active, revealed as it exits */}
+          {nextItem && (
+            <div
+              key={`next_${nextItem.question.id}_${nextItem.date}`}
+              className="heuristics-card heuristics-card--next"
+              aria-hidden
+            >
+              {renderCardContent(nextItem, false)}
+            </div>
+          )}
+
           {/* Active card */}
           <div
             key={`${activeItem.question.id}_${activeItem.date}`}
@@ -255,52 +320,7 @@ export default function HeuristicsPage() {
               transitioning && "heuristics-card--exiting",
             ].filter(Boolean).join(" ")}
           >
-            <span className="heuristics-card__date">{friendlyDateLabel(activeItem.date)}</span>
-            <p className="heuristics-card__question">{activeItem.question.label}</p>
-
-            {!transitioning && (
-              <>
-                {/* Score bar */}
-                <div className="heuristics-scale">
-                  {SCALE.map((n, i) => (
-                    <button
-                      key={n}
-                      type="button"
-                      className="heuristics-scale__segment"
-                      style={{
-                        "--segment-color": SCALE_COLORS[i],
-                        "--segment-color-dim": SCALE_COLORS[i] + "33",
-                      } as React.CSSProperties}
-                      onClick={() => handleScore(n)}
-                      aria-label={`${n} — ${SCALE_LABELS[i]}`}
-                    >
-                      <span className="heuristics-scale__number">{n}</span>
-                      <span className="heuristics-scale__label">{SCALE_LABELS[i]}</span>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Card actions */}
-                <div className="heuristics-card__actions">
-                  <button
-                    type="button"
-                    className="heuristics-card__action"
-                    onClick={handleAnswerLater}
-                  >
-                    Skip for now
-                    <span className="heuristics-card__action-note">answer later</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="heuristics-card__action"
-                    onClick={handleDismiss}
-                  >
-                    N/A
-                    <span className="heuristics-card__action-note">no impact on scores</span>
-                  </button>
-                </div>
-              </>
-            )}
+            {renderCardContent(activeItem, !transitioning)}
           </div>
         </div>
 
