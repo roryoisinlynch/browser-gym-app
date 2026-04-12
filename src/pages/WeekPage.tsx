@@ -295,8 +295,10 @@ export default function WeekPage() {
                 if (delta < 0) {
                   const n = Math.abs(delta);
                   caption = `${n} day${n === 1 ? "" : "s"} overdue`;
+                  rowState = "overdue";
                 } else if (delta === 0) {
                   caption = "Today";
+                  rowState = "overdue";
                 } else {
                   caption = `In ${delta} day${delta === 1 ? "" : "s"}`;
                 }

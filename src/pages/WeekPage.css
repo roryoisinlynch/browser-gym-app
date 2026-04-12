@@ -229,6 +229,11 @@
   background: rgba(216, 240, 106, 0.10);
 }
 
+/* Today / overdue — matches dashboard overdue (#e76f51) */
+.week-day--overdue .week-day__content {
+  background: rgba(231, 111, 81, 0.08);
+}
+
 .week-day--upcoming .week-day__content {
   background: rgba(255, 255, 255, 0.03);
 }
