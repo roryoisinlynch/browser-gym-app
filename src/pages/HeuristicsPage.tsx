@@ -266,20 +266,20 @@ export default function HeuristicsPage() {
           <button
             type="button"
             className="heuristics-card__action"
-            onClick={interactive ? handleAnswerLater : undefined}
-            tabIndex={interactive ? 0 : -1}
-          >
-            Skip for now
-            <span className="heuristics-card__action-note">answer later</span>
-          </button>
-          <button
-            type="button"
-            className="heuristics-card__action"
             onClick={interactive ? handleDismiss : undefined}
             tabIndex={interactive ? 0 : -1}
           >
             N/A
             <span className="heuristics-card__action-note">no impact on scores</span>
+          </button>
+          <button
+            type="button"
+            className="heuristics-card__action"
+            onClick={interactive ? handleAnswerLater : undefined}
+            tabIndex={interactive ? 0 : -1}
+          >
+            Skip for now
+            <span className="heuristics-card__action-note">answer later</span>
           </button>
         </div>
       </>
