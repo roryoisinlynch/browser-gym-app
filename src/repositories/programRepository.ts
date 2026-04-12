@@ -2685,7 +2685,7 @@ export async function getAllTimePREvents(): Promise<PREvent[]> {
 
 /**
  * Returns the route of the first active instance, in priority order:
- * in-progress session → /week.
+ * in-progress session → /session/:id, active season → /week, else → /season.
  */
 export async function getActiveDestinationRoute(): Promise<string> {
   const sessionInstances = await getAll<SessionInstance>(STORE_NAMES.sessionInstances);
@@ -2693,7 +2693,7 @@ export async function getActiveDestinationRoute(): Promise<string> {
   if (activeSession) return `/session/${activeSession.id}`;
 
   const activeSeason = await getActiveSeasonInstance();
-  if (!activeSeason) return "/";
+  if (!activeSeason) return "/season";
 
   return "/week";
 }
