@@ -571,7 +571,7 @@ export default function DashboardPage() {
           <p className="dashboard-heuristics-optin__details-text">
             At the end of a training block, you can review your heuristics alongside your training analytics
             to add another dimension to your results. See how factors like sleep consistency or creatine intake
-            may have contributed to the strength gains you did — or didn't — make over the period.
+            may have contributed to the strength gains you did (or didn't) make over the period.
           </p>
         </details>
         <div className="dashboard-heuristics-optin__actions">
