@@ -1,0 +1,115 @@
+.seasons-page {
+  min-height: 100vh;
+  padding: 64px 0 100px;
+  background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+  color: var(--text-strong);
+}
+
+.seasons-shell {
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 16px 14px 28px;
+}
+
+.seasons-message {
+  margin: 24px 0 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.seasons-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.seasons-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.seasons-row__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.seasons-row__heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.seasons-row__name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.seasons-row__status {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--pill-muted-bg);
+}
+
+.seasons-row__status--active {
+  color: #6bcb77;
+}
+
+.seasons-row__status--completed {
+  color: var(--text-muted);
+}
+
+.seasons-row__status--cancelled {
+  color: #8a8d92;
+}
+
+.seasons-row__meta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.seasons-row__sep {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.seasons-row__delete {
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #e76f51;
+  background: transparent;
+  color: #e76f51;
+  cursor: pointer;
+}
+
+.seasons-row__delete:hover:not(:disabled) {
+  background: rgba(231, 111, 81, 0.1);
+}
+
+.seasons-row__delete:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

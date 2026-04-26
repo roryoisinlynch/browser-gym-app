@@ -107,6 +107,20 @@ export default function SettingsPage() {
             <button
               type="button"
               className="settings-nav-card"
+              onClick={() => navigate("/seasons")}
+            >
+              <div className="settings-nav-card__body">
+                <span className="settings-nav-card__title">View season records</span>
+                <span className="settings-nav-card__desc">
+                  Browse and delete seasons
+                </span>
+              </div>
+              <span className="settings-nav-card__chevron">›</span>
+            </button>
+
+            <button
+              type="button"
+              className="settings-nav-card"
               onClick={() => navigate("/backup")}
             >
               <div className="settings-nav-card__body">

@@ -229,7 +229,7 @@ export async function getActiveSeasonInstance(): Promise<SeasonInstance | undefi
  * abandoned without any logged sets — leaving a cancelled stub in that case
  * would clutter the All Seasons list with a zero-content entry.
  */
-async function deleteSeasonInstanceTree(seasonInstanceId: string): Promise<void> {
+export async function deleteSeasonInstanceTree(seasonInstanceId: string): Promise<void> {
   const weeks = await getAllByIndex<WeekInstance>(
     STORE_NAMES.weekInstances,
     "bySeasonInstanceId",
