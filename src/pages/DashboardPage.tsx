@@ -3,12 +3,13 @@ import { useNavigate } from "react-router-dom";
 import type { SeasonInstance, SessionInstance, WeekInstance } from "../domain/models";
 import type { PREvent, SessionInstanceView, WeekInstanceItemView } from "../repositories/programRepository";
 import {
+  computeSeasonConsistencyForSeason,
   getActiveSeasonInstance,
   getAllTimePREvents,
   getCanonicalWeekTemplateForSeason,
-  getLastCompletedSeasonInstance,
   getLastCompletedSessionInstance,
   getLastCompletedWeekInstance,
+  getLastEndedSeasonInstance,
   getSeasonCalendarWeeks,
   getSessionInstanceById,
   getSessionInstanceView,
@@ -69,7 +70,7 @@ interface RecentCard {
   id: string;
   name: string;
   grade: string | null;
-  gradeColor: "green" | "amber" | "red" | null;
+  gradeColor: "green" | "amber" | "red" | "grey" | null;
   ragStatus?: "green" | "amber" | "red";
   link: string;
 }
@@ -372,7 +373,8 @@ async function buildSeasonCard(season: SeasonInstance): Promise<RecentCard | nul
         return computeWeekMetrics(w, items, views);
       })
     );
-    const sm = computeSeasonMetrics(season, weekMetrics);
+    const consistencyOverride = await computeSeasonConsistencyForSeason(season);
+    const sm = computeSeasonMetrics(season, weekMetrics, consistencyOverride);
     return {
       id: season.id,
       name: season.name,
@@ -431,7 +433,7 @@ export default function DashboardPage() {
 
       setUpNext(computeUpNext(activeSeason, weekItems));
 
-      const seasonToShow = activeSeason ?? (await getLastCompletedSeasonInstance());
+      const seasonToShow = activeSeason ?? (await getLastEndedSeasonInstance());
       if (cancelled.current) return;
       if (seasonToShow) {
         const isPrev = !activeSeason;
@@ -453,7 +455,7 @@ export default function DashboardPage() {
       const [lastSession, lastWeek, lastSeason, prList] = await Promise.all([
         getLastCompletedSessionInstance(),
         getLastCompletedWeekInstance(),
-        getLastCompletedSeasonInstance(),
+        getLastEndedSeasonInstance(),
         getAllTimePREvents(),
       ]);
       if (cancelled.current) return;

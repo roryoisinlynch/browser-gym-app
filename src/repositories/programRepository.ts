@@ -31,6 +31,8 @@ import {
   calculateEstimatedOneRepMax,
 } from "../services/setAnalysis";
 
+import { computeSeasonConsistency } from "../services/seasonMetrics";
+
 import { mergeWithImportedSets } from "../services/importMerge";
 import { loadAllImportedSets } from "../services/importedSetStore";
 
@@ -235,21 +237,40 @@ export async function activateProgram(
   for (const active of activeInstances) {
     const weeks = await getWeekInstancesForSeasonInstance(active.id);
     for (const week of weeks.filter((w) => w.status === "in_progress")) {
-      // Drain any in-progress sessions (and their exercises) so they don't
-      // pollute getActiveDestinationRoute after the program switch.
+      // Drain any in-progress sessions so they don't pollute
+      // getActiveDestinationRoute after the program switch. Sessions with
+      // logged sets are promoted to completed (real work was done); sessions
+      // with no logged sets are demoted to not_started so they don't inflate
+      // the season's completed-session count.
       const weekSessions = await getSessionInstancesForWeekInstance(week.id);
       for (const session of weekSessions.filter((s) => s.status === "in_progress")) {
+        const sets = await getExerciseSetsForSessionInstance(session.id);
         const exerciseInstances = await getExerciseInstancesForSessionInstance(session.id);
-        await Promise.all(
-          exerciseInstances
-            .filter((e) => e.status === "in_progress")
-            .map((e) => completeExerciseInstance(e.id))
-        );
-        await putItem(STORE_NAMES.sessionInstances, {
-          ...session,
-          status: "completed",
-          completedAt: session.completedAt ?? nowIso,
-        });
+        if (sets.length === 0) {
+          for (const e of exerciseInstances.filter((e) => e.status === "in_progress")) {
+            await putItem(STORE_NAMES.exerciseInstances, {
+              ...e,
+              status: "not_started",
+              startedAt: null,
+            });
+          }
+          await putItem(STORE_NAMES.sessionInstances, {
+            ...session,
+            status: "not_started",
+            startedAt: null,
+          });
+        } else {
+          await Promise.all(
+            exerciseInstances
+              .filter((e) => e.status === "in_progress")
+              .map((e) => completeExerciseInstance(e.id))
+          );
+          await putItem(STORE_NAMES.sessionInstances, {
+            ...session,
+            status: "completed",
+            completedAt: session.completedAt ?? nowIso,
+          });
+        }
       }
       await putItem(STORE_NAMES.weekInstances, {
         ...week,
@@ -260,7 +281,7 @@ export async function activateProgram(
     await putItem(STORE_NAMES.seasonInstances, {
       ...active,
       status: "cancelled",
-      completedAt: null,
+      completedAt: nowIso,
     });
   }
 
@@ -2581,6 +2602,63 @@ export async function getLastCompletedSeasonInstance(): Promise<SeasonInstance |
   const all = await getAll<SeasonInstance>(STORE_NAMES.seasonInstances);
   const sorted = all
     .filter((s) => s.status === "completed" && s.completedAt != null)
+    .sort((a, b) => b.completedAt!.localeCompare(a.completedAt!));
+  return sorted[0] ?? null;
+}
+
+/**
+ * Computes season-level consistency: working days delivered / working days
+ * the program would have prescribed in the elapsed time. Generated weeks use
+ * their own snapshot; time past the last generated week extrapolates the
+ * live canonical week pattern. Returns null for seasons with no elapsed time
+ * or no expected sessions (e.g. cancelled the same day they started).
+ */
+export async function computeSeasonConsistencyForSeason(
+  season: SeasonInstance
+): Promise<number | null> {
+  if (!season.startedAt || !season.completedAt) return null;
+
+  const [weekInstances, canonicalWeek] = await Promise.all([
+    getWeekInstancesForSeasonInstance(season.id),
+    getCanonicalWeekTemplateForSeason(season.seasonTemplateId),
+  ]);
+
+  const weekData = await Promise.all(
+    weekInstances.map(async (week) => {
+      const [items, sessions] = await Promise.all([
+        getWeekInstanceItemsForWeekInstance(week.id),
+        getSessionInstancesForWeekInstance(week.id),
+      ]);
+      const completedSessionCount = sessions.filter((s) => s.status === "completed").length;
+      return { week, items, completedSessionCount };
+    })
+  );
+
+  const canonicalWeekItems = canonicalWeek
+    ? await getWeekTemplateItemsForWeekTemplate(canonicalWeek.id)
+    : [];
+
+  return computeSeasonConsistency({
+    startedAt: season.startedAt,
+    endedAt: season.completedAt,
+    weeks: weekData,
+    canonicalWeekItems,
+  });
+}
+
+/**
+ * Most recent season that has ended, whether it was finished naturally or
+ * cancelled (ended early). Cancelled seasons need an `endedAt` timestamp
+ * (`completedAt`) to be ranked; older data without one is treated as completed-only.
+ */
+export async function getLastEndedSeasonInstance(): Promise<SeasonInstance | null> {
+  const all = await getAll<SeasonInstance>(STORE_NAMES.seasonInstances);
+  const sorted = all
+    .filter(
+      (s) =>
+        (s.status === "completed" || s.status === "cancelled") &&
+        s.completedAt != null
+    )
     .sort((a, b) => b.completedAt!.localeCompare(a.completedAt!));
   return sorted[0] ?? null;
 }

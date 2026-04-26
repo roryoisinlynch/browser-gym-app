@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import type { SessionInstanceView, SessionPR } from "../repositories/programRepository";
 import {
+  computeSeasonConsistencyForSeason,
   getSeasonInstanceById,
   getAllSeasonInstances,
   getWeekInstancesForSeasonInstance,
@@ -147,7 +148,8 @@ export default function SeasonSummaryPage() {
         );
         setLoadProgress(50);
 
-        const computed = computeSeasonMetrics(seasonInstance, weekMetricsList);
+        const consistencyOverride = await computeSeasonConsistencyForSeason(seasonInstance);
+        const computed = computeSeasonMetrics(seasonInstance, weekMetricsList, consistencyOverride);
         setMetrics(computed);
         setSeasonName(seasonTemplate?.name ?? "Season summary");
         setPrs(seasonPRs);
@@ -195,14 +197,17 @@ export default function SeasonSummaryPage() {
         }
         setLoadProgress(65);
 
-        // All completed seasons across all programs, ordered for display.
-        // Not filtered by template ID — seasons from deleted or different programs
-        // are still part of the user's training history and should be visible.
+        // All ended seasons across all programs (completed or stopped early),
+        // ordered for display. Not filtered by template ID — seasons from
+        // deleted or different programs are still part of the user's training
+        // history and should be visible.
         const allSeasons = await getAllSeasonInstances();
-        const completedSeasons = allSeasons.filter(s => s.status === "completed");
+        const endedSeasons = allSeasons.filter(
+          s => (s.status === "completed" || s.status === "cancelled") && s.completedAt != null
+        );
 
         const rows: SeasonRow[] = (await Promise.all(
-          completedSeasons.map(async (s): Promise<SeasonRow | null> => {
+          endedSeasons.map(async (s): Promise<SeasonRow | null> => {
             const isCurrent = s.id === seasonInstanceId;
             let grade: SeasonGrade | null = null;
             let prCount = 0;
@@ -228,7 +233,8 @@ export default function SeasonSummaryPage() {
                   return computeWeekMetrics(w, wItems, wViews);
                 })
               );
-              const sMetrics = isCurrent ? computed : computeSeasonMetrics(s, sWeekMetrics);
+              const sConsistency = await computeSeasonConsistencyForSeason(s);
+              const sMetrics = isCurrent ? computed : computeSeasonMetrics(s, sWeekMetrics, sConsistency);
               grade = sMetrics.grade;
 
               const sPRs = await getSeasonPRs(s.id);
@@ -300,12 +306,17 @@ export default function SeasonSummaryPage() {
             </div>
           </>
         ) : (() => {
-          const { totalSets, totalSessions, totalWeeks, durationLabel, volumeScore, intensityScore, consistencyScore, seasonScore, grade } = metrics!;
+          const { totalSets, totalSessions, totalWeeks, durationLabel, volumeScore, intensityScore, consistencyScore, seasonScore, grade, endedEarly } = metrics!;
           const color = gradeColor(grade);
           return (<>
         {/* ── Season name ── */}
         <header className="season-summary-header">
           <h1 className="season-summary-title">{seasonName}</h1>
+          {endedEarly && (
+            <p className="season-summary-eyebrow season-summary-eyebrow--ended-early">
+              Ended early
+            </p>
+          )}
         </header>
 
         {/* ── Descriptive stats ── */}
@@ -381,7 +392,7 @@ export default function SeasonSummaryPage() {
           </div>
 
           <p className="season-summary-score-footnote">
-            Score = average of volume, intensity and consistency across all weeks
+            Score = average of volume, intensity and consistency (each out of 100)
           </p>
         </section>
 

@@ -5,7 +5,7 @@ import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import "./BackupPage.css";
 
-const BACKUP_VERSION = 3;
+const BACKUP_VERSION = 4;
 const MIN_COMPATIBLE_VERSION = 2;
 
 type StoreData = Record<string, unknown[]>;

@@ -646,6 +646,7 @@
 .dashboard-recent-card__grade--green { color: #6bcb77; }
 .dashboard-recent-card__grade--amber { color: #f4a261; }
 .dashboard-recent-card__grade--red   { color: #e76f51; }
+.dashboard-recent-card__grade--grey  { color: #8a8d92; }
 
 /* ── PR Spotlight ── */
 .dashboard-pr-spotlight {

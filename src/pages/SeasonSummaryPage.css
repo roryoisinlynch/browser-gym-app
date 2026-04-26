@@ -165,6 +165,20 @@
   text-shadow: 0 0 12px rgba(231, 111, 81, 0.4);
 }
 
+.season-summary-grade--grey {
+  color: #8a8d92;
+  text-shadow: 0 0 12px rgba(138, 141, 146, 0.35);
+}
+
+.season-summary-eyebrow--ended-early {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #8a8d92;
+}
+
 .season-summary-score-center {
   flex: 1;
   display: flex;
@@ -295,6 +309,7 @@
 .season-summary-season-row__grade--green { color: #6bcb77; }
 .season-summary-season-row__grade--amber { color: #f4a261; }
 .season-summary-season-row__grade--red   { color: #e76f51; }
+.season-summary-season-row__grade--grey  { color: #8a8d92; }
 
 .season-summary-season-row__prs {
   font-size: 0.78rem;
