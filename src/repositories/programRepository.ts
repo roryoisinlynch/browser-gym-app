@@ -222,6 +222,80 @@ export async function getActiveSeasonInstance(): Promise<SeasonInstance | undefi
   return instances[0];
 }
 
+/**
+ * Removes a SeasonInstance and every record that hangs off it: weeks, week
+ * items, sessions, session muscle groups, session exercises, exercise
+ * instances, and exercise sets. Used when a freshly-started season is
+ * abandoned without any logged sets — leaving a cancelled stub in that case
+ * would clutter the All Seasons list with a zero-content entry.
+ */
+async function deleteSeasonInstanceTree(seasonInstanceId: string): Promise<void> {
+  const weeks = await getAllByIndex<WeekInstance>(
+    STORE_NAMES.weekInstances,
+    "bySeasonInstanceId",
+    seasonInstanceId
+  );
+  for (const week of weeks) {
+    const items = await getAllByIndex<WeekInstanceItem>(
+      STORE_NAMES.weekInstanceItems,
+      "byWeekInstanceId",
+      week.id
+    );
+    for (const item of items) {
+      await deleteItem(STORE_NAMES.weekInstanceItems, item.id);
+    }
+  }
+
+  const sessions = await getAllByIndex<SessionInstance>(
+    STORE_NAMES.sessionInstances,
+    "bySeasonInstanceId",
+    seasonInstanceId
+  );
+  for (const session of sessions) {
+    const exerciseInstances = await getAllByIndex<ExerciseInstance>(
+      STORE_NAMES.exerciseInstances,
+      "bySessionInstanceId",
+      session.id
+    );
+    for (const ei of exerciseInstances) {
+      const sets = await getAllByIndex<ExerciseSet>(
+        STORE_NAMES.exerciseSets,
+        "byExerciseInstanceId",
+        ei.id
+      );
+      for (const s of sets) {
+        await deleteItem(STORE_NAMES.exerciseSets, s.id);
+      }
+      await deleteItem(STORE_NAMES.exerciseInstances, ei.id);
+    }
+
+    const simgs = await getAllByIndex<SessionInstanceMuscleGroup>(
+      STORE_NAMES.sessionInstanceMuscleGroups,
+      "bySessionInstanceId",
+      session.id
+    );
+    for (const simg of simgs) {
+      await deleteItem(STORE_NAMES.sessionInstanceMuscleGroups, simg.id);
+    }
+
+    const sies = await getAllByIndex<SessionInstanceExercise>(
+      STORE_NAMES.sessionInstanceExercises,
+      "bySessionInstanceId",
+      session.id
+    );
+    for (const sie of sies) {
+      await deleteItem(STORE_NAMES.sessionInstanceExercises, sie.id);
+    }
+
+    await deleteItem(STORE_NAMES.sessionInstances, session.id);
+  }
+
+  for (const week of weeks) {
+    await deleteItem(STORE_NAMES.weekInstances, week.id);
+  }
+  await deleteItem(STORE_NAMES.seasonInstances, seasonInstanceId);
+}
+
 export async function activateProgram(
   seasonTemplateId: string,
   startedAt?: string
@@ -235,6 +309,26 @@ export async function activateProgram(
     "in_progress"
   );
   for (const active of activeInstances) {
+    // If the displaced season has zero logged sets, it's a non-event — delete
+    // it entirely rather than leave a cancelled stub in the user's history.
+    const allSeasonSessions = await getAllByIndex<SessionInstance>(
+      STORE_NAMES.sessionInstances,
+      "bySeasonInstanceId",
+      active.id
+    );
+    let hasAnySets = false;
+    for (const s of allSeasonSessions) {
+      const sets = await getExerciseSetsForSessionInstance(s.id);
+      if (sets.length > 0) {
+        hasAnySets = true;
+        break;
+      }
+    }
+    if (!hasAnySets) {
+      await deleteSeasonInstanceTree(active.id);
+      continue;
+    }
+
     const weeks = await getWeekInstancesForSeasonInstance(active.id);
     for (const week of weeks.filter((w) => w.status === "in_progress")) {
       // Drain any in-progress sessions so they don't pollute
