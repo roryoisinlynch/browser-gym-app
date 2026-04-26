@@ -158,7 +158,14 @@ export default function SeasonSummaryPage() {
 
         // Compute season-level day squares
         if (seasonInstance.startedAt && weekLength > 0) {
-          const today = localDateIso();
+          // For active seasons the cutoff is today; for ended ones (completed
+          // or cancelled) the cutoff is when the season ended, otherwise the
+          // "missed" count would keep growing as wall-clock time advances.
+          const seasonEnded = seasonInstance.status !== "in_progress";
+          const today =
+            seasonEnded && seasonInstance.completedAt
+              ? localDateIso(toLocalMidnight(seasonInstance.completedAt))
+              : localDateIso();
           const seasonStartMs = toLocalMidnight(seasonInstance.startedAt).getTime();
           const sortedWeeks = [...weeks].sort((a, b) => a.order - b.order);
 
