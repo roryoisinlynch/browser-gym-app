@@ -2544,7 +2544,8 @@ async function detectPRsForInstances(
  * and whether the exercise is bodyweight.
  */
 async function groupInstancesByName(
-  scopedInstances: ExerciseInstance[]
+  scopedInstances: ExerciseInstance[],
+  priorBefore?: string
 ): Promise<
   Array<{
     exerciseName: string;
@@ -2573,7 +2574,17 @@ async function groupInstancesByName(
     const allForName = allInstances.filter(
       (i) => i.exerciseName.trim().toLowerCase() === normalizedName
     );
-    const priorInstances = allForName.filter((i) => !scopedInstanceIds.has(i.id));
+    let priorInstances = allForName.filter((i) => !scopedInstanceIds.has(i.id));
+
+    // When viewing a past scope retrospectively (e.g. an old season's
+    // summary), exclude instances that happened AFTER the scope began —
+    // otherwise a later season's higher e1RM would overshadow this scope's
+    // genuine PR. completedAt strings are ISO so lexicographic compare works.
+    if (priorBefore) {
+      priorInstances = priorInstances.filter(
+        (i) => i.completedAt != null && i.completedAt < priorBefore
+      );
+    }
 
     if (priorInstances.length < 1) continue;
 
@@ -2594,8 +2605,10 @@ async function groupInstancesByName(
 }
 
 export async function getSessionPRs(sessionInstanceId: string): Promise<SessionPR[]> {
+  const session = await getById<SessionInstance>(STORE_NAMES.sessionInstances, sessionInstanceId);
+  const priorBefore = session?.startedAt ?? session?.date ?? undefined;
   const exerciseInstances = await getExerciseInstancesForSessionInstance(sessionInstanceId);
-  const groups = await groupInstancesByName(exerciseInstances);
+  const groups = await groupInstancesByName(exerciseInstances, priorBefore);
   const prs: SessionPR[] = [];
   for (const g of groups) {
     prs.push(...await detectPRsForInstances(
@@ -2621,12 +2634,14 @@ export async function getSessionPRs(sessionInstanceId: string): Promise<SessionP
  *  - Multiple PRs for the same exercise within the week collapse into one entry.
  */
 export async function getWeekPRs(weekInstanceId: string): Promise<SessionPR[]> {
+  const week = await getById<WeekInstance>(STORE_NAMES.weekInstances, weekInstanceId);
+  const priorBefore = week?.startedAt ?? undefined;
   const weekSessions = await getSessionInstancesForWeekInstance(weekInstanceId);
   const allWeekExerciseInstances: ExerciseInstance[] = (
     await Promise.all(weekSessions.map((s) => getExerciseInstancesForSessionInstance(s.id)))
   ).flat();
 
-  const groups = await groupInstancesByName(allWeekExerciseInstances);
+  const groups = await groupInstancesByName(allWeekExerciseInstances, priorBefore);
   const prs: SessionPR[] = [];
   for (const g of groups) {
     prs.push(...await detectPRsForInstances(
@@ -2653,6 +2668,8 @@ export async function getWeekPRs(weekInstanceId: string): Promise<SessionPR[]> {
  *  - previousE1RM is the all-time best BEFORE the season started.
  */
 export async function getSeasonPRs(seasonInstanceId: string): Promise<SessionPR[]> {
+  const season = await getById<SeasonInstance>(STORE_NAMES.seasonInstances, seasonInstanceId);
+  const priorBefore = season?.startedAt ?? undefined;
   const seasonWeeks = await getWeekInstancesForSeasonInstance(seasonInstanceId);
   const allSeasonSessions: SessionInstance[] = (
     await Promise.all(seasonWeeks.map((w) => getSessionInstancesForWeekInstance(w.id)))
@@ -2661,7 +2678,7 @@ export async function getSeasonPRs(seasonInstanceId: string): Promise<SessionPR[
     await Promise.all(allSeasonSessions.map((s) => getExerciseInstancesForSessionInstance(s.id)))
   ).flat();
 
-  const groups = await groupInstancesByName(allSeasonExerciseInstances);
+  const groups = await groupInstancesByName(allSeasonExerciseInstances, priorBefore);
   const prs: SessionPR[] = [];
   for (const g of groups) {
     prs.push(...await detectPRsForInstances(
