@@ -82,6 +82,8 @@ interface SeasonRow {
   season: SeasonInstance;
   programName: string | null;
   grade: SeasonGrade | null;
+  seasonScore: number | null;
+  durationLabel: string | null;
   prCount: number;
   completedAt: string | null;
 }
@@ -218,6 +220,8 @@ export default function SeasonSummaryPage() {
           endedSeasons.map(async (s): Promise<SeasonRow | null> => {
             const isCurrent = s.id === seasonInstanceId;
             let grade: SeasonGrade | null = null;
+            let seasonScore: number | null = null;
+            let durationLabel: string | null = null;
             let prCount = 0;
             let programName: string | null = null;
 
@@ -244,6 +248,8 @@ export default function SeasonSummaryPage() {
               const sConsistency = await computeSeasonConsistencyForSeason(s);
               const sMetrics = isCurrent ? computed : computeSeasonMetrics(s, sWeekMetrics, sConsistency);
               grade = sMetrics.grade;
+              seasonScore = sMetrics.seasonScore;
+              durationLabel = sMetrics.durationLabel;
 
               const sPRs = await getSeasonPRs(s.id);
               prCount = sPRs.length;
@@ -255,6 +261,8 @@ export default function SeasonSummaryPage() {
               season: s,
               programName,
               grade,
+              seasonScore,
+              durationLabel,
               prCount,
               completedAt: s.completedAt ?? null,
             };
@@ -446,7 +454,7 @@ export default function SeasonSummaryPage() {
         )}
 
         {/* ── All seasons ── */}
-        {seasonRows.length > 1 && (
+        {seasonRows.length > 0 && (
           <section className="season-summary-section">
             <h2 className="season-summary-section-title">All seasons</h2>
             <ul className="season-summary-seasons-list">
@@ -458,22 +466,32 @@ export default function SeasonSummaryPage() {
                   : null;
                 return (
                   <li key={row.season.id} className={`season-summary-season-row${isCurrent ? " season-summary-season-row--current" : ""}`}>
-                    <span className="season-summary-season-row__name">
-                      {row.programName
-                        ? `${row.programName} · ${row.season.name}`
-                        : row.season.name}
-                    </span>
-                    <span className="season-summary-season-row__meta">
-                      {row.grade && rowColor && (
-                        <span className={`season-summary-season-row__grade season-summary-season-row__grade--${rowColor}`}>
-                          {row.grade}
-                        </span>
+                    <div className="season-summary-season-row__main">
+                      <span className="season-summary-season-row__name">
+                        {row.programName
+                          ? `${row.programName} · ${row.season.name}`
+                          : row.season.name}
+                      </span>
+                      <span className="season-summary-season-row__meta">
+                        {row.grade && rowColor && (
+                          <span className={`season-summary-season-row__grade season-summary-season-row__grade--${rowColor}`}>
+                            {row.grade}
+                          </span>
+                        )}
+                        {row.seasonScore != null && (
+                          <span className="season-summary-season-row__score">{row.seasonScore}</span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="season-summary-season-row__sub">
+                      {row.durationLabel && (
+                        <span className="season-summary-season-row__duration">{row.durationLabel}</span>
                       )}
                       <span className="season-summary-season-row__prs">{row.prCount} PR{row.prCount !== 1 ? "s" : ""}</span>
                       {finishDate && (
                         <span className="season-summary-season-row__date">{finishDate}</span>
                       )}
-                    </span>
+                    </div>
                   </li>
                 );
               })}

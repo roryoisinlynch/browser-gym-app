@@ -269,10 +269,8 @@
 
 .season-summary-season-row {
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  gap: 4px;
   padding: 10px 0;
   border-bottom: 1px solid var(--panel-border);
 }
@@ -280,6 +278,28 @@
 .season-summary-season-row:last-child {
   border-bottom: none;
   padding-bottom: 0;
+}
+
+.season-summary-season-row__main {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.season-summary-season-row__sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: var(--text-soft);
+}
+
+.season-summary-season-row__sub > * + *::before {
+  content: "·";
+  margin-right: 8px;
+  opacity: 0.5;
 }
 
 .season-summary-season-row--current .season-summary-season-row__name {
@@ -304,6 +324,12 @@
   font-size: 1rem;
   font-weight: 800;
   letter-spacing: -0.02em;
+}
+
+.season-summary-season-row__score {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text-strong);
 }
 
 .season-summary-season-row__grade--green { color: #6bcb77; }
