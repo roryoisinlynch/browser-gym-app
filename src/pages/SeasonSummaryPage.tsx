@@ -158,13 +158,21 @@ export default function SeasonSummaryPage() {
         if (seasonInstance.startedAt && weekLength > 0) {
           const today = localDateIso();
           const seasonStartMs = toLocalMidnight(seasonInstance.startedAt).getTime();
+          const sortedWeeks = [...weeks].sort((a, b) => a.order - b.order);
+
+          // Populate session info from every week, not just completed ones —
+          // otherwise sessions in not-yet-completed weeks fall through the
+          // day-square classifier and get marked "upcoming" even when their
+          // scheduled date is already past.
           const sessionInfoMap = new Map<string, { date: string; status: string; completedAt: string | null }>();
-          for (const sessions of sessionsByWeek.values()) {
-            for (const s of sessions) {
+          for (const w of sortedWeeks) {
+            const cached = sessionsByWeek.get(w.id);
+            const sessionsForWeek = cached ?? (await getSessionInstancesForWeekInstance(w.id));
+            for (const s of sessionsForWeek) {
               sessionInfoMap.set(s.id, { date: s.date, status: s.status, completedAt: s.completedAt ?? null });
             }
           }
-          const sortedWeeks = [...weeks].sort((a, b) => a.order - b.order);
+
           const weekInstanceItemsPerWeek = await Promise.all(
             sortedWeeks.map(w => getWeekInstanceItemsForWeekInstance(w.id))
           );
