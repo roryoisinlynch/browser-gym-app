@@ -461,9 +461,13 @@ export default function SeasonSummaryPage() {
               {seasonRows.map((row) => {
                 const isCurrent = row.season.id === seasonInstanceId;
                 const rowColor = row.grade ? gradeColor(row.grade) : null;
-                const finishDate = row.completedAt
-                  ? new Date(row.completedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
-                  : null;
+                const fmtDate = (iso: string) =>
+                  new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+                const startDate = row.season.startedAt ? fmtDate(row.season.startedAt) : null;
+                const finishDate = row.completedAt ? fmtDate(row.completedAt) : null;
+                const dateRange = startDate && finishDate
+                  ? `${startDate} – ${finishDate}`
+                  : startDate ?? finishDate ?? null;
                 return (
                   <li key={row.season.id} className={`season-summary-season-row${isCurrent ? " season-summary-season-row--current" : ""}`}>
                     <div className="season-summary-season-row__main">
@@ -473,13 +477,13 @@ export default function SeasonSummaryPage() {
                           : row.season.name}
                       </span>
                       <span className="season-summary-season-row__meta">
+                        {row.seasonScore != null && (
+                          <span className="season-summary-season-row__score">{row.seasonScore}</span>
+                        )}
                         {row.grade && rowColor && (
                           <span className={`season-summary-season-row__grade season-summary-season-row__grade--${rowColor}`}>
                             {row.grade}
                           </span>
-                        )}
-                        {row.seasonScore != null && (
-                          <span className="season-summary-season-row__score">{row.seasonScore}</span>
                         )}
                       </span>
                     </div>
@@ -488,8 +492,8 @@ export default function SeasonSummaryPage() {
                         <span className="season-summary-season-row__duration">{row.durationLabel}</span>
                       )}
                       <span className="season-summary-season-row__prs">{row.prCount} PR{row.prCount !== 1 ? "s" : ""}</span>
-                      {finishDate && (
-                        <span className="season-summary-season-row__date">{finishDate}</span>
+                      {dateRange && (
+                        <span className="season-summary-season-row__date">{dateRange}</span>
                       )}
                     </div>
                   </li>
