@@ -6,6 +6,7 @@ export interface BreadcrumbWeek {
   weekInstanceId: string;
   emojiRating: EmojiRating | null;
   isCurrent: boolean;
+  endedEarly?: boolean;
 }
 
 interface WeeksBreadcrumbProps {
@@ -26,9 +27,11 @@ export default function WeeksBreadcrumb({ weeks }: WeeksBreadcrumbProps) {
             )}
             <div className="weeks-breadcrumb__dot">
               <span
-                className={`weeks-breadcrumb__emoji${week.isCurrent ? " weeks-breadcrumb__emoji--current" : ""}`}
+                className={`weeks-breadcrumb__emoji${week.isCurrent ? " weeks-breadcrumb__emoji--current" : ""}${week.endedEarly ? " weeks-breadcrumb__emoji--ended-early" : ""}`}
                 aria-label={
-                  week.emojiRating != null
+                  week.endedEarly
+                    ? "Week ended early"
+                    : week.emojiRating != null
                     ? `Week rating ${week.emojiRating}`
                     : "Not yet completed"
                 }

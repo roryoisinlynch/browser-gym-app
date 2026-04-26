@@ -82,6 +82,7 @@ function toLocalMidnight(iso: string): Date {
 export default function WeekSummaryPage() {
   const { weekInstanceId } = useParams<{ weekInstanceId: string }>();
   const [weekName, setWeekName] = useState<string | null>(null);
+  const [weekEndedEarly, setWeekEndedEarly] = useState(false);
   const [metrics, setMetrics] = useState<ReturnType<typeof computeWeekMetrics> | null>(null);
   const [sessionBreadcrumb, setSessionBreadcrumb] = useState<BreadcrumbSession[]>([]);
   const [weeksBreadcrumb, setWeeksBreadcrumb] = useState<BreadcrumbWeek[]>([]);
@@ -196,6 +197,7 @@ export default function WeekSummaryPage() {
             ? `Week ${weekInstance.order}, ${weekRir} RIR`
             : `Week ${weekInstance.order}`
         );
+        setWeekEndedEarly(weekInstance.endedEarly === true);
         setPrs(weekPRs);
         setWeekTemplateDays(templateItems);
         setWeekInstanceItems(wii);
@@ -259,12 +261,13 @@ export default function WeekSummaryPage() {
               // Not yet generated — show as an empty future dot.
               return { weekInstanceId: `future-week-${order}`, emojiRating: null, isCurrent: false };
             }
+            const endedEarly = w.endedEarly === true;
             const isCurrent = w.id === weekInstanceId;
             if (isCurrent) {
-              return { weekInstanceId: w.id, emojiRating: metrics ? metrics.emojiRating : null, isCurrent: true };
+              return { weekInstanceId: w.id, emojiRating: metrics ? metrics.emojiRating : null, isCurrent: true, endedEarly };
             }
             if (w.status !== "completed") {
-              return { weekInstanceId: w.id, emojiRating: null, isCurrent: false };
+              return { weekInstanceId: w.id, emojiRating: null, isCurrent: false, endedEarly };
             }
             try {
               const wSessions = await getSessionInstancesForWeekInstance(w.id);
@@ -277,9 +280,9 @@ export default function WeekSummaryPage() {
                 )
               ).filter((sv): sv is SessionInstanceView => sv != null);
               const wMetrics = computeWeekMetrics(w, wItems, wViews);
-              return { weekInstanceId: w.id, emojiRating: wMetrics.emojiRating, isCurrent: false };
+              return { weekInstanceId: w.id, emojiRating: wMetrics.emojiRating, isCurrent: false, endedEarly };
             } catch {
-              return { weekInstanceId: w.id, emojiRating: null, isCurrent: false };
+              return { weekInstanceId: w.id, emojiRating: null, isCurrent: false, endedEarly };
             }
           })
         );
@@ -364,6 +367,11 @@ export default function WeekSummaryPage() {
         {/* ── Week name ── */}
         <header className="week-summary-header">
           <h1 className="week-summary-title">{weekName}</h1>
+          {weekEndedEarly && (
+            <p className="week-summary-eyebrow week-summary-eyebrow--ended-early">
+              Ended early
+            </p>
+          )}
         </header>
 
         {/* ── Descriptive stats ── */}

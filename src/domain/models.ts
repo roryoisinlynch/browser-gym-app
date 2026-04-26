@@ -185,6 +185,13 @@ export interface WeekInstance {
   startedAt?: string | null;
   completedAt?: string | null;
 
+  /**
+   * True when this week was force-completed because the user cancelled the
+   * season mid-flight. Distinguishes a partial week from a fully-attempted one
+   * for UI treatment.
+   */
+  endedEarly?: boolean;
+
   summary?: string | null;
   grade?: string | null;
 }

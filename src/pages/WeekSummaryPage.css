@@ -37,6 +37,15 @@
   color: var(--text-strong);
 }
 
+.week-summary-eyebrow--ended-early {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #8a8d92;
+}
+
 /* ── Stats rows (multi-row container) ── */
 .week-summary-stats-rows {
   display: flex;

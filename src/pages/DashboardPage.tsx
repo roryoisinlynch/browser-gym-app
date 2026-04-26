@@ -341,8 +341,9 @@ async function buildWeekCard(week: WeekInstance): Promise<RecentCard | null> {
       await Promise.all(completed.map((s) => getSessionInstanceView(s.id)))
     ).filter((v): v is SessionInstanceView => v != null);
     const wm = computeWeekMetrics(week, templateItems, views);
-    const scoreColor: "green" | "amber" | "red" =
-      wm.weekScore >= 96 ? "green" : wm.weekScore >= 88 ? "amber" : "red";
+    const scoreColor: "green" | "amber" | "red" | "grey" = week.endedEarly
+      ? "grey"
+      : wm.weekScore >= 96 ? "green" : wm.weekScore >= 88 ? "amber" : "red";
     return {
       id: week.id,
       name: `Week ${week.order}`,

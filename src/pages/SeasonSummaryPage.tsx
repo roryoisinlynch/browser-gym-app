@@ -260,12 +260,13 @@ export default function SeasonSummaryPage() {
         // Weeks this season breadcrumb — all weeks with their emoji rating.
         const wbItems: BreadcrumbWeek[] = await Promise.all(
           weeks.map(async (w): Promise<BreadcrumbWeek> => {
-            if (w.status !== "completed") return { weekInstanceId: w.id, emojiRating: null, isCurrent: false };
+            const endedEarly = w.endedEarly === true;
+            if (w.status !== "completed") return { weekInstanceId: w.id, emojiRating: null, isCurrent: false, endedEarly };
             const idx = completedWeeks.indexOf(w);
             if (idx !== -1 && weekMetricsList[idx]) {
-              return { weekInstanceId: w.id, emojiRating: weekMetricsList[idx].emojiRating, isCurrent: false };
+              return { weekInstanceId: w.id, emojiRating: weekMetricsList[idx].emojiRating, isCurrent: false, endedEarly };
             }
-            return { weekInstanceId: w.id, emojiRating: null, isCurrent: false };
+            return { weekInstanceId: w.id, emojiRating: null, isCurrent: false, endedEarly };
           })
         );
         setWeeksBreadcrumb(wbItems);

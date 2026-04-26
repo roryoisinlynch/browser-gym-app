@@ -276,6 +276,7 @@ export async function activateProgram(
         ...week,
         status: "completed",
         completedAt: week.completedAt ?? nowIso,
+        endedEarly: true,
       });
     }
     await putItem(STORE_NAMES.seasonInstances, {
