@@ -34,7 +34,7 @@ import {
 import { computeSeasonConsistency } from "../services/seasonMetrics";
 
 import { mergeWithImportedSets } from "../services/importMerge";
-import { loadAllImportedSets } from "../services/importedSetStore";
+import { loadAllImportedSets, loadImportedSetsForExercise } from "../services/importedSetStore";
 
 export interface SessionTemplateListItem {
   sessionTemplate: SessionTemplate;
@@ -2463,7 +2463,14 @@ async function detectPRsForInstances(
 
   const scopedSets = allSets.filter((s) => scopedInstanceIds.has(s.exerciseInstanceId));
   const priorInstanceIds = new Set(priorInstances.map((i) => i.id));
-  const priorSets = allSets.filter((s) => priorInstanceIds.has(s.exerciseInstanceId));
+  // Imported (CSV) sets carry exerciseInstanceId "__imported__"; treat them as
+  // prior history so first-season PRs are compared against the user's full
+  // historical max, not just other native instances.
+  const priorSets = allSets.filter(
+    (s) =>
+      priorInstanceIds.has(s.exerciseInstanceId) ||
+      s.exerciseInstanceId === "__imported__"
+  );
 
   if (isBodyweight) {
     let newMaxReps: number | null = null;
@@ -2575,8 +2582,6 @@ async function groupInstancesByName(
     );
     const priorInstances = allForName.filter((i) => !scopedInstanceIds.has(i.id));
 
-    if (priorInstances.length < 1) continue;
-
     // Determine bodyweight status from the SessionInstanceExercise snapshot.
     const sie = await getById<SessionInstanceExercise>(
       STORE_NAMES.sessionInstanceExercises,
@@ -2586,6 +2591,12 @@ async function groupInstancesByName(
     const isBodyweight = sie
       ? sie.weightMode === "bodyweight"
       : false;
+
+    // CSV-imported sets are valid prior history too — without this check,
+    // a first-season PR for an exercise with only imported priors would be
+    // dropped (no native prior instances to pass the gate).
+    const importedPriors = await loadImportedSetsForExercise(exerciseName, isBodyweight);
+    if (priorInstances.length < 1 && importedPriors.length < 1) continue;
 
     groups.push({ exerciseName, scopedInstanceIds, priorInstances, isBodyweight });
   }
