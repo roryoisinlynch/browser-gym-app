@@ -395,6 +395,86 @@
   font-weight: 700;
 }
 
+/* ── Heuristics summary ── */
+.hs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.hs-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hs-row__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hs-row__label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.hs-row__value {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-strong);
+}
+
+.hs-bar {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #e76f51 0%,
+    #f4a261 25%,
+    #f4d35e 50%,
+    #a8d065 75%,
+    #6bcb77 100%
+  );
+  overflow: visible;
+}
+
+.hs-bar__range {
+  position: absolute;
+  top: -3px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1.5px solid rgba(255, 255, 255, 0.6);
+  border-radius: 999px;
+  min-width: 6px;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.hs-bar__pin {
+  position: absolute;
+  top: -5px;
+  width: 3px;
+  height: 18px;
+  background: var(--text-strong);
+  border-radius: 2px;
+  transform: translateX(-1.5px);
+  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.hs-row__caption {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
 /* ── Start next season ── */
 .season-summary-section--next {
   gap: 10px;

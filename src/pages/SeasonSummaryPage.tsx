@@ -21,6 +21,11 @@ import {
 } from "../services/seasonMetrics";
 import type { SeasonMetrics, SeasonGrade } from "../services/seasonMetrics";
 import type { SeasonInstance } from "../domain/models";
+import {
+  isHeuristicsEnabled,
+  getQuestions,
+  getEntriesForDateRange,
+} from "../repositories/heuristicsRepository";
 import WeeksBreadcrumb from "../components/WeeksBreadcrumb";
 import type { BreadcrumbWeek } from "../components/WeeksBreadcrumb";
 import TopBar from "../components/TopBar";
@@ -88,6 +93,23 @@ interface SeasonRow {
   completedAt: string | null;
 }
 
+interface HeuristicSummaryRow {
+  questionId: string;
+  label: string;
+  avg: number | null;
+  low: number;
+  high: number;
+  givenCount: number;
+  missingDays: number;
+  totalDays: number;
+}
+
+function dayDiffInclusive(startIso: string, endIso: string): number {
+  const s = new Date(startIso + "T00:00:00").getTime();
+  const e = new Date(endIso + "T00:00:00").getTime();
+  return Math.floor((e - s) / 86_400_000) + 1;
+}
+
 export default function SeasonSummaryPage() {
   const { seasonInstanceId } = useParams<{ seasonInstanceId: string }>();
   const [seasonName, setSeasonName] = useState<string | null>(null);
@@ -96,6 +118,7 @@ export default function SeasonSummaryPage() {
   const [seasonRows, setSeasonRows] = useState<SeasonRow[]>([]);
   const [weeksBreadcrumb, setWeeksBreadcrumb] = useState<BreadcrumbWeek[]>([]);
   const [seasonDaySquares, setSeasonDaySquares] = useState<DaySquare[]>([]);
+  const [heuristicSummary, setHeuristicSummary] = useState<HeuristicSummaryRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadProgress, setLoadProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -213,6 +236,60 @@ export default function SeasonSummaryPage() {
           setSeasonDaySquares(squares);
         }
         setLoadProgress(65);
+
+        // ── Heuristics summary ───────────────────────────────────────────
+        if (await isHeuristicsEnabled() && seasonInstance.startedAt) {
+          const questions = await getQuestions();
+          if (questions.length > 0) {
+            const startIso = localDateIso(toLocalMidnight(seasonInstance.startedAt));
+            const seasonEnded = seasonInstance.status !== "in_progress";
+            const endSourceIso =
+              seasonEnded && seasonInstance.completedAt
+                ? seasonInstance.completedAt
+                : new Date().toISOString();
+            const endIso = localDateIso(toLocalMidnight(endSourceIso));
+            const totalDays = Math.max(0, dayDiffInclusive(startIso, endIso));
+
+            if (totalDays > 0) {
+              const entries = await getEntriesForDateRange(startIso, endIso);
+              const byQuestion = new Map<string, typeof entries>();
+              for (const e of entries) {
+                const list = byQuestion.get(e.questionId) ?? [];
+                list.push(e);
+                byQuestion.set(e.questionId, list);
+              }
+
+              const summary: HeuristicSummaryRow[] = questions.map((q) => {
+                const qEntries = byQuestion.get(q.id) ?? [];
+                const datesAnswered = new Set<string>();
+                let sum = 0;
+                for (const e of qEntries) {
+                  if (e.value != null && !datesAnswered.has(e.date)) {
+                    datesAnswered.add(e.date);
+                    sum += e.value;
+                  }
+                }
+                const givenCount = datesAnswered.size;
+                const missingDays = Math.max(0, totalDays - givenCount);
+                const avg = givenCount > 0 ? sum / givenCount : null;
+                const low = (sum + 1 * missingDays) / totalDays;
+                const high = (sum + 5 * missingDays) / totalDays;
+                return {
+                  questionId: q.id,
+                  label: q.label,
+                  avg,
+                  low,
+                  high,
+                  givenCount,
+                  missingDays,
+                  totalDays,
+                };
+              });
+              setHeuristicSummary(summary);
+            }
+          }
+        }
+        setLoadProgress(75);
 
         // All ended seasons across all programs (completed or stopped early),
         // ordered for display. Not filtered by template ID — seasons from
@@ -492,6 +569,54 @@ export default function SeasonSummaryPage() {
                   ) : null}
                 </li>
               ))}
+            </ul>
+          </section>
+        )}
+
+        {/* ── Heuristics ── */}
+        {heuristicSummary.length > 0 && (
+          <section className="season-summary-section">
+            <h2 className="season-summary-section-title">Heuristics</h2>
+            <ul className="hs-list">
+              {heuristicSummary.map((row) => {
+                const lowPct = ((row.low - 1) / 4) * 100;
+                const highPct = ((row.high - 1) / 4) * 100;
+                const avgPct = row.avg != null ? ((row.avg - 1) / 4) * 100 : null;
+                const hasRange = row.missingDays > 0;
+                return (
+                  <li key={row.questionId} className="hs-row">
+                    <div className="hs-row__head">
+                      <span className="hs-row__label">{row.label}</span>
+                      <span className="hs-row__value">
+                        {row.avg != null ? row.avg.toFixed(1) : "—"}
+                      </span>
+                    </div>
+                    <div className="hs-bar">
+                      {hasRange && (
+                        <div
+                          className="hs-bar__range"
+                          style={{
+                            left: `${lowPct}%`,
+                            width: `${Math.max(highPct - lowPct, 0)}%`,
+                          }}
+                        />
+                      )}
+                      {avgPct != null && (
+                        <div
+                          className="hs-bar__pin"
+                          style={{ left: `${avgPct}%` }}
+                        />
+                      )}
+                    </div>
+                    {row.missingDays > 0 && (
+                      <p className="hs-row__caption">
+                        {row.givenCount} of {row.totalDays} days answered ·{" "}
+                        {row.missingDays} missing
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </section>
         )}
