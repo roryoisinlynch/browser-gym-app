@@ -271,9 +271,13 @@ export default function SeasonSummaryPage() {
                 }
                 const givenCount = datesAnswered.size;
                 const missingDays = Math.max(0, totalDays - givenCount);
-                const avg = givenCount > 0 ? sum / givenCount : null;
                 const low = (sum + 1 * missingDays) / totalDays;
                 const high = (sum + 5 * missingDays) / totalDays;
+                // Centre estimate: assume missing days were neutral (3). This
+                // makes the pin sit in the middle of the [low, high] range so
+                // the uncertainty visually extends evenly in both directions.
+                // Collapses to the simple mean when no days are missing.
+                const avg = givenCount > 0 ? (low + high) / 2 : null;
                 return {
                   questionId: q.id,
                   label: q.label,
