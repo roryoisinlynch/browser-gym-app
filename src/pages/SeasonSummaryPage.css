@@ -469,11 +469,6 @@
   pointer-events: none;
 }
 
-.hs-row__caption {
-  margin: 0;
-  font-size: 0.74rem;
-  color: var(--text-muted);
-}
 
 /* ── Start next season ── */
 .season-summary-section--next {

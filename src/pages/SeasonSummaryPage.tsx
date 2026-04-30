@@ -612,12 +612,6 @@ export default function SeasonSummaryPage() {
                         />
                       )}
                     </div>
-                    {row.missingDays > 0 && (
-                      <p className="hs-row__caption">
-                        {row.givenCount} of {row.totalDays} days answered ·{" "}
-                        {row.missingDays} missing
-                      </p>
-                    )}
                   </li>
                 );
               })}
