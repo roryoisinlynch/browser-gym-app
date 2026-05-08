@@ -324,7 +324,7 @@ export default function WeekPage() {
                     </div>
                     {state === "next" && (
                       <div className="week-day__pill">
-                        <span className="day-pill day-pill--start">Start</span>
+                        <span className="day-pill day-pill--start">View</span>
                       </div>
                     )}
                   </div>
