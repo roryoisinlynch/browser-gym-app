@@ -56,8 +56,14 @@ export function getPriorBestEstimatedOneRepMax(
  * Full set analysis for one set, given earlier comparable sets.
  *
  * Working-set definition:
- *   Weighted  — intensity ≥ 60% of effective e1RM  AND  performedRir < 6
+ *   Weighted  — intensity ≥ 60% of effective e1RM  AND  equivalent RIR < 6
  *   Bodyweight — rep gap to effective baseline ≤ 5 (≡ RIR < 6)
+ *
+ * Equivalent RIR is derived from the e1RM gap at the performed weight:
+ * `equivBaselineReps − performedReps`, where equivBaselineReps is what the
+ * effective best e1RM would yield at that weight. This matches the bar in
+ * ExerciseRepDashProgress and avoids relying on the unpopulated stored
+ * `performedRir` field.
  *
  * When prescribedWeight + prescribedRepTarget are provided and the prescribed
  * target itself would fail the working criteria (low intensity OR implied RIR
@@ -110,10 +116,16 @@ export function analyzeSet(
 
   const intensity = calculateIntensity(estimatedOneRepMax, priorBestEstimatedOneRepMax);
 
-  // Working requires BOTH: intensity ≥ 60% AND RIR < 6.
+  // Working requires BOTH: intensity ≥ 60% AND equivalent RIR < 6.
   const intensityOk = intensity != null && intensity >= WORKING_SET_INTENSITY_THRESHOLD;
-  const ririOk =
-    currentSet.performedRir == null || currentSet.performedRir < WORKING_SET_RIR_THRESHOLD;
+  const performedWeight = currentSet.performedWeight;
+  const performedReps = currentSet.performedReps ?? 0;
+  const equivBaselineReps =
+    performedWeight != null && performedWeight > 0 && priorBestEstimatedOneRepMax != null
+      ? 30 * (priorBestEstimatedOneRepMax / performedWeight - 1)
+      : null;
+  const equivRir = equivBaselineReps != null ? equivBaselineReps - performedReps : null;
+  const ririOk = equivRir == null || equivRir < WORKING_SET_RIR_THRESHOLD;
   let setType: SetType = intensityOk && ririOk ? "working" : "warmup";
 
   // Prescribed target adjustment: if the target itself would be warmup (either
