@@ -540,6 +540,62 @@
 .dashboard-timeline__status--behind { color: #f4a261; font-size: 0.72rem; font-weight: 700; }
 .dashboard-timeline__status--ok { color: var(--text-muted); font-size: 0.72rem; font-weight: 700; }
 
+/* Rest dot: behind-schedule variant (a session was scheduled, user rested instead) */
+.dashboard-timeline__day--rest.dashboard-timeline__day--rest-behind {
+  background: rgba(231, 111, 81, 0.45);
+}
+
+/* ── Last 7 days strip ── */
+.dashboard-timeline-recent {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dashboard-timeline-recent__label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.dashboard-timeline-recent__strip {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.dashboard-timeline-recent__cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dashboard-timeline-recent__weekday {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-soft);
+}
+
+/* Override the default flex sizing of .dashboard-timeline__day inside the
+   column-flex strip cells — we want the day to fill the cell width. */
+.dashboard-timeline-recent__cell .dashboard-timeline__day {
+  flex: 0 0 auto;
+  width: 100%;
+}
+
+.dashboard-timeline-recent__cell .dashboard-timeline__day--rest {
+  width: 66%;
+}
+
 /* ── Section header (title + info button) ── */
 .dashboard-section-header {
   display: flex;

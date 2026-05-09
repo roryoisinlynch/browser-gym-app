@@ -66,6 +66,15 @@ interface SeasonTimelineData {
   expectedWeekOrder: number;
 }
 
+type RecentDayStatus = "green" | "amber" | "late" | "grey" | "rest-past" | "rest-behind";
+
+interface RecentDayCell {
+  dateIso: string;
+  weekdayLabel: string;
+  status: RecentDayStatus;
+  isToday: boolean;
+}
+
 interface RecentCard {
   id: string;
   name: string;
@@ -311,6 +320,116 @@ async function loadTimeline(
   };
 }
 
+async function loadRecent7Days(season: SeasonInstance): Promise<RecentDayCell[] | null> {
+  if (!season.startedAt) return null;
+
+  const seasonStartMs = toLocalMidnight(season.startedAt).getTime();
+  const todayIso = localDateIso();
+  const todayMs = toLocalMidnight(todayIso).getTime();
+  const daysSinceStart = Math.round((todayMs - seasonStartMs) / 86400000);
+  if (daysSinceStart < 7) return null;
+
+  const [calendarWeeks, canonicalWeek] = await Promise.all([
+    getSeasonCalendarWeeks(season.id),
+    getCanonicalWeekTemplateForSeason(season.seasonTemplateId),
+  ]);
+  if (!canonicalWeek) return null;
+
+  const templateItems = (
+    await getWeekTemplateItemsForWeekTemplate(canonicalWeek.id)
+  ).sort((a, b) => a.order - b.order);
+  if (templateItems.length === 0) return null;
+
+  type Slot = {
+    type: "session" | "rest";
+    sessionInstance: SessionInstance | null;
+    originalDateIso: string;
+  };
+  const slots: Slot[] = [];
+  let dayOffset = 0;
+
+  for (const calWeek of calendarWeeks) {
+    if (calWeek.weekInstance) {
+      const items = (
+        await getWeekInstanceItemsForWeekInstance(calWeek.weekInstance.id)
+      ).sort((a, b) => a.order - b.order);
+      for (const item of items) {
+        const originalDateIso = localDateIso(
+          new Date(seasonStartMs + (dayOffset + item.order - 1) * 86400000)
+        );
+        if (item.type === "session") {
+          const session = item.sessionInstanceId
+            ? await getSessionInstanceById(item.sessionInstanceId)
+            : null;
+          slots.push({ type: "session", sessionInstance: session ?? null, originalDateIso });
+        } else {
+          slots.push({ type: "rest", sessionInstance: null, originalDateIso });
+        }
+      }
+      dayOffset += items.length;
+    } else {
+      for (const item of templateItems) {
+        const originalDateIso = localDateIso(
+          new Date(seasonStartMs + (dayOffset + item.order - 1) * 86400000)
+        );
+        slots.push({ type: item.type as "session" | "rest", sessionInstance: null, originalDateIso });
+      }
+      dayOffset += templateItems.length;
+    }
+  }
+
+  // Index completed sessions by their actual completion date.
+  const completedByDate = new Map<string, Slot>();
+  for (const slot of slots) {
+    if (
+      slot.type === "session" &&
+      slot.sessionInstance?.status === "completed" &&
+      slot.sessionInstance.completedAt
+    ) {
+      const completedDate = localDateIso(toLocalMidnight(slot.sessionInstance.completedAt));
+      completedByDate.set(completedDate, slot);
+    }
+  }
+
+  const weekdayLetters = ["S", "M", "T", "W", "T", "F", "S"];
+  const cells: RecentDayCell[] = [];
+
+  for (let i = 6; i >= 0; i--) {
+    const dateMs = todayMs - i * 86400000;
+    const date = new Date(dateMs);
+    const dateIso = localDateIso(date);
+    const weekdayLabel = weekdayLetters[date.getDay()];
+    const isToday = i === 0;
+
+    const completedSlot = completedByDate.get(dateIso);
+    if (completedSlot) {
+      const original = completedSlot.originalDateIso;
+      let status: RecentDayStatus;
+      if (dateIso < original) status = "amber";
+      else if (dateIso > original) status = "late";
+      else status = "green";
+      cells.push({ dateIso, weekdayLabel, status, isToday });
+      continue;
+    }
+
+    // No completion on this calendar date — was the original-template position a rest?
+    const positionIndex = Math.round((dateMs - seasonStartMs) / 86400000);
+    const slot = slots[positionIndex];
+
+    if (slot && slot.type === "rest") {
+      cells.push({ dateIso, weekdayLabel, status: "rest-past", isToday });
+    } else if (isToday) {
+      // Today, scheduled for a session, not yet done — show as upcoming, not "behind".
+      cells.push({ dateIso, weekdayLabel, status: "grey", isToday });
+    } else {
+      // Past day, scheduled for a session, didn't happen — rest while behind.
+      cells.push({ dateIso, weekdayLabel, status: "rest-behind", isToday });
+    }
+  }
+
+  return cells;
+}
+
 async function buildSessionCard(session: SessionInstance): Promise<RecentCard | null> {
   try {
     const view = await getSessionInstanceView(session.id);
@@ -401,6 +520,7 @@ export default function DashboardPage() {
   const [seasonTimeline, setSeasonTimeline] = useState<SeasonTimelineData | null>(null);
   const [isPreviousSeason, setIsPreviousSeason] = useState(false);
   const [timelineLoading, setTimelineLoading] = useState(true);
+  const [recent7Days, setRecent7Days] = useState<RecentDayCell[] | null>(null);
   const [recentSession, setRecentSession] = useState<RecentCard | null | typeof LOADING_CARD>(LOADING_CARD);
   const [recentWeek, setRecentWeek] = useState<RecentCard | null | typeof LOADING_CARD>(LOADING_CARD);
   const [recentSeason, setRecentSeason] = useState<RecentCard | null | typeof LOADING_CARD>(LOADING_CARD);
@@ -447,6 +567,13 @@ export default function DashboardPage() {
         });
       } else {
         setTimelineLoading(false);
+      }
+
+      // 7-day strip is anchored to "now" — only render for an active season.
+      if (activeSeason) {
+        loadRecent7Days(activeSeason).then((cells) => {
+          if (!cancelled.current) setRecent7Days(cells);
+        });
       }
 
       loadSecondary();
@@ -893,6 +1020,29 @@ export default function DashboardPage() {
             ) : null;
           })()}
         </div>
+
+        {recent7Days && (
+          <div className="dashboard-timeline-recent">
+            <div className="dashboard-timeline-recent__label">Last 7 days</div>
+            <div className="dashboard-timeline-recent__strip">
+              {recent7Days.map((cell) => {
+                const isRest = cell.status === "rest-past" || cell.status === "rest-behind";
+                const dayClasses = [
+                  "dashboard-timeline__day",
+                  `dashboard-timeline__day--${cell.status}`,
+                  isRest ? "dashboard-timeline__day--rest" : "",
+                  cell.isToday ? "dashboard-timeline__day--today" : "",
+                ].filter(Boolean).join(" ");
+                return (
+                  <div key={cell.dateIso} className="dashboard-timeline-recent__cell">
+                    <span className="dashboard-timeline-recent__weekday">{cell.weekdayLabel}</span>
+                    <div className={dayClasses} title={cell.dateIso} />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </section>
     );
   }
