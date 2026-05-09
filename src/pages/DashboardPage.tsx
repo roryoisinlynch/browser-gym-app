@@ -70,9 +70,13 @@ type RecentDayStatus = "green" | "amber" | "late" | "grey" | "rest-past" | "rest
 
 interface RecentDayCell {
   dateIso: string;
-  weekdayLabel: string;
   status: RecentDayStatus;
   isToday: boolean;
+}
+
+interface RecentDaysData {
+  weekdayLetters: string[]; // length 7, starting at season-start weekday
+  rows: (RecentDayCell | null)[][]; // each row has 7 entries; null = future placeholder in current row
 }
 
 interface RecentCard {
@@ -320,14 +324,13 @@ async function loadTimeline(
   };
 }
 
-async function loadRecent7Days(season: SeasonInstance): Promise<RecentDayCell[] | null> {
+async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | null> {
   if (!season.startedAt) return null;
 
   const seasonStartMs = toLocalMidnight(season.startedAt).getTime();
-  const todayIso = localDateIso();
-  const todayMs = toLocalMidnight(todayIso).getTime();
+  const todayMs = toLocalMidnight(localDateIso()).getTime();
   const daysSinceStart = Math.round((todayMs - seasonStartMs) / 86400000);
-  if (daysSinceStart < 7) return null;
+  if (daysSinceStart < 0) return null;
 
   const [calendarWeeks, canonicalWeek] = await Promise.all([
     getSeasonCalendarWeeks(season.id),
@@ -391,16 +394,8 @@ async function loadRecent7Days(season: SeasonInstance): Promise<RecentDayCell[] 
     }
   }
 
-  const weekdayLetters = ["S", "M", "T", "W", "T", "F", "S"];
-  const cells: RecentDayCell[] = [];
-
-  for (let i = 6; i >= 0; i--) {
-    const dateMs = todayMs - i * 86400000;
-    const date = new Date(dateMs);
-    const dateIso = localDateIso(date);
-    const weekdayLabel = weekdayLetters[date.getDay()];
-    const isToday = i === 0;
-
+  function buildCell(dateMs: number, isToday: boolean): RecentDayCell {
+    const dateIso = localDateIso(new Date(dateMs));
     const completedSlot = completedByDate.get(dateIso);
     if (completedSlot) {
       const original = completedSlot.originalDateIso;
@@ -408,26 +403,46 @@ async function loadRecent7Days(season: SeasonInstance): Promise<RecentDayCell[] 
       if (dateIso < original) status = "amber";
       else if (dateIso > original) status = "late";
       else status = "green";
-      cells.push({ dateIso, weekdayLabel, status, isToday });
-      continue;
+      return { dateIso, status, isToday };
     }
-
-    // No completion on this calendar date — was the original-template position a rest?
     const positionIndex = Math.round((dateMs - seasonStartMs) / 86400000);
     const slot = slots[positionIndex];
-
     if (slot && slot.type === "rest") {
-      cells.push({ dateIso, weekdayLabel, status: "rest-past", isToday });
-    } else if (isToday) {
-      // Today, scheduled for a session, not yet done — show as upcoming, not "behind".
-      cells.push({ dateIso, weekdayLabel, status: "grey", isToday });
-    } else {
-      // Past day, scheduled for a session, didn't happen — rest while behind.
-      cells.push({ dateIso, weekdayLabel, status: "rest-behind", isToday });
+      return { dateIso, status: "rest-past", isToday };
     }
+    if (isToday) {
+      // Today, scheduled for a session, not yet done — show as upcoming, not "behind".
+      return { dateIso, status: "grey", isToday };
+    }
+    return { dateIso, status: "rest-behind", isToday };
   }
 
-  return cells;
+  // Header letters: 7 weekday letters starting at the season-start weekday.
+  const allLetters = ["S", "M", "T", "W", "T", "F", "S"];
+  const startWeekday = new Date(seasonStartMs).getDay();
+  const weekdayLetters: string[] = [];
+  for (let c = 0; c < 7; c++) {
+    weekdayLetters.push(allLetters[(startWeekday + c) % 7]);
+  }
+
+  // Rows: row r covers day-indices [r*7 .. r*7+6]. Pad future cells in current row with null.
+  const totalRows = Math.floor(daysSinceStart / 7) + 1;
+  const rows: (RecentDayCell | null)[][] = [];
+  for (let r = 0; r < totalRows; r++) {
+    const row: (RecentDayCell | null)[] = [];
+    for (let c = 0; c < 7; c++) {
+      const dayIndex = r * 7 + c;
+      if (dayIndex > daysSinceStart) {
+        row.push(null);
+      } else {
+        const dms = seasonStartMs + dayIndex * 86400000;
+        row.push(buildCell(dms, dayIndex === daysSinceStart));
+      }
+    }
+    rows.push(row);
+  }
+
+  return { weekdayLetters, rows };
 }
 
 async function buildSessionCard(session: SessionInstance): Promise<RecentCard | null> {
@@ -520,7 +535,7 @@ export default function DashboardPage() {
   const [seasonTimeline, setSeasonTimeline] = useState<SeasonTimelineData | null>(null);
   const [isPreviousSeason, setIsPreviousSeason] = useState(false);
   const [timelineLoading, setTimelineLoading] = useState(true);
-  const [recent7Days, setRecent7Days] = useState<RecentDayCell[] | null>(null);
+  const [recentDays, setRecentDays] = useState<RecentDaysData | null>(null);
   const [recentSession, setRecentSession] = useState<RecentCard | null | typeof LOADING_CARD>(LOADING_CARD);
   const [recentWeek, setRecentWeek] = useState<RecentCard | null | typeof LOADING_CARD>(LOADING_CARD);
   const [recentSeason, setRecentSeason] = useState<RecentCard | null | typeof LOADING_CARD>(LOADING_CARD);
@@ -569,10 +584,10 @@ export default function DashboardPage() {
         setTimelineLoading(false);
       }
 
-      // 7-day strip is anchored to "now" — only render for an active season.
+      // Day-by-day grid is anchored to "now" — only render for an active season.
       if (activeSeason) {
-        loadRecent7Days(activeSeason).then((cells) => {
-          if (!cancelled.current) setRecent7Days(cells);
+        loadRecentDays(activeSeason).then((data) => {
+          if (!cancelled.current) setRecentDays(data);
         });
       }
 
@@ -1021,25 +1036,36 @@ export default function DashboardPage() {
           })()}
         </div>
 
-        {recent7Days && (
+        {recentDays && (
           <div className="dashboard-timeline-recent">
-            <div className="dashboard-timeline-recent__label">Last 7 days</div>
-            <div className="dashboard-timeline-recent__strip">
-              {recent7Days.map((cell) => {
-                const isRest = cell.status === "rest-past" || cell.status === "rest-behind";
-                const dayClasses = [
-                  "dashboard-timeline__day",
-                  `dashboard-timeline__day--${cell.status}`,
-                  isRest ? "dashboard-timeline__day--rest" : "",
-                  cell.isToday ? "dashboard-timeline__day--today" : "",
-                ].filter(Boolean).join(" ");
-                return (
-                  <div key={cell.dateIso} className="dashboard-timeline-recent__cell">
-                    <span className="dashboard-timeline-recent__weekday">{cell.weekdayLabel}</span>
-                    <div className={dayClasses} title={cell.dateIso} />
-                  </div>
-                );
-              })}
+            <div className="dashboard-timeline-recent__label">Day by day</div>
+            <div className="dashboard-timeline-recent__grid">
+              <div className="dashboard-timeline-recent__header-row">
+                {recentDays.weekdayLetters.map((letter, i) => (
+                  <span key={i} className="dashboard-timeline-recent__header-cell">{letter}</span>
+                ))}
+              </div>
+              {recentDays.rows.map((row, ri) => (
+                <div key={ri} className="dashboard-timeline-recent__row">
+                  {row.map((cell, ci) => (
+                    <div key={ci} className="dashboard-timeline-recent__slot">
+                      {cell && (
+                        <div
+                          className={[
+                            "dashboard-timeline__day",
+                            `dashboard-timeline__day--${cell.status}`,
+                            cell.status === "rest-past" || cell.status === "rest-behind"
+                              ? "dashboard-timeline__day--rest"
+                              : "",
+                            cell.isToday ? "dashboard-timeline__day--today" : "",
+                          ].filter(Boolean).join(" ")}
+                          title={cell.dateIso}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ))}
             </div>
           </div>
         )}

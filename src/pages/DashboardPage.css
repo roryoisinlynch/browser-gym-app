@@ -545,7 +545,7 @@
   background: rgba(231, 111, 81, 0.45);
 }
 
-/* ── Last 7 days strip ── */
+/* ── Day-by-day grid ── */
 .dashboard-timeline-recent {
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
@@ -564,35 +564,44 @@
   color: var(--text-soft);
 }
 
-.dashboard-timeline-recent__strip {
-  display: flex;
-  gap: 6px;
-  align-items: stretch;
-}
-
-.dashboard-timeline-recent__cell {
-  flex: 1;
+.dashboard-timeline-recent__grid {
   display: flex;
   flex-direction: column;
+  gap: 4px;
+}
+
+.dashboard-timeline-recent__header-row,
+.dashboard-timeline-recent__row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.dashboard-timeline-recent__header-cell {
+  text-align: center;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--text-soft);
+  letter-spacing: 0.04em;
+}
+
+/* Each slot is a square cell holding either a day square or nothing (future placeholder). */
+.dashboard-timeline-recent__slot {
+  aspect-ratio: 1;
+  display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
   min-width: 0;
 }
 
-.dashboard-timeline-recent__weekday {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--text-soft);
-}
-
-/* Override the default flex sizing of .dashboard-timeline__day inside the
-   column-flex strip cells — we want the day to fill the cell width. */
-.dashboard-timeline-recent__cell .dashboard-timeline__day {
+/* Inside the slot, override .dashboard-timeline__day's default flex so it
+   sizes by width (grid context, not flex parent). */
+.dashboard-timeline-recent__slot .dashboard-timeline__day {
   flex: 0 0 auto;
   width: 100%;
 }
 
-.dashboard-timeline-recent__cell .dashboard-timeline__day--rest {
+.dashboard-timeline-recent__slot .dashboard-timeline__day--rest {
   width: 66%;
 }
 
