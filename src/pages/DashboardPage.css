@@ -363,6 +363,14 @@
   gap: 10px;
 }
 
+.dashboard-timeline__label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
 /* Body: grid left (50%) + sidebar right */
 .dashboard-timeline__body {
   display: flex;

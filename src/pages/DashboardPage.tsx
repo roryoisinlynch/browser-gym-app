@@ -983,6 +983,7 @@ export default function DashboardPage() {
       <section className="dashboard-section">
         <h2 className="dashboard-section-title">{isPreviousSeason ? "Previous season" : "Season progress"}</h2>
         <div className="dashboard-timeline">
+          <div className="dashboard-timeline__label">Schedule (planned)</div>
           <div className="dashboard-timeline__body">
             {/* Left: week-row grid — auto-sizing squares to fill 50% width */}
             <div className="dashboard-timeline__grid">
@@ -1070,7 +1071,7 @@ export default function DashboardPage() {
 
         {recentDays && (
           <div className="dashboard-timeline-recent">
-            <div className="dashboard-timeline-recent__label">Day by day</div>
+            <div className="dashboard-timeline-recent__label">Schedule (actual)</div>
             <div className="dashboard-timeline-recent__grid">
               <div className="dashboard-timeline-recent__header-row">
                 {recentDays.weekdayLetters.map((letter, i) => (
