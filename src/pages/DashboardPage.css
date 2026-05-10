@@ -415,9 +415,9 @@
   min-width: 0;
 }
 
-/* Rest days: circular dot scaled to 66% of a session square */
+/* Rest days: circular dot occupying the same slot width as a session square,
+   so columns align across rows regardless of session/rest mix */
 .dashboard-timeline__day--rest {
-  flex: 0.66;
   border-radius: 50%;
   align-self: center;
 }
