@@ -17,11 +17,16 @@
   top: 64px;
   z-index: 4;
   display: flex;
-  gap: 5px;
+  align-items: flex-end;
+  gap: 6px;
   padding: 10px 0 8px;
   margin: 0 -4px;
   background: var(--bg-top);
   border-bottom: 1px solid var(--card-border);
+}
+
+.heuristics-scale-header__spacer {
+  flex: 0 0 96px;
 }
 
 .heuristics-scale-header__col {
@@ -114,22 +119,34 @@
 .heuristics-group__list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 6px;
 }
 
-/* ─── Card (no chrome — floats on the page) ──────────────────────────────── */
+/* ─── Card (question label + button row in a single line) ────────────────── */
+
+.heuristics-card {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 
 .heuristics-card__question {
-  margin: 0 0 10px;
-  font-size: 0.98rem;
-  font-weight: 700;
+  flex: 0 0 96px;
+  margin: 0;
+  padding-right: 4px;
+  font-size: 0.92rem;
+  font-weight: 600;
   color: var(--text-strong);
   text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ─── Colour scale ───────────────────────────────────────────────────────── */
 
 .heuristics-scale {
+  flex: 1;
   display: flex;
   gap: 6px;
 }
