@@ -75,9 +75,14 @@ interface RecentDayCell {
   isToday: boolean;
 }
 
+interface RecentDayRow {
+  headerLetters: string[]; // weekday letters for each cell in this row
+  cells: (RecentDayCell | null)[]; // null = future placeholder in current row
+}
+
 interface RecentDaysData {
-  weekdayLetters: string[]; // length 7, starting at season-start weekday
-  rows: (RecentDayCell | null)[][]; // each row has 7 entries; null = future placeholder in current row
+  cols: number; // training-week length (columns per row)
+  rows: RecentDayRow[];
 }
 
 interface RecentCard {
@@ -449,32 +454,31 @@ async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | 
     return { dateIso, status: "rest-past", isToday };
   }
 
-  // Header letters: 7 weekday letters starting at the season-start weekday.
+  // Columns per row = training-week length, so the grid mirrors the program's
+  // configured rhythm. With non-7 weeks the weekday alignment shifts each row,
+  // so headers are computed per-row from the actual calendar dates.
   const allLetters = ["S", "M", "T", "W", "T", "F", "S"];
-  const startWeekday = new Date(seasonStartMs).getDay();
-  const weekdayLetters: string[] = [];
-  for (let c = 0; c < 7; c++) {
-    weekdayLetters.push(allLetters[(startWeekday + c) % 7]);
-  }
+  const cols = templateItems.length;
 
-  // Rows: row r covers day-indices [r*7 .. r*7+6]. Pad future cells in current row with null.
-  const totalRows = Math.floor(daysSinceStart / 7) + 1;
-  const rows: (RecentDayCell | null)[][] = [];
+  const totalRows = Math.floor(daysSinceStart / cols) + 1;
+  const rows: RecentDayRow[] = [];
   for (let r = 0; r < totalRows; r++) {
-    const row: (RecentDayCell | null)[] = [];
-    for (let c = 0; c < 7; c++) {
-      const dayIndex = r * 7 + c;
+    const cells: (RecentDayCell | null)[] = [];
+    const headerLetters: string[] = [];
+    for (let c = 0; c < cols; c++) {
+      const dayIndex = r * cols + c;
+      const dms = seasonStartMs + dayIndex * 86400000;
+      headerLetters.push(allLetters[new Date(dms).getDay()]);
       if (dayIndex > daysSinceStart) {
-        row.push(null);
+        cells.push(null);
       } else {
-        const dms = seasonStartMs + dayIndex * 86400000;
-        row.push(buildCell(dms, dayIndex === daysSinceStart));
+        cells.push(buildCell(dms, dayIndex === daysSinceStart));
       }
     }
-    rows.push(row);
+    rows.push({ cells, headerLetters });
   }
 
-  return { weekdayLetters, rows };
+  return { cols, rows };
 }
 
 async function buildSessionCard(session: SessionInstance): Promise<RecentCard | null> {
@@ -1072,31 +1076,36 @@ export default function DashboardPage() {
         {recentDays && (
           <div className="dashboard-timeline-recent">
             <div className="dashboard-timeline-recent__label">Schedule (actual)</div>
-            <div className="dashboard-timeline-recent__grid">
-              <div className="dashboard-timeline-recent__header-row">
-                {recentDays.weekdayLetters.map((letter, i) => (
-                  <span key={i} className="dashboard-timeline-recent__header-cell">{letter}</span>
-                ))}
-              </div>
+            <div
+              className="dashboard-timeline-recent__grid"
+              style={{ ["--cols" as string]: recentDays.cols }}
+            >
               {recentDays.rows.map((row, ri) => (
-                <div key={ri} className="dashboard-timeline-recent__row">
-                  {row.map((cell, ci) => (
-                    <div key={ci} className="dashboard-timeline-recent__slot">
-                      {cell && (
-                        <div
-                          className={[
-                            "dashboard-timeline__day",
-                            `dashboard-timeline__day--${cell.status}`,
-                            cell.status === "rest-past" || cell.status === "rest-behind"
-                              ? "dashboard-timeline__day--rest"
-                              : "",
-                            cell.isToday ? "dashboard-timeline__day--today" : "",
-                          ].filter(Boolean).join(" ")}
-                          title={cell.dateIso}
-                        />
-                      )}
-                    </div>
-                  ))}
+                <div key={ri} className="dashboard-timeline-recent__row-block">
+                  <div className="dashboard-timeline-recent__row-headers">
+                    {row.headerLetters.map((letter, i) => (
+                      <span key={i} className="dashboard-timeline-recent__header-cell">{letter}</span>
+                    ))}
+                  </div>
+                  <div className="dashboard-timeline-recent__row">
+                    {row.cells.map((cell, ci) => (
+                      <div key={ci} className="dashboard-timeline-recent__slot">
+                        {cell && (
+                          <div
+                            className={[
+                              "dashboard-timeline__day",
+                              `dashboard-timeline__day--${cell.status}`,
+                              cell.status === "rest-past" || cell.status === "rest-behind"
+                                ? "dashboard-timeline__day--rest"
+                                : "",
+                              cell.isToday ? "dashboard-timeline__day--today" : "",
+                            ].filter(Boolean).join(" ")}
+                            title={cell.dateIso}
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>

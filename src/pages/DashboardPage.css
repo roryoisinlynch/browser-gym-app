@@ -575,13 +575,19 @@
 .dashboard-timeline-recent__grid {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
-.dashboard-timeline-recent__header-row,
+.dashboard-timeline-recent__row-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dashboard-timeline-recent__row-headers,
 .dashboard-timeline-recent__row {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(var(--cols, 7), 1fr);
   gap: 4px;
 }
 
