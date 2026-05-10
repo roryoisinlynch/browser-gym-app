@@ -35,28 +35,40 @@ function getEquivalentRepsAtWeight(
 }
 
 /**
- * Compute the warmup/working boundary in continuous equivalent-rep space.
+ * Compute the warmup/working boundary in equivalent-rep space at the working
+ * weight.
  *
- * Working = RIR < 6 at the working weight. This corresponds to a set e1RM at
- * or above `baseline − workingWeight × (6/30)`, which in equivalent-rep space
- * at the working weight is `effectiveEquivReps − 6`. When the prescribed
- * target sits below the cutoff (the target itself is in warmup territory),
- * the cutoff is pulled down to the target so that segment counts as working.
+ * Working = RIR < 6. The prescription places the target at `targetRir` reps
+ * short of failure, so max reps at the working weight = `targetReps + targetRir`
+ * and the warmup boundary (RIR = 6) lands at `targetReps + targetRir − 6`.
+ * Deriving the cutoff from the prescription (rather than the continuous
+ * baseline e1RM) keeps shading aligned to whole segments, since the
+ * prescription itself is built from a floored max-rep count.
  *
- * Returns null when there is not enough data to determine a boundary (all
- * segments treated as working / no desaturation applied).
+ * Falls back to the continuous baseline e1RM when targetRir is unavailable.
+ *
+ * When the prescribed target itself sits in warmup territory (targetRir ≥ 6),
+ * the cutoff is pulled down to the target so the target segment counts as
+ * working.
  */
 function computeWarmupCutoff(
+  targetReps: number | null,
+  targetRir: number | null,
   effectiveE1RM: number | null,
-  workingWeight: number | null,
-  targetReps: number | null
+  workingWeight: number | null
 ): number | null {
-  if (effectiveE1RM == null || workingWeight == null || workingWeight <= 0) return null;
+  if (targetReps == null) return null;
 
-  const effectiveEquivReps = Math.max(0, 30 * (effectiveE1RM / workingWeight - 1));
-  let cutoff = effectiveEquivReps - 6;
+  let cutoff: number;
+  if (targetRir != null) {
+    cutoff = targetReps + targetRir - 6;
+  } else if (effectiveE1RM != null && workingWeight != null && workingWeight > 0) {
+    cutoff = Math.max(0, 30 * (effectiveE1RM / workingWeight - 1)) - 6;
+  } else {
+    return null;
+  }
 
-  if (targetReps != null && targetReps - 1 < cutoff) {
+  if (targetReps - 1 < cutoff) {
     cutoff = targetReps - 1;
   }
 
@@ -124,13 +136,15 @@ export default function ExerciseRepDashProgress({
     clamp(topSetEquivalentReps - i, 0, 1)
   );
 
-  // Warmup boundary in continuous equivalent-rep space. Fall back to the
-  // all-time PR when there's no recent-max override (the repository nulls the
-  // recent max once it's matched the historical), so we always have a baseline.
+  // Derive the warmup boundary from the prescription (target + targetRir − 6),
+  // which gives clean whole-segment shading. Fall back to the continuous
+  // baseline e1RM if targetRir isn't available, using the historical PR when
+  // recent-max has been nulled.
   const warmupCutoff = computeWarmupCutoff(
+    targetReps,
+    targetRir,
     effectiveEstimatedOneRepMax ?? historicalBestEstimatedOneRepMax,
-    workingWeight,
-    targetReps
+    workingWeight
   );
 
   const workingSetReps =
