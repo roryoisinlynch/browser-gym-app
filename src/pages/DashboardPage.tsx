@@ -383,6 +383,7 @@ async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | 
 
   // Index completed sessions by their actual completion date.
   const completedByDate = new Map<string, Slot>();
+  const completedDates: string[] = [];
   for (const slot of slots) {
     if (
       slot.type === "session" &&
@@ -391,7 +392,24 @@ async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | 
     ) {
       const completedDate = localDateIso(toLocalMidnight(slot.sessionInstance.completedAt));
       completedByDate.set(completedDate, slot);
+      completedDates.push(completedDate);
     }
+  }
+
+  // List of originally-projected dates for every session slot in the template.
+  const sessionOriginalDates: string[] = slots
+    .filter((s) => s.type === "session")
+    .map((s) => s.originalDateIso);
+
+  function countLessOrEqual(dates: string[], target: string): number {
+    let n = 0;
+    for (const d of dates) if (d <= target) n++;
+    return n;
+  }
+  function countLessThan(dates: string[], target: string): number {
+    let n = 0;
+    for (const d of dates) if (d < target) n++;
+    return n;
   }
 
   function buildCell(dateMs: number, isToday: boolean): RecentDayCell {
@@ -405,16 +423,27 @@ async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | 
       else status = "green";
       return { dateIso, status, isToday };
     }
-    const positionIndex = Math.round((dateMs - seasonStartMs) / 86400000);
-    const slot = slots[positionIndex];
-    if (slot && slot.type === "rest") {
-      return { dateIso, status: "rest-past", isToday };
-    }
+
+    // No completion on this calendar day. A rest is "on schedule" only when the
+    // user has completed at least as many sessions as the template projected by
+    // this date — independent of whether the template called for rest or session
+    // at this specific position.
+    const actualThrough = countLessOrEqual(completedDates, dateIso);
+
     if (isToday) {
-      // Today, scheduled for a session, not yet done — show as upcoming, not "behind".
-      return { dateIso, status: "grey", isToday };
+      // Today is still in progress: don't penalise the user for not yet having
+      // done today's scheduled session. Only flag "behind" if they were already
+      // behind by start-of-today.
+      const expectedBefore = countLessThan(sessionOriginalDates, dateIso);
+      const expectedThrough = countLessOrEqual(sessionOriginalDates, dateIso);
+      if (actualThrough >= expectedThrough) return { dateIso, status: "rest-past", isToday };
+      if (actualThrough >= expectedBefore) return { dateIso, status: "grey", isToday };
+      return { dateIso, status: "rest-behind", isToday };
     }
-    return { dateIso, status: "rest-behind", isToday };
+
+    const expectedThrough = countLessOrEqual(sessionOriginalDates, dateIso);
+    if (actualThrough < expectedThrough) return { dateIso, status: "rest-behind", isToday };
+    return { dateIso, status: "rest-past", isToday };
   }
 
   // Header letters: 7 weekday letters starting at the season-start weekday.
