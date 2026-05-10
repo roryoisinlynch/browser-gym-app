@@ -595,13 +595,10 @@
 }
 
 /* Inside the slot, override .dashboard-timeline__day's default flex so it
-   sizes by width (grid context, not flex parent). */
+   sizes by width (grid context, not flex parent). Squares are scaled down
+   to match the rest circles for a calmer, more compact grid. */
 .dashboard-timeline-recent__slot .dashboard-timeline__day {
   flex: 0 0 auto;
-  width: 100%;
-}
-
-.dashboard-timeline-recent__slot .dashboard-timeline__day--rest {
   width: 66%;
 }
 
