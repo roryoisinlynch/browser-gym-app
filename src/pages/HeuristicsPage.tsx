@@ -199,6 +199,26 @@ export default function HeuristicsPage() {
     <main className="heuristics-page">
       <TopBar title="Heuristics" />
       <section className="heuristics-shell">
+        <div className="heuristics-scale-header" aria-hidden>
+          {SCALE.map((n, i) => (
+            <div
+              key={n}
+              className="heuristics-scale-header__col"
+              style={{ "--segment-color": SCALE_COLORS[i] } as React.CSSProperties}
+            >
+              <span className="heuristics-scale-header__num">{n}</span>
+              <span className="heuristics-scale-header__label">{SCALE_LABELS[i]}</span>
+            </div>
+          ))}
+          <div
+            className="heuristics-scale-header__col"
+            style={{ "--segment-color": "#9ca3af" } as React.CSSProperties}
+          >
+            <span className="heuristics-scale-header__num">N/A</span>
+            <span className="heuristics-scale-header__label">skip</span>
+          </div>
+        </div>
+
         {groups.map(([date, items]) => {
           const isCollapsed = collapsed.has(date);
           return (
@@ -255,8 +275,7 @@ export default function HeuristicsPage() {
                             onClick={() => handleAnswer(item, n)}
                             aria-label={`${n} — ${SCALE_LABELS[i]}`}
                           >
-                            <span className="heuristics-scale__number">{n}</span>
-                            <span className="heuristics-scale__label">{SCALE_LABELS[i]}</span>
+                            {n}
                           </button>
                         ))}
                         <button
@@ -269,8 +288,7 @@ export default function HeuristicsPage() {
                           onClick={() => handleAnswer(item, null)}
                           aria-label="N/A — no impact on scores"
                         >
-                          <span className="heuristics-scale__number">N/A</span>
-                          <span className="heuristics-scale__label">skip</span>
+                          N/A
                         </button>
                       </div>
                     </div>
