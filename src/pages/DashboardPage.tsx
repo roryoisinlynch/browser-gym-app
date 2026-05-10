@@ -999,10 +999,7 @@ export default function DashboardPage() {
               {weeks.map((week, wi) => (
                 <div key={wi} className="dashboard-timeline__week-row">
                   <span className="dashboard-timeline__week-label">W{wi + 1}</span>
-                  <div
-                    className="dashboard-timeline__days"
-                    style={{ ["--day-count" as string]: week.length }}
-                  >
+                  <div className="dashboard-timeline__days">
                     {week.map((day, di) => {
                       const isToday = day.scheduledDate === today;
                       const classes = [
@@ -1011,7 +1008,11 @@ export default function DashboardPage() {
                         day.type === "rest" ? "dashboard-timeline__day--rest" : "",
                         isToday ? "dashboard-timeline__day--today" : "",
                       ].filter(Boolean).join(" ");
-                      return <div key={di} className={classes} title={day.scheduledDate} />;
+                      return (
+                        <div key={di} className="dashboard-timeline__slot">
+                          <div className={classes} title={day.scheduledDate} />
+                        </div>
+                      );
                     })}
                   </div>
                 </div>

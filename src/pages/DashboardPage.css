@@ -382,7 +382,7 @@
   flex: 0 0 50%;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .dashboard-timeline__week-row {
@@ -407,26 +407,29 @@
   min-width: 0;
 }
 
-/* Session squares: grow to fill available space, stay square */
-.dashboard-timeline__day {
+/* Each slot takes an equal share of the row width — sessions and rests
+   align in columns regardless of mix. */
+.dashboard-timeline__slot {
   flex: 1;
-  aspect-ratio: 1;
-  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
 }
 
-/* Rest days: circular dot, same slot allocation as session squares */
-.dashboard-timeline__day--rest {
-  border-radius: 50%;
-  align-self: center;
+/* Day fills its slot up to a cap. Real width/height (no transform) so the
+   row height matches the visual size, keeping vertical gaps consistent
+   across short and long weeks. */
+.dashboard-timeline__day {
+  width: 100%;
+  max-width: 28px;
+  aspect-ratio: 1;
+  border-radius: 3px;
 }
 
-/* Visually shrink each day so short-week slots (which would otherwise be huge)
-   read at a similar size to long-week slots. Scale ramps from 0.66 at very
-   short weeks up to 1.0 once there are ≥5 cells per row, so long weeks fill
-   their slot naturally without further shrinkage. */
-.dashboard-timeline__days .dashboard-timeline__day {
-  transform: scale(clamp(0.66, calc(var(--day-count, 7) / 5), 1));
+/* Rest days: circular dot — same sizing rules, just rounded. */
+.dashboard-timeline__day--rest {
+  border-radius: 50%;
 }
 
 /* Sidebar: status + dates */
