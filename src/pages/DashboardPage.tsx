@@ -357,6 +357,11 @@ async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | 
   ).sort((a, b) => a.order - b.order);
   if (templateItems.length === 0) return null;
 
+  // Hide until the calendar reaches the start of program week 2 — a single
+  // partial row isn't useful and the block needs at least one finished week of
+  // context to be readable.
+  if (daysSinceStart < templateItems.length) return null;
+
   type Slot = {
     type: "session" | "rest";
     sessionInstance: SessionInstance | null;
