@@ -124,9 +124,11 @@ export default function ExerciseRepDashProgress({
     clamp(topSetEquivalentReps - i, 0, 1)
   );
 
-  // Warmup boundary in continuous equivalent-rep space.
+  // Warmup boundary in continuous equivalent-rep space. Fall back to the
+  // all-time PR when there's no recent-max override (the repository nulls the
+  // recent max once it's matched the historical), so we always have a baseline.
   const warmupCutoff = computeWarmupCutoff(
-    effectiveEstimatedOneRepMax,
+    effectiveEstimatedOneRepMax ?? historicalBestEstimatedOneRepMax,
     workingWeight,
     targetReps
   );
