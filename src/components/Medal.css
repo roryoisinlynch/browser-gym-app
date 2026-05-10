@@ -39,13 +39,3 @@
 .medal--lg .medal__icon { font-size: 40px; }
 .medal--lg .medal__placeholder { width: 40px; height: 40px; }
 
-/* Inactive medals in showAll mode */
-.medal__icon--inactive {
-  opacity: 0.18;
-  filter: grayscale(0.4);
-}
-
-/* Stack layout for showAll */
-.medal--stack {
-  gap: 4px;
-}

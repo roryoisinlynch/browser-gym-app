@@ -207,7 +207,7 @@ export default function SessionSummaryPage() {
           <div className="summary-score-block">
             {/* Left: traffic lights + score + label */}
             <div className="summary-score-primary">
-              <Medal status={ragStatus} size="lg" showAll />
+              <Medal status={ragStatus} size="lg" />
               <div className="summary-score-center">
                 <span className="summary-score-item__pct summary-score-item__pct--total">
                   {sessionScore}
