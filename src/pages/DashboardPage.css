@@ -405,19 +405,19 @@
   display: flex;
   gap: 3px;
   min-width: 0;
-  /* When cells reach their max-width (short weeks), centre them in the row
-     so the leftover space is split evenly on both sides. */
+  /* Centre cells when their basis fits within the row (short weeks) so the
+     leftover space is split evenly on both sides. */
   justify-content: center;
 }
 
-/* Session squares: grow to fill available space, capped so short weeks don't
-   blow up huge. Long weeks shrink naturally below the cap. */
+/* Cells default to ~36px and only shrink when many of them need to fit in a
+   row (long weeks). Short weeks keep a consistent cell size, long weeks
+   shrink naturally to fit. */
 .dashboard-timeline__day {
-  flex: 1 1 0;
+  flex: 0 1 36px;
   aspect-ratio: 1;
   border-radius: 3px;
   min-width: 0;
-  max-width: 28px;
 }
 
 /* Rest days: circular dot, same slot allocation as session squares */
