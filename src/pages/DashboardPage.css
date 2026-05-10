@@ -419,10 +419,11 @@
 
 /* Day fills its slot up to a cap. Real width/height (no transform) so the
    row height matches the visual size, keeping vertical gaps consistent
-   across short and long weeks. */
+   across short and long weeks. The 40px cap matches the size that read
+   well in short-week feedback; long weeks shrink below it to fit. */
 .dashboard-timeline__day {
   width: 100%;
-  max-width: 28px;
+  max-width: 40px;
   aspect-ratio: 1;
   border-radius: 3px;
 }
