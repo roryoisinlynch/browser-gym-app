@@ -114,22 +114,26 @@
 .heuristics-group__list {
   display: flex;
   flex-direction: column;
-  gap: 10px;  /* between question units */
+  gap: 6px;
 }
 
-/* ─── Card — caption stacked tight on its buttons so they read as one unit  */
+/* ─── Card — boxed unit, caption above buttons ───────────────────────────── */
 
 .heuristics-card {
   display: flex;
   flex-direction: column;
-  gap: 3px;  /* caption ↔ buttons (tight binding) */
+  gap: 6px;
+  padding: 10px 12px 12px;
+  border-radius: 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
 }
 
 .heuristics-card__question {
   margin: 0;
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--text-soft);
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text-strong);
   text-align: left;
 }
 
