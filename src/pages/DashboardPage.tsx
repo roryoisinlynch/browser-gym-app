@@ -63,7 +63,8 @@ interface SeasonTimelineData {
   totalWeeks: number;
   weeks: DaySquare[][];
   currentWeekOrder: number;
-  expectedWeekOrder: number;
+  sessionsCompleted: number;
+  sessionsExpected: number;
 }
 
 type RecentDayStatus = "green" | "amber" | "late" | "grey" | "rest-past" | "rest-behind";
@@ -306,13 +307,20 @@ async function loadTimeline(
   const lastWeekSquares = weeks[weeks.length - 1] ?? [];
   const endDate = lastWeekSquares[lastWeekSquares.length - 1]?.scheduledDate ?? seasonStartIso;
 
-  // expectedWeekOrder: find which week contains today by its first scheduled date.
-  let expectedWeekOrder = 1;
-  for (let i = 0; i < weeks.length; i++) {
-    const firstDate = weeks[i][0]?.scheduledDate;
-    if (firstDate && firstDate <= today) expectedWeekOrder = i + 1;
+  // Schedule status compares actual session completions to template-expected
+  // sessions through today, so intra-week lag is reflected. A session done early
+  // counts as completed even if its scheduled date is still in the future.
+  let sessionsCompleted = 0;
+  let sessionsExpected = 0;
+  for (const weekSquares of weeks) {
+    for (const sq of weekSquares) {
+      if (sq.type !== "session") continue;
+      if (sq.scheduledDate <= today) sessionsExpected++;
+      if (sq.status === "green" || sq.status === "amber" || sq.status === "late") {
+        sessionsCompleted++;
+      }
+    }
   }
-  expectedWeekOrder = Math.min(expectedWeekOrder, totalWeeks);
 
   return {
     startDate: seasonStartIso,
@@ -320,7 +328,8 @@ async function loadTimeline(
     totalWeeks,
     weeks,
     currentWeekOrder,
-    expectedWeekOrder,
+    sessionsCompleted,
+    sessionsExpected,
   };
 }
 
@@ -966,9 +975,9 @@ export default function DashboardPage() {
       );
     }
     if (!seasonTimeline) return null;
-    const { startDate, endDate, weeks, currentWeekOrder, expectedWeekOrder, totalWeeks } = seasonTimeline;
-    const isAhead = currentWeekOrder > expectedWeekOrder;
-    const isBehind = currentWeekOrder < expectedWeekOrder;
+    const { startDate, endDate, weeks, currentWeekOrder, sessionsCompleted, sessionsExpected, totalWeeks } = seasonTimeline;
+    const isAhead = sessionsCompleted > sessionsExpected;
+    const isBehind = sessionsCompleted < sessionsExpected;
     const today = localDateIso();
 
     const statusLabel = isAhead ? "Ahead of schedule" : isBehind ? "Behind schedule" : "On schedule";
