@@ -33,20 +33,6 @@
   color: var(--text-muted);
 }
 
-.exercise-summary-card__rir-pill {
-  min-height: 30px;
-  padding: 0 12px;
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  border: 1px solid rgba(216, 240, 106, 0.24);
-  background: rgba(216, 240, 106, 0.08);
-  color: var(--accent);
-  font-size: 0.8rem;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
 .exercise-summary-card__metrics-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -73,9 +73,6 @@ export default function ExerciseSummaryCard({
             <p className="exercise-summary-card__eyebrow">Exercise</p>
             <p className="exercise-summary-card__movement">{movementTypeName}</p>
           </div>
-          <div className="exercise-summary-card__rir-pill">
-            Target RIR: {targetRir ?? "—"}
-          </div>
         </div>
         <div className="exercise-summary-card__amrap-banner">
           {isAmrap ? (
@@ -186,10 +183,6 @@ export default function ExerciseSummaryCard({
         <div>
           <p className="exercise-summary-card__eyebrow">Exercise</p>
           <p className="exercise-summary-card__movement">{movementTypeName}</p>
-        </div>
-
-        <div className="exercise-summary-card__rir-pill">
-          Target RIR: {targetRir ?? "—"}
         </div>
       </div>
 

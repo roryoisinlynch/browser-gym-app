@@ -14,6 +14,10 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
+function formatWeight(value: number): string {
+  return `${Number.isInteger(value) ? value : value.toFixed(1)}kg`;
+}
+
 function getEquivalentRepsAtWeight(
   estimatedOneRepMax: number | null,
   workingWeight: number | null
@@ -136,6 +140,47 @@ export default function ExerciseRepDashProgress({
     targetReps
   );
 
+  const workingSetReps =
+    warmupCutoff == null
+      ? 1
+      : Math.max(1, Math.floor(warmupCutoff + 0.0001) + 1);
+  const intensityTargetReps = targetIndex + 1;
+  const includeRecentBestLine =
+    effectiveEstimatedOneRepMax != null &&
+    targetRir !== 0 &&
+    recentBestIndex != null;
+  const recentBestBeatReps =
+    includeRecentBestLine && recentBestIndex != null ? recentBestIndex + 1 : null;
+  const allTimePrReps = dashCount;
+
+  type NarrativeItem = { reps: number; label: string };
+  const narrativeItemsAll: NarrativeItem[] = [
+    { reps: workingSetReps, label: "qualify as a working set" },
+    { reps: intensityTargetReps, label: "match your intensity target" },
+  ];
+  if (recentBestBeatReps != null) {
+    narrativeItemsAll.push({
+      reps: recentBestBeatReps,
+      label: "beat your recent best",
+    });
+  }
+  narrativeItemsAll.push({
+    reps: allTimePrReps,
+    label: "set an all time PR",
+  });
+
+  // Dedup with "later wins": walk backwards, drop earlier items whose reps
+  // already appeared in a later position.
+  const seenReps = new Set<number>();
+  const narrativeItems: NarrativeItem[] = [];
+  for (let i = narrativeItemsAll.length - 1; i >= 0; i--) {
+    const item = narrativeItemsAll[i];
+    if (!seenReps.has(item.reps)) {
+      seenReps.add(item.reps);
+      narrativeItems.unshift(item);
+    }
+  }
+
   return (
     <div className="exercise-rep-dash-progress">
       <div
@@ -247,6 +292,22 @@ export default function ExerciseRepDashProgress({
             </div>
           )}
         </div>
+      </div>
+
+      <div className="exercise-rep-dash-progress__narrative">
+        <p className="exercise-rep-dash-progress__narrative-intro">
+          At {formatWeight(workingWeight)} working weight…
+        </p>
+        <ul className="exercise-rep-dash-progress__narrative-list">
+          {narrativeItems.map((item) => (
+            <li
+              key={item.label}
+              className="exercise-rep-dash-progress__narrative-item"
+            >
+              lift <strong>{item.reps}</strong> reps to {item.label}
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );
