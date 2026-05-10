@@ -65,35 +65,8 @@
 .exercise-rep-dash-progress__caption-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
-}
-
-.exercise-rep-dash-progress__caption-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.exercise-rep-dash-progress__caption {
-  font-size: 0.8rem;
-  font-weight: 800;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.exercise-rep-dash-progress__met-check {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  color: #8fe3a5;
-  font-size: 0.92rem;
-  line-height: 1;
-  font-weight: 900;
 }
 
 .exercise-rep-dash-progress__info {
@@ -173,11 +146,7 @@
 }
 
 .exercise-rep-dash-progress__narrative {
-  margin-top: 4px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--panel-border);
-  background: rgba(15, 19, 24, 0.36);
+  margin-top: 2px;
 }
 
 .exercise-rep-dash-progress__narrative-intro {

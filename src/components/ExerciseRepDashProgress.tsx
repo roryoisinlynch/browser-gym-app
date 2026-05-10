@@ -131,8 +131,6 @@ export default function ExerciseRepDashProgress({
     clamp(topSetEquivalentReps - i, 0, 1)
   );
 
-  const hasMetTarget = topSetEquivalentReps + 0.0001 >= targetReps;
-
   // Warmup boundary in continuous equivalent-rep space.
   const warmupCutoff = computeWarmupCutoff(
     effectiveEstimatedOneRepMax,
@@ -250,21 +248,6 @@ export default function ExerciseRepDashProgress({
       </div>
 
       <div className="exercise-rep-dash-progress__caption-row">
-        <div className="exercise-rep-dash-progress__caption-group">
-          <span className="exercise-rep-dash-progress__caption">
-            Intensity Target
-          </span>
-          {hasMetTarget && (
-            <span
-              className="exercise-rep-dash-progress__met-check"
-              aria-label="Intensity target met"
-              title="Intensity target met"
-            >
-              ✓
-            </span>
-          )}
-        </div>
-
         <div className="exercise-rep-dash-progress__info" ref={infoRef}>
           <button
             className="exercise-rep-dash-progress__info-button"
