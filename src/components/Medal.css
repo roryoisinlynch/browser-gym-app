@@ -36,6 +36,6 @@
 .medal--md .medal__icon { font-size: 22px; }
 .medal--md .medal__placeholder { width: 16px; height: 16px; }
 
-.medal--lg .medal__icon { font-size: 3rem; }
-.medal--lg .medal__placeholder { width: 48px; height: 48px; }
+.medal--lg .medal__icon { font-size: 40px; }
+.medal--lg .medal__placeholder { width: 40px; height: 40px; }
 

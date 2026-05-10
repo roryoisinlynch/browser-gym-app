@@ -136,6 +136,11 @@
   gap: 12px;
 }
 
+/* Match the week-summary emoji size in this score block. */
+.summary-score-primary .medal__icon {
+  font-size: 3rem;
+}
+
 /* Centers the score number and label in the space between lights and divider */
 .summary-score-center {
   flex: 1;
