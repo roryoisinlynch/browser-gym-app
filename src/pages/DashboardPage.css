@@ -422,6 +422,14 @@
   align-self: center;
 }
 
+/* In the planned-schedule grid, render days at 66% of their slot so short
+   weeks (e.g. 3 items/row) don't blow up huge. Whitespace around each cell
+   mirrors the actual-schedule visual. Scoped via the row container so it
+   doesn't affect the actual-schedule grid or the legend chips. */
+.dashboard-timeline__days .dashboard-timeline__day {
+  transform: scale(0.66);
+}
+
 /* Sidebar: status + dates */
 .dashboard-timeline__sidebar {
   flex: 1;
