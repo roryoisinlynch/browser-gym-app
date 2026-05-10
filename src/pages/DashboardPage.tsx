@@ -415,11 +415,6 @@ async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | 
     for (const d of dates) if (d <= target) n++;
     return n;
   }
-  function countLessThan(dates: string[], target: string): number {
-    let n = 0;
-    for (const d of dates) if (d < target) n++;
-    return n;
-  }
 
   function buildCell(dateMs: number, isToday: boolean): RecentDayCell {
     const dateIso = localDateIso(new Date(dateMs));
@@ -440,14 +435,13 @@ async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | 
     const actualThrough = countLessOrEqual(completedDates, dateIso);
 
     if (isToday) {
-      // Today is still in progress: don't penalise the user for not yet having
-      // done today's scheduled session. Only flag "behind" if they were already
-      // behind by start-of-today.
-      const expectedBefore = countLessThan(sessionOriginalDates, dateIso);
+      // Today is still in progress: never render as rest-behind, because the
+      // user could still salvage the day by training. If they're caught up
+      // including today's slot, show as on-schedule rest; otherwise grey
+      // (upcoming gym day, which behind users will see until they train).
       const expectedThrough = countLessOrEqual(sessionOriginalDates, dateIso);
       if (actualThrough >= expectedThrough) return { dateIso, status: "rest-past", isToday };
-      if (actualThrough >= expectedBefore) return { dateIso, status: "grey", isToday };
-      return { dateIso, status: "rest-behind", isToday };
+      return { dateIso, status: "grey", isToday };
     }
 
     const expectedThrough = countLessOrEqual(sessionOriginalDates, dateIso);
