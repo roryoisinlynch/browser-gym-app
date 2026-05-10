@@ -405,29 +405,25 @@
   display: flex;
   gap: 3px;
   min-width: 0;
+  /* When cells reach their max-width (short weeks), centre them in the row
+     so the leftover space is split evenly on both sides. */
+  justify-content: center;
 }
 
-/* Session squares: grow to fill available space, stay square */
+/* Session squares: grow to fill available space, capped so short weeks don't
+   blow up huge. Long weeks shrink naturally below the cap. */
 .dashboard-timeline__day {
-  flex: 1;
+  flex: 1 1 0;
   aspect-ratio: 1;
   border-radius: 3px;
   min-width: 0;
+  max-width: 28px;
 }
 
-/* Rest days: circular dot occupying the same slot width as a session square,
-   so columns align across rows regardless of session/rest mix */
+/* Rest days: circular dot, same slot allocation as session squares */
 .dashboard-timeline__day--rest {
   border-radius: 50%;
   align-self: center;
-}
-
-/* In the planned-schedule grid, render days at 66% of their slot so short
-   weeks (e.g. 3 items/row) don't blow up huge. Whitespace around each cell
-   mirrors the actual-schedule visual. Scoped via the row container so it
-   doesn't affect the actual-schedule grid or the legend chips. */
-.dashboard-timeline__days .dashboard-timeline__day {
-  transform: scale(0.66);
 }
 
 /* Sidebar: status + dates */
