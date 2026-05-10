@@ -137,30 +137,43 @@
 .heuristics-scale__segment {
   flex: 1;
   min-width: 0;
-  height: 36px;
-  margin-bottom: 3px;  /* room for the bottom rim */
+  height: 40px;
   padding: 0;
   border: none;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--segment-color) 20%, transparent);
+  border-radius: 999px;
+  background:
+    radial-gradient(ellipse 80% 100% at 50% 25%,
+      color-mix(in srgb, var(--segment-color) 42%, transparent),
+      color-mix(in srgb, var(--segment-color) 12%, transparent));
   cursor: pointer;
   font-size: 0;  /* hide any inner text but keep aria-label readable */
   box-shadow:
-    0 3px 0 0 color-mix(in srgb, var(--segment-color) 30%, transparent),
-    0 5px 6px rgba(0, 0, 0, 0.2);
-  transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.12s ease;
+    inset 0 1px 1px color-mix(in srgb, var(--segment-color) 40%, transparent),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.45),
+    0 0 10px -2px color-mix(in srgb, var(--segment-color) 30%, transparent),
+    0 2px 4px rgba(0, 0, 0, 0.35);
+  transition: transform 0.1s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
 
 .heuristics-scale__segment:hover {
-  background: color-mix(in srgb, var(--segment-color) 30%, transparent);
+  background:
+    radial-gradient(ellipse 80% 100% at 50% 25%,
+      color-mix(in srgb, var(--segment-color) 56%, transparent),
+      color-mix(in srgb, var(--segment-color) 18%, transparent));
+  box-shadow:
+    inset 0 1px 1px color-mix(in srgb, var(--segment-color) 55%, transparent),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.45),
+    0 0 18px 0 color-mix(in srgb, var(--segment-color) 55%, transparent),
+    0 3px 6px rgba(0, 0, 0, 0.4);
 }
 
 .heuristics-scale__segment:active {
-  transform: translateY(3px);
-  background: color-mix(in srgb, var(--segment-color) 35%, transparent);
+  transform: translateY(1px);
   box-shadow:
-    0 0 0 0 transparent,
-    0 1px 2px rgba(0, 0, 0, 0.15);
+    inset 0 2px 5px rgba(0, 0, 0, 0.55),
+    inset 0 -1px 1px color-mix(in srgb, var(--segment-color) 25%, transparent),
+    0 0 22px 0 color-mix(in srgb, var(--segment-color) 70%, transparent),
+    0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
 /* ─── Last action + undo ─────────────────────────────────────────────────── */
