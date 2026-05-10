@@ -21,82 +21,82 @@
 }
 
 .heuristics-group__heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
   margin: 0 0 10px;
+  padding: 4px 0;
+  border: none;
+  background: transparent;
   font-size: 0.82rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-soft);
+  cursor: pointer;
+  text-align: left;
+}
+
+.heuristics-group__heading:hover {
+  color: var(--text-muted);
+}
+
+.heuristics-group__heading-text {
+  flex: 0 0 auto;
+}
+
+.heuristics-group__heading-count {
+  flex: 1;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-soft);
+  opacity: 0.7;
+}
+
+.heuristics-group__chevron {
+  flex-shrink: 0;
+  transition: transform 0.18s ease;
+}
+
+.heuristics-group__chevron--collapsed {
+  transform: rotate(-90deg);
 }
 
 .heuristics-group__list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 16px;
 }
 
-/* ─── Card ───────────────────────────────────────────────────────────────── */
-
-.heuristics-card {
-  padding: 14px 14px 6px;
-  border-radius: 16px;
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  box-shadow: var(--card-shadow);
-  text-align: center;
-}
+/* ─── Card (no chrome — floats on the page) ──────────────────────────────── */
 
 .heuristics-card__question {
-  margin: 0 0 12px;
-  font-size: 1rem;
+  margin: 0 0 10px;
+  font-size: 0.98rem;
   font-weight: 700;
   color: var(--text-strong);
-}
-
-.heuristics-card__na {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-  margin-top: 8px;
-  padding: 6px 12px;
-  border: none;
-  background: transparent;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--text-soft);
-  cursor: pointer;
-  transition: color 0.12s;
-}
-
-.heuristics-card__na:hover {
-  color: var(--text-muted);
-}
-
-.heuristics-card__na:active {
-  opacity: 0.7;
-}
-
-.heuristics-card__na-note {
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: var(--text-soft);
-  opacity: 0.7;
+  text-align: left;
 }
 
 /* ─── Colour scale ───────────────────────────────────────────────────────── */
 
 .heuristics-scale {
   display: flex;
-  gap: 6px;
+  gap: 5px;
 }
 
 .heuristics-scale__segment {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 3px;
-  padding: 10px 0 6px;
+  padding: 9px 0 6px;
   border: 2px solid transparent;
   border-radius: 12px;
   background: var(--segment-color-dim);
@@ -121,6 +121,11 @@
   font-weight: 800;
   color: var(--segment-color);
   line-height: 1;
+}
+
+.heuristics-scale__segment--na .heuristics-scale__number {
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
 }
 
 .heuristics-scale__label {

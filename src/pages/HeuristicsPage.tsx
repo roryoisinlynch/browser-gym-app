@@ -61,6 +61,16 @@ export default function HeuristicsPage() {
   const [queue, setQueue] = useState<PendingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastAction, setLastAction] = useState<LastAction | null>(null);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  function toggleCollapsed(date: string) {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(date)) next.delete(date);
+      else next.add(date);
+      return next;
+    });
+  }
 
   async function buildQueue(): Promise<PendingItem[]> {
     const questions = await getQuestions();
@@ -189,49 +199,87 @@ export default function HeuristicsPage() {
     <main className="heuristics-page">
       <TopBar title="Heuristics" />
       <section className="heuristics-shell">
-        {groups.map(([date, items]) => (
-          <div key={date} className="heuristics-group">
-            <h2 className="heuristics-group__heading">{friendlyDateLabel(date)}</h2>
-            <div className="heuristics-group__list">
-              {items.map((item) => (
-                <div
-                  key={`${item.question.id}_${item.date}`}
-                  className="heuristics-card"
+        {groups.map(([date, items]) => {
+          const isCollapsed = collapsed.has(date);
+          return (
+            <div key={date} className="heuristics-group">
+              <button
+                type="button"
+                className="heuristics-group__heading"
+                onClick={() => toggleCollapsed(date)}
+                aria-expanded={!isCollapsed}
+              >
+                <span className="heuristics-group__heading-text">
+                  {friendlyDateLabel(date)}
+                </span>
+                <span className="heuristics-group__heading-count">{items.length}</span>
+                <svg
+                  className={[
+                    "heuristics-group__chevron",
+                    isCollapsed && "heuristics-group__chevron--collapsed",
+                  ].filter(Boolean).join(" ")}
+                  viewBox="0 0 24 24"
+                  width="16"
+                  height="16"
+                  aria-hidden
                 >
-                  <p className="heuristics-card__question">{item.question.label}</p>
+                  <path
+                    d="M6 9l6 6 6-6"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+              {!isCollapsed && (
+                <div className="heuristics-group__list">
+                  {items.map((item) => (
+                    <div
+                      key={`${item.question.id}_${item.date}`}
+                      className="heuristics-card"
+                    >
+                      <p className="heuristics-card__question">{item.question.label}</p>
 
-                  <div className="heuristics-scale">
-                    {SCALE.map((n, i) => (
-                      <button
-                        key={n}
-                        type="button"
-                        className="heuristics-scale__segment"
-                        style={{
-                          "--segment-color": SCALE_COLORS[i],
-                          "--segment-color-dim": SCALE_COLORS[i] + "33",
-                        } as React.CSSProperties}
-                        onClick={() => handleAnswer(item, n)}
-                        aria-label={`${n} — ${SCALE_LABELS[i]}`}
-                      >
-                        <span className="heuristics-scale__number">{n}</span>
-                        <span className="heuristics-scale__label">{SCALE_LABELS[i]}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  <button
-                    type="button"
-                    className="heuristics-card__na"
-                    onClick={() => handleAnswer(item, null)}
-                  >
-                    N/A
-                    <span className="heuristics-card__na-note">no impact on scores</span>
-                  </button>
+                      <div className="heuristics-scale">
+                        {SCALE.map((n, i) => (
+                          <button
+                            key={n}
+                            type="button"
+                            className="heuristics-scale__segment"
+                            style={{
+                              "--segment-color": SCALE_COLORS[i],
+                              "--segment-color-dim": SCALE_COLORS[i] + "33",
+                            } as React.CSSProperties}
+                            onClick={() => handleAnswer(item, n)}
+                            aria-label={`${n} — ${SCALE_LABELS[i]}`}
+                          >
+                            <span className="heuristics-scale__number">{n}</span>
+                            <span className="heuristics-scale__label">{SCALE_LABELS[i]}</span>
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          className="heuristics-scale__segment heuristics-scale__segment--na"
+                          style={{
+                            "--segment-color": "#9ca3af",
+                            "--segment-color-dim": "rgba(156, 163, 175, 0.18)",
+                          } as React.CSSProperties}
+                          onClick={() => handleAnswer(item, null)}
+                          aria-label="N/A — no impact on scores"
+                        >
+                          <span className="heuristics-scale__number">N/A</span>
+                          <span className="heuristics-scale__label">skip</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         <div className="heuristics-footer">
           <button
