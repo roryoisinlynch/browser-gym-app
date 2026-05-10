@@ -89,6 +89,7 @@ interface RecentCard {
   id: string;
   name: string;
   grade: string | null;
+  gradeKind?: "emoji" | "letter";
   gradeColor: "green" | "amber" | "red" | "grey" | null;
   ragStatus?: "green" | "amber" | "red";
   link: string;
@@ -523,6 +524,7 @@ async function buildWeekCard(week: WeekInstance): Promise<RecentCard | null> {
       id: week.id,
       name: `Week ${week.order}`,
       grade: emojiForRating(wm.emojiRating),
+      gradeKind: "emoji",
       gradeColor: scoreColor,
       link: `/week/${week.id}/summary`,
     };
@@ -555,6 +557,7 @@ async function buildSeasonCard(season: SeasonInstance): Promise<RecentCard | nul
       id: season.id,
       name: season.name,
       grade: sm.grade,
+      gradeKind: "letter",
       gradeColor: gradeColor(sm.grade),
       link: `/season/${season.id}/summary`,
     };
@@ -1149,7 +1152,11 @@ export default function DashboardPage() {
             <Medal status={data!.ragStatus} size="lg" />
           ) : data!.grade ? (
             <span
-              className={`dashboard-recent-card__grade${data!.gradeColor ? ` dashboard-recent-card__grade--${data!.gradeColor}` : ""}`}
+              className={[
+                "dashboard-recent-card__grade",
+                data!.gradeKind ? `dashboard-recent-card__grade--${data!.gradeKind}` : "",
+                data!.gradeColor ? `dashboard-recent-card__grade--${data!.gradeColor}` : "",
+              ].filter(Boolean).join(" ")}
             >
               {data!.grade}
             </span>

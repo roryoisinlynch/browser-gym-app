@@ -726,11 +726,17 @@
 }
 
 .dashboard-recent-card__grade {
-  font-size: 2rem;
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1;
 }
+
+/* Emojis fill their em-box, so a 40px font-size matches the lg medal. */
+.dashboard-recent-card__grade--emoji { font-size: 40px; }
+
+/* Letters only fill ~70% of their em-box (cap-height), so they need a larger
+   font-size to optically match the 40px emoji glyphs. */
+.dashboard-recent-card__grade--letter { font-size: 56px; }
 
 .dashboard-recent-card__grade--green { color: #6bcb77; }
 .dashboard-recent-card__grade--amber { color: #f4a261; }
