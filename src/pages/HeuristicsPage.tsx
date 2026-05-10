@@ -268,28 +268,18 @@ export default function HeuristicsPage() {
                             key={n}
                             type="button"
                             className="heuristics-scale__segment"
-                            style={{
-                              "--segment-color": SCALE_COLORS[i],
-                              "--segment-color-dim": SCALE_COLORS[i] + "33",
-                            } as React.CSSProperties}
+                            style={{ "--segment-color": SCALE_COLORS[i] } as React.CSSProperties}
                             onClick={() => handleAnswer(item, n)}
                             aria-label={`${n} — ${SCALE_LABELS[i]}`}
-                          >
-                            {n}
-                          </button>
+                          />
                         ))}
                         <button
                           type="button"
-                          className="heuristics-scale__segment heuristics-scale__segment--na"
-                          style={{
-                            "--segment-color": "#9ca3af",
-                            "--segment-color-dim": "rgba(156, 163, 175, 0.18)",
-                          } as React.CSSProperties}
+                          className="heuristics-scale__segment"
+                          style={{ "--segment-color": "#9ca3af" } as React.CSSProperties}
                           onClick={() => handleAnswer(item, null)}
                           aria-label="N/A — no impact on scores"
-                        >
-                          N/A
-                        </button>
+                        />
                       </div>
                     </div>
                   ))}
