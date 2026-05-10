@@ -200,7 +200,6 @@ export default function HeuristicsPage() {
       <TopBar title="Heuristics" />
       <section className="heuristics-shell">
         <div className="heuristics-scale-header" aria-hidden>
-          <div className="heuristics-scale-header__spacer" />
           {SCALE.map((n, i) => (
             <div
               key={n}
@@ -261,10 +260,7 @@ export default function HeuristicsPage() {
                       key={`${item.question.id}_${item.date}`}
                       className="heuristics-card"
                     >
-                      <p
-                        className="heuristics-card__question"
-                        title={item.question.label}
-                      >
+                      <p className="heuristics-card__question">
                         {item.question.label}
                       </p>
 

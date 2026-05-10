@@ -17,16 +17,11 @@
   top: 64px;
   z-index: 4;
   display: flex;
-  align-items: flex-end;
   gap: 6px;
   padding: 10px 0 8px;
   margin: 0 -4px;
   background: var(--bg-top);
   border-bottom: 1px solid var(--card-border);
-}
-
-.heuristics-scale-header__spacer {
-  flex: 0 0 96px;
 }
 
 .heuristics-scale-header__col {
@@ -119,34 +114,28 @@
 .heuristics-group__list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;  /* between question units */
 }
 
-/* ─── Card (question label + button row in a single line) ────────────────── */
+/* ─── Card — caption stacked tight on its buttons so they read as one unit  */
 
 .heuristics-card {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 3px;  /* caption ↔ buttons (tight binding) */
 }
 
 .heuristics-card__question {
-  flex: 0 0 96px;
   margin: 0;
-  padding-right: 4px;
-  font-size: 0.92rem;
-  font-weight: 600;
-  color: var(--text-strong);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-soft);
   text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* ─── Colour scale ───────────────────────────────────────────────────────── */
 
 .heuristics-scale {
-  flex: 1;
   display: flex;
   gap: 6px;
 }
