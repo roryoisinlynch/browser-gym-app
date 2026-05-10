@@ -29,7 +29,7 @@ import {
   getPendingHeuristicDates,
 } from "../repositories/heuristicsRepository";
 import ExerciseInsights from "../components/ExerciseInsights";
-import TrafficLight from "../components/TrafficLight";
+import Medal from "../components/Medal";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import { computeSessionMetrics } from "../services/sessionMetrics";
@@ -1139,7 +1139,7 @@ export default function DashboardPage() {
           {isLoading ? (
             <div className="dashboard-spinner" />
           ) : data!.ragStatus ? (
-            <TrafficLight status={data!.ragStatus} size="lg" />
+            <Medal status={data!.ragStatus} size="lg" />
           ) : data!.grade ? (
             <span
               className={`dashboard-recent-card__grade${data!.gradeColor ? ` dashboard-recent-card__grade--${data!.gradeColor}` : ""}`}

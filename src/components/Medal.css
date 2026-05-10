@@ -1,0 +1,51 @@
+.medal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+
+.medal__arrow {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 2px;
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.medal__icon {
+  display: block;
+  line-height: 1;
+}
+
+/* Placeholder for grey/uncompleted sessions — neutral dot, sized per variant */
+.medal__placeholder {
+  display: block;
+  border-radius: 50%;
+  background: var(--panel-border);
+}
+
+/* Sizes */
+.medal--sm .medal__icon { font-size: 14px; }
+.medal--sm .medal__placeholder { width: 10px; height: 10px; }
+
+.medal--md .medal__icon { font-size: 22px; }
+.medal--md .medal__placeholder { width: 16px; height: 16px; }
+
+.medal--lg .medal__icon { font-size: 40px; }
+.medal--lg .medal__placeholder { width: 40px; height: 40px; }
+
+/* Inactive medals in showAll mode */
+.medal__icon--inactive {
+  opacity: 0.18;
+  filter: grayscale(0.4);
+}
+
+/* Stack layout for showAll */
+.medal--stack {
+  gap: 4px;
+}

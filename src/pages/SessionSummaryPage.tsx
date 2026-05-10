@@ -10,7 +10,7 @@ import {
   computeSessionMetrics,
   formatDuration,
 } from "../services/sessionMetrics";
-import TrafficLight from "../components/TrafficLight";
+import Medal from "../components/Medal";
 import WeeklyBreadcrumb from "../components/WeeklyBreadcrumb";
 import type { BreadcrumbSession } from "../components/WeeklyBreadcrumb";
 import TopBar from "../components/TopBar";
@@ -207,7 +207,7 @@ export default function SessionSummaryPage() {
           <div className="summary-score-block">
             {/* Left: traffic lights + score + label */}
             <div className="summary-score-primary">
-              <TrafficLight status={ragStatus} size="lg" showAll />
+              <Medal status={ragStatus} size="lg" showAll />
               <div className="summary-score-center">
                 <span className="summary-score-item__pct summary-score-item__pct--total">
                   {sessionScore}

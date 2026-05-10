@@ -45,7 +45,11 @@
   flex: 0 0 auto;
 }
 
-.weekly-breadcrumb__dot .traffic-light__bulb {
-  width: 24px;
-  height: 24px;
+.weekly-breadcrumb__dot .medal__icon {
+  font-size: 24px;
+}
+
+.weekly-breadcrumb__dot .medal__placeholder {
+  width: 18px;
+  height: 18px;
 }

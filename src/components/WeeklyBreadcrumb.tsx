@@ -1,5 +1,5 @@
 import type { RagStatus } from "../services/sessionMetrics";
-import TrafficLight from "./TrafficLight";
+import Medal from "./Medal";
 import "./WeeklyBreadcrumb.css";
 
 export interface BreadcrumbSession {
@@ -27,7 +27,7 @@ export default function WeeklyBreadcrumb({ sessions }: WeeklyBreadcrumbProps) {
               <span className="weekly-breadcrumb__separator" aria-hidden="true" />
             )}
             <div className="weekly-breadcrumb__dot">
-              <TrafficLight
+              <Medal
                 status={session.ragStatus ?? "grey"}
                 size="sm"
                 isCurrent={session.isCurrent}
