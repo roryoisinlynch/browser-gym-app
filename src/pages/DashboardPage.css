@@ -382,7 +382,7 @@
   flex: 0 0 50%;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .dashboard-timeline__week-row {
@@ -403,27 +403,29 @@
 .dashboard-timeline__days {
   flex: 1;
   display: flex;
-  gap: 3px;
+  gap: 4px;
   min-width: 0;
 }
 
-/* Each slot takes an equal share of the row width — sessions and rests
-   align in columns regardless of mix. */
+/* Each slot is square (aspect-ratio: 1), so the vertical row pitch matches
+   the horizontal slot width. Combined with equal row/column gaps, this
+   makes the visual whitespace around each cell read the same on every
+   side regardless of week length. */
 .dashboard-timeline__slot {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   min-width: 0;
+  aspect-ratio: 1;
 }
 
-/* Day fills its slot up to a cap. Real width/height (no transform) so the
-   row height matches the visual size, keeping vertical gaps consistent
-   across short and long weeks. The 40px cap matches the size that read
-   well in short-week feedback; long weeks shrink below it to fit. */
+/* Day occupies 66% of its slot for short/medium weeks (≤ 8 days) so cells
+   have breathing room within the square slot. Long weeks (≥ 9 days) — where
+   the slot is already small — render the day at 100% so cells don't shrink
+   into illegibility. */
 .dashboard-timeline__day {
-  width: 100%;
-  max-width: 40px;
+  width: clamp(66%, calc(100% * (var(--day-count, 7) - 8)), 100%);
   aspect-ratio: 1;
   border-radius: 3px;
 }

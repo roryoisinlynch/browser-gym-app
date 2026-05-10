@@ -999,7 +999,10 @@ export default function DashboardPage() {
               {weeks.map((week, wi) => (
                 <div key={wi} className="dashboard-timeline__week-row">
                   <span className="dashboard-timeline__week-label">W{wi + 1}</span>
-                  <div className="dashboard-timeline__days">
+                  <div
+                    className="dashboard-timeline__days"
+                    style={{ ["--day-count" as string]: week.length }}
+                  >
                     {week.map((day, di) => {
                       const isToday = day.scheduledDate === today;
                       const classes = [
