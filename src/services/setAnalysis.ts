@@ -56,19 +56,22 @@ export function getPriorBestEstimatedOneRepMax(
  * Full set analysis for one set, given earlier comparable sets.
  *
  * Working-set definition:
- *   Weighted  — intensity ≥ 60% of effective e1RM  AND  equivalent RIR < 6
+ *   Weighted  — set e1RM ≥ threshold e1RM, where the threshold is what an
+ *               RIR-6 set at the working weight produces:
+ *                 thresholdE1RM = baselineE1RM − workingWeight × (6/30)
+ *               Defining the cutoff as an e1RM (rather than a rep count at one
+ *               weight) keeps the rule consistent across weights — any set's
+ *               e1RM converts trivially.
  *   Bodyweight — rep gap to effective baseline ≤ 5 (≡ RIR < 6)
  *
- * Equivalent RIR is derived from the e1RM gap at the performed weight:
- * `equivBaselineReps − performedReps`, where equivBaselineReps is what the
- * effective best e1RM would yield at that weight. This matches the bar in
- * ExerciseRepDashProgress and avoids relying on the unpopulated stored
- * `performedRir` field.
+ * The reference weight for the threshold is `prescribedWeight` when supplied,
+ * else the performed weight. The baseline e1RM is the larger of the prior
+ * sets' best and any caller-provided `effectiveBaselineE1RM`.
  *
  * When prescribedWeight + prescribedRepTarget are provided and the prescribed
- * target itself would fail the working criteria (low intensity OR implied RIR
- * ≥ 6), the working threshold is pulled down to the target's e1RM so the
- * target counts as working and any set clearing that same e1RM level does too.
+ * target sits below the threshold (the target itself implies RIR ≥ 6), the
+ * threshold is pulled down to the target's e1RM so the target — and any set
+ * matching it — still counts as working.
  *
  * For bodyweight the effective baseline comes from effectiveBaselineReps
  * (recentMaxReps ?? historicalBestReps); similarly the threshold is pulled
@@ -116,41 +119,34 @@ export function analyzeSet(
 
   const intensity = calculateIntensity(estimatedOneRepMax, priorBestEstimatedOneRepMax);
 
-  // Working requires BOTH: intensity ≥ 60% AND equivalent RIR < 6.
-  const intensityOk = intensity != null && intensity >= WORKING_SET_INTENSITY_THRESHOLD;
-  const performedWeight = currentSet.performedWeight;
-  const performedReps = currentSet.performedReps ?? 0;
-  const equivBaselineReps =
-    performedWeight != null && performedWeight > 0 && priorBestEstimatedOneRepMax != null
-      ? 30 * (priorBestEstimatedOneRepMax / performedWeight - 1)
+  // Threshold e1RM: the e1RM that an RIR-6 set at the working weight produces.
+  // Anything at or above this counts as working (RIR < 6).
+  const referenceWeight = prescribedWeight ?? currentSet.performedWeight;
+  let workingThresholdE1RM: number | null =
+    priorBestEstimatedOneRepMax != null && referenceWeight != null && referenceWeight > 0
+      ? priorBestEstimatedOneRepMax - referenceWeight * (WORKING_SET_RIR_THRESHOLD / 30)
       : null;
-  const equivRir = equivBaselineReps != null ? equivBaselineReps - performedReps : null;
-  const ririOk = equivRir == null || equivRir < WORKING_SET_RIR_THRESHOLD;
-  let setType: SetType = intensityOk && ririOk ? "working" : "warmup";
 
-  // Prescribed target adjustment: if the target itself would be warmup (either
-  // its e1RM is below the 60% bar, OR its implied RIR ≥ 6), lower the working
-  // threshold to the target's e1RM.
+  // If the prescribed target's own e1RM falls below the threshold, pull the
+  // threshold down to the target so meeting the prescription still qualifies.
   if (
     prescribedWeight != null &&
     prescribedWeight > 0 &&
     prescribedRepTarget != null &&
-    priorBestEstimatedOneRepMax != null &&
-    estimatedOneRepMax != null
+    workingThresholdE1RM != null
   ) {
     const targetE1RM = calculateEstimatedOneRepMax(prescribedWeight, prescribedRepTarget);
-    if (targetE1RM != null) {
-      const targetIntensity = targetE1RM / priorBestEstimatedOneRepMax;
-      const maxRepsAtPrescribed = 30 * (priorBestEstimatedOneRepMax / prescribedWeight - 1);
-      const impliedTargetRir = maxRepsAtPrescribed - prescribedRepTarget;
-      const targetIsWarmup =
-        targetIntensity < WORKING_SET_INTENSITY_THRESHOLD ||
-        impliedTargetRir >= WORKING_SET_RIR_THRESHOLD;
-      if (targetIsWarmup) {
-        setType = estimatedOneRepMax >= targetE1RM ? "working" : "warmup";
-      }
+    if (targetE1RM != null && targetE1RM < workingThresholdE1RM) {
+      workingThresholdE1RM = targetE1RM;
     }
   }
+
+  const setType: SetType =
+    workingThresholdE1RM == null || estimatedOneRepMax == null
+      ? "warmup"
+      : estimatedOneRepMax >= workingThresholdE1RM
+        ? "working"
+        : "warmup";
 
   return { estimatedOneRepMax, priorBestEstimatedOneRepMax, intensity, setType };
 }

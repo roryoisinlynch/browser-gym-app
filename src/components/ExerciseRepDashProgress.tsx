@@ -37,10 +37,11 @@ function getEquivalentRepsAtWeight(
 /**
  * Compute the warmup/working boundary in continuous equivalent-rep space.
  *
- * Working requires BOTH intensity ≥ 60% AND equivalent RIR < 6, so the
- * cutoff is the higher of the two individual thresholds. When the prescribed
- * target falls below the cutoff (the target itself is in warmup territory),
- * the cutoff is pulled down to the target so the target segment is working.
+ * Working = RIR < 6 at the working weight. This corresponds to a set e1RM at
+ * or above `baseline − workingWeight × (6/30)`, which in equivalent-rep space
+ * at the working weight is `effectiveEquivReps − 6`. When the prescribed
+ * target sits below the cutoff (the target itself is in warmup territory),
+ * the cutoff is pulled down to the target so that segment counts as working.
  *
  * Returns null when there is not enough data to determine a boundary (all
  * segments treated as working / no desaturation applied).
@@ -52,17 +53,9 @@ function computeWarmupCutoff(
 ): number | null {
   if (effectiveE1RM == null || workingWeight == null || workingWeight <= 0) return null;
 
-  // Equivalent reps at 60% intensity threshold.
-  const intensity60 = Math.max(0, 30 * (0.6 * effectiveE1RM / workingWeight - 1));
-
-  // Equivalent reps where RIR = 6 (must do more than this to have RIR < 6).
   const effectiveEquivReps = Math.max(0, 30 * (effectiveE1RM / workingWeight - 1));
-  const rir6 = effectiveEquivReps - 6;
+  let cutoff = effectiveEquivReps - 6;
 
-  let cutoff = Math.max(intensity60, rir6);
-
-  // If the prescribed target falls inside the warmup zone, lower the cutoff so
-  // the target segment (and anything above it) counts as working.
   if (targetReps != null && targetReps - 1 < cutoff) {
     cutoff = targetReps - 1;
   }
