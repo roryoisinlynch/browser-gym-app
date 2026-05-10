@@ -117,16 +117,12 @@
   gap: 6px;
 }
 
-/* ─── Card — boxed unit, caption above buttons ───────────────────────────── */
+/* ─── Card — floats on the page, caption above buttons ──────────────────── */
 
 .heuristics-card {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 10px 12px 12px;
-  border-radius: 12px;
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
 }
 
 .heuristics-card__question {
