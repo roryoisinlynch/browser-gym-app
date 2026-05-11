@@ -78,6 +78,9 @@ interface RecentDayCell {
 interface RecentDayRow {
   headerLetters: string[]; // weekday letters for each cell in this row
   cells: (RecentDayCell | null)[]; // null = future placeholder in current row
+  done: number;     // sessions completed within this row's calendar window
+  expected: number; // template-projected sessions within this row's window
+  delta: number;    // running season delta (done - expected) at row end
 }
 
 interface RecentDaysData {
@@ -455,6 +458,8 @@ async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | 
 
   const totalRows = Math.floor(daysSinceStart / cols) + 1;
   const rows: RecentDayRow[] = [];
+  let prevDoneCum = 0;
+  let prevExpectedCum = 0;
   for (let r = 0; r < totalRows; r++) {
     const cells: (RecentDayCell | null)[] = [];
     const headerLetters: string[] = [];
@@ -468,7 +473,19 @@ async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | 
         cells.push(buildCell(dms, dayIndex === daysSinceStart));
       }
     }
-    rows.push({ cells, headerLetters });
+    // Cap the row's effective end at today for the in-progress (last) row so
+    // expected/delta don't yet include sessions scheduled later this week.
+    const isLastRow = r === totalRows - 1;
+    const lastDayIndex = isLastRow ? daysSinceStart : (r + 1) * cols - 1;
+    const lastDayIso = localDateIso(new Date(seasonStartMs + lastDayIndex * 86400000));
+    const doneCum = countLessOrEqual(completedDates, lastDayIso);
+    const expectedCum = countLessOrEqual(sessionOriginalDates, lastDayIso);
+    const done = doneCum - prevDoneCum;
+    const expected = expectedCum - prevExpectedCum;
+    const delta = doneCum - expectedCum;
+    prevDoneCum = doneCum;
+    prevExpectedCum = expectedCum;
+    rows.push({ cells, headerLetters, done, expected, delta });
   }
 
   return { cols, rows };
@@ -1078,34 +1095,52 @@ export default function DashboardPage() {
               className="dashboard-timeline-recent__grid"
               style={{ ["--cols" as string]: recentDays.cols }}
             >
-              {recentDays.rows.map((row, ri) => (
-                <div key={ri} className="dashboard-timeline-recent__row-block">
-                  <div className="dashboard-timeline-recent__row-headers">
-                    {row.headerLetters.map((letter, i) => (
-                      <span key={i} className="dashboard-timeline-recent__header-cell">{letter}</span>
-                    ))}
-                  </div>
-                  <div className="dashboard-timeline-recent__row">
-                    {row.cells.map((cell, ci) => (
-                      <div key={ci} className="dashboard-timeline-recent__slot">
-                        {cell && (
-                          <div
-                            className={[
-                              "dashboard-timeline__day",
-                              `dashboard-timeline__day--${cell.status}`,
-                              cell.status === "rest-past" || cell.status === "rest-behind"
-                                ? "dashboard-timeline__day--rest"
-                                : "",
-                              cell.isToday ? "dashboard-timeline__day--today" : "",
-                            ].filter(Boolean).join(" ")}
-                            title={cell.dateIso}
-                          />
-                        )}
+              {recentDays.rows.map((row, ri) => {
+                const deltaLabel = row.delta > 0
+                  ? `ahead +${row.delta}`
+                  : row.delta < 0
+                    ? `behind ${row.delta}`
+                    : "on track";
+                const deltaModifier = row.delta > 0 ? "ahead" : row.delta < 0 ? "behind" : "ok";
+                return (
+                  <div key={ri} className="dashboard-timeline-recent__row-block">
+                    <div className="dashboard-timeline-recent__row-main">
+                      <div className="dashboard-timeline-recent__row-headers">
+                        {row.headerLetters.map((letter, i) => (
+                          <span key={i} className="dashboard-timeline-recent__header-cell">{letter}</span>
+                        ))}
                       </div>
-                    ))}
+                      <div className="dashboard-timeline-recent__row">
+                        {row.cells.map((cell, ci) => (
+                          <div key={ci} className="dashboard-timeline-recent__slot">
+                            {cell && (
+                              <div
+                                className={[
+                                  "dashboard-timeline__day",
+                                  `dashboard-timeline__day--${cell.status}`,
+                                  cell.status === "rest-past" || cell.status === "rest-behind"
+                                    ? "dashboard-timeline__day--rest"
+                                    : "",
+                                  cell.isToday ? "dashboard-timeline__day--today" : "",
+                                ].filter(Boolean).join(" ")}
+                                title={cell.dateIso}
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="dashboard-timeline-recent__row-side">
+                      <span className="dashboard-timeline-recent__row-side-count">
+                        {row.done}/{row.expected}
+                      </span>
+                      <span className={`dashboard-timeline-recent__row-side-delta dashboard-timeline-recent__row-side-delta--${deltaModifier}`}>
+                        {deltaLabel}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
