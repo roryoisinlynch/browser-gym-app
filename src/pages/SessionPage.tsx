@@ -236,30 +236,6 @@ export default function SessionPage() {
       });
   }, [sessionView]);
 
-  // True if any working set across the session met its intensity target — drives the dart key.
-  const anyDartsVisible = useMemo(() => {
-    return sortedMuscleGroups.some(({ exercises }) =>
-      exercises.some(({ exerciseTemplate, exerciseInstance, sets }) => {
-        const isBodyweight = exerciseTemplate.weightMode === "bodyweight";
-        const targetE1RM = isBodyweight
-          ? null
-          : calculateEstimatedOneRepMax(
-              exerciseInstance?.prescribedWeight ?? null,
-              exerciseInstance?.prescribedRepTarget ?? null
-            );
-        const targetReps = exerciseInstance?.prescribedRepTarget ?? null;
-        const isAmrap = exerciseInstance?.prescribedRepTarget == null;
-        return sets.some((s) => {
-          if (s.analysis.setType !== "working") return false;
-          if (isAmrap) return true;
-          if (isBodyweight) return targetReps != null && (s.set.performedReps ?? 0) >= targetReps;
-          return targetE1RM != null && s.analysis.estimatedOneRepMax != null &&
-            s.analysis.estimatedOneRepMax >= targetE1RM - 0.0001;
-        });
-      })
-    );
-  }, [sortedMuscleGroups]);
-
   useEffect(() => {
     if (!sessionView) {
       return;
@@ -748,9 +724,6 @@ export default function SessionPage() {
             </div>
           )}
 
-          {anyDartsVisible && (
-            <p className="session-dart-key">🎯 = RIR target met</p>
-          )}
         </section>
 
         {sessionFinished && (

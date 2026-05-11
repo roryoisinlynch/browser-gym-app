@@ -503,13 +503,6 @@
   line-height: 1;
 }
 
-.session-dart-key {
-  margin: 10px 14px 14px;
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: var(--text-muted);
-}
-
 .exercise-chip {
   display: inline-flex;
   align-items: center;
