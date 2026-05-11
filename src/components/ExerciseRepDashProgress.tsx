@@ -161,10 +161,13 @@ export default function ExerciseRepDashProgress({
   const allTimePrReps = dashCount;
 
   type NarrativeItem = { reps: number; label: string };
-  const narrativeItemsAll: NarrativeItem[] = [
-    { reps: workingSetReps, label: "qualify as a working set" },
-    { reps: intensityTargetReps, label: "match your intensity target" },
-  ];
+  // Skip the working-set qualifier when the threshold collapses to 1 rep
+  // ("lift 1 reps to qualify…" is noise — any rep already qualifies).
+  const narrativeItemsAll: NarrativeItem[] = [];
+  if (workingSetReps >= 2) {
+    narrativeItemsAll.push({ reps: workingSetReps, label: "qualify as a working set" });
+  }
+  narrativeItemsAll.push({ reps: intensityTargetReps, label: "match your intensity target" });
   if (recentBestBeatReps != null) {
     narrativeItemsAll.push({
       reps: recentBestBeatReps,

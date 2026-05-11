@@ -81,10 +81,13 @@ export default function ExerciseRepDashProgressBodyweight({
   const allTimePrReps = historicalBestReps + 1;
 
   type NarrativeItem = { reps: number; label: string };
-  const narrativeItemsAll: NarrativeItem[] = [
-    { reps: workingSetReps, label: "qualify as a working set" },
-    { reps: targetReps, label: "match your rep target" },
-  ];
+  // Skip the working-set qualifier when the threshold collapses to 1 rep
+  // ("lift 1 reps to qualify…" is noise — any rep already qualifies).
+  const narrativeItemsAll: NarrativeItem[] = [];
+  if (workingSetReps >= 2) {
+    narrativeItemsAll.push({ reps: workingSetReps, label: "qualify as a working set" });
+  }
+  narrativeItemsAll.push({ reps: targetReps, label: "match your rep target" });
   if (recentBestBeatReps != null) {
     narrativeItemsAll.push({
       reps: recentBestBeatReps,
