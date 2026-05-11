@@ -26,11 +26,11 @@
 
 .exercise-summary-card__target-caption {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 0.74rem;
   font-weight: 800;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-strong);
+  color: var(--text-soft);
   line-height: 1.1;
 }
 
