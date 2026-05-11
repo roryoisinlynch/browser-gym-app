@@ -43,6 +43,28 @@ function daysSince(isoDate: string): number {
   );
 }
 
+// Phrasing buckets:
+//   < 6 months   →  "N days ago"
+//   < 2 years    →  "N months ago" (round to nearest 30-day month)
+//   ≥ 2 years    →  "over N years ago" for first half of the year,
+//                   "almost N+1 years ago" for the second half.
+function formatTimeAgo(isoDate: string): string {
+  const days = daysSince(isoDate);
+  if (days < 180) {
+    return `${days} ${days === 1 ? "day" : "days"} ago`;
+  }
+  if (days < 730) {
+    const months = Math.round(days / 30);
+    return `${months} months ago`;
+  }
+  const years = days / 365;
+  const floorYears = Math.floor(years);
+  const fraction = years - floorYears;
+  return fraction <= 0.5
+    ? `over ${floorYears} years ago`
+    : `almost ${floorYears + 1} years ago`;
+}
+
 export default function ExerciseSummaryCard({
   targetRir,
   targetWeight,
@@ -82,7 +104,7 @@ export default function ExerciseSummaryCard({
           const historicalStr = historicalBestReps != null ? `${historicalBestReps} reps` : null;
           const recentStr = `${recentMaxReps} reps`;
           const recentDateStr = formatDate(recentMaxRepsDate);
-          const dayCount = daysSince(recentMaxRepsDate);
+          const recentTimeAgo = formatTimeAgo(recentMaxRepsDate);
 
           const historicalContext = historicalStr
             ? `Your all-time best of ${historicalStr} hasn't been matched in a while.`
@@ -96,7 +118,7 @@ export default function ExerciseSummaryCard({
               <p className="exercise-summary-card__recent-max-body">
                 {historicalContext}{historicalContext ? " " : ""}Today&apos;s targets are based on your more
                 recent best of <strong>{recentStr}</strong> ({recentDateStr},{" "}
-                {dayCount} days ago) to keep your training load fair and
+                {recentTimeAgo}) to keep your training load fair and
                 sustainable.
               </p>
             </div>
@@ -116,13 +138,13 @@ export default function ExerciseSummaryCard({
             "kg"
           );
           const recentDateStr = formatDate(recentMaxDate);
-          const dayCount = daysSince(recentMaxDate);
+          const recentTimeAgo = formatTimeAgo(recentMaxDate);
 
           const historicalContext =
             historicalBestDate != null
-              ? `Your all-time PR of ${historicalStr} (set ${daysSince(
+              ? `Your all-time PR of ${historicalStr} (set ${formatTimeAgo(
                   historicalBestDate
-                )} days ago) hasn't been matched in a while.`
+                )}) hasn't been matched in a while.`
               : `Your all-time PR of ${historicalStr} is from your imported training history.`;
 
           return (
@@ -133,7 +155,7 @@ export default function ExerciseSummaryCard({
               <p className="exercise-summary-card__recent-max-body">
                 {historicalContext} Today&apos;s targets are based on your more
                 recent best of <strong>{recentStr}</strong> ({recentDateStr},{" "}
-                {dayCount} days ago) to keep your training load fair and
+                {recentTimeAgo}) to keep your training load fair and
                 sustainable.
               </p>
             </div>
