@@ -92,11 +92,11 @@
 }
 
 .exercise-summary-card__recent-max-banner {
-  margin-bottom: 14px;
+  margin-top: 14px;
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(216, 240, 106, 0.2);
-  background: rgba(216, 240, 106, 0.05);
+  border: 1px solid var(--panel-border);
+  background: rgba(15, 19, 24, 0.28);
 }
 
 .exercise-summary-card__recent-max-heading {
@@ -105,7 +105,7 @@
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--text-soft);
 }
 
 .exercise-summary-card__recent-max-body {

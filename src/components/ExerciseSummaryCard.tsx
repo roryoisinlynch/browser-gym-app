@@ -149,8 +149,6 @@ export default function ExerciseSummaryCard({
 
   return (
     <section className="exercise-summary-card">
-      {isBodyweight ? recentMaxRepsBanner : recentMaxBanner}
-
       <div className="exercise-summary-card__target-header">
         <div className="exercise-summary-card__target-caption-block">
           <p className="exercise-summary-card__target-caption">
@@ -195,6 +193,8 @@ export default function ExerciseSummaryCard({
           topSetReps={topSetReps}
         />
       )}
+
+      {(isBodyweight ? recentMaxRepsBanner : recentMaxBanner)}
     </section>
   );
 }
