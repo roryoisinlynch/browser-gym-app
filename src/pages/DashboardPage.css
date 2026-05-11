@@ -624,9 +624,10 @@
   justify-content: flex-end;
   align-items: flex-end;
   gap: 1px;
-  min-width: 56px;
+  min-width: 92px;
   padding-bottom: 2px;
   line-height: 1.1;
+  white-space: nowrap;
 }
 
 .dashboard-timeline-recent__row-side-count {

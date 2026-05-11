@@ -1097,10 +1097,10 @@ export default function DashboardPage() {
             >
               {recentDays.rows.map((row, ri) => {
                 const deltaLabel = row.delta > 0
-                  ? `ahead +${row.delta}`
+                  ? `Total: +${row.delta}`
                   : row.delta < 0
-                    ? `behind ${row.delta}`
-                    : "on track";
+                    ? `Total: ${row.delta}`
+                    : "Total: 0";
                 const deltaModifier = row.delta > 0 ? "ahead" : row.delta < 0 ? "behind" : "ok";
                 return (
                   <div key={ri} className="dashboard-timeline-recent__row-block">
@@ -1132,7 +1132,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="dashboard-timeline-recent__row-side">
                       <span className="dashboard-timeline-recent__row-side-count">
-                        {row.done}/{row.expected}
+                        Week {ri + 1} - {row.done}/{row.expected}
                       </span>
                       <span className={`dashboard-timeline-recent__row-side-delta dashboard-timeline-recent__row-side-delta--${deltaModifier}`}>
                         {deltaLabel}
