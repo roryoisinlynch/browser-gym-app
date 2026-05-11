@@ -66,44 +66,17 @@ export default function ExerciseSummaryCard({
   if (isAmrap || isBodyweightAmrap || needsWeightConfig) {
     return (
       <section className="exercise-summary-card">
-        <div className="exercise-summary-card__header-row">
-          <div>
-            <p className="exercise-summary-card__eyebrow">Target</p>
-          </div>
-        </div>
-        <div className="exercise-summary-card__amrap-banner">
-          {isAmrap ? (
-            <>
-              <p className="exercise-summary-card__amrap-heading">
-                No baseline yet
-              </p>
-              <p className="exercise-summary-card__amrap-body">
-                Choose a challenging weight and lift for as many reps as
-                possible (AMRAP). Your e1RM will be calculated from this
-                session and used to prescribe future sessions.
-              </p>
-            </>
-          ) : isBodyweightAmrap ? (
-            <>
-              <p className="exercise-summary-card__amrap-heading">
-                No baseline yet
-              </p>
-              <p className="exercise-summary-card__amrap-body">
-                Lift for as many reps as possible (AMRAP). Your best reps will
-                be recorded and used to prescribe future sessions.
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="exercise-summary-card__amrap-heading">
-                Working weight not set
-              </p>
-              <p className="exercise-summary-card__amrap-body">
-                You have session history for this exercise. Set a working weight
-                to get today&apos;s target.
-              </p>
-            </>
-          )}
+        <div className="exercise-summary-card__target-block">
+          <strong className="exercise-summary-card__target-value">
+            {needsWeightConfig ? "Set working weight" : "AMRAP"}
+          </strong>
+          <p className="exercise-summary-card__target-secondary">
+            {isAmrap
+              ? "Choose a challenging weight and lift for as many reps as possible. Your e1RM will be calculated from this session and used to prescribe future sessions."
+              : isBodyweightAmrap
+                ? "Lift for as many reps as possible. Your best reps will be recorded and used to prescribe future sessions."
+                : "You have session history for this exercise. Set a working weight to get today’s target."}
+          </p>
         </div>
       </section>
     );

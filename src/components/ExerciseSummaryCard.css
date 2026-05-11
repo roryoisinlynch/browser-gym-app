@@ -45,8 +45,10 @@
 
 .exercise-summary-card__target-secondary {
   margin: 0;
+  max-width: 36ch;
   font-size: 0.82rem;
   color: var(--text-soft);
+  line-height: 1.5;
 }
 
 .exercise-summary-card__bodyweight-progress {
@@ -72,27 +74,6 @@
   font-size: 1rem;
   font-weight: 800;
   color: var(--text-strong);
-}
-
-.exercise-summary-card__amrap-banner {
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(216, 240, 106, 0.2);
-  background: rgba(216, 240, 106, 0.05);
-}
-
-.exercise-summary-card__amrap-heading {
-  margin: 0 0 4px;
-  font-size: 0.84rem;
-  font-weight: 800;
-  color: var(--accent);
-}
-
-.exercise-summary-card__amrap-body {
-  margin: 0;
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  line-height: 1.5;
 }
 
 .exercise-summary-card__recent-max-banner {
