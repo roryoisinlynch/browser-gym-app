@@ -98,6 +98,7 @@ export default function WeekSummaryPage() {
     movements: Array<{ name: string; count: number; tone: MovementTone }>;
   }>>([]);
   const [weekStartIso, setWeekStartIso] = useState<string | null>(null);
+  const [extraRestDays, setExtraRestDays] = useState<number>(0);
   const [sessionInfoMap, setSessionInfoMap] = useState<Map<string, { date: string; status: string; completedAt: string | null }>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [loadProgress, setLoadProgress] = useState(0);
@@ -254,6 +255,41 @@ export default function WeekSummaryPage() {
         );
         const totalWeeks = seasonTemplateForRir?.rirSequence?.length ?? allWeeks.length;
         const weekByOrder = new Map(allWeeks.map((w) => [w.order, w]));
+
+        // Calendar days between this week's start and the next week's first
+        // completed session count as "Extra rest" for this week. Gaps before a
+        // new week's first session belong to the prior week — see week-summary
+        // boundary discussion in the design.
+        const nextWeek = weekByOrder.get(weekInstance.order + 1);
+        let endBoundaryIso: string | null = null;
+        if (nextWeek) {
+          const nextSessions = await getSessionInstancesForWeekInstance(nextWeek.id);
+          const earliestCompletedNext = nextSessions
+            .filter((s) => s.status === "completed" && s.completedAt)
+            .map((s) => s.completedAt!)
+            .sort((a, b) => a.localeCompare(b))[0];
+          endBoundaryIso = earliestCompletedNext ?? nextWeek.startedAt ?? null;
+        }
+        if (!endBoundaryIso) {
+          const si = await getSeasonInstanceById(weekInstance.seasonInstanceId);
+          endBoundaryIso = si?.completedAt ?? new Date().toISOString();
+        }
+        let weekStartForCalcIso: string | null = null;
+        for (const item of wii) {
+          if (!item.sessionInstanceId) continue;
+          const s = sessions.find((x) => x.id === item.sessionInstanceId);
+          if (s) {
+            const startMs = toLocalMidnight(s.date).getTime() - (item.order - 1) * 86400000;
+            weekStartForCalcIso = localDateIso(new Date(startMs));
+            break;
+          }
+        }
+        if (weekStartForCalcIso) {
+          const startMs = toLocalMidnight(weekStartForCalcIso).getTime();
+          const endMs = toLocalMidnight(endBoundaryIso).getTime();
+          const dayDiff = Math.max(0, Math.round((endMs - startMs) / 86_400_000));
+          setExtraRestDays(Math.max(0, dayDiff - templateItems.length));
+        }
 
         const weekBreadcrumbItems: BreadcrumbWeek[] = await Promise.all(
           Array.from({ length: totalWeeks }, async (_, i): Promise<BreadcrumbWeek> => {
@@ -449,6 +485,7 @@ export default function WeekSummaryPage() {
             { label: "Missed",    color: "#9b2335", n: weekDaySquares.filter(d => d.status === "overdue").length },
             { label: "Upcoming",  color: null,      n: weekDaySquares.filter(d => d.status === "grey").length },
             { label: "Rest",      color: null,      n: weekDaySquares.filter(d => d.type === "rest").length },
+            { label: "Extra rest", color: null,     n: extraRestDays },
           ].filter(i => i.n > 0);
 
           if (countItems.length === 0) return null;
