@@ -26,13 +26,6 @@
   color: var(--text-soft);
 }
 
-.exercise-summary-card__movement {
-  margin: 0;
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: var(--text-muted);
-}
-
 .exercise-summary-card__metrics-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

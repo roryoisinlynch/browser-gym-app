@@ -3,7 +3,6 @@ import ExerciseRepDashProgress from "./ExerciseRepDashProgress";
 import ExerciseRepDashProgressBodyweight from "./ExerciseRepDashProgressBodyweight";
 
 interface ExerciseSummaryCardProps {
-  movementTypeName: string;
   targetRir: number | null;
   targetWeight: number | null;
   targetReps: number | null;
@@ -46,7 +45,6 @@ function daysSince(isoDate: string): number {
 }
 
 export default function ExerciseSummaryCard({
-  movementTypeName,
   targetRir,
   targetWeight,
   targetReps,
@@ -70,8 +68,7 @@ export default function ExerciseSummaryCard({
       <section className="exercise-summary-card">
         <div className="exercise-summary-card__header-row">
           <div>
-            <p className="exercise-summary-card__eyebrow">Exercise</p>
-            <p className="exercise-summary-card__movement">{movementTypeName}</p>
+            <p className="exercise-summary-card__eyebrow">Targets</p>
           </div>
         </div>
         <div className="exercise-summary-card__amrap-banner">
@@ -181,8 +178,7 @@ export default function ExerciseSummaryCard({
     <section className="exercise-summary-card">
       <div className="exercise-summary-card__header-row">
         <div>
-          <p className="exercise-summary-card__eyebrow">Exercise</p>
-          <p className="exercise-summary-card__movement">{movementTypeName}</p>
+          <p className="exercise-summary-card__eyebrow">Targets</p>
         </div>
       </div>
 
