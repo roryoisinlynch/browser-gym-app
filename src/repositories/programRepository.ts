@@ -1136,14 +1136,21 @@ export async function getExerciseSessionHistory(
  */
 export async function getEffectiveE1RM(
   exerciseName: string,
-  currentSeasonInstanceId?: string
+  currentSeasonInstanceId?: string,
+  excludeExerciseInstanceIds?: ReadonlySet<string>
 ): Promise<{
   historicalBest: number | null;
   recentMax: number | null;
   historicalBestReps: number | null;
   recentMaxReps: number | null;
 }> {
-  const history = await getExerciseSessionHistory(exerciseName);
+  const rawHistory = await getExerciseSessionHistory(exerciseName);
+  // Exclude data points from the current session so that PRs set during the
+  // session do not retroactively raise the baseline used for prescription and
+  // working-set classification mid-session.
+  const history = excludeExerciseInstanceIds && excludeExerciseInstanceIds.size > 0
+    ? rawHistory.filter((dp) => !excludeExerciseInstanceIds.has(dp.exerciseInstanceId))
+    : rawHistory;
 
   const historicalBest = history.reduce<number | null>((best, dp) => {
     if (dp.topEstimatedOneRepMax == null) return best;
@@ -1247,7 +1254,11 @@ function buildAnalyzedSetList(
         return effectiveE1RM == null;
       }
 
-      return candidate.setIndex < set.setIndex;
+      // Same-instance earlier sets only feed the baseline when there is no
+      // historical e1RM at all (first-ever attempt); otherwise letting them
+      // raise the threshold would flip 'working' sets to 'warmup' the moment
+      // the user PRs mid-session.
+      return effectiveE1RM == null && candidate.setIndex < set.setIndex;
     });
 
     return {
@@ -1707,6 +1718,10 @@ export async function getSessionInstanceView(
   const instanceBySieId = new Map(
     exerciseInstances.map((ei) => [ei.sessionInstanceExerciseId, ei])
   );
+  // Exclude this session's own exercise instances from baseline computation
+  // so within-session PRs don't shift prescriptions or set-type thresholds
+  // mid-session.
+  const currentSessionExerciseInstanceIds = new Set(exerciseInstances.map((ei) => ei.id));
 
   const muscleGroups: SessionInstanceMuscleGroupView[] = [];
 
@@ -1765,7 +1780,8 @@ export async function getSessionInstanceView(
 
       const { historicalBest, recentMax, historicalBestReps, recentMaxReps } = await getEffectiveE1RM(
         sie.exerciseName,
-        sessionInstance.seasonInstanceId
+        sessionInstance.seasonInstanceId,
+        currentSessionExerciseInstanceIds
       );
       const effectiveE1RM = recentMax ?? historicalBest;
       // For bodyweight exercises, use the same recency-adjusted rep baseline as
