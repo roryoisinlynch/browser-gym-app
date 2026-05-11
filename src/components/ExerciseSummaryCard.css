@@ -49,11 +49,6 @@
   color: var(--text-soft);
 }
 
-.exercise-summary-card__target-secondary-value {
-  font-weight: 700;
-  color: var(--text-muted);
-}
-
 .exercise-summary-card__bodyweight-progress {
   display: flex;
   align-items: baseline;

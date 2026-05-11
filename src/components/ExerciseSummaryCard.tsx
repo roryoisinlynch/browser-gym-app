@@ -195,12 +195,9 @@ export default function ExerciseSummaryCard({
               : `${formatMetricValue(targetWeight, "kg")} × ${formatMetricValue(targetReps)}`}
         </strong>
         <p className="exercise-summary-card__target-secondary">
-          {isBodyweight ? "Best reps" : "Target e1RM"}:{" "}
-          <span className="exercise-summary-card__target-secondary-value">
-            {isBodyweight
-              ? formatMetricValue(historicalBestReps)
-              : formatMetricValue(targetEstimatedOneRepMax, "kg")}
-          </span>
+          {isBodyweight
+            ? `(${formatMetricValue(historicalBestReps)} best reps)`
+            : `(${formatMetricValue(targetEstimatedOneRepMax, "kg")} e1RM)`}
         </p>
       </div>
 
