@@ -32,7 +32,7 @@ import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import "./SeasonSummaryPage.css";
 
-type DaySquareStatus = "green" | "amber" | "late" | "overdue" | "grey" | "rest-past" | "rest-future";
+type DaySquareStatus = "green" | "overdue" | "grey" | "rest-past" | "rest-future";
 interface DaySquare { type: "session" | "rest"; scheduledDate: string; status: DaySquareStatus; }
 
 function localDateIso(d: Date = new Date()): string {
@@ -232,9 +232,7 @@ export default function SeasonSummaryPage() {
                 squares.push({ type: "session", scheduledDate, status: scheduledDate < today ? "overdue" : "grey" });
                 continue;
               }
-              const completedDate = session.completedAt ? localDateIso(toLocalMidnight(session.completedAt)) : scheduledDate;
-              const status: DaySquareStatus = completedDate < scheduledDate ? "amber" : completedDate > scheduledDate ? "late" : "green";
-              squares.push({ type: "session", scheduledDate, status });
+              squares.push({ type: "session", scheduledDate, status: "green" });
             }
           }
           setSeasonDaySquares(squares);
@@ -541,9 +539,7 @@ export default function SeasonSummaryPage() {
         {/* ── Schedule day counts ── */}
         {seasonDaySquares.length > 0 && (() => {
           const countItems = [
-            { label: "On time",   color: "#6bcb77", n: seasonDaySquares.filter(d => d.status === "green").length },
-            { label: "Done early", color: "#f4a261", n: seasonDaySquares.filter(d => d.status === "amber").length },
-            { label: "Done late", color: "#e76f51", n: seasonDaySquares.filter(d => d.status === "late").length },
+            { label: "Done",      color: "#6bcb77", n: seasonDaySquares.filter(d => d.status === "green").length },
             { label: "Missed",    color: "#9b2335", n: seasonDaySquares.filter(d => d.status === "overdue").length },
             { label: "Upcoming",  color: null,      n: seasonDaySquares.filter(d => d.status === "grey").length },
             { label: "Rest",      color: null,      n: seasonDaySquares.filter(d => d.type === "rest").length },

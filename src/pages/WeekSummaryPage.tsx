@@ -69,7 +69,7 @@ function buildWeekNarrative(metrics: WeekMetrics): string {
   return `You ${join(positives)}, but you ${join(negatives)}.`;
 }
 
-type DaySquareStatus = "green" | "amber" | "late" | "overdue" | "grey" | "rest-past" | "rest-future";
+type DaySquareStatus = "green" | "overdue" | "grey" | "rest-past" | "rest-future";
 interface DaySquare { type: "session" | "rest"; scheduledDate: string; status: DaySquareStatus; }
 
 function localDateIso(d: Date = new Date()): string {
@@ -370,9 +370,7 @@ export default function WeekSummaryPage() {
       if (session.status !== "completed") {
         return { type: "session", scheduledDate, status: scheduledDate < today ? "overdue" : "grey" };
       }
-      const completedDate = session.completedAt ? localDateIso(toLocalMidnight(session.completedAt)) : scheduledDate;
-      const status: DaySquareStatus = completedDate < scheduledDate ? "amber" : completedDate > scheduledDate ? "late" : "green";
-      return { type: "session", scheduledDate, status };
+      return { type: "session", scheduledDate, status: "green" };
     });
   }, [weekStartIso, weekTemplateDays, weekInstanceItems, sessionInfoMap]);
 
@@ -484,9 +482,7 @@ export default function WeekSummaryPage() {
         {/* ── Schedule counts ── */}
         {weekDaySquares && weekDaySquares.length > 0 && (() => {
           const countItems = [
-            { label: "On time",   color: "#6bcb77", n: weekDaySquares.filter(d => d.status === "green").length },
-            { label: "Done early", color: "#f4a261", n: weekDaySquares.filter(d => d.status === "amber").length },
-            { label: "Done late", color: "#e76f51", n: weekDaySquares.filter(d => d.status === "late").length },
+            { label: "Done",      color: "#6bcb77", n: weekDaySquares.filter(d => d.status === "green").length },
             { label: "Missed",    color: "#9b2335", n: weekDaySquares.filter(d => d.status === "overdue").length },
             { label: "Upcoming",  color: null,      n: weekDaySquares.filter(d => d.status === "grey").length },
             { label: "Rest",      color: null,      n: weekDaySquares.filter(d => d.type === "rest").length },

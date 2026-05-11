@@ -49,7 +49,7 @@ type UpNextState =
   | { type: "upcoming"; sessionId: string; sessionName: string; date: string; daysUntil: number }
   | { type: "week_complete" };
 
-type DaySquareStatus = "green" | "amber" | "late" | "overdue" | "grey" | "rest-past" | "rest-future";
+type DaySquareStatus = "green" | "overdue" | "grey" | "rest-past" | "rest-future";
 
 interface DaySquare {
   type: "session" | "rest";
@@ -67,7 +67,7 @@ interface SeasonTimelineData {
   sessionsExpected: number;
 }
 
-type RecentDayStatus = "green" | "amber" | "late" | "grey" | "rest-past" | "rest-behind";
+type RecentDayStatus = "green" | "grey" | "rest-past" | "rest-behind";
 
 interface RecentDayCell {
   dateIso: string;
@@ -280,14 +280,7 @@ async function loadTimeline(
           continue;
         }
 
-        const completedDate = session.completedAt
-          ? localDateIso(toLocalMidnight(session.completedAt))
-          : scheduledDate;
-        let status: DaySquareStatus;
-        if (completedDate < scheduledDate) status = "amber";
-        else if (completedDate > scheduledDate) status = "late";
-        else status = "green";
-        weekSquares.push({ type: "session", scheduledDate, status });
+        weekSquares.push({ type: "session", scheduledDate, status: "green" });
       }
 
       dayOffset += weekItems.length;
@@ -322,7 +315,7 @@ async function loadTimeline(
     for (const sq of weekSquares) {
       if (sq.type !== "session") continue;
       if (sq.scheduledDate <= today) sessionsExpected++;
-      if (sq.status === "green" || sq.status === "amber" || sq.status === "late") {
+      if (sq.status === "green") {
         sessionsCompleted++;
       }
     }
@@ -429,14 +422,8 @@ async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | 
 
   function buildCell(dateMs: number, isToday: boolean): RecentDayCell {
     const dateIso = localDateIso(new Date(dateMs));
-    const completedSlot = completedByDate.get(dateIso);
-    if (completedSlot) {
-      const original = completedSlot.originalDateIso;
-      let status: RecentDayStatus;
-      if (dateIso < original) status = "amber";
-      else if (dateIso > original) status = "late";
-      else status = "green";
-      return { dateIso, status, isToday };
+    if (completedByDate.has(dateIso)) {
+      return { dateIso, status: "green", isToday };
     }
 
     // No completion on this calendar day. A rest is "on schedule" only when the
@@ -1062,11 +1049,7 @@ export default function DashboardPage() {
 
             const entries: React.ReactNode[] = [];
             if (statuses.has("green")) entries.push(chip("green",
-              <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--green" />, "On time"));
-            if (statuses.has("amber")) entries.push(chip("amber",
-              <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--amber" />, "Done early"));
-            if (statuses.has("late")) entries.push(chip("late",
-              <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--late" />, "Done late"));
+              <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--green" />, "Done"));
             if (statuses.has("overdue")) entries.push(chip("overdue",
               <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--overdue" />, "Overdue"));
             if (statuses.has("grey")) entries.push(chip("grey",
