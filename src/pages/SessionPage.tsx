@@ -533,29 +533,33 @@ export default function SessionPage() {
               <div className="session-progress-block">
                 <div className="session-progress-row">
                   <span className="session-progress-label">Intensity target</span>
-                  <div
-                    className="intensity-dots"
-                    aria-label={`${sessionIntensityProgress.met} of ${sessionIntensityProgress.target} intense sets`}
-                  >
-                    {Array.from({ length: sessionIntensityProgress.target }).map((_, index) => {
-                      const isHit = index < sessionIntensityProgress.met;
-                      return isHit ? (
-                        <span
-                          key={index}
-                          className="intensity-dot intensity-dot--hit"
-                          aria-hidden="true"
-                        >
-                          🎯
-                        </span>
-                      ) : (
-                        <span
-                          key={index}
-                          className="intensity-dot"
-                          aria-hidden="true"
-                        />
-                      );
-                    })}
-                  </div>
+                  <span className="session-progress-value">
+                    {sessionIntensityProgress.met} / {sessionIntensityProgress.target}
+                  </span>
+                </div>
+
+                <div
+                  className="intensity-dots"
+                  aria-label={`${sessionIntensityProgress.met} of ${sessionIntensityProgress.target} intense sets`}
+                >
+                  {Array.from({ length: sessionIntensityProgress.target }).map((_, index) => {
+                    const isHit = index < sessionIntensityProgress.met;
+                    return isHit ? (
+                      <span
+                        key={index}
+                        className="intensity-dot intensity-dot--hit"
+                        aria-hidden="true"
+                      >
+                        🎯
+                      </span>
+                    ) : (
+                      <span
+                        key={index}
+                        className="intensity-dot intensity-dot--miss"
+                        aria-hidden="true"
+                      />
+                    );
+                  })}
                 </div>
               </div>
             )}

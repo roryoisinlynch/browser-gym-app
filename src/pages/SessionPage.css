@@ -337,23 +337,24 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-start;
   gap: 5px;
 }
 
+/* Each slot occupies the same square footprint so spheres and darts line up. */
 .intensity-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 999px;
-  background: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  font-size: 14px;
+  line-height: 1;
 }
 
-.intensity-dot--hit {
-  width: auto;
-  height: auto;
-  border-radius: 0;
-  background: transparent;
-  font-size: 0.72rem;
-  line-height: 1;
+.intensity-dot--miss {
+  border-radius: 999px;
+  background: var(--text-muted);
 }
 
 .muscle-group-list {
