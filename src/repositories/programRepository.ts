@@ -1390,7 +1390,12 @@ export async function getExerciseInstanceView(
     (set) => set.exerciseInstanceId !== exerciseInstance.id
   );
 
-  const historicalBestEstimatedOneRepMax = priorHistoricalSets.reduce<number | null>(
+  // Fall back to all sets (including the current instance) when there is no
+  // prior history — preserves first-ever-attempt classification. Frozen-
+  // baseline behavior only matters when prior data exists to anchor on.
+  const baselineSets = priorHistoricalSets.length > 0 ? priorHistoricalSets : allHistoricalSets;
+
+  const historicalBestEstimatedOneRepMax = baselineSets.reduce<number | null>(
     (best, set) => {
       const estimatedOneRepMax = calculateEstimatedOneRepMax(
         set.performedWeight,
@@ -1410,7 +1415,7 @@ export async function getExerciseInstanceView(
     null
   );
 
-  const historicalBestReps = priorHistoricalSets.reduce<number | null>((best, set) => {
+  const historicalBestReps = baselineSets.reduce<number | null>((best, set) => {
     if (set.performedReps == null || set.performedReps <= 0) return best;
     return best == null || set.performedReps > best ? set.performedReps : best;
   }, null);
