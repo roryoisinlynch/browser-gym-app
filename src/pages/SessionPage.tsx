@@ -533,9 +533,6 @@ export default function SessionPage() {
               <div className="session-progress-block">
                 <div className="session-progress-row">
                   <span className="session-progress-label">Intensity target</span>
-                  <span className="session-progress-value">
-                    {sessionIntensityProgress.met} / {sessionIntensityProgress.target}
-                  </span>
                 </div>
 
                 <div
