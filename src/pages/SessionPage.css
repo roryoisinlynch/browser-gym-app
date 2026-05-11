@@ -333,6 +333,29 @@
   background: var(--accent);
 }
 
+.intensity-dots {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+
+.intensity-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--text-muted);
+}
+
+.intensity-dot--hit {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: transparent;
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
 .muscle-group-list {
   display: flex;
   flex-direction: column;

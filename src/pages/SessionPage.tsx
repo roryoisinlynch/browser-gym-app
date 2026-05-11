@@ -11,6 +11,7 @@ import {
 import BottomNav from "../components/BottomNav";
 import TopBar from "../components/TopBar";
 import { calculateEstimatedOneRepMax } from "../services/setAnalysis";
+import { computeSessionMetrics } from "../services/sessionMetrics";
 import {
   type MovementTone,
   PALETTE,
@@ -63,17 +64,22 @@ type SessionActionState = "locked" | "available" | "ready";
 function getFinishActionState(
   started: boolean,
   finished: boolean,
-  percentage: number
+  volumePercentage: number,
+  intensityPercentage: number
 ): SessionActionState {
   if (!started || finished) {
     return "locked";
   }
 
-  if (percentage >= 100) {
+  // Both bars gate the state — whichever is lower drives the result, so the
+  // glow only fires once the session is complete on both axes.
+  const minPercentage = Math.min(volumePercentage, intensityPercentage);
+
+  if (minPercentage >= 100) {
     return "ready";
   }
 
-  if (percentage >= 90) {
+  if (minPercentage >= 90) {
     return "available";
   }
 
@@ -144,6 +150,27 @@ export default function SessionPage() {
     const percentage = target > 0 ? clampPercentage((completed / target) * 100) : 0;
 
     return { completed, target, percentage };
+  }, [sessionView]);
+
+  const sessionIntensityProgress = useMemo(() => {
+    if (!sessionView) {
+      return { met: 0, target: 0, percentage: 100 };
+    }
+
+    const metrics = computeSessionMetrics(sessionView);
+    // When the volume target is small enough that the derived intensity target
+    // rounds to 0, treat the bar as fully met so it doesn't gate the Finish
+    // button on an unachievable goal. The bar itself is hidden in that case.
+    const percentage =
+      metrics.intensityTarget > 0
+        ? clampPercentage((metrics.setsMetIntensity / metrics.intensityTarget) * 100)
+        : 100;
+
+    return {
+      met: metrics.setsMetIntensity,
+      target: metrics.intensityTarget,
+      percentage,
+    };
   }, [sessionView]);
 
   const sortedMuscleGroups = useMemo(() => {
@@ -409,7 +436,8 @@ export default function SessionPage() {
   const finishActionState = getFinishActionState(
     sessionStarted,
     sessionFinished,
-    sessionWorkingSetProgress.percentage
+    sessionWorkingSetProgress.percentage,
+    sessionIntensityProgress.percentage
   );
 
   const startButtonLabel = !sessionStarted
@@ -500,6 +528,37 @@ export default function SessionPage() {
                 />
               </div>
             </div>
+
+            {sessionIntensityProgress.target > 0 && (
+              <div className="session-progress-block">
+                <div className="session-progress-row">
+                  <span className="session-progress-label">Intensity target</span>
+                  <div
+                    className="intensity-dots"
+                    aria-label={`${sessionIntensityProgress.met} of ${sessionIntensityProgress.target} intense sets`}
+                  >
+                    {Array.from({ length: sessionIntensityProgress.target }).map((_, index) => {
+                      const isHit = index < sessionIntensityProgress.met;
+                      return isHit ? (
+                        <span
+                          key={index}
+                          className="intensity-dot intensity-dot--hit"
+                          aria-hidden="true"
+                        >
+                          🎯
+                        </span>
+                      ) : (
+                        <span
+                          key={index}
+                          className="intensity-dot"
+                          aria-hidden="true"
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {errorMessage && <p className="session-inline-message">{errorMessage}</p>}
           </div>
