@@ -9,21 +9,29 @@
   box-shadow: var(--card-shadow);
 }
 
-.exercise-summary-card__header-row {
+.exercise-summary-card__target-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
-.exercise-summary-card__eyebrow {
-  margin: 0 0 4px;
-  font-size: 0.74rem;
+.exercise-summary-card__target-caption-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.exercise-summary-card__target-caption {
+  margin: 0;
+  font-size: 1.05rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: var(--text-soft);
+  color: var(--text-strong);
+  line-height: 1.1;
 }
 
 .exercise-summary-card__target-block {
@@ -37,10 +45,11 @@
 
 .exercise-summary-card__target-value {
   display: block;
-  font-size: 1.8rem;
+  font-size: 1.6rem;
   font-weight: 800;
   color: var(--text-strong);
   line-height: 1.1;
+  white-space: nowrap;
 }
 
 .exercise-summary-card__target-secondary {
@@ -49,6 +58,12 @@
   font-size: 0.82rem;
   color: var(--text-soft);
   line-height: 1.5;
+}
+
+.exercise-summary-card__divider {
+  margin: 0 0 14px;
+  border: 0;
+  border-top: 1px solid var(--panel-border);
 }
 
 .exercise-summary-card__bodyweight-progress {

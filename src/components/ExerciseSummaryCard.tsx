@@ -151,7 +151,17 @@ export default function ExerciseSummaryCard({
     <section className="exercise-summary-card">
       {isBodyweight ? recentMaxRepsBanner : recentMaxBanner}
 
-      <div className="exercise-summary-card__target-block">
+      <div className="exercise-summary-card__target-header">
+        <div className="exercise-summary-card__target-caption-block">
+          <p className="exercise-summary-card__target-caption">
+            Today’s target
+          </p>
+          <p className="exercise-summary-card__target-secondary">
+            {isBodyweight
+              ? `(${formatMetricValue(historicalBestReps)} best reps)`
+              : `(${formatMetricValue(targetEstimatedOneRepMax, "kg")} e1RM)`}
+          </p>
+        </div>
         <strong className="exercise-summary-card__target-value">
           {isBodyweight
             ? targetReps == null
@@ -161,12 +171,9 @@ export default function ExerciseSummaryCard({
               ? "—"
               : `${formatMetricValue(targetWeight, "kg")} × ${formatMetricValue(targetReps)}`}
         </strong>
-        <p className="exercise-summary-card__target-secondary">
-          {isBodyweight
-            ? `(${formatMetricValue(historicalBestReps)} best reps)`
-            : `(${formatMetricValue(targetEstimatedOneRepMax, "kg")} e1RM)`}
-        </p>
       </div>
+
+      <hr className="exercise-summary-card__divider" />
 
       {!isBodyweight && (
         <ExerciseRepDashProgress
