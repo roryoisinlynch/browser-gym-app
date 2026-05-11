@@ -111,23 +111,25 @@ export default function ExercisePage() {
 
   const isBodyweight = exerciseView?.exerciseTemplate.weightMode === "bodyweight";
 
-  // True AMRAP: no session history at all — user needs to establish an e1RM.
+  // True AMRAP: no prior-session history — user needs to establish an e1RM.
+  // Use hasPriorHistory (not historicalBestEstimatedOneRepMax) so logging sets
+  // mid-session in a first-ever AMRAP doesn't flip the page out of AMRAP mode.
   const isAmrap =
     exerciseView != null &&
     !isBodyweight &&
-    exerciseView.historicalBestEstimatedOneRepMax == null;
+    !exerciseView.hasPriorHistory;
 
-  // Bodyweight equivalent: no rep history — user needs to establish a baseline.
+  // Bodyweight equivalent: no prior-session rep history.
   const isBodyweightAmrap =
     exerciseView != null &&
     isBodyweight &&
-    exerciseView.historicalBestReps == null;
+    !exerciseView.hasPriorHistory;
 
-  // Has history but no working weight configured in settings yet.
+  // Has prior history but no working weight configured in settings yet.
   const needsWeightConfig =
     exerciseView != null &&
     !isBodyweight &&
-    exerciseView.historicalBestEstimatedOneRepMax != null &&
+    exerciseView.hasPriorHistory &&
     exerciseView.exerciseInstance.prescribedWeight == null;
 
   const topSetEstimatedOneRepMax = useMemo(() => {

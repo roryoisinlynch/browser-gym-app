@@ -142,6 +142,14 @@ export interface ExerciseInstanceView {
   targetEstimatedOneRepMax: number | null;
   effectiveRir: number;
   sets: AnalyzedExerciseSet[];
+  /**
+   * True when there are sets from sessions other than the current instance
+   * (including imported data). Lets the UI distinguish a first-ever attempt
+   * from one that already has prior history — historicalBestEstimatedOneRepMax
+   * alone can't, since it falls back to current-instance data when no prior
+   * data exists, so it flips non-null mid-session as the user logs sets.
+   */
+  hasPriorHistory: boolean;
 }
 
 export interface SessionInstanceListItem {
@@ -1648,6 +1656,7 @@ export async function getExerciseInstanceView(
     recentMaxRepsDate,
     targetEstimatedOneRepMax,
     effectiveRir: weekRir,
+    hasPriorHistory: priorHistoricalSets.length > 0,
     sets: buildAnalyzedSetList(
       currentSets,
       allHistoricalSets,
