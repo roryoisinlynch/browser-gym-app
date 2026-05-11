@@ -221,8 +221,10 @@ export default function SessionPage() {
               exerciseInstance?.prescribedRepTarget ?? null
             );
         const targetReps = exerciseInstance?.prescribedRepTarget ?? null;
+        const isAmrap = exerciseInstance?.prescribedRepTarget == null;
         return sets.some((s) => {
           if (s.analysis.setType !== "working") return false;
+          if (isAmrap) return true;
           if (isBodyweight) return targetReps != null && (s.set.performedReps ?? 0) >= targetReps;
           return targetE1RM != null && s.analysis.estimatedOneRepMax != null &&
             s.analysis.estimatedOneRepMax >= targetE1RM - 0.0001;
@@ -604,9 +606,12 @@ export default function SessionPage() {
                                   );
                               const targetReps = exerciseInstance?.prescribedRepTarget ?? null;
 
-                              // Count how many working sets met the intensity target
+                              // Count how many working sets met the intensity target.
+                              // AMRAP has no target, so every working set counts.
+                              const isAmrap = exerciseInstance?.prescribedRepTarget == null;
                               const dartCount = sets.filter((s) => {
                                 if (s.analysis.setType !== "working") return false;
+                                if (isAmrap) return true;
                                 if (isBodyweight) {
                                   return targetReps != null && (s.set.performedReps ?? 0) >= targetReps;
                                 }

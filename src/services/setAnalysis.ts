@@ -95,15 +95,16 @@ export function analyzeSet(
     const reps = currentSet.performedReps ?? 0;
     let setType: SetType;
 
-    if (effectiveBaselineReps != null) {
+    if (prescribedRepTarget == null) {
+      // AMRAP: no target to ramp toward, so every set is "the work."
+      setType = "working";
+    } else if (effectiveBaselineReps != null) {
       const normalThreshold = effectiveBaselineReps - BODYWEIGHT_WARMUP_GAP_THRESHOLD;
       // Pull threshold down to prescribed target when target is in warmup territory.
       const effectiveThreshold =
-        prescribedRepTarget != null && prescribedRepTarget < normalThreshold
-          ? prescribedRepTarget
-          : normalThreshold;
+        prescribedRepTarget < normalThreshold ? prescribedRepTarget : normalThreshold;
       setType = reps >= effectiveThreshold ? "working" : "warmup";
-    } else if (prescribedRepTarget != null && reps > 0) {
+    } else if (reps > 0) {
       setType = reps >= prescribedRepTarget ? "working" : "warmup";
     } else {
       setType = "working";
@@ -118,6 +119,13 @@ export function analyzeSet(
     Math.max(rawPriorBest ?? 0, effectiveBaselineE1RM ?? 0) || null;
 
   const intensity = calculateIntensity(estimatedOneRepMax, priorBestEstimatedOneRepMax);
+
+  // AMRAP: no target to ramp toward, so every logged set is "the work."
+  // Avoids the failure mode where a heavy PR late in the session retroactively
+  // demotes earlier sets to warmups by raising the e1RM baseline.
+  if (prescribedRepTarget == null) {
+    return { estimatedOneRepMax, priorBestEstimatedOneRepMax, intensity, setType: "working" };
+  }
 
   // Threshold e1RM: the e1RM that an RIR-6 set at the working weight produces.
   // Anything at or above this counts as working (RIR < 6).
