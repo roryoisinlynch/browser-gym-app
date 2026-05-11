@@ -597,6 +597,11 @@
   gap: 8px;
 }
 
+.dashboard-timeline-recent__row-block + .dashboard-timeline-recent__row-block {
+  border-top: 1px solid var(--panel-border);
+  padding-top: 8px;
+}
+
 .dashboard-timeline-recent__row-main {
   flex: 1;
   min-width: 0;
