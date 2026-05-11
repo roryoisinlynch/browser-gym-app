@@ -176,12 +176,6 @@ export default function ExerciseSummaryCard({
 
   return (
     <section className="exercise-summary-card">
-      <div className="exercise-summary-card__header-row">
-        <div>
-          <p className="exercise-summary-card__eyebrow">Target</p>
-        </div>
-      </div>
-
       {isBodyweight ? recentMaxRepsBanner : recentMaxBanner}
 
       <div className="exercise-summary-card__target-block">
