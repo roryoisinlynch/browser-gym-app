@@ -46,8 +46,10 @@ function daysSince(isoDate: string): number {
 // Phrasing buckets:
 //   < 6 months   →  "N days ago"
 //   < 2 years    →  "N months ago" (round to nearest 30-day month)
-//   ≥ 2 years    →  "over N years ago" for first half of the year,
-//                   "almost N+1 years ago" for the second half.
+//   ≥ 2 years    →  by quarter of the year past the floor:
+//                     Q1 [0, 0.25)  → "N years ago"
+//                     Q2 [0.25, 0.75) → "over N years ago"
+//                     Q4 [0.75, 1)  → "nearly N+1 years ago"
 function formatTimeAgo(isoDate: string): string {
   const days = daysSince(isoDate);
   if (days < 180) {
@@ -60,9 +62,9 @@ function formatTimeAgo(isoDate: string): string {
   const years = days / 365;
   const floorYears = Math.floor(years);
   const fraction = years - floorYears;
-  return fraction <= 0.5
-    ? `over ${floorYears} years ago`
-    : `almost ${floorYears + 1} years ago`;
+  if (fraction < 0.25) return `${floorYears} years ago`;
+  if (fraction < 0.75) return `over ${floorYears} years ago`;
+  return `nearly ${floorYears + 1} years ago`;
 }
 
 export default function ExerciseSummaryCard({
