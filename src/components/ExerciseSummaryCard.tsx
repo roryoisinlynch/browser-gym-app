@@ -68,7 +68,7 @@ export default function ExerciseSummaryCard({
       <section className="exercise-summary-card">
         <div className="exercise-summary-card__header-row">
           <div>
-            <p className="exercise-summary-card__eyebrow">Targets</p>
+            <p className="exercise-summary-card__eyebrow">Target</p>
           </div>
         </div>
         <div className="exercise-summary-card__amrap-banner">
@@ -178,7 +178,7 @@ export default function ExerciseSummaryCard({
     <section className="exercise-summary-card">
       <div className="exercise-summary-card__header-row">
         <div>
-          <p className="exercise-summary-card__eyebrow">Targets</p>
+          <p className="exercise-summary-card__eyebrow">Target</p>
         </div>
       </div>
 
