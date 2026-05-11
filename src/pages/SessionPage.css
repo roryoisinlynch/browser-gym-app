@@ -107,7 +107,6 @@
   color: var(--accent);
   border-color: rgba(216, 240, 106, 0.32);
   background: rgba(216, 240, 106, 0.08);
-  box-shadow: 0 8px 18px rgba(216, 240, 106, 0.08);
 }
 
 .session-control-button--finish-ready {

@@ -73,7 +73,7 @@ function getFinishActionState(
     return "ready";
   }
 
-  if (percentage >= 50) {
+  if (percentage >= 90) {
     return "available";
   }
 
