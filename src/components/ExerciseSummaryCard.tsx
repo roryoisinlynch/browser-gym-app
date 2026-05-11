@@ -45,23 +45,23 @@ function daysSince(isoDate: string): number {
 
 // Phrasing buckets:
 //   < 6 months   →  "N days ago"
-//   < 2 years    →  "N months ago" (round to nearest 30-day month)
-//   ≥ 2 years    →  by quarter of the year past the floor:
-//                     Q1 [0, 0.25)  → "N years ago"
-//                     Q2 [0.25, 0.75) → "over N years ago"
-//                     Q4 [0.75, 1)  → "nearly N+1 years ago"
+//   < 21 months  →  "N months ago" (round to nearest 30-day month)
+//   ≥ 21 months  →  derive years from months/12 and bucket by quarter:
+//                     Q1 [0, 0.25)    → "N years ago"
+//                     Q2/Q3 [0.25, 0.75) → "over N years ago"
+//                     Q4 [0.75, 1)    → "nearly N+1 years ago"
+//                   Driving years off months (not raw days) keeps the
+//                   21-month cutoff aligned to the Q4 boundary so 21 mo
+//                   rolls cleanly into "nearly 2 years".
 function formatTimeAgo(isoDate: string): string {
   const days = daysSince(isoDate);
   if (days < 180) {
     return `${days} ${days === 1 ? "day" : "days"} ago`;
   }
-  if (days < 730) {
-    const months = Math.round(days / 30);
-    return `${months} months ago`;
-  }
-  const years = days / 365;
-  const floorYears = Math.floor(years);
-  const fraction = years - floorYears;
+  const months = Math.round(days / 30);
+  if (months < 21) return `${months} months ago`;
+  const floorYears = Math.floor(months / 12);
+  const fraction = (months % 12) / 12;
   if (fraction < 0.25) return `${floorYears} years ago`;
   if (fraction < 0.75) return `over ${floorYears} years ago`;
   return `nearly ${floorYears + 1} years ago`;
