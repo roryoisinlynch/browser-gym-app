@@ -112,7 +112,7 @@
 
 .week-day {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 0;
   min-height: 72px;
   text-decoration: none;
@@ -122,6 +122,15 @@
 
 .week-day:last-child {
   border-bottom: none;
+}
+
+.week-day__link {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
 }
 
 /* ─── Date column (left spine) ───────────────────────────────────────────── */
@@ -208,6 +217,38 @@
   padding-right: 14px;
 }
 
+.week-day__pill--actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  align-self: stretch;
+}
+
+.week-day--next .week-day__pill--actions {
+  background: rgba(216, 240, 106, 0.10);
+}
+
+.week-day--overdue .week-day__pill--actions {
+  background: rgba(231, 111, 81, 0.08);
+}
+
+.day-pill--skip {
+  background: rgba(248, 113, 113, 0.14);
+  color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.40);
+  font-size: 0.85rem;
+  padding: 0 12px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 700;
+  min-height: 36px;
+  border-radius: 999px;
+}
+
+.day-pill--skip:active {
+  transform: scale(0.96);
+}
+
 /* ─── Row state colours (on content wrapper for seamless fill) ────────────── */
 
 /* Completed: on schedule — green (#4ade80) */
@@ -232,6 +273,15 @@
 /* Today / overdue — matches dashboard overdue (#e76f51) */
 .week-day--overdue .week-day__content {
   background: rgba(231, 111, 81, 0.08);
+}
+
+/* Skipped — red wash, matches schedule visual */
+.week-day--skipped .week-day__content {
+  background: rgba(248, 113, 113, 0.10);
+}
+
+.week-day--skipped .week-day__caption {
+  color: #f87171;
 }
 
 .week-day--upcoming .week-day__content {

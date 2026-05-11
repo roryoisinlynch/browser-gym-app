@@ -16,7 +16,7 @@ const LABEL_BY_STATUS: Record<RagStatus, string> = {
 };
 
 interface MedalProps {
-  status: RagStatus | "grey";
+  status: RagStatus | "grey" | "skipped";
   size?: "sm" | "md" | "lg";
   isCurrent?: boolean;
 }
@@ -31,6 +31,10 @@ export default function Medal({
       {isCurrent && <span className="medal__arrow">▼</span>}
       {status === "grey" ? (
         <span className="medal__placeholder" aria-label="Session not completed" />
+      ) : status === "skipped" ? (
+        <span className="medal__icon" aria-label="Session skipped">
+          🏳️
+        </span>
       ) : (
         <span className="medal__icon" aria-label={`Session score: ${LABEL_BY_STATUS[status]}`}>
           {MEDAL_BY_STATUS[status]}

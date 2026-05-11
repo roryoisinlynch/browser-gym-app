@@ -69,7 +69,7 @@ function buildWeekNarrative(metrics: WeekMetrics): string {
   return `You ${join(positives)}, but you ${join(negatives)}.`;
 }
 
-type DaySquareStatus = "green" | "overdue" | "grey" | "rest-past" | "rest-future";
+type DaySquareStatus = "green" | "overdue" | "skipped" | "grey" | "rest-past" | "rest-future";
 interface DaySquare { type: "session" | "rest"; scheduledDate: string; status: DaySquareStatus; }
 
 function localDateIso(d: Date = new Date()): string {
@@ -148,7 +148,9 @@ export default function WeekSummaryPage() {
           await Promise.all(sessions.map((s) => getSessionInstanceView(s.id)))
         ).filter((sv): sv is SessionInstanceView => sv != null);
         const sessionViews = allSessionViews.filter(
-          (sv) => sv.sessionInstance.status === "completed"
+          (sv) =>
+            sv.sessionInstance.status === "completed" ||
+            sv.sessionInstance.status === "skipped"
         );
         setLoadProgress(55);
 
@@ -230,6 +232,9 @@ export default function WeekSummaryPage() {
         // Sessions this week breadcrumb — show all sessions with their RAG status.
         const breadcrumbSessions: BreadcrumbSession[] = await Promise.all(
           sessions.map(async (session): Promise<BreadcrumbSession> => {
+            if (session.status === "skipped") {
+              return { sessionInstanceId: session.id, ragStatus: "skipped", isCurrent: false };
+            }
             if (session.status !== "completed") {
               return { sessionInstanceId: session.id, ragStatus: null, isCurrent: false };
             }
@@ -367,6 +372,9 @@ export default function WeekSummaryPage() {
       }
       const session = sessionInfoMap.get(wiiItem.sessionInstanceId);
       if (!session) return { type: "session", scheduledDate, status: "grey" };
+      if (session.status === "skipped") {
+        return { type: "session", scheduledDate, status: "skipped" };
+      }
       if (session.status !== "completed") {
         return { type: "session", scheduledDate, status: scheduledDate < today ? "overdue" : "grey" };
       }
@@ -483,7 +491,8 @@ export default function WeekSummaryPage() {
         {weekDaySquares && weekDaySquares.length > 0 && (() => {
           const countItems = [
             { label: "Done",      color: "#6bcb77", n: weekDaySquares.filter(d => d.status === "green").length },
-            { label: "Missed",    color: "#9b2335", n: weekDaySquares.filter(d => d.status === "overdue").length },
+            { label: "Skipped",   color: "#f87171", n: weekDaySquares.filter(d => d.status === "skipped").length },
+            { label: "Missed",    color: "#f4a261", n: weekDaySquares.filter(d => d.status === "overdue").length },
             { label: "Upcoming",  color: null,      n: weekDaySquares.filter(d => d.status === "grey").length },
             { label: "Rest",      color: null,      n: weekDaySquares.filter(d => d.type === "rest").length },
             { label: "Extra rest", color: null,     n: extraRestDays },

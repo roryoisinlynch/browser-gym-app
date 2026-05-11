@@ -4,12 +4,13 @@ import BottomNav from "../components/BottomNav";
 import type { DayState } from "../components/DayCard";
 import StartSeasonModal from "../components/StartSeasonModal";
 import TopBar from "../components/TopBar";
-import type { SeasonTemplate } from "../domain/models";
+import type { SeasonTemplate, SessionInstanceStatus } from "../domain/models";
 import type { WeekInstanceItemView } from "../repositories/programRepository";
 import {
   getActiveSeasonInstance,
   getSeasonTemplates,
   getWeekInstanceItemsForCurrentWeek,
+  skipSessionInstance,
   startSeasonFromTemplate,
 } from "../repositories/programRepository";
 import "./WeekPage.css";
@@ -19,10 +20,11 @@ import "./WeekPage.css";
 const DAY_ABBR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function getDayState(
-  status: "not_started" | "in_progress" | "completed",
+  status: SessionInstanceStatus,
   hasSeenNext: boolean
 ): DayState {
   if (status === "completed") return "completed";
+  if (status === "skipped") return "skipped";
   if (!hasSeenNext) return "next";
   return "upcoming";
 }
@@ -104,6 +106,26 @@ export default function WeekPage() {
     } catch (error) {
       console.error(error);
       setErrorMessage("Could not start program.");
+    }
+  }
+
+  async function handleSkipSession(
+    e: React.MouseEvent,
+    sessionInstanceId: string,
+    sessionName: string
+  ) {
+    e.preventDefault();
+    e.stopPropagation();
+    const confirmed = window.confirm(
+      `Skip "${sessionName}"? Skipped sessions count as zero volume and zero intensity, and will tank your week score.`
+    );
+    if (!confirmed) return;
+    try {
+      await skipSessionInstance(sessionInstanceId);
+      await loadWeekPage();
+    } catch (error) {
+      console.error(error);
+      setErrorMessage("Could not skip session.");
     }
   }
 
@@ -289,6 +311,12 @@ export default function WeekPage() {
                 }
               }
 
+              // Skipped sessions
+              if (state === "skipped") {
+                caption = "Skipped";
+                rowState = "skipped";
+              }
+
               // Urgency (next)
               if (state === "next" && scheduledDate) {
                 const delta = daysBetween(scheduledDate, todayIso());
@@ -303,32 +331,48 @@ export default function WeekPage() {
                 }
               }
 
+              const sessionId = item.sessionInstance.id;
+              const sessionName = item.sessionTemplate.name;
+
               return (
-                <Link
-                  key={item.sessionInstance.id}
-                  to={`/session/${item.sessionInstance.id}`}
+                <div
+                  key={sessionId}
                   className={`week-day week-day--session week-day--${rowState}`}
                 >
-                  <div className="week-day__date-col">
-                    <span className="week-day__num">{dayNum}</span>
-                    <span className="week-day__abbr">{dayAbbr}</span>
-                  </div>
-                  <div className="week-day__content">
-                    <div className="week-day__body">
-                      <span className="week-day__activity">{item.sessionTemplate.name}</span>
-                      {caption && (
-                        <span className="week-day__caption">
-                          {caption}
-                        </span>
-                      )}
+                  <Link to={`/session/${sessionId}`} className="week-day__link">
+                    <div className="week-day__date-col">
+                      <span className="week-day__num">{dayNum}</span>
+                      <span className="week-day__abbr">{dayAbbr}</span>
                     </div>
-                    {state === "next" && (
-                      <div className="week-day__pill">
-                        <span className="day-pill day-pill--start">View</span>
+                    <div className="week-day__content">
+                      <div className="week-day__body">
+                        <span className="week-day__activity">{sessionName}</span>
+                        {caption && (
+                          <span className="week-day__caption">{caption}</span>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </Link>
+                    </div>
+                  </Link>
+                  {state === "next" && (
+                    <div className="week-day__pill week-day__pill--actions">
+                      <button
+                        type="button"
+                        className="day-pill day-pill--skip"
+                        onClick={(e) =>
+                          handleSkipSession(e, sessionId, sessionName)
+                        }
+                      >
+                        Skip
+                      </button>
+                      <Link
+                        to={`/session/${sessionId}`}
+                        className="day-pill day-pill--start"
+                      >
+                        View
+                      </Link>
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>

@@ -32,7 +32,7 @@ import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import "./SeasonSummaryPage.css";
 
-type DaySquareStatus = "green" | "overdue" | "grey" | "rest-past" | "rest-future";
+type DaySquareStatus = "green" | "overdue" | "skipped" | "grey" | "rest-past" | "rest-future";
 interface DaySquare { type: "session" | "rest"; scheduledDate: string; status: DaySquareStatus; }
 
 function localDateIso(d: Date = new Date()): string {
@@ -167,9 +167,11 @@ export default function SeasonSummaryPage() {
             ]);
             sessionsByWeek.set(w.id, sessions);
             if (weekLength === 0) weekLength = templateItems.length;
-            const completedSessions = sessions.filter(s => s.status === "completed");
+            const settledSessions = sessions.filter(
+              s => s.status === "completed" || s.status === "skipped"
+            );
             const sessionViews: SessionInstanceView[] = (
-              await Promise.all(completedSessions.map(s => getSessionInstanceView(s.id)))
+              await Promise.all(settledSessions.map(s => getSessionInstanceView(s.id)))
             ).filter((sv): sv is SessionInstanceView => sv != null);
             return computeWeekMetrics(w, templateItems, sessionViews);
           })
@@ -228,6 +230,10 @@ export default function SeasonSummaryPage() {
               }
               const session = sessionInfoMap.get(item.sessionInstanceId);
               if (!session) { squares.push({ type: "session", scheduledDate, status: "grey" }); continue; }
+              if (session.status === "skipped") {
+                squares.push({ type: "session", scheduledDate, status: "skipped" });
+                continue;
+              }
               if (session.status !== "completed") {
                 squares.push({ type: "session", scheduledDate, status: scheduledDate < today ? "overdue" : "grey" });
                 continue;
@@ -361,7 +367,9 @@ export default function SeasonSummaryPage() {
                   ]);
                   const wViews: SessionInstanceView[] = (
                     await Promise.all(
-                      wSessions.filter(s => s.status === "completed").map(s => getSessionInstanceView(s.id))
+                      wSessions
+                        .filter(s => s.status === "completed" || s.status === "skipped")
+                        .map(s => getSessionInstanceView(s.id))
                     )
                   ).filter((sv): sv is SessionInstanceView => sv != null);
                   return computeWeekMetrics(w, wItems, wViews);
@@ -540,7 +548,8 @@ export default function SeasonSummaryPage() {
         {seasonDaySquares.length > 0 && (() => {
           const countItems = [
             { label: "Done",      color: "#6bcb77", n: seasonDaySquares.filter(d => d.status === "green").length },
-            { label: "Missed",    color: "#9b2335", n: seasonDaySquares.filter(d => d.status === "overdue").length },
+            { label: "Skipped",   color: "#f87171", n: seasonDaySquares.filter(d => d.status === "skipped").length },
+            { label: "Missed",    color: "#f4a261", n: seasonDaySquares.filter(d => d.status === "overdue").length },
             { label: "Upcoming",  color: null,      n: seasonDaySquares.filter(d => d.status === "grey").length },
             { label: "Rest",      color: null,      n: seasonDaySquares.filter(d => d.type === "rest").length },
             { label: "Extra rest", color: null,     n: seasonExtraRestDays },

@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import "./DayCard.css";
 
-export type DayState = "completed" | "next" | "upcoming";
+export type DayState = "completed" | "next" | "upcoming" | "skipped";
 
 export interface DayCardItem {
   id: string;
@@ -111,6 +111,7 @@ export default function DayCard({
             {state === "completed" && "Completed"}
             {state === "next" && "Next session"}
             {state === "upcoming" && "Upcoming"}
+            {state === "skipped" && "Skipped"}
           </p>
         )}
       </div>
@@ -126,6 +127,9 @@ export default function DayCard({
           <span className="day-pill day-pill--view">
             View <span className="day-pill__arrow">›</span>
           </span>
+        )}
+        {state === "skipped" && (
+          <span className="day-pill day-pill--done">Skipped</span>
         )}
       </div>
     </Link>

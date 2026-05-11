@@ -49,7 +49,7 @@ type UpNextState =
   | { type: "upcoming"; sessionId: string; sessionName: string; date: string; daysUntil: number }
   | { type: "week_complete" };
 
-type DaySquareStatus = "green" | "overdue" | "grey" | "rest-past" | "rest-future";
+type DaySquareStatus = "green" | "overdue" | "skipped" | "grey" | "rest-past" | "rest-future";
 
 interface DaySquare {
   type: "session" | "rest";
@@ -67,7 +67,7 @@ interface SeasonTimelineData {
   sessionsExpected: number;
 }
 
-type RecentDayStatus = "green" | "grey" | "rest-past" | "rest-behind";
+type RecentDayStatus = "green" | "skipped" | "grey" | "rest-past" | "rest-behind";
 
 interface RecentDayCell {
   dateIso: string;
@@ -94,7 +94,7 @@ interface RecentCard {
   grade: string | null;
   gradeKind?: "emoji" | "letter";
   gradeColor: "green" | "amber" | "red" | "grey" | null;
-  ragStatus?: "green" | "amber" | "red";
+  ragStatus?: "green" | "amber" | "red" | "skipped";
   link: string;
 }
 
@@ -167,9 +167,15 @@ function computeUpNext(
   const itemDate = (item: WeekInstanceItemView) =>
     localDateIso(new Date(weekStartMs + (item.weekInstanceItem.order - 1) * 86400000));
 
-  // Surface the oldest incomplete session regardless of whether it's past/today/future
+  // Surface the oldest incomplete session regardless of whether it's past/today/future.
+  // Skipped sessions count as settled — the user has opted out, so they shouldn't
+  // be surfaced as "up next".
   const oldest = sessionItems
-    .filter((item) => item.sessionInstance?.status !== "completed")
+    .filter(
+      (item) =>
+        item.sessionInstance?.status !== "completed" &&
+        item.sessionInstance?.status !== "skipped"
+    )
     .sort((a, b) => a.weekInstanceItem.order - b.weekInstanceItem.order)[0];
 
   if (!oldest) {
@@ -278,6 +284,11 @@ async function loadTimeline(
           continue;
         }
 
+        if (session.status === "skipped") {
+          weekSquares.push({ type: "session", scheduledDate, status: "skipped" });
+          continue;
+        }
+
         if (session.status !== "completed") {
           weekSquares.push({ type: "session", scheduledDate, status: scheduledDate < today ? "overdue" : "grey" });
           continue;
@@ -318,7 +329,7 @@ async function loadTimeline(
     for (const sq of weekSquares) {
       if (sq.type !== "session") continue;
       if (sq.scheduledDate <= today) sessionsExpected++;
-      if (sq.status === "green") {
+      if (sq.status === "green" || sq.status === "skipped") {
         sessionsCompleted++;
       }
     }
@@ -400,15 +411,18 @@ async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | 
   // Index completed sessions by their actual completion date.
   const completedByDate = new Map<string, Slot>();
   const completedDates: string[] = [];
+  // Skipped sessions count toward "settled" (not behind) but render as red
+  // squares to flag them visually distinct from genuine completions.
+  const skippedByDate = new Map<string, Slot>();
   for (const slot of slots) {
-    if (
-      slot.type === "session" &&
-      slot.sessionInstance?.status === "completed" &&
-      slot.sessionInstance.completedAt
-    ) {
-      const completedDate = localDateIso(toLocalMidnight(slot.sessionInstance.completedAt));
-      completedByDate.set(completedDate, slot);
-      completedDates.push(completedDate);
+    if (slot.type !== "session" || !slot.sessionInstance?.completedAt) continue;
+    const settledDate = localDateIso(toLocalMidnight(slot.sessionInstance.completedAt));
+    if (slot.sessionInstance.status === "completed") {
+      completedByDate.set(settledDate, slot);
+      completedDates.push(settledDate);
+    } else if (slot.sessionInstance.status === "skipped") {
+      skippedByDate.set(settledDate, slot);
+      completedDates.push(settledDate);
     }
   }
 
@@ -427,6 +441,9 @@ async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | 
     const dateIso = localDateIso(new Date(dateMs));
     if (completedByDate.has(dateIso)) {
       return { dateIso, status: "green", isToday };
+    }
+    if (skippedByDate.has(dateIso)) {
+      return { dateIso, status: "skipped", isToday };
     }
 
     // No completion on this calendar day. A rest is "on schedule" only when the
@@ -495,6 +512,16 @@ async function buildSessionCard(session: SessionInstance): Promise<RecentCard | 
   try {
     const view = await getSessionInstanceView(session.id);
     if (!view) return null;
+    if (session.status === "skipped") {
+      return {
+        id: session.id,
+        name: view.sessionTemplate?.name ?? "Session",
+        grade: null,
+        gradeColor: "red",
+        ragStatus: "skipped",
+        link: `/session/${session.id}/summary`,
+      };
+    }
     const m = computeSessionMetrics(view);
     const color = m.ragStatus;
     return {
@@ -516,9 +543,11 @@ async function buildWeekCard(week: WeekInstance): Promise<RecentCard | null> {
       getWeekTemplateItemsForWeekTemplate(week.weekTemplateId),
       getSessionInstancesForWeekInstance(week.id),
     ]);
-    const completed = sessions.filter((s) => s.status === "completed");
+    const settled = sessions.filter(
+      (s) => s.status === "completed" || s.status === "skipped"
+    );
     const views: SessionInstanceView[] = (
-      await Promise.all(completed.map((s) => getSessionInstanceView(s.id)))
+      await Promise.all(settled.map((s) => getSessionInstanceView(s.id)))
     ).filter((v): v is SessionInstanceView => v != null);
     const wm = computeWeekMetrics(week, templateItems, views);
     const scoreColor: "green" | "amber" | "red" | "grey" = week.endedEarly
@@ -549,7 +578,9 @@ async function buildSeasonCard(season: SeasonInstance): Promise<RecentCard | nul
         ]);
         const views: SessionInstanceView[] = (
           await Promise.all(
-            sessions.filter((s) => s.status === "completed").map((s) => getSessionInstanceView(s.id))
+            sessions
+              .filter((s) => s.status === "completed" || s.status === "skipped")
+              .map((s) => getSessionInstanceView(s.id))
           )
         ).filter((v): v is SessionInstanceView => v != null);
         return computeWeekMetrics(w, items, views);
@@ -1067,6 +1098,8 @@ export default function DashboardPage() {
             const entries: React.ReactNode[] = [];
             if (statuses.has("green")) entries.push(chip("green",
               <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--green" />, "Done"));
+            if (statuses.has("skipped")) entries.push(chip("skipped",
+              <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--skipped" />, "Skipped"));
             if (statuses.has("overdue")) entries.push(chip("overdue",
               <span className="dashboard-timeline__legend-item dashboard-timeline__legend-item--overdue" />, "Overdue"));
             if (statuses.has("grey")) entries.push(chip("grey",

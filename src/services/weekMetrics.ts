@@ -68,8 +68,13 @@ export function computeWeekMetrics(
   weekTemplateItems: WeekTemplateItem[],
   sessionViews: SessionInstanceView[]
 ): WeekMetrics {
+  // Skipped sessions are treated as zero-effort completions: they count toward
+  // the session totals (so the week settles) and pull volume/intensity averages
+  // toward zero so the user is rated honestly for opting out.
   const completedViews = sessionViews.filter(
-    (sv) => sv.sessionInstance.status === "completed"
+    (sv) =>
+      sv.sessionInstance.status === "completed" ||
+      sv.sessionInstance.status === "skipped"
   );
 
   const totalSets = completedViews.reduce(

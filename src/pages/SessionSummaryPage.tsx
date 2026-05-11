@@ -98,6 +98,10 @@ export default function SessionSummaryPage() {
           weekSessions.map(async (session): Promise<BreadcrumbSession> => {
             const isCurrent = session.id === sessionInstanceId;
 
+            if (session.status === "skipped") {
+              return { sessionInstanceId: session.id, ragStatus: "skipped", isCurrent };
+            }
+
             if (session.status !== "completed") {
               return { sessionInstanceId: session.id, ragStatus: null, isCurrent };
             }
@@ -172,7 +176,10 @@ export default function SessionSummaryPage() {
           const sv = sessionView!;
           const m = metrics!;
           const { ragStatus, sessionScore, volumeScore, intensityScore, durationSeconds, totalSets } = m;
-          const narrative = buildNarrative(m);
+          const isSkipped = sv.sessionInstance.status === "skipped";
+          const narrative = isSkipped
+            ? "You skipped this session — it counts as zero volume and zero intensity."
+            : buildNarrative(m);
           return (<>
         {/* ── Session name ── */}
         <header className="summary-header">
@@ -207,7 +214,7 @@ export default function SessionSummaryPage() {
           <div className="summary-score-block">
             {/* Left: traffic lights + score + label */}
             <div className="summary-score-primary">
-              <Medal status={ragStatus} size="lg" />
+              <Medal status={isSkipped ? "skipped" : ragStatus} size="lg" />
               <div className="summary-score-center">
                 <span className="summary-score-item__pct summary-score-item__pct--total">
                   {sessionScore}

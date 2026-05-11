@@ -2389,7 +2389,9 @@ export async function stopSessionInstance(
   );
 
   const allSessionsCompleted = weekSessions.every((session) =>
-    session.id === updatedSession.id ? true : session.status === "completed"
+    session.id === updatedSession.id
+      ? true
+      : session.status === "completed" || session.status === "skipped"
   );
 
   if (!allSessionsCompleted) {
@@ -2426,6 +2428,100 @@ export async function stopSessionInstance(
   if (completedWeek.order < weekCount) {
     // Generate the next week fresh from the current template state. Any edits
     // made to the program since the last week was generated are picked up here.
+    await populateWeekFromTemplate(
+      seasonTemplate,
+      weekInstance.seasonInstanceId,
+      currentSeasonInstance.startedAt ?? new Date().toISOString(),
+      completedWeek.order + 1
+    );
+    return updatedSession;
+  }
+
+  const completedSeasonInstance: SeasonInstance = {
+    ...currentSeasonInstance,
+    status: "completed",
+    completedAt: currentSeasonInstance.completedAt ?? nowIso,
+  };
+
+  await putItem(STORE_NAMES.seasonInstances, completedSeasonInstance);
+
+  return updatedSession;
+}
+
+/**
+ * Marks a session as skipped — terminal state with no logged work.
+ *
+ * Skipped sessions count as "settled" for week/season completion (so all-skipped
+ * weeks still finalise) but are treated as zero-volume zero-intensity by the
+ * metrics layer, so they tank the user's scores like an empty completed session.
+ */
+export async function skipSessionInstance(
+  sessionInstanceId: string
+): Promise<SessionInstance | undefined> {
+  const sessionInstance = await getSessionInstanceById(sessionInstanceId);
+
+  if (!sessionInstance) {
+    return undefined;
+  }
+
+  if (
+    sessionInstance.status === "completed" ||
+    sessionInstance.status === "skipped"
+  ) {
+    return sessionInstance;
+  }
+
+  const nowIso = new Date().toISOString();
+
+  const updatedSession: SessionInstance = {
+    ...sessionInstance,
+    startedAt: sessionInstance.startedAt ?? nowIso,
+    completedAt: nowIso,
+    durationSeconds: 0,
+    status: "skipped",
+  };
+
+  await putItem(STORE_NAMES.sessionInstances, updatedSession);
+
+  const weekSessions = await getSessionInstancesForWeekInstance(
+    sessionInstance.weekInstanceId
+  );
+
+  const allSessionsSettled = weekSessions.every((session) =>
+    session.id === updatedSession.id
+      ? true
+      : session.status === "completed" || session.status === "skipped"
+  );
+
+  if (!allSessionsSettled) {
+    return updatedSession;
+  }
+
+  const weekInstance = await getWeekInstanceById(sessionInstance.weekInstanceId);
+  if (!weekInstance) return updatedSession;
+
+  const completedWeek: WeekInstance = {
+    ...weekInstance,
+    status: "completed",
+    completedAt: weekInstance.completedAt ?? nowIso,
+  };
+
+  await putItem(STORE_NAMES.weekInstances, completedWeek);
+
+  const currentSeasonInstance = await getSeasonInstanceById(
+    weekInstance.seasonInstanceId
+  );
+  if (!currentSeasonInstance) return updatedSession;
+
+  const seasonTemplate = await getById<SeasonTemplate>(
+    STORE_NAMES.seasonTemplates,
+    currentSeasonInstance.seasonTemplateId
+  );
+  if (!seasonTemplate) return updatedSession;
+
+  const weekCount = seasonTemplate.rirSequence?.length ?? seasonTemplate.plannedWeekCount;
+
+  if (completedWeek.order < weekCount) {
     await populateWeekFromTemplate(
       seasonTemplate,
       weekInstance.seasonInstanceId,
@@ -3005,7 +3101,10 @@ export async function deleteSessionTemplateById(id: string): Promise<void> {
   // on the template for display and navigation, so block those.
   const allSessionInstances = await getAll<SessionInstance>(STORE_NAMES.sessionInstances);
   const activeRefs = allSessionInstances.filter(
-    (s) => s.sessionTemplateId === id && s.status !== "completed"
+    (s) =>
+      s.sessionTemplateId === id &&
+      s.status !== "completed" &&
+      s.status !== "skipped"
   );
   if (activeRefs.length > 0) {
     throw new Error(

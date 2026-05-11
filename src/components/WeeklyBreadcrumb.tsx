@@ -4,7 +4,7 @@ import "./WeeklyBreadcrumb.css";
 
 export interface BreadcrumbSession {
   sessionInstanceId: string;
-  ragStatus: RagStatus | null;
+  ragStatus: RagStatus | "skipped" | null;
   isCurrent: boolean;
 }
 
