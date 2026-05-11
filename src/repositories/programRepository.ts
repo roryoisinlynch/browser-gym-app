@@ -1148,9 +1148,14 @@ export async function getEffectiveE1RM(
   // Exclude data points from the current session so that PRs set during the
   // session do not retroactively raise the baseline used for prescription and
   // working-set classification mid-session.
-  const history = excludeExerciseInstanceIds && excludeExerciseInstanceIds.size > 0
+  const filteredHistory = excludeExerciseInstanceIds && excludeExerciseInstanceIds.size > 0
     ? rawHistory.filter((dp) => !excludeExerciseInstanceIds.has(dp.exerciseInstanceId))
     : rawHistory;
+  // Fall back to the unfiltered history when the exclusion erased all data —
+  // i.e. a first-ever attempt at this exercise. Without this, classification
+  // would have no baseline and every set would default to "warmup". Frozen-
+  // baseline behavior is only meaningful when there is prior data to anchor on.
+  const history = filteredHistory.length > 0 ? filteredHistory : rawHistory;
 
   const historicalBest = history.reduce<number | null>((best, dp) => {
     if (dp.topEstimatedOneRepMax == null) return best;
