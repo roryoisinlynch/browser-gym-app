@@ -28,10 +28,11 @@ import BottomNav from "../components/BottomNav";
 import "./WeekSummaryPage.css";
 
 function buildWeekNarrative(metrics: WeekMetrics): string {
-  const { volumeScore, intensityScore, skippedSessions } = metrics;
+  const { volumeScore, intensityScore, consistencyScore } = metrics;
 
   const volStatus = volumeScore >= 100 ? "green" : volumeScore >= 90 ? "amber" : "red";
   const intStatus = intensityScore >= 100 ? "green" : intensityScore >= 90 ? "amber" : "red";
+  const conStatus = consistencyScore >= 100 ? "green" : consistencyScore >= 90 ? "amber" : "red";
 
   const volPhrase =
     volStatus === "green" ? "logged enough sets to meet your volume target"
@@ -43,14 +44,15 @@ function buildWeekNarrative(metrics: WeekMetrics): string {
     : intStatus === "amber" ? "almost lifted enough weight to hit your intensity target"
     : "didn't lift enough weight to hit your intensity target";
 
-  const conPhrase = skippedSessions === 0
-    ? "stayed consistent with your schedule"
-    : "did not stay consistent with your schedule";
+  const conPhrase =
+    conStatus === "green" ? "stayed consistent with your schedule"
+    : conStatus === "amber" ? "almost stayed consistent with your schedule"
+    : "didn't stay consistent with your schedule";
 
   const items = [
     { positive: volStatus !== "red", phrase: volPhrase },
     { positive: intStatus !== "red", phrase: intPhrase },
-    { positive: skippedSessions === 0, phrase: conPhrase },
+    { positive: conStatus !== "red", phrase: conPhrase },
   ];
 
   const positives = items.filter(i => i.positive).map(i => i.phrase);
