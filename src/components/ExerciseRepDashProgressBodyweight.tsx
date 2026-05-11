@@ -59,8 +59,6 @@ export default function ExerciseRepDashProgressBodyweight({
     clamp(topSetFill - i, 0, 1)
   );
 
-  const hasMetTarget = topSetFill >= targetReps;
-
   // Warmup boundary: working requires RIR < 6 (gap ≤ 5).
   // Use the recency-adjusted baseline so stale PRs don't widen the warmup zone.
   const effectiveBaseline = recentMaxReps ?? historicalBestReps;
@@ -70,6 +68,45 @@ export default function ExerciseRepDashProgressBodyweight({
   // Pull cutoff down if the prescribed target is already in warmup territory,
   // so the target segment (index targetReps−1) is working, not warmup.
   const warmupCutoff = targetReps - 1 <= normalCutoff ? targetReps - 2 : normalCutoff;
+
+  // Narrative items mirror the weighted card. Rep counts:
+  //   working set qualifier = warmupCutoff + 2 (first segment past the warmup
+  //     zone, 1-indexed), clamped to ≥ 1.
+  //   rep target = targetReps (the prescription).
+  //   beat recent best = recentMaxReps + 1 (one more than the recent best).
+  //   set all-time PR = historicalBestReps + 1.
+  const workingSetReps = Math.max(1, warmupCutoff + 2);
+  const recentBestBeatReps =
+    recentMaxReps != null && targetRir !== 0 ? recentMaxReps + 1 : null;
+  const allTimePrReps = historicalBestReps + 1;
+
+  type NarrativeItem = { reps: number; label: string };
+  const narrativeItemsAll: NarrativeItem[] = [
+    { reps: workingSetReps, label: "qualify as a working set" },
+    { reps: targetReps, label: "match your rep target" },
+  ];
+  if (recentBestBeatReps != null) {
+    narrativeItemsAll.push({
+      reps: recentBestBeatReps,
+      label: "beat your recent best",
+    });
+  }
+  narrativeItemsAll.push({
+    reps: allTimePrReps,
+    label: "set an all time PR",
+  });
+
+  // Dedup with "later wins": walk backwards, drop earlier items whose reps
+  // already appeared in a later position.
+  const seenReps = new Set<number>();
+  const narrativeItems: NarrativeItem[] = [];
+  for (let i = narrativeItemsAll.length - 1; i >= 0; i--) {
+    const item = narrativeItemsAll[i];
+    if (!seenReps.has(item.reps)) {
+      seenReps.add(item.reps);
+      narrativeItems.unshift(item);
+    }
+  }
 
   return (
     <div className="exercise-rep-dash-progress">
@@ -118,21 +155,6 @@ export default function ExerciseRepDashProgressBodyweight({
       </div>
 
       <div className="exercise-rep-dash-progress__caption-row">
-        <div className="exercise-rep-dash-progress__caption-group">
-          <span className="exercise-rep-dash-progress__caption">
-            Rep Target
-          </span>
-          {hasMetTarget && (
-            <span
-              className="exercise-rep-dash-progress__met-check"
-              aria-label="Rep target met"
-              title="Rep target met"
-            >
-              ✓
-            </span>
-          )}
-        </div>
-
         <div className="exercise-rep-dash-progress__info" ref={infoRef}>
           <button
             className="exercise-rep-dash-progress__info-button"
@@ -160,6 +182,22 @@ export default function ExerciseRepDashProgressBodyweight({
             </div>
           )}
         </div>
+      </div>
+
+      <div className="exercise-rep-dash-progress__narrative">
+        <p className="exercise-rep-dash-progress__narrative-intro">
+          For today&apos;s session…
+        </p>
+        <ul className="exercise-rep-dash-progress__narrative-list">
+          {narrativeItems.map((item) => (
+            <li
+              key={item.label}
+              className="exercise-rep-dash-progress__narrative-item"
+            >
+              lift <strong>{item.reps}</strong> reps to {item.label}
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );
