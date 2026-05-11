@@ -390,7 +390,7 @@ export default function ExercisePage() {
           return null;
         })()}
 
-        {!isBodyweight && (
+        {!isBodyweight && !isAmrap && (
           <div className="exercise-page__config-cta-wrap">
             <button
               type="button"
@@ -420,12 +420,14 @@ export default function ExercisePage() {
             isBodyweightAmrap={isBodyweightAmrap}
           />
 
-          <ExerciseInsights
-            exerciseTemplateId={exerciseView.exerciseTemplate.id}
-            exerciseName={exerciseView.exerciseTemplate.exerciseName}
-            currentExerciseInstanceId={exerciseView.exerciseInstance.id}
-            isBodyweight={isBodyweight}
-          />
+          {!isAmrap && !isBodyweightAmrap && (
+            <ExerciseInsights
+              exerciseTemplateId={exerciseView.exerciseTemplate.id}
+              exerciseName={exerciseView.exerciseTemplate.exerciseName}
+              currentExerciseInstanceId={exerciseView.exerciseInstance.id}
+              isBodyweight={isBodyweight}
+            />
+          )}
         </div>
       </section>
 
