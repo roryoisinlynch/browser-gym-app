@@ -256,10 +256,12 @@ export default function WeekSummaryPage() {
         const totalWeeks = seasonTemplateForRir?.rirSequence?.length ?? allWeeks.length;
         const weekByOrder = new Map(allWeeks.map((w) => [w.order, w]));
 
-        // Calendar days between this week's start and the next week's first
-        // completed session count as "Extra rest" for this week. Gaps before a
-        // new week's first session belong to the prior week — see week-summary
-        // boundary discussion in the design.
+        // Extra rest = calendar days this week owns minus its template length.
+        // Boundary rule: a week spans from the prior week's end-boundary to the
+        // next week's start of activity. The "earliest completed session of
+        // week N+1" defines the boundary so a gap before week N+1's first
+        // session belongs to week N. Falls back to startedAt / season end /
+        // today when nothing has been logged yet.
         const nextWeek = weekByOrder.get(weekInstance.order + 1);
         let endBoundaryIso: string | null = null;
         if (nextWeek) {
@@ -274,18 +276,21 @@ export default function WeekSummaryPage() {
           const si = await getSeasonInstanceById(weekInstance.seasonInstanceId);
           endBoundaryIso = si?.completedAt ?? new Date().toISOString();
         }
-        let weekStartForCalcIso: string | null = null;
-        for (const item of wii) {
-          if (!item.sessionInstanceId) continue;
-          const s = sessions.find((x) => x.id === item.sessionInstanceId);
-          if (s) {
-            const startMs = toLocalMidnight(s.date).getTime() - (item.order - 1) * 86400000;
-            weekStartForCalcIso = localDateIso(new Date(startMs));
-            break;
-          }
+        // Week N's actual start = boundary from week N-1. Week 1 starts at the
+        // season start; week N>=2 starts at its own earliest completed session,
+        // falling back to its startedAt (which is when week N-1 completed).
+        let actualStartIso: string | null = null;
+        if (weekInstance.order === 1) {
+          actualStartIso = weekInstance.startedAt ?? null;
+        } else {
+          const earliestCompletedHere = sessions
+            .filter((s) => s.status === "completed" && s.completedAt)
+            .map((s) => s.completedAt!)
+            .sort((a, b) => a.localeCompare(b))[0];
+          actualStartIso = earliestCompletedHere ?? weekInstance.startedAt ?? null;
         }
-        if (weekStartForCalcIso) {
-          const startMs = toLocalMidnight(weekStartForCalcIso).getTime();
+        if (actualStartIso) {
+          const startMs = toLocalMidnight(actualStartIso).getTime();
           const endMs = toLocalMidnight(endBoundaryIso).getTime();
           const dayDiff = Math.max(0, Math.round((endMs - startMs) / 86_400_000));
           setExtraRestDays(Math.max(0, dayDiff - templateItems.length));

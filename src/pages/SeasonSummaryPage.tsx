@@ -120,6 +120,7 @@ export default function SeasonSummaryPage() {
   const [seasonRows, setSeasonRows] = useState<SeasonRow[]>([]);
   const [weeksBreadcrumb, setWeeksBreadcrumb] = useState<BreadcrumbWeek[]>([]);
   const [seasonDaySquares, setSeasonDaySquares] = useState<DaySquare[]>([]);
+  const [seasonExtraRestDays, setSeasonExtraRestDays] = useState<number>(0);
   const [heuristicSummary, setHeuristicSummary] = useState<HeuristicSummaryRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadProgress, setLoadProgress] = useState(0);
@@ -200,9 +201,10 @@ export default function SeasonSummaryPage() {
           // scheduled date is already past.
           const sessionInfoMap = new Map<string, { date: string; status: string; completedAt: string | null }>();
           for (const w of sortedWeeks) {
-            const cached = sessionsByWeek.get(w.id);
-            const sessionsForWeek = cached ?? (await getSessionInstancesForWeekInstance(w.id));
-            for (const s of sessionsForWeek) {
+            if (!sessionsByWeek.has(w.id)) {
+              sessionsByWeek.set(w.id, await getSessionInstancesForWeekInstance(w.id));
+            }
+            for (const s of sessionsByWeek.get(w.id)!) {
               sessionInfoMap.set(s.id, { date: s.date, status: s.status, completedAt: s.completedAt ?? null });
             }
           }
@@ -236,6 +238,38 @@ export default function SeasonSummaryPage() {
             }
           }
           setSeasonDaySquares(squares);
+
+          // Partition the season into per-week calendar spans using the same
+          // boundary rule as the week summary: a week's end is the next week's
+          // earliest completed session (or its startedAt, or season end / today
+          // when nothing is logged yet). Each calendar day belongs to exactly
+          // one week. Extra rest = span - template length, summed across weeks.
+          const seasonEndIso =
+            seasonEnded && seasonInstance.completedAt
+              ? seasonInstance.completedAt
+              : new Date().toISOString();
+          const boundaries: string[] = [seasonInstance.startedAt];
+          for (let i = 0; i < sortedWeeks.length; i++) {
+            const nextW = sortedWeeks[i + 1];
+            let boundaryIso: string | null = null;
+            if (nextW) {
+              const nextSessions = sessionsByWeek.get(nextW.id) ?? [];
+              const earliestCompleted = nextSessions
+                .filter((s) => s.status === "completed" && s.completedAt)
+                .map((s) => s.completedAt!)
+                .sort((a, b) => a.localeCompare(b))[0];
+              boundaryIso = earliestCompleted ?? nextW.startedAt ?? null;
+            }
+            boundaries.push(boundaryIso ?? seasonEndIso);
+          }
+          let totalExtraRest = 0;
+          for (let i = 0; i < sortedWeeks.length; i++) {
+            const startMs = toLocalMidnight(boundaries[i]).getTime();
+            const endMs = toLocalMidnight(boundaries[i + 1]).getTime();
+            const dayDiff = Math.max(0, Math.round((endMs - startMs) / 86_400_000));
+            totalExtraRest += Math.max(0, dayDiff - weekLength);
+          }
+          setSeasonExtraRestDays(totalExtraRest);
         }
         setLoadProgress(65);
 
@@ -513,6 +547,7 @@ export default function SeasonSummaryPage() {
             { label: "Missed",    color: "#9b2335", n: seasonDaySquares.filter(d => d.status === "overdue").length },
             { label: "Upcoming",  color: null,      n: seasonDaySquares.filter(d => d.status === "grey").length },
             { label: "Rest",      color: null,      n: seasonDaySquares.filter(d => d.type === "rest").length },
+            { label: "Extra rest", color: null,     n: seasonExtraRestDays },
           ].filter(i => i.n > 0);
           if (countItems.length === 0) return null;
           const rows = countItems.length <= 3
