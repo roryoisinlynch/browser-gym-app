@@ -347,27 +347,28 @@ export default function ExercisePage() {
           )}
         </header>
 
-        <ExerciseSummaryCard
-          targetRir={exerciseView.effectiveRir}
-          targetWeight={exerciseView.exerciseInstance.prescribedWeight ?? null}
-          targetReps={exerciseView.exerciseInstance.prescribedRepTarget ?? null}
-          targetEstimatedOneRepMax={exerciseView.targetEstimatedOneRepMax}
-          topSetEstimatedOneRepMax={topSetEstimatedOneRepMax}
-          historicalBestEstimatedOneRepMax={
-            exerciseView.historicalBestEstimatedOneRepMax
-          }
-          historicalBestDate={exerciseView.historicalBestDate}
-          recentMaxEstimatedOneRepMax={exerciseView.recentMaxEstimatedOneRepMax}
-          recentMaxDate={exerciseView.recentMaxDate}
-          recentMaxReps={exerciseView.recentMaxReps}
-          recentMaxRepsDate={exerciseView.recentMaxRepsDate}
-          isBodyweight={isBodyweight}
-          historicalBestReps={exerciseView.historicalBestReps}
-          topSetReps={topSetReps}
-          isAmrap={isAmrap}
-          isBodyweightAmrap={isBodyweightAmrap}
-          needsWeightConfig={needsWeightConfig}
-        />
+        {!needsWeightConfig && (
+          <ExerciseSummaryCard
+            targetRir={exerciseView.effectiveRir}
+            targetWeight={exerciseView.exerciseInstance.prescribedWeight ?? null}
+            targetReps={exerciseView.exerciseInstance.prescribedRepTarget ?? null}
+            targetEstimatedOneRepMax={exerciseView.targetEstimatedOneRepMax}
+            topSetEstimatedOneRepMax={topSetEstimatedOneRepMax}
+            historicalBestEstimatedOneRepMax={
+              exerciseView.historicalBestEstimatedOneRepMax
+            }
+            historicalBestDate={exerciseView.historicalBestDate}
+            recentMaxEstimatedOneRepMax={exerciseView.recentMaxEstimatedOneRepMax}
+            recentMaxDate={exerciseView.recentMaxDate}
+            recentMaxReps={exerciseView.recentMaxReps}
+            recentMaxRepsDate={exerciseView.recentMaxRepsDate}
+            isBodyweight={isBodyweight}
+            historicalBestReps={exerciseView.historicalBestReps}
+            topSetReps={topSetReps}
+            isAmrap={isAmrap}
+            isBodyweightAmrap={isBodyweightAmrap}
+          />
+        )}
 
         {!isBodyweight && (() => {
           const reps = exerciseView.exerciseInstance.prescribedRepTarget;
@@ -403,27 +404,29 @@ export default function ExercisePage() {
           </div>
         )}
 
-        <ExerciseSetTable
-          rows={rows}
-          targetWeight={exerciseView.exerciseInstance.prescribedWeight ?? null}
-          targetReps={exerciseView.exerciseInstance.prescribedRepTarget ?? null}
-          onWeightChange={(rowId, value) => updateRowValue(rowId, "weight", value)}
-          onRepsChange={(rowId, value) => updateRowValue(rowId, "reps", value)}
-          onRowBlur={handleRowBlur}
-          onRemoveRow={handleRemoveRow}
-          onAddRow={handleAddRow}
-          onDone={handleDone}
-          isBodyweight={isBodyweight}
-          isAmrap={isAmrap}
-          isBodyweightAmrap={isBodyweightAmrap}
-        />
+        <div className={needsWeightConfig ? "exercise-page__locked" : undefined}>
+          <ExerciseSetTable
+            rows={rows}
+            targetWeight={exerciseView.exerciseInstance.prescribedWeight ?? null}
+            targetReps={exerciseView.exerciseInstance.prescribedRepTarget ?? null}
+            onWeightChange={(rowId, value) => updateRowValue(rowId, "weight", value)}
+            onRepsChange={(rowId, value) => updateRowValue(rowId, "reps", value)}
+            onRowBlur={handleRowBlur}
+            onRemoveRow={handleRemoveRow}
+            onAddRow={handleAddRow}
+            onDone={handleDone}
+            isBodyweight={isBodyweight}
+            isAmrap={isAmrap}
+            isBodyweightAmrap={isBodyweightAmrap}
+          />
 
-        <ExerciseInsights
-          exerciseTemplateId={exerciseView.exerciseTemplate.id}
-          exerciseName={exerciseView.exerciseTemplate.exerciseName}
-          currentExerciseInstanceId={exerciseView.exerciseInstance.id}
-          isBodyweight={isBodyweight}
-        />
+          <ExerciseInsights
+            exerciseTemplateId={exerciseView.exerciseTemplate.id}
+            exerciseName={exerciseView.exerciseTemplate.exerciseName}
+            currentExerciseInstanceId={exerciseView.exerciseInstance.id}
+            isBodyweight={isBodyweight}
+          />
+        </div>
       </section>
 
       <BottomNav activeTab="session" />

@@ -19,7 +19,6 @@ interface ExerciseSummaryCardProps {
   recentMaxRepsDate?: string | null;
   isAmrap?: boolean;
   isBodyweightAmrap?: boolean;
-  needsWeightConfig?: boolean;
 }
 
 function formatMetricValue(value: number | null, suffix = ""): string {
@@ -61,21 +60,16 @@ export default function ExerciseSummaryCard({
   recentMaxRepsDate = null,
   isAmrap = false,
   isBodyweightAmrap = false,
-  needsWeightConfig = false,
 }: ExerciseSummaryCardProps) {
-  if (isAmrap || isBodyweightAmrap || needsWeightConfig) {
+  if (isAmrap || isBodyweightAmrap) {
     return (
       <section className="exercise-summary-card">
         <div className="exercise-summary-card__target-block">
-          <strong className="exercise-summary-card__target-value">
-            {needsWeightConfig ? "Set working weight" : "AMRAP"}
-          </strong>
+          <strong className="exercise-summary-card__target-value">AMRAP</strong>
           <p className="exercise-summary-card__target-secondary">
             {isAmrap
               ? "Choose a challenging weight and lift for as many reps as possible. Your e1RM will be calculated from this session and used to prescribe future sessions."
-              : isBodyweightAmrap
-                ? "Lift for as many reps as possible. Your best reps will be recorded and used to prescribe future sessions."
-                : "You have session history for this exercise. Set a working weight to get today’s target."}
+              : "Lift for as many reps as possible. Your best reps will be recorded and used to prescribe future sessions."}
           </p>
         </div>
       </section>

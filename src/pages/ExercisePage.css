@@ -51,6 +51,11 @@
   margin: 0 14px 16px;
 }
 
+.exercise-page__locked {
+  opacity: 0.38;
+  pointer-events: none;
+}
+
 .exercise-page__config-cta {
   width: 100%;
   min-height: 42px;
