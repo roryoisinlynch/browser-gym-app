@@ -184,30 +184,24 @@ export default function ExerciseSummaryCard({
 
       {isBodyweight ? recentMaxRepsBanner : recentMaxBanner}
 
-      <div className="exercise-summary-card__metrics-grid">
-        <div className="exercise-summary-card__metric">
-          <span className="exercise-summary-card__metric-label">Target</span>
-          <strong className="exercise-summary-card__metric-value">
-            {isBodyweight
-              ? targetReps == null
-                ? "—"
-                : `${targetReps} reps`
-              : targetWeight == null || targetReps == null
-                ? "—"
-                : `${formatMetricValue(targetWeight, "kg")} × ${formatMetricValue(targetReps)}`}
-          </strong>
-        </div>
-
-        <div className="exercise-summary-card__metric">
-          <span className="exercise-summary-card__metric-label">
-            {isBodyweight ? "Best reps" : "Target e1RM"}
-          </span>
-          <strong className="exercise-summary-card__metric-value">
+      <div className="exercise-summary-card__target-block">
+        <strong className="exercise-summary-card__target-value">
+          {isBodyweight
+            ? targetReps == null
+              ? "—"
+              : `${targetReps} reps`
+            : targetWeight == null || targetReps == null
+              ? "—"
+              : `${formatMetricValue(targetWeight, "kg")} × ${formatMetricValue(targetReps)}`}
+        </strong>
+        <p className="exercise-summary-card__target-secondary">
+          {isBodyweight ? "Best reps" : "Target e1RM"}:{" "}
+          <span className="exercise-summary-card__target-secondary-value">
             {isBodyweight
               ? formatMetricValue(historicalBestReps)
               : formatMetricValue(targetEstimatedOneRepMax, "kg")}
-          </strong>
-        </div>
+          </span>
+        </p>
       </div>
 
       {!isBodyweight && (

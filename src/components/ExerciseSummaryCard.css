@@ -26,35 +26,32 @@
   color: var(--text-soft);
 }
 
-.exercise-summary-card__metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+.exercise-summary-card__target-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
   margin-bottom: 16px;
+  text-align: center;
 }
 
-.exercise-summary-card__metric {
-  padding: 12px;
-  border-radius: 14px;
-  background: rgba(15, 19, 24, 0.36);
-  border: 1px solid var(--panel-border);
-}
-
-.exercise-summary-card__metric-label {
+.exercise-summary-card__target-value {
   display: block;
-  margin-bottom: 4px;
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: var(--text-soft);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.exercise-summary-card__metric-value {
-  display: block;
-  font-size: 1rem;
+  font-size: 1.8rem;
   font-weight: 800;
   color: var(--text-strong);
+  line-height: 1.1;
+}
+
+.exercise-summary-card__target-secondary {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-soft);
+}
+
+.exercise-summary-card__target-secondary-value {
+  font-weight: 700;
+  color: var(--text-muted);
 }
 
 .exercise-summary-card__bodyweight-progress {
