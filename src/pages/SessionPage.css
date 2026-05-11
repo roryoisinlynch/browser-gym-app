@@ -352,7 +352,13 @@
   line-height: 1;
 }
 
-.intensity-dot--miss {
+/* Unmet slot keeps its 14x14 footprint so the row stays evenly spaced,
+   but renders only a small centered dot. */
+.intensity-dot--miss::before {
+  content: "";
+  display: block;
+  width: 4px;
+  height: 4px;
   border-radius: 999px;
   background: var(--text-muted);
 }
