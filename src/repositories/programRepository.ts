@@ -648,18 +648,24 @@ export async function startSeasonFromTemplate(
   );
 
   const uniqueExerciseNames = [...new Set(weightedNewSies.map((s) => s.exerciseName))];
-  const e1rmByName = new Map<string, number | null>();
+  type EffectiveEntry = { effectiveE1RM: number | null; dormant: boolean };
+  const effectiveByName = new Map<string, EffectiveEntry>();
   await Promise.all(
     uniqueExerciseNames.map(async (name) => {
-      const { historicalBest, recentMax } = await getEffectiveE1RM(name, newSeasonInstanceId);
-      e1rmByName.set(name, recentMax ?? historicalBest);
+      const { historicalBest, recentMax, lastAttemptedDate } = await getEffectiveE1RM(name, newSeasonInstanceId);
+      effectiveByName.set(name, {
+        effectiveE1RM: recentMax ?? historicalBest,
+        dormant: isDormantSince(lastAttemptedDate),
+      });
     })
   );
 
   await Promise.all(
     weightedNewSies.map(async (sie) => {
-      const effectiveE1RM = e1rmByName.get(sie.exerciseName);
-      if (effectiveE1RM == null || sie.prescribedWeight! >= effectiveE1RM) {
+      const entry = effectiveByName.get(sie.exerciseName);
+      const effectiveE1RM = entry?.effectiveE1RM ?? null;
+      const dormant = entry?.dormant ?? false;
+      if (effectiveE1RM == null || sie.prescribedWeight! >= effectiveE1RM || dormant) {
         await putItem(STORE_NAMES.sessionInstanceExercises, {
           ...sie,
           prescribedWeight: null,
@@ -1132,6 +1138,18 @@ export async function getExerciseSessionHistory(
   return dataPoints.sort((a, b) => a.date.localeCompare(b.date));
 }
 
+// An exercise is "dormant" when it hasn't been attempted in this many years.
+// Dormant exercises default to AMRAP because old prescriptions may no longer
+// reflect the user's current capacity.
+const DORMANT_GAP_YEARS = 2;
+
+export function isDormantSince(lastAttemptedDate: string | null): boolean {
+  if (lastAttemptedDate == null) return false;
+  const cutoff = new Date();
+  cutoff.setFullYear(cutoff.getFullYear() - DORMANT_GAP_YEARS);
+  return lastAttemptedDate < cutoff.toISOString().slice(0, 10);
+}
+
 /**
  * Returns the historical best e1RM and, when the all-time best hasn't been
  * matched in the last three seasons, a "recent max" that reflects current
@@ -1151,6 +1169,7 @@ export async function getEffectiveE1RM(
   recentMax: number | null;
   historicalBestReps: number | null;
   recentMaxReps: number | null;
+  lastAttemptedDate: string | null;
 }> {
   const rawHistory = await getExerciseSessionHistory(exerciseName);
   // Exclude data points from the current session so that PRs set during the
@@ -1177,8 +1196,22 @@ export async function getEffectiveE1RM(
     return best == null || dp.topRepCount > best ? dp.topRepCount : best;
   }, null);
 
+  // Use rawHistory (not the exclusion-filtered list) so that sets just logged
+  // in the current session still count as a recent attempt — we don't want
+  // the AMRAP override to fire mid-session.
+  const lastAttemptedDate = rawHistory.reduce<string | null>(
+    (latest, dp) => (latest == null || dp.date > latest ? dp.date : latest),
+    null
+  );
+
   if (historicalBest == null && historicalBestReps == null) {
-    return { historicalBest: null, recentMax: null, historicalBestReps: null, recentMaxReps: null };
+    return {
+      historicalBest: null,
+      recentMax: null,
+      historicalBestReps: null,
+      recentMaxReps: null,
+      lastAttemptedDate,
+    };
   }
 
   type SeasonBucket = { sortDate: string; bestE1RM: number | null; bestReps: number | null };
@@ -1248,7 +1281,7 @@ export async function getEffectiveE1RM(
     recentMaxReps = null;
   }
 
-  return { historicalBest, recentMax, historicalBestReps, recentMaxReps };
+  return { historicalBest, recentMax, historicalBestReps, recentMaxReps, lastAttemptedDate };
 }
 
 function buildAnalyzedSetList(
@@ -1583,6 +1616,18 @@ export async function getExerciseInstanceView(
   }
   // ─────────────────────────────────────────────────────────────────────────
 
+  // Dormant check: if the most recent prior attempt is older than the dormant
+  // threshold, force AMRAP. The current-season placeholder bucket (no logged
+  // effort) is skipped so its synthetic sortDate doesn't mask a real gap.
+  let lastAttemptedDate: string | null = null;
+  for (const bucket of seasonBuckets.values()) {
+    if (bucket.bestE1RM == null && bucket.bestReps == null) continue;
+    if (lastAttemptedDate == null || bucket.sortDate > lastAttemptedDate) {
+      lastAttemptedDate = bucket.sortDate;
+    }
+  }
+  const isDormant = isDormantSince(lastAttemptedDate);
+
   const weekRir =
     weekInstance.rirTarget ??
     seasonTemplate.rirSequence?.[weekInstance.order - 1] ??
@@ -1592,10 +1637,14 @@ export async function getExerciseInstanceView(
 
   // Always recompute from history — never carry over stale stored values.
   // No history → both remain null → AMRAP prompt shown to user.
+  // Dormant (>DORMANT_GAP_YEARS since last attempt) → same: both stay null.
   let prescribedWeight: number | null = null;
   let prescribedRepTarget: number | null = null;
 
-  if (exerciseTemplate.weightMode === "bodyweight") {
+  if (isDormant) {
+    // Leave both null → AMRAP. Old prescriptions can't be trusted after a
+    // long gap, so the user re-establishes weight and reps from scratch.
+  } else if (exerciseTemplate.weightMode === "bodyweight") {
     // Historical best is a 0 RIR effort, so prescription = best - weekRir.
     // Use the recent max when available so targets stay fair after a long gap.
     const effectiveReps = recentMaxReps ?? historicalBestReps;
