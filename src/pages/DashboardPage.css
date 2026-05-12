@@ -675,6 +675,15 @@
   width: 66%;
 }
 
+/* Today placeholder — accent dash, same colour as the planned-timeline
+   today border, so the cell reads as "in flight, nothing logged yet". */
+.dashboard-timeline-recent__today-dash {
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--accent);
+}
+
 /* ── Section header (title + info button) ── */
 .dashboard-section-header {
   display: flex;

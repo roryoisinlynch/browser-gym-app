@@ -1144,23 +1144,43 @@ export default function DashboardPage() {
                         ))}
                       </div>
                       <div className="dashboard-timeline-recent__row">
-                        {row.cells.map((cell, ci) => (
-                          <div key={ci} className="dashboard-timeline-recent__slot">
-                            {cell && (
-                              <div
-                                className={[
-                                  "dashboard-timeline__day",
-                                  `dashboard-timeline__day--${cell.status}`,
-                                  cell.status === "rest-past" || cell.status === "rest-behind"
-                                    ? "dashboard-timeline__day--rest"
-                                    : "",
-                                  cell.isToday ? "dashboard-timeline__day--today" : "",
-                                ].filter(Boolean).join(" ")}
-                                title={cell.dateIso}
-                              />
-                            )}
-                          </div>
-                        ))}
+                        {row.cells.map((cell, ci) => {
+                          if (!cell) {
+                            return <div key={ci} className="dashboard-timeline-recent__slot" />;
+                          }
+                          // Today, when nothing's been logged or skipped yet,
+                          // is a "still pending" placeholder — render an accent
+                          // dash instead of a square so it reads as in-flight.
+                          const isPendingToday =
+                            cell.isToday &&
+                            cell.status !== "green" &&
+                            cell.status !== "skipped";
+                          return (
+                            <div key={ci} className="dashboard-timeline-recent__slot">
+                              {isPendingToday ? (
+                                <span
+                                  className="dashboard-timeline-recent__today-dash"
+                                  title={cell.dateIso}
+                                  aria-label="Today"
+                                >
+                                  −
+                                </span>
+                              ) : (
+                                <div
+                                  className={[
+                                    "dashboard-timeline__day",
+                                    `dashboard-timeline__day--${cell.status}`,
+                                    cell.status === "rest-past" || cell.status === "rest-behind"
+                                      ? "dashboard-timeline__day--rest"
+                                      : "",
+                                    cell.isToday ? "dashboard-timeline__day--today" : "",
+                                  ].filter(Boolean).join(" ")}
+                                  title={cell.dateIso}
+                                />
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                     <div className="dashboard-timeline-recent__row-side">
