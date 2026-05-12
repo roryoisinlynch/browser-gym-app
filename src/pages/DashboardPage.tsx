@@ -408,12 +408,12 @@ async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | 
     }
   }
 
-  // Index completed sessions by their actual completion date.
+  // Index completed sessions by their actual completion date. Skipped sessions
+  // count toward "settled" (so they appear in completedDates for the
+  // ahead/behind tally) but their square placement is decided separately
+  // below — see `relocatedSkippedDates` and `settleSkipTotals`.
   const completedByDate = new Map<string, Slot>();
   const completedDates: string[] = [];
-  // Skipped sessions count toward "settled" (not behind) but render as red
-  // squares to flag them visually distinct from genuine completions.
-  const skippedByDate = new Map<string, Slot>();
   for (const slot of slots) {
     if (slot.type !== "session" || !slot.sessionInstance?.completedAt) continue;
     const settledDate = localDateIso(toLocalMidnight(slot.sessionInstance.completedAt));
@@ -421,7 +421,6 @@ async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | 
       completedByDate.set(settledDate, slot);
       completedDates.push(settledDate);
     } else if (slot.sessionInstance.status === "skipped") {
-      skippedByDate.set(settledDate, slot);
       completedDates.push(settledDate);
     }
   }
@@ -437,10 +436,65 @@ async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | 
     return n;
   }
 
+  // Background classification for a date when no settled-session marker is
+  // claiming it — either a rest cross (caught-up) or a behind-rest / grey cell.
+  function fallbackStatus(dateIso: string, isToday: boolean): RecentDayStatus {
+    const actualThrough = countLessOrEqual(completedDates, dateIso);
+    const expectedThrough = countLessOrEqual(sessionOriginalDates, dateIso);
+    if (isToday) {
+      // Today is still in progress: never render as rest-behind, because the
+      // user could still salvage the day by training. If they're caught up
+      // including today's slot, show as on-schedule rest; otherwise grey
+      // (upcoming gym day, which behind users will see until they train).
+      return actualThrough >= expectedThrough ? "rest-past" : "grey";
+    }
+    return actualThrough < expectedThrough ? "rest-behind" : "rest-past";
+  }
+
+  // Relocate skipped-session markers onto the day each one was originally
+  // scheduled for, when (a) that day is in the past and (b) it currently
+  // renders as a rest cross. This surfaces skips on the slot they belonged to
+  // rather than on whatever day the user pressed Skip.
+  const todayIsoStr = localDateIso(new Date(todayMs));
+  const relocatedSkippedDates = new Set<string>();
+  // Per-settle-date counts so a relocation only "frees up" the original cell
+  // when every skip on that settle date has somewhere else to go.
+  const settleSkipTotals = new Map<string, number>();
+  const settleSkipRelocated = new Map<string, number>();
+  // Iterate in original-date order for deterministic placement when two skips
+  // ever target the same fallback X.
+  const skippedSlots = slots
+    .filter(
+      (s): s is Slot & { sessionInstance: SessionInstance } =>
+        s.type === "session"
+        && s.sessionInstance != null
+        && s.sessionInstance.status === "skipped"
+        && s.sessionInstance.completedAt != null
+    )
+    .sort((a, b) => a.originalDateIso.localeCompare(b.originalDateIso));
+  for (const slot of skippedSlots) {
+    const settleDate = localDateIso(toLocalMidnight(slot.sessionInstance.completedAt!));
+    settleSkipTotals.set(settleDate, (settleSkipTotals.get(settleDate) ?? 0) + 1);
+    const originalDate = slot.originalDateIso;
+    if (originalDate >= todayIsoStr) continue;
+    if (originalDate === settleDate) continue;
+    if (completedByDate.has(originalDate)) continue;
+    if (relocatedSkippedDates.has(originalDate)) continue;
+    const fallback = fallbackStatus(originalDate, false);
+    if (fallback !== "rest-past" && fallback !== "rest-behind") continue;
+    relocatedSkippedDates.add(originalDate);
+    settleSkipRelocated.set(settleDate, (settleSkipRelocated.get(settleDate) ?? 0) + 1);
+  }
+
   function buildCell(dateMs: number, isToday: boolean): RecentDayCell {
     const dateIso = localDateIso(new Date(dateMs));
     const hasCompleted = completedByDate.has(dateIso);
-    const hasSkipped = skippedByDate.has(dateIso);
+    // A skip stays on its settle date only if at least one skip on that date
+    // wasn't relocated; relocated markers appear on their original-scheduled
+    // day instead.
+    const settleSkipsRemaining =
+      (settleSkipTotals.get(dateIso) ?? 0) - (settleSkipRelocated.get(dateIso) ?? 0);
+    const hasSkipped = settleSkipsRemaining > 0 || relocatedSkippedDates.has(dateIso);
     if (hasCompleted && hasSkipped) {
       return { dateIso, status: "green-skipped", isToday };
     }
@@ -450,26 +504,7 @@ async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | 
     if (hasSkipped) {
       return { dateIso, status: "skipped", isToday };
     }
-
-    // No completion on this calendar day. A rest is "on schedule" only when the
-    // user has completed at least as many sessions as the template projected by
-    // this date — independent of whether the template called for rest or session
-    // at this specific position.
-    const actualThrough = countLessOrEqual(completedDates, dateIso);
-
-    if (isToday) {
-      // Today is still in progress: never render as rest-behind, because the
-      // user could still salvage the day by training. If they're caught up
-      // including today's slot, show as on-schedule rest; otherwise grey
-      // (upcoming gym day, which behind users will see until they train).
-      const expectedThrough = countLessOrEqual(sessionOriginalDates, dateIso);
-      if (actualThrough >= expectedThrough) return { dateIso, status: "rest-past", isToday };
-      return { dateIso, status: "grey", isToday };
-    }
-
-    const expectedThrough = countLessOrEqual(sessionOriginalDates, dateIso);
-    if (actualThrough < expectedThrough) return { dateIso, status: "rest-behind", isToday };
-    return { dateIso, status: "rest-past", isToday };
+    return { dateIso, status: fallbackStatus(dateIso, isToday), isToday };
   }
 
   // Columns per row = training-week length, so the grid mirrors the program's
