@@ -505,7 +505,8 @@
 
 .exercise-pr-badge {
   display: inline;
-  margin-right: 6px;
+  margin-left: 6px;
+  font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   color: var(--accent);

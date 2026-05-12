@@ -726,6 +726,7 @@ export default function SessionPage() {
                                     <div className="exercise-card__top-row">
                                       <div className="exercise-card__title-block">
                                         <h3 className="exercise-card__title">
+                                          {exerciseTemplate.exerciseName}
                                           {hasSeasonPR && (
                                             <span
                                               className="exercise-pr-badge"
@@ -735,7 +736,6 @@ export default function SessionPage() {
                                               PR
                                             </span>
                                           )}
-                                          {exerciseTemplate.exerciseName}
                                         </h3>
 
                                         <span className="exercise-card__status">
