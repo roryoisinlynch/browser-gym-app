@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import type { SessionInstanceView } from "../repositories/programRepository";
 import {
   ensureExerciseInstance,
+  getSeasonPRs,
   getSessionInstanceView,
   startSessionInstance,
   stopSessionInstance,
@@ -94,6 +95,7 @@ export default function SessionPage() {
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(
     {}
   );
+  const [seasonPRNames, setSeasonPRNames] = useState<Set<string>>(() => new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -126,6 +128,30 @@ export default function SessionPage() {
 
     loadSessionPage();
   }, [sessionInstanceId]);
+
+  useEffect(() => {
+    if (!sessionView) {
+      return;
+    }
+
+    let cancelled = false;
+    async function loadSeasonPRs() {
+      try {
+        const prs = await getSeasonPRs(sessionView!.seasonInstance.id);
+        if (cancelled) return;
+        setSeasonPRNames(
+          new Set(prs.map((pr) => pr.exerciseName.trim().toLowerCase()))
+        );
+      } catch (error) {
+        console.error("Failed to load season PRs:", error);
+      }
+    }
+
+    loadSeasonPRs();
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionView]);
 
   const sessionWorkingSetProgress = useMemo(() => {
     if (!sessionView) {
@@ -172,6 +198,18 @@ export default function SessionPage() {
       percentage,
     };
   }, [sessionView]);
+
+  const hasAnyPRBadge = useMemo(() => {
+    if (!sessionView || seasonPRNames.size === 0) {
+      return false;
+    }
+
+    return sessionView.muscleGroups.some((group) =>
+      group.exercises.some((exercise) =>
+        seasonPRNames.has(exercise.exerciseTemplate.exerciseName.trim().toLowerCase())
+      )
+    );
+  }, [sessionView, seasonPRNames]);
 
   const sortedMuscleGroups = useMemo(() => {
     if (!sessionView) {
@@ -632,6 +670,9 @@ export default function SessionPage() {
                             ({ sessionInstanceExerciseId, exerciseTemplate, movementType, exerciseInstance, sets, workingSetCount, warmupSetCount }) => {
                               const tone = groupToneMap.get(movementType.name) ?? PALETTE[0];
                               const isBodyweight = exerciseTemplate.weightMode === "bodyweight";
+                              const hasSeasonPR = seasonPRNames.has(
+                                exerciseTemplate.exerciseName.trim().toLowerCase()
+                              );
 
                               // Target e1RM for intensity comparison
                               const targetE1RM = isBodyweight
@@ -703,12 +744,24 @@ export default function SessionPage() {
                                         </span>
                                       </div>
 
-                                      <span
-                                        className="exercise-chip exercise-chip--tone"
-                                        style={getMovementToneStyle(tone)}
-                                      >
-                                        {movementType.name}
-                                      </span>
+                                      <div className="exercise-card__badges">
+                                        {hasSeasonPR && (
+                                          <span
+                                            className="exercise-pr-badge"
+                                            title="All-time PR set this season"
+                                            aria-label="All-time PR set this season"
+                                          >
+                                            PR
+                                          </span>
+                                        )}
+
+                                        <span
+                                          className="exercise-chip exercise-chip--tone"
+                                          style={getMovementToneStyle(tone)}
+                                        >
+                                          {movementType.name}
+                                        </span>
+                                      </div>
                                     </div>
                                   </button>
                                 </li>
@@ -725,6 +778,13 @@ export default function SessionPage() {
           )}
 
         </section>
+
+        {hasAnyPRBadge && (
+          <aside className="session-pr-legend" aria-label="Badge key">
+            <span className="exercise-pr-badge" aria-hidden="true">PR</span>
+            <span>All-time PR set this season</span>
+          </aside>
+        )}
 
         {sessionFinished && (
           <footer className="session-footer session-footer--summary">
