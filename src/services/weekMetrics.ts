@@ -102,16 +102,22 @@ export function computeWeekMetrics(
   }
 
   // Consistency: blended score of completion rate × timing rate.
-  //   completionRate = completed sessions / scheduled sessions (capped at 1)
+  //   completionRate = genuinely-completed sessions / scheduled sessions
+  //                    (capped at 1; skipped sessions DO NOT count as completed
+  //                    here, so a skipped session tanks consistency just like
+  //                    it tanks volume and intensity)
   //   timingRate     = expected calendar length / actual calendar length (capped at 1)
   // Both must be good for a high score; each independently penalises skips or delays.
   const expectedLength = weekTemplateItems.length; // calendar days the week was designed to span
   const scheduledSessionCount = weekTemplateItems.filter((i) => i.type === "session").length;
-  const skippedSessions = Math.max(0, scheduledSessionCount - completedViews.length);
+  const genuinelyCompletedCount = completedViews.filter(
+    (sv) => sv.sessionInstance.status === "completed"
+  ).length;
+  const skippedSessions = Math.max(0, scheduledSessionCount - genuinelyCompletedCount);
 
   let consistencyScore = 100;
   if (scheduledSessionCount > 0) {
-    const completionRate = Math.min(1, completedViews.length / scheduledSessionCount);
+    const completionRate = Math.min(1, genuinelyCompletedCount / scheduledSessionCount);
     let timingRate = 1;
     if (weekInstance.startedAt && weekInstance.completedAt && expectedLength > 0) {
       const startMs = new Date(weekInstance.startedAt).getTime();
