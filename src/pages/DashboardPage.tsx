@@ -67,7 +67,7 @@ interface SeasonTimelineData {
   sessionsExpected: number;
 }
 
-type RecentDayStatus = "green" | "skipped" | "grey" | "rest-past" | "rest-behind";
+type RecentDayStatus = "green" | "skipped" | "green-skipped" | "grey" | "rest-past" | "rest-behind";
 
 interface RecentDayCell {
   dateIso: string;
@@ -439,10 +439,15 @@ async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | 
 
   function buildCell(dateMs: number, isToday: boolean): RecentDayCell {
     const dateIso = localDateIso(new Date(dateMs));
-    if (completedByDate.has(dateIso)) {
+    const hasCompleted = completedByDate.has(dateIso);
+    const hasSkipped = skippedByDate.has(dateIso);
+    if (hasCompleted && hasSkipped) {
+      return { dateIso, status: "green-skipped", isToday };
+    }
+    if (hasCompleted) {
       return { dateIso, status: "green", isToday };
     }
-    if (skippedByDate.has(dateIso)) {
+    if (hasSkipped) {
       return { dateIso, status: "skipped", isToday };
     }
 
@@ -1154,7 +1159,8 @@ export default function DashboardPage() {
                           const isPendingToday =
                             cell.isToday &&
                             cell.status !== "green" &&
-                            cell.status !== "skipped";
+                            cell.status !== "skipped" &&
+                            cell.status !== "green-skipped";
                           return (
                             <div key={ci} className="dashboard-timeline-recent__slot">
                               {isPendingToday ? (

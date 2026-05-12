@@ -492,10 +492,11 @@
 }
 
 /* Status colours — session squares */
-.dashboard-timeline__day--green   { background: #6bcb77; }
-.dashboard-timeline__day--skipped { background: #e63946; }
-.dashboard-timeline__day--overdue { background: #f4a261; }
-.dashboard-timeline__day--grey    { background: rgba(255, 255, 255, 0.18); }
+.dashboard-timeline__day--green         { background: #6bcb77; }
+.dashboard-timeline__day--skipped       { background: #e63946; }
+.dashboard-timeline__day--green-skipped { background: linear-gradient(135deg, #6bcb77 50%, #e63946 50%); }
+.dashboard-timeline__day--overdue       { background: #f4a261; }
+.dashboard-timeline__day--grey          { background: rgba(255, 255, 255, 0.18); }
 
 /* Today accent ring */
 .dashboard-timeline__day--today {
