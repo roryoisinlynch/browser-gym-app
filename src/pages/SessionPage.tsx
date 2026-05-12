@@ -726,6 +726,15 @@ export default function SessionPage() {
                                     <div className="exercise-card__top-row">
                                       <div className="exercise-card__title-block">
                                         <h3 className="exercise-card__title">
+                                          {hasSeasonPR && (
+                                            <span
+                                              className="exercise-pr-badge"
+                                              title="All-time PR set this season"
+                                              aria-label="All-time PR set this season"
+                                            >
+                                              PR
+                                            </span>
+                                          )}
                                           {exerciseTemplate.exerciseName}
                                         </h3>
 
@@ -744,24 +753,12 @@ export default function SessionPage() {
                                         </span>
                                       </div>
 
-                                      <div className="exercise-card__badges">
-                                        {hasSeasonPR && (
-                                          <span
-                                            className="exercise-pr-badge"
-                                            title="All-time PR set this season"
-                                            aria-label="All-time PR set this season"
-                                          >
-                                            PR
-                                          </span>
-                                        )}
-
-                                        <span
-                                          className="exercise-chip exercise-chip--tone"
-                                          style={getMovementToneStyle(tone)}
-                                        >
-                                          {movementType.name}
-                                        </span>
-                                      </div>
+                                      <span
+                                        className="exercise-chip exercise-chip--tone"
+                                        style={getMovementToneStyle(tone)}
+                                      >
+                                        {movementType.name}
+                                      </span>
                                     </div>
                                   </button>
                                 </li>
