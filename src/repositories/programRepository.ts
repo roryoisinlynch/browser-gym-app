@@ -1140,14 +1140,20 @@ export async function getExerciseSessionHistory(
 
 // An exercise is "dormant" when it hasn't been attempted in this many years.
 // Dormant exercises default to AMRAP because old prescriptions may no longer
-// reflect the user's current capacity.
+// reflect the user's current capacity. The same threshold also excludes stale
+// seasons from the recent-max baseline so an old PR can't sneak back in when
+// the user has very sparse history for an exercise.
 const DORMANT_GAP_YEARS = 2;
+
+function dormantCutoffDate(): string {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - DORMANT_GAP_YEARS);
+  return d.toISOString().slice(0, 10);
+}
 
 export function isDormantSince(lastAttemptedDate: string | null): boolean {
   if (lastAttemptedDate == null) return false;
-  const cutoff = new Date();
-  cutoff.setFullYear(cutoff.getFullYear() - DORMANT_GAP_YEARS);
-  return lastAttemptedDate < cutoff.toISOString().slice(0, 10);
+  return lastAttemptedDate < dormantCutoffDate();
 }
 
 /**
@@ -1248,8 +1254,14 @@ export async function getEffectiveE1RM(
     }
   }
 
+  // Filter out seasons whose most-recent activity is older than the dormant
+  // threshold before taking the top 3. Without this, a single very old season
+  // can dominate the recent-max baseline when the user has fewer than 3 total
+  // seasons containing this exercise.
+  const cutoff = dormantCutoffDate();
   const recentSeasonKeys = new Set(
     [...seasonBuckets.entries()]
+      .filter(([, b]) => b.sortDate >= cutoff)
       .sort((a, b) => b[1].sortDate.localeCompare(a[1].sortDate))
       .slice(0, 3)
       .map(([key]) => key)
@@ -1556,9 +1568,14 @@ export async function getExerciseInstanceView(
     mergeIntoBucket(resolveExerciseSeasonKey(null, s.date), s.date, e1rm, s.reps);
   }
 
-  // Sort buckets by most-recent activity (newest first) and take the top 3.
+  // Filter out seasons whose most-recent activity is older than the dormant
+  // threshold, then sort by recency and take the top 3. The dormancy filter
+  // prevents a single very old season from dominating the recent-max baseline
+  // when the user has only sparse history for this exercise.
+  const recentCutoff = dormantCutoffDate();
   const recentSeasonKeys = new Set(
     [...seasonBuckets.entries()]
+      .filter(([, b]) => b.sortDate >= recentCutoff)
       .sort((a, b) => b[1].sortDate.localeCompare(a[1].sortDate))
       .slice(0, 3)
       .map(([key]) => key)
