@@ -493,7 +493,7 @@
 
 /* Status colours — session squares */
 .dashboard-timeline__day--green   { background: #6bcb77; }
-.dashboard-timeline__day--skipped { background: #f87171; }
+.dashboard-timeline__day--skipped { background: #e63946; }
 .dashboard-timeline__day--overdue { background: #f4a261; }
 .dashboard-timeline__day--grey    { background: rgba(255, 255, 255, 0.18); }
 
@@ -528,7 +528,7 @@
 }
 
 .dashboard-timeline__legend-item--green   { background: #6bcb77; }
-.dashboard-timeline__legend-item--skipped { background: #f87171; }
+.dashboard-timeline__legend-item--skipped { background: #e63946; }
 .dashboard-timeline__legend-item--overdue { background: #f4a261; }
 .dashboard-timeline__legend-item--grey    { background: rgba(255, 255, 255, 0.18); }
 

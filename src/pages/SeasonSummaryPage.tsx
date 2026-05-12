@@ -548,7 +548,7 @@ export default function SeasonSummaryPage() {
         {seasonDaySquares.length > 0 && (() => {
           const countItems = [
             { label: "Done",      color: "#6bcb77", n: seasonDaySquares.filter(d => d.status === "green").length },
-            { label: "Skipped",   color: "#f87171", n: seasonDaySquares.filter(d => d.status === "skipped").length },
+            { label: "Skipped",   color: "#e63946", n: seasonDaySquares.filter(d => d.status === "skipped").length },
             { label: "Missed",    color: "#f4a261", n: seasonDaySquares.filter(d => d.status === "overdue").length },
             { label: "Upcoming",  color: null,      n: seasonDaySquares.filter(d => d.status === "grey").length },
             { label: "Rest",      color: null,      n: seasonDaySquares.filter(d => d.type === "rest").length },
