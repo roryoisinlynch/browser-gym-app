@@ -1453,7 +1453,14 @@ export default function DashboardPage() {
   }
 
   function renderAchievements() {
-    if (!achievements) return null;
+    if (achievements === null) {
+      return (
+        <section className="dashboard-section">
+          <h2 className="dashboard-section-title">Achievements</h2>
+          <div className="dashboard-spinner" />
+        </section>
+      );
+    }
     const { goldSessions, perfectWeeks, aSeasons } = achievements;
     if (goldSessions.length === 0 && perfectWeeks.length === 0 && aSeasons.length === 0) {
       return null;
