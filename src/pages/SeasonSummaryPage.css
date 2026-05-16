@@ -435,13 +435,15 @@
   height: 8px;
   border-radius: 999px;
   /* Two stacked gradients: the colour ramp underneath, and a dark mask above
-     that's transparent only between the row's per-question IQR. Each IQR
-     boundary fades over ±--iqr-fade (set per-row to a fraction of the IQR's
-     own width), so wider IQRs get softer transitions and narrower IQRs get
-     tighter ones — the boundary "meshes" into the muted outside instead of
-     hard-cutting. Defaults (--iqr-low: 0%, --iqr-high: 100%, --iqr-fade: 0%)
-     yield a fully transparent mask, so rows with too few answers to compute
-     a meaningful IQR keep the full vivid bar. */
+     that's transparent only between the row's central band. The band starts
+     as the IQR (Q1..Q3) but is stretched outward if necessary to include the
+     mean (the pin), so a skew-driven mean never sits in the muted zone.
+     Each boundary fades over ±--iqr-fade (set per-row to a fraction of the
+     band's own width), so wider bands get softer transitions and narrower
+     bands get tighter ones — the boundary "meshes" into the muted outside
+     instead of hard-cutting. Defaults (--iqr-low: 0%, --iqr-high: 100%,
+     --iqr-fade: 0%) yield a fully transparent mask, so rows with too few
+     answers to compute a meaningful band keep the full vivid bar. */
   background:
     linear-gradient(
       90deg,

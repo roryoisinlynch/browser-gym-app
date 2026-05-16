@@ -643,10 +643,15 @@ export default function SeasonSummaryPage() {
                 const barStyle =
                   row.q1 != null && row.q3 != null
                     ? (() => {
-                        const lowPct = ((row.q1 - 1) / 4) * 100;
-                        const highPct = ((row.q3 - 1) / 4) * 100;
-                        // Fade radius is a fraction of the IQR width, so wider
-                        // IQRs get softer transitions and narrow ones stay tight.
+                        // Band starts as the IQR but stretches outward to
+                        // include the mean if it falls outside — keeps the
+                        // pin inside the vivid zone on skewed distributions.
+                        const bandLow = row.avg != null ? Math.min(row.q1, row.avg) : row.q1;
+                        const bandHigh = row.avg != null ? Math.max(row.q3, row.avg) : row.q3;
+                        const lowPct = ((bandLow - 1) / 4) * 100;
+                        const highPct = ((bandHigh - 1) / 4) * 100;
+                        // Fade radius scales with the band width: wider bands
+                        // get softer transitions, narrow ones stay tight.
                         const fadePct = (highPct - lowPct) * 0.2;
                         return {
                           "--iqr-low": `${lowPct}%`,
