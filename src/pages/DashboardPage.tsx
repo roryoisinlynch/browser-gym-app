@@ -138,13 +138,26 @@ function shortDate(iso: string): string {
   return `${d.getDate()} ${months[d.getMonth()]} '${String(d.getFullYear()).slice(2)}`;
 }
 
-function shortDateOrdinal(iso: string): string {
+// Picks the shortest unambiguous label for an achievement date given its
+// recency: weekday for the past week, ordinal day within this month, month
+// within this year, and bare year for anything older.
+function compactAchievementDate(iso: string): string {
   const d = toLocalMidnight(iso);
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const n = d.getDate();
-  const v = n % 100;
-  const suffix = ["th", "st", "nd", "rd"][(v - 20) % 10] || ["th", "st", "nd", "rd"][v] || "th";
-  return `${n}${suffix} ${months[d.getMonth()]} '${String(d.getFullYear()).slice(2)}`;
+  const today = toLocalMidnight(localDateIso());
+  const daysAgo = Math.round((today.getTime() - d.getTime()) / 86400000);
+  if (daysAgo >= 0 && daysAgo <= 6) {
+    return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()];
+  }
+  if (d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth()) {
+    const n = d.getDate();
+    const v = n % 100;
+    const suffix = ["th", "st", "nd", "rd"][(v - 20) % 10] || ["th", "st", "nd", "rd"][v] || "th";
+    return `${n}${suffix}`;
+  }
+  if (d.getFullYear() === today.getFullYear()) {
+    return ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()];
+  }
+  return String(d.getFullYear());
 }
 
 function computeUpNext(
@@ -1432,7 +1445,7 @@ export default function DashboardPage() {
         {dates.map((date, i) => (
           <div key={i} className="dashboard-achievement">
             <span className={iconClasses}>{icon}</span>
-            <span className="dashboard-achievement__date">{shortDateOrdinal(date)}</span>
+            <span className="dashboard-achievement__date">{compactAchievementDate(date)}</span>
           </div>
         ))}
       </div>

@@ -809,7 +809,7 @@
 .dashboard-achievement-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 14px;
+  gap: 8px 10px;
   align-items: flex-start;
 }
 
@@ -817,40 +817,42 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
 }
 
 .dashboard-achievement--count {
   flex-direction: row;
   align-items: baseline;
-  gap: 6px;
+  gap: 4px;
 }
 
 .dashboard-achievement__icon {
-  font-size: 36px;
+  font-size: 26px;
   line-height: 1;
 }
 
 .dashboard-achievement__icon--grade {
-  font-size: 44px;
+  font-size: 32px;
   font-weight: 800;
   letter-spacing: -0.02em;
   color: #6bcb77;
 }
 
 .dashboard-achievement__count {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--text-strong);
   line-height: 1;
 }
 
 .dashboard-achievement__date {
-  font-size: 0.7rem;
+  font-size: 0.62rem;
   font-weight: 600;
+  letter-spacing: 0;
   color: var(--text-muted);
   white-space: nowrap;
+  line-height: 1;
 }
 
 /* ── PR Spotlight ── */
