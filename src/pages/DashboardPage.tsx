@@ -1548,7 +1548,6 @@ export default function DashboardPage() {
               aria-hidden="true"
             >
               <span className="dashboard-achievement__slot" />
-              <span className="dashboard-achievement__date">&nbsp;</span>
             </div>
           ))}
         </div>

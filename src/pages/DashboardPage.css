@@ -834,15 +834,15 @@
 }
 
 .dashboard-achievement__slot {
-  /* Outer dimensions match the icon's visual line-box so the placeholder cell
-     stays the same height as a real trophy cell — keeping the shelf border
-     perfectly level across the last row. The inner ::before is the visible
-     dot, sized small and centered. */
+  /* Spans the full icon + gap + date area of a real cell (26 + 6 + 10 = 42px),
+     so the placeholder cell keeps the same height as a trophy cell AND the
+     centered dot sits at the visual midpoint of where the icon-and-label
+     stack would be — not just the icon's line-box. */
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 22px;
-  height: 26px;
+  height: 42px;
 }
 
 .dashboard-achievement__slot::before {
@@ -851,10 +851,6 @@
   height: 8px;
   border-radius: 50%;
   background: rgba(168, 175, 191, 0.3);
-}
-
-.dashboard-achievement--placeholder {
-  /* Inherits the shelf line, just no icon or label. */
 }
 
 .dashboard-achievement__icon {
