@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type { ExerciseTemplate, MovementType, WeightMode } from "../domain/models";
 import {
+  attachExerciseTemplateToSessionInstance,
   deleteExerciseTemplateById,
   getAllExerciseTemplates,
   getAllMovementTypes,
@@ -33,6 +34,8 @@ export default function ConfigExercisePage() {
   const stmgId = searchParams.get("stmgId") ?? "";
   const muscleGroupId = searchParams.get("muscleGroupId") ?? "";
   const returnTo = searchParams.get("returnTo");
+  const addToSessionId = searchParams.get("addToSession");
+  const addToSimgId = searchParams.get("simgId");
 
   // Core form state
   const [exerciseName, setExerciseName] = useState("");
@@ -264,6 +267,17 @@ export default function ConfigExercisePage() {
       };
 
       await saveExerciseTemplate(template);
+
+      // Mid-session add: also drop a SessionInstanceExercise snapshot on the
+      // current session so the new exercise appears immediately, without
+      // touching other instances.
+      if (isNew && addToSessionId && addToSimgId) {
+        await attachExerciseTemplateToSessionInstance(
+          template.id,
+          addToSessionId,
+          addToSimgId
+        );
+      }
 
       if (returnTo) {
         navigate(returnTo);

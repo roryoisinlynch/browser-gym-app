@@ -585,7 +585,7 @@ export default function SessionPage() {
           ) : (
             <div className="muscle-group-list">
               {sortedMuscleGroups.map(
-                ({ sessionTemplateMuscleGroup, muscleGroup, exercises }) => {
+                ({ sessionTemplateMuscleGroup, muscleGroup, exercises, sourceSessionTemplateMuscleGroup }) => {
                   const workingSetsCompleted = exercises.reduce(
                     (sum, exercise) => sum + exercise.workingSetCount,
                     0
@@ -665,6 +665,7 @@ export default function SessionPage() {
                       </button>
 
                       {!isCollapsed && (
+                        <>
                         <ul className="exercise-list">
                           {exercises.map(
                             ({ sessionInstanceExerciseId, exerciseTemplate, movementType, exerciseInstance, sets, workingSetCount, warmupSetCount }) => {
@@ -766,6 +767,26 @@ export default function SessionPage() {
                             }
                           )}
                         </ul>
+                        {!sessionFinished && sourceSessionTemplateMuscleGroup && (
+                          <button
+                            type="button"
+                            className="muscle-group-card__add-exercise"
+                            onClick={() => {
+                              const returnTo = `/session/${sessionView.sessionInstance.id}`;
+                              const params = new URLSearchParams({
+                                stmgId: sourceSessionTemplateMuscleGroup.id,
+                                muscleGroupId: muscleGroup.id,
+                                addToSession: sessionView.sessionInstance.id,
+                                simgId: sessionTemplateMuscleGroup.id,
+                                returnTo,
+                              });
+                              navigate(`/config/exercises/new?${params.toString()}`);
+                            }}
+                          >
+                            + Add exercise
+                          </button>
+                        )}
+                        </>
                       )}
                     </section>
                   );

@@ -97,6 +97,14 @@ export interface SessionInstanceMuscleGroupView {
   sessionTemplateMuscleGroup: SessionTemplateMuscleGroup;
   muscleGroup: MuscleGroup;
   exercises: SessionInstanceExerciseView[];
+  /**
+   * The live SessionTemplateMuscleGroup this section was snapshotted from,
+   * when it still exists in the template. Null when the section was removed
+   * from the template after the season started. UI flows that mutate the
+   * template (e.g. mid-session add-exercise) need this id; consumers that
+   * only render the snapshot should keep using sessionTemplateMuscleGroup.
+   */
+  sourceSessionTemplateMuscleGroup: SessionTemplateMuscleGroup | null;
 }
 
 export interface SessionInstanceView {
@@ -1797,6 +1805,15 @@ export async function getSessionInstanceView(
   const allMovementTypes = await getAll<MovementType>(STORE_NAMES.movementTypes);
   const movementTypeMap = new Map(allMovementTypes.map((m) => [m.id, m]));
 
+  const liveStmgs = await getAllByIndex<SessionTemplateMuscleGroup>(
+    STORE_NAMES.sessionTemplateMuscleGroups,
+    "bySessionTemplateId",
+    sessionInstance.sessionTemplateId
+  );
+  const liveStmgByMuscleGroupId = new Map(
+    liveStmgs.map((stmg) => [stmg.muscleGroupId, stmg])
+  );
+
   const exerciseInstances = await getExerciseInstancesForSessionInstance(
     sessionInstance.id
   );
@@ -1900,6 +1917,8 @@ export async function getSessionInstanceView(
       sessionTemplateMuscleGroup,
       muscleGroup,
       exercises: hydratedExercises,
+      sourceSessionTemplateMuscleGroup:
+        liveStmgByMuscleGroupId.get(simg.muscleGroupId) ?? null,
     });
   }
 
@@ -3273,4 +3292,55 @@ export async function saveSessionInstanceExercise(
   sie: SessionInstanceExercise
 ): Promise<void> {
   await putItem(STORE_NAMES.sessionInstanceExercises, sie);
+}
+
+/**
+ * Creates a SessionInstanceExercise snapshot on the given session instance
+ * from an existing ExerciseTemplate, without touching any other session
+ * instance. Used by the mid-session "add exercise" flow so the new exercise
+ * lands on the current session only — other instances keep the snapshots
+ * they were given at season start.
+ */
+export async function attachExerciseTemplateToSessionInstance(
+  exerciseTemplateId: string,
+  sessionInstanceId: string,
+  sessionInstanceMuscleGroupId: string
+): Promise<SessionInstanceExercise> {
+  const template = await getById<ExerciseTemplate>(
+    STORE_NAMES.exerciseTemplates,
+    exerciseTemplateId
+  );
+  if (!template) {
+    throw new Error(`Exercise template not found: ${exerciseTemplateId}`);
+  }
+
+  const simg = await getById<SessionInstanceMuscleGroup>(
+    STORE_NAMES.sessionInstanceMuscleGroups,
+    sessionInstanceMuscleGroupId
+  );
+  if (!simg) {
+    throw new Error(
+      `Session instance muscle group not found: ${sessionInstanceMuscleGroupId}`
+    );
+  }
+  if (simg.sessionInstanceId !== sessionInstanceId) {
+    throw new Error(
+      "Session instance muscle group does not belong to the given session instance"
+    );
+  }
+
+  const sie: SessionInstanceExercise = {
+    id: `sie-${sessionInstanceMuscleGroupId}-${template.id}`,
+    sessionInstanceMuscleGroupId,
+    sessionInstanceId,
+    sourceExerciseTemplateId: template.id,
+    movementTypeId: template.movementTypeId,
+    exerciseName: template.exerciseName,
+    weightMode: template.weightMode,
+    prescribedWeight: template.prescribedWeight ?? null,
+    weightIncrement: template.weightIncrement,
+    availableWeights: template.availableWeights,
+  };
+  await putItem(STORE_NAMES.sessionInstanceExercises, sie);
+  return sie;
 }
