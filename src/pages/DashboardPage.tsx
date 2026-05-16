@@ -1371,17 +1371,20 @@ export default function DashboardPage() {
     if (prEvents === null) {
       return (
         <section className="dashboard-section">
-          <h2 className="dashboard-section-title">Personal records</h2>
+          <h2 className="dashboard-section-title">Recent personal records</h2>
           <div className="dashboard-spinner" />
         </section>
       );
     }
     if (prEvents.length === 0) return null;
+    const today = localDateIso();
+    const recentPRs = prEvents.filter((pr) => daysBetween(pr.date, today) <= 30);
+    const displayedPRs = recentPRs.length >= 5 ? recentPRs : prEvents.slice(0, 5);
     return (
       <section className="dashboard-section">
-        <h2 className="dashboard-section-title">Personal records</h2>
+        <h2 className="dashboard-section-title">Recent personal records</h2>
         <ul className="dashboard-pr-list">
-          {prEvents.slice(0, 15).map((pr, i) => {
+          {displayedPRs.map((pr, i) => {
             const daysAgo = daysBetween(pr.date, localDateIso());
             const agoLabel = daysAgo === 0 ? "Today" : daysAgo === 1 ? "Yesterday" : `${daysAgo} days ago`;
             return (
