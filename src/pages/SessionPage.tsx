@@ -99,6 +99,7 @@ export default function SessionPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isAddExerciseOpen, setIsAddExerciseOpen] = useState(false);
 
   useEffect(() => {
     async function loadSessionPage() {
@@ -585,7 +586,7 @@ export default function SessionPage() {
           ) : (
             <div className="muscle-group-list">
               {sortedMuscleGroups.map(
-                ({ sessionTemplateMuscleGroup, muscleGroup, exercises, sourceSessionTemplateMuscleGroup }) => {
+                ({ sessionTemplateMuscleGroup, muscleGroup, exercises }) => {
                   const workingSetsCompleted = exercises.reduce(
                     (sum, exercise) => sum + exercise.workingSetCount,
                     0
@@ -665,7 +666,6 @@ export default function SessionPage() {
                       </button>
 
                       {!isCollapsed && (
-                        <>
                         <ul className="exercise-list">
                           {exercises.map(
                             ({ sessionInstanceExerciseId, exerciseTemplate, movementType, exerciseInstance, sets, workingSetCount, warmupSetCount }) => {
@@ -767,26 +767,6 @@ export default function SessionPage() {
                             }
                           )}
                         </ul>
-                        {!sessionFinished && sourceSessionTemplateMuscleGroup && (
-                          <button
-                            type="button"
-                            className="muscle-group-card__add-exercise"
-                            onClick={() => {
-                              const returnTo = `/session/${sessionView.sessionInstance.id}`;
-                              const params = new URLSearchParams({
-                                stmgId: sourceSessionTemplateMuscleGroup.id,
-                                muscleGroupId: muscleGroup.id,
-                                addToSession: sessionView.sessionInstance.id,
-                                simgId: sessionTemplateMuscleGroup.id,
-                                returnTo,
-                              });
-                              navigate(`/config/exercises/new?${params.toString()}`);
-                            }}
-                          >
-                            + Add exercise
-                          </button>
-                        )}
-                        </>
                       )}
                     </section>
                   );
@@ -796,6 +776,58 @@ export default function SessionPage() {
           )}
 
         </section>
+
+        {!sessionFinished && sortedMuscleGroups.some((g) => g.sourceSessionTemplateMuscleGroup) && (
+          <section className="session-add-exercise" aria-label="Add exercise">
+            {!isAddExerciseOpen ? (
+              <button
+                type="button"
+                className="session-add-exercise__trigger"
+                onClick={() => setIsAddExerciseOpen(true)}
+              >
+                + Add exercise
+              </button>
+            ) : (
+              <div className="session-add-exercise__picker">
+                <p className="session-add-exercise__prompt">Add to which muscle group?</p>
+                <div className="session-add-exercise__options">
+                  {sortedMuscleGroups
+                    .filter((group) => group.sourceSessionTemplateMuscleGroup)
+                    .map((group) => {
+                      const stmg = group.sourceSessionTemplateMuscleGroup!;
+                      return (
+                        <button
+                          key={group.sessionTemplateMuscleGroup.id}
+                          type="button"
+                          className="session-add-exercise__option"
+                          onClick={() => {
+                            const returnTo = `/session/${sessionView.sessionInstance.id}`;
+                            const params = new URLSearchParams({
+                              stmgId: stmg.id,
+                              muscleGroupId: group.muscleGroup.id,
+                              addToSession: sessionView.sessionInstance.id,
+                              simgId: group.sessionTemplateMuscleGroup.id,
+                              returnTo,
+                            });
+                            navigate(`/config/exercises/new?${params.toString()}`);
+                          }}
+                        >
+                          {group.muscleGroup.name}
+                        </button>
+                      );
+                    })}
+                </div>
+                <button
+                  type="button"
+                  className="session-add-exercise__cancel"
+                  onClick={() => setIsAddExerciseOpen(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+          </section>
+        )}
 
         {hasAnyPRBadge && (
           <aside className="session-pr-legend" aria-label="Badge key">
