@@ -329,7 +329,9 @@ export default function SeasonSummaryPage() {
                   totalDays,
                 };
               });
-              setHeuristicSummary(summary);
+              // Drop questions the user never answered in this window — an
+              // all-missing row carries no signal and just clutters the list.
+              setHeuristicSummary(summary.filter((row) => row.givenCount > 0));
             }
           }
         }
