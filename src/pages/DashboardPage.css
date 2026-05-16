@@ -800,17 +800,29 @@
 .dashboard-recent-card__grade--grey  { color: #8a8d92; }
 
 /* ── Achievements ── */
+/* The panel reads as a low-fidelity trophy shelf: an outer cabinet with
+   tiered planks, one per achievement category row. Each row has its
+   trophies stand on a thin warm-toned line (the plank) and a subtle
+   shadow below it (the plank's edge). */
 .dashboard-achievements {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
+  padding: 14px 12px 4px;
+  border-radius: 14px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel-bg);
 }
 
 .dashboard-achievement-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 10px;
-  align-items: flex-start;
+  gap: 8px 14px;
+  align-items: flex-end;
+  padding: 6px 6px 8px;
+  border-bottom: 2px solid rgba(212, 175, 100, 0.28);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.22);
+  margin-bottom: 4px;
 }
 
 .dashboard-achievement {
