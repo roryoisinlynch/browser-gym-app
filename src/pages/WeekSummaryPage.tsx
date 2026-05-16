@@ -96,8 +96,6 @@ interface HeuristicSummaryRow {
   questionId: string;
   label: string;
   avg: number | null;
-  low: number;
-  high: number;
   givenCount: number;
   missingDays: number;
   totalDays: number;
@@ -323,13 +321,9 @@ export default function WeekSummaryPage() {
                 }
                 const givenCount = datesAnswered.size;
                 const missingDays = Math.max(0, totalDays - givenCount);
-                const low = (sum + 1 * missingDays) / totalDays;
-                const high = (sum + 5 * missingDays) / totalDays;
-                // Centre estimate matches the season page: assume missing days
-                // were neutral (3) so the pin sits in the middle of the
-                // [low, high] band. Collapses to the simple mean when there
-                // are no missing days.
-                const avg = givenCount > 0 ? (low + high) / 2 : null;
+                // Simple mean of answered values only — matches the season
+                // page and keeps the pin in the same distribution as Q1/Q3.
+                const avg = givenCount > 0 ? sum / givenCount : null;
                 const sortedValues = [...values].sort((a, b) => a - b);
                 const q1 = percentileOrNull(sortedValues, 0.25);
                 const q3 = percentileOrNull(sortedValues, 0.75);
@@ -337,8 +331,6 @@ export default function WeekSummaryPage() {
                   questionId: q.id,
                   label: q.label,
                   avg,
-                  low,
-                  high,
                   givenCount,
                   missingDays,
                   totalDays,

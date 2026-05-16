@@ -100,8 +100,6 @@ interface HeuristicSummaryRow {
   questionId: string;
   label: string;
   avg: number | null;
-  low: number;
-  high: number;
   givenCount: number;
   missingDays: number;
   totalDays: number;
@@ -317,13 +315,12 @@ export default function SeasonSummaryPage() {
                 }
                 const givenCount = datesAnswered.size;
                 const missingDays = Math.max(0, totalDays - givenCount);
-                const low = (sum + 1 * missingDays) / totalDays;
-                const high = (sum + 5 * missingDays) / totalDays;
-                // Centre estimate: assume missing days were neutral (3). This
-                // makes the pin sit in the middle of the [low, high] range so
-                // the uncertainty visually extends evenly in both directions.
-                // Collapses to the simple mean when no days are missing.
-                const avg = givenCount > 0 ? (low + high) / 2 : null;
+                // Simple mean of answered values only. Earlier this imputed a
+                // neutral 3 for missing days to anchor the (now removed)
+                // uncertainty band — but that pulled the pin toward 3 while
+                // Q1/Q3 below were computed from real answers only, so they'd
+                // read from different distributions on low-coverage rows.
+                const avg = givenCount > 0 ? sum / givenCount : null;
                 const sortedValues = [...values].sort((a, b) => a - b);
                 const q1 = percentileOrNull(sortedValues, 0.25);
                 const q3 = percentileOrNull(sortedValues, 0.75);
@@ -331,8 +328,6 @@ export default function SeasonSummaryPage() {
                   questionId: q.id,
                   label: q.label,
                   avg,
-                  low,
-                  high,
                   givenCount,
                   missingDays,
                   totalDays,
