@@ -98,6 +98,12 @@ interface RecentCard {
   link: string;
 }
 
+interface Achievements {
+  goldSessions: number;
+  perfectWeeks: number;
+  aSeasons: number;
+}
+
 // ─── Pure helpers ─────────────────────────────────────────────────────────────
 
 function localDateIso(d: Date = new Date()): string {
@@ -644,6 +650,95 @@ async function buildSeasonCard(season: SeasonInstance): Promise<RecentCard | nul
   }
 }
 
+async function loadAchievements(): Promise<Achievements> {
+  const [allSessions, allWeeks, allSeasons] = await Promise.all([
+    getAll<SessionInstance>(STORE_NAMES.sessionInstances),
+    getAll<WeekInstance>(STORE_NAMES.weekInstances),
+    getAll<SeasonInstance>(STORE_NAMES.seasonInstances),
+  ]);
+
+  // Build a session view for every settled session once. Both session-level
+  // scoring and the week metrics below feed off these views, so this keeps the
+  // scan from re-hitting IndexedDB three times per session.
+  const settledSessions = allSessions.filter(
+    (s) => s.status === "completed" || s.status === "skipped"
+  );
+  const sessionViews = new Map<string, SessionInstanceView>();
+  await Promise.all(
+    settledSessions.map(async (s) => {
+      const v = await getSessionInstanceView(s.id);
+      if (v) sessionViews.set(s.id, v);
+    })
+  );
+
+  let goldSessions = 0;
+  for (const s of allSessions) {
+    if (s.status !== "completed") continue;
+    const v = sessionViews.get(s.id);
+    if (!v) continue;
+    if (computeSessionMetrics(v).ragStatus === "green") goldSessions++;
+  }
+
+  // Pre-load week-template items once per unique template so each week's
+  // computeWeekMetrics call gets its inputs without a duplicate fetch.
+  const completedWeeks = allWeeks.filter((w) => w.status === "completed");
+  const uniqueWeekTemplateIds = [...new Set(completedWeeks.map((w) => w.weekTemplateId))];
+  const templateItemsByTemplateId = new Map<
+    string,
+    Awaited<ReturnType<typeof getWeekTemplateItemsForWeekTemplate>>
+  >();
+  await Promise.all(
+    uniqueWeekTemplateIds.map(async (id) => {
+      templateItemsByTemplateId.set(id, await getWeekTemplateItemsForWeekTemplate(id));
+    })
+  );
+
+  const sessionsByWeekId = new Map<string, SessionInstance[]>();
+  for (const s of settledSessions) {
+    const arr = sessionsByWeekId.get(s.weekInstanceId) ?? [];
+    arr.push(s);
+    sessionsByWeekId.set(s.weekInstanceId, arr);
+  }
+
+  const weekMetricsByWeekId = new Map<string, ReturnType<typeof computeWeekMetrics>>();
+  for (const w of completedWeeks) {
+    const views = (sessionsByWeekId.get(w.id) ?? [])
+      .map((s) => sessionViews.get(s.id))
+      .filter((v): v is SessionInstanceView => v != null);
+    const items = templateItemsByTemplateId.get(w.weekTemplateId) ?? [];
+    weekMetricsByWeekId.set(w.id, computeWeekMetrics(w, items, views));
+  }
+
+  // Star-eyed weeks: emojiRating 1 (score ≥ 100). Exclude force-completed weeks
+  // since the recent-week card already paints them grey rather than green.
+  let perfectWeeks = 0;
+  for (const w of completedWeeks) {
+    if (w.endedEarly) continue;
+    const wm = weekMetricsByWeekId.get(w.id);
+    if (wm && wm.emojiRating === 1) perfectWeeks++;
+  }
+
+  const weeksBySeasonId = new Map<string, WeekInstance[]>();
+  for (const w of completedWeeks) {
+    const arr = weeksBySeasonId.get(w.seasonInstanceId) ?? [];
+    arr.push(w);
+    weeksBySeasonId.set(w.seasonInstanceId, arr);
+  }
+
+  let aSeasons = 0;
+  for (const season of allSeasons) {
+    if (season.status !== "completed") continue;
+    const seasonWeekMetrics = (weeksBySeasonId.get(season.id) ?? [])
+      .map((w) => weekMetricsByWeekId.get(w.id))
+      .filter((m): m is ReturnType<typeof computeWeekMetrics> => m != null);
+    const consistencyOverride = await computeSeasonConsistencyForSeason(season);
+    const sm = computeSeasonMetrics(season, seasonWeekMetrics, consistencyOverride);
+    if (sm.grade === "A") aSeasons++;
+  }
+
+  return { goldSessions, perfectWeeks, aSeasons };
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const LOADING_CARD = Symbol("loading");
@@ -665,6 +760,7 @@ export default function DashboardPage() {
   const [recentTooltipOpen, setRecentTooltipOpen] = useState(false);
   const [lastBackupAt, setLastBackupAt] = useState<string | null | "loading">("loading");
   const [hasSettledWeek, setHasSettledWeek] = useState<boolean | "loading">("loading");
+  const [achievements, setAchievements] = useState<Achievements | null>(null);
   const [showHeuristicsOptIn, setShowHeuristicsOptIn] = useState(false);
   const [heuristicsOptInDeferred, setHeuristicsOptInDeferred] = useState(false);
   const [pendingHeuristicDays, setPendingHeuristicDays] = useState(0);
@@ -738,6 +834,10 @@ export default function DashboardPage() {
       setRecentSession(sessionCard);
       setRecentWeek(weekCard);
       setRecentSeason(seasonCard);
+
+      const a = await loadAchievements();
+      if (cancelled.current) return;
+      setAchievements(a);
     }
 
     loadBase();
@@ -1289,6 +1389,36 @@ export default function DashboardPage() {
   const hasAnyRecent =
     recentSession !== null || recentWeek !== null || recentSeason !== null;
 
+  // ─── Achievements ────────────────────────────────────────────────────────
+
+  function renderAchievements() {
+    if (!achievements) return null;
+    const { goldSessions, perfectWeeks, aSeasons } = achievements;
+    if (goldSessions === 0 && perfectWeeks === 0 && aSeasons === 0) return null;
+    return (
+      <section className="dashboard-section">
+        <h2 className="dashboard-section-title">Achievements</h2>
+        <div className="dashboard-achievements">
+          <div className="dashboard-achievement">
+            <span className="dashboard-achievement__icon">🥇</span>
+            <span className="dashboard-achievement__count">{goldSessions}</span>
+            <span className="dashboard-achievement__label">Sessions</span>
+          </div>
+          <div className="dashboard-achievement">
+            <span className="dashboard-achievement__icon">🤩</span>
+            <span className="dashboard-achievement__count">{perfectWeeks}</span>
+            <span className="dashboard-achievement__label">Weeks</span>
+          </div>
+          <div className="dashboard-achievement">
+            <span className="dashboard-achievement__icon dashboard-achievement__icon--grade">A</span>
+            <span className="dashboard-achievement__count">{aSeasons}</span>
+            <span className="dashboard-achievement__label">Seasons</span>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   // ─── PR Spotlight ─────────────────────────────────────────────────────────
 
   const spotlight = prEvents?.[0] ?? null;
@@ -1502,6 +1632,8 @@ export default function DashboardPage() {
             </div>
           </section>
         )}
+
+        {renderAchievements()}
 
         {renderBackupNudge()}
 

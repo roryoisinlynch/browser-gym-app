@@ -799,6 +799,47 @@
 .dashboard-recent-card__grade--red   { color: #e76f51; }
 .dashboard-recent-card__grade--grey  { color: #8a8d92; }
 
+/* ── Achievements ── */
+.dashboard-achievements {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.dashboard-achievement {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  min-width: 0;
+}
+
+.dashboard-achievement__icon {
+  font-size: 40px;
+  line-height: 1;
+}
+
+.dashboard-achievement__icon--grade {
+  font-size: 56px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #6bcb77;
+}
+
+.dashboard-achievement__count {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  line-height: 1;
+}
+
+.dashboard-achievement__label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
 /* ── PR Spotlight ── */
 .dashboard-pr-spotlight {
   padding: 16px;
