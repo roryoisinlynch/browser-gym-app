@@ -22,10 +22,6 @@ import {
 import { getAll, getById, STORE_NAMES } from "../db/db";
 import {
   isHeuristicsEnabled,
-  getHeuristicsPromptResponse,
-  setHeuristicsPromptResponse,
-  setHeuristicsEnabled,
-  seedDefaultQuestions,
   getPendingHeuristicDates,
 } from "../repositories/heuristicsRepository";
 import ExerciseInsights from "../components/ExerciseInsights";
@@ -791,8 +787,6 @@ export default function DashboardPage() {
   const [achievements, setAchievements] = useState<Achievements | null>(null);
   const achievementsShelfRef = useRef<HTMLDivElement | null>(null);
   const [achievementColumns, setAchievementColumns] = useState(0);
-  const [showHeuristicsOptIn, setShowHeuristicsOptIn] = useState(false);
-  const [heuristicsOptInDeferred, setHeuristicsOptInDeferred] = useState(false);
   const [pendingHeuristicDays, setPendingHeuristicDays] = useState(0);
   const recentTooltipRef = useRef<HTMLDivElement | null>(null);
 
@@ -886,112 +880,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadHeuristics() {
-      const [enabled, promptResponse] = await Promise.all([
-        isHeuristicsEnabled(),
-        getHeuristicsPromptResponse(),
-      ]);
-
-      if (enabled) {
-        const pending = await getPendingHeuristicDates(3);
-        setPendingHeuristicDays(pending.length);
-      } else if (!promptResponse) {
-        // Show opt-in only if user hasn't responded AND has completed >= 2 sessions
-        const sessions = await getAll<SessionInstance>(STORE_NAMES.sessionInstances);
-        const completedCount = sessions.filter((s) => s.status === "completed").length;
-        if (completedCount >= 2) {
-          setShowHeuristicsOptIn(true);
-        }
-      }
-    }
-    loadHeuristics();
-  }, []);
-
-  // ─── Heuristics opt-in ────────────────────────────────────────────────────
-
-  async function handleOptInChoice(enable: boolean) {
-    if (enable) {
-      await setHeuristicsPromptResponse("yes");
-      await setHeuristicsEnabled(true);
-      await seedDefaultQuestions();
+      if (!(await isHeuristicsEnabled())) return;
       const pending = await getPendingHeuristicDates(3);
       setPendingHeuristicDays(pending.length);
     }
-    setHeuristicsOptInDeferred(true);
-  }
-
-  async function handleOptInDismiss() {
-    if (!heuristicsOptInDeferred) return;
-    // Only persist the prompt response on final dismiss — if they enabled,
-    // the response was already saved in handleOptInChoice.
-    const alreadyResponded = await getHeuristicsPromptResponse();
-    if (!alreadyResponded) await setHeuristicsPromptResponse("later");
-    setShowHeuristicsOptIn(false);
-  }
-
-  function renderHeuristicsOptIn() {
-    if (!showHeuristicsOptIn) return null;
-
-    if (heuristicsOptInDeferred) {
-      return (
-        <div className="dashboard-heuristics-optin">
-          <p className="dashboard-heuristics-optin__desc">
-            OK! You can change your mind at any time by toggling heuristics in the Settings menu.
-          </p>
-          <div className="dashboard-heuristics-optin__actions">
-            <button
-              type="button"
-              className="dashboard-heuristics-optin__btn"
-              onClick={handleOptInDismiss}
-            >
-              OK
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="dashboard-heuristics-optin">
-        <p className="dashboard-heuristics-optin__heading">Enable heuristics tracking?</p>
-        <p className="dashboard-heuristics-optin__desc">
-          Heuristics don't affect your training program or any other feature. You can toggle this
-          any time in Settings.
-        </p>
-        <details className="dashboard-heuristics-optin__details">
-          <summary className="dashboard-heuristics-optin__summary">What are heuristics?</summary>
-          <p className="dashboard-heuristics-optin__details-text">
-            A way to track subjective, anecdotal scores on training-adjacent variables — things like sleep
-            quality, nutrition, hydration, stress, and anything else you choose. You define your own questions
-            and rate them on a simple 1–5 scale whenever it suits you.
-          </p>
-        </details>
-        <details className="dashboard-heuristics-optin__details">
-          <summary className="dashboard-heuristics-optin__summary">What's the benefit?</summary>
-          <p className="dashboard-heuristics-optin__details-text">
-            At the end of a training block, you can review your heuristics alongside your training analytics
-            to add another dimension to your results. See how factors like sleep consistency or creatine intake
-            may have contributed to the strength gains you did (or didn't) make over the period.
-          </p>
-        </details>
-        <div className="dashboard-heuristics-optin__actions">
-          <button
-            type="button"
-            className="dashboard-heuristics-optin__btn"
-            onClick={() => handleOptInChoice(true)}
-          >
-            Try it now
-          </button>
-          <button
-            type="button"
-            className="dashboard-heuristics-optin__btn"
-            onClick={() => handleOptInChoice(false)}
-          >
-            Decide later
-          </button>
-        </div>
-      </div>
-    );
-  }
+    loadHeuristics();
+  }, []);
 
   const showHeuristicsUpNext = pendingHeuristicDays > 0 &&
     (upNext.type === "rest_day" || upNext.type === "upcoming" || upNext.type === "week_complete");
@@ -1741,8 +1635,6 @@ export default function DashboardPage() {
         <section className="dashboard-section">
           {renderUpNext()}
         </section>
-
-        {renderHeuristicsOptIn()}
 
         {renderTimeline()}
 
