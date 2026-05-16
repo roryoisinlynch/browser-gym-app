@@ -15,6 +15,11 @@ import {
 } from "../repositories/programRepository";
 import type { SeasonInstance } from "../domain/models";
 import type { WeekTemplateItem, WeekInstanceItem } from "../domain/models";
+import {
+  isHeuristicsEnabled,
+  getQuestions,
+  getEntriesForDateRange,
+} from "../repositories/heuristicsRepository";
 import { computeSessionMetrics } from "../services/sessionMetrics";
 import { computeWeekMetrics, emojiForRating } from "../services/weekMetrics";
 import { type MovementTone, PALETTE, buildGroupToneMap } from "../services/movementTones";
@@ -81,6 +86,23 @@ function toLocalMidnight(iso: string): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
+function dayDiffInclusive(startIso: string, endIso: string): number {
+  const s = new Date(startIso + "T00:00:00").getTime();
+  const e = new Date(endIso + "T00:00:00").getTime();
+  return Math.floor((e - s) / 86_400_000) + 1;
+}
+
+interface HeuristicSummaryRow {
+  questionId: string;
+  label: string;
+  avg: number | null;
+  low: number;
+  high: number;
+  givenCount: number;
+  missingDays: number;
+  totalDays: number;
+}
+
 export default function WeekSummaryPage() {
   const { weekInstanceId } = useParams<{ weekInstanceId: string }>();
   const [weekName, setWeekName] = useState<string | null>(null);
@@ -100,6 +122,7 @@ export default function WeekSummaryPage() {
   const [weekStartIso, setWeekStartIso] = useState<string | null>(null);
   const [extraRestDays, setExtraRestDays] = useState<number>(0);
   const [sessionInfoMap, setSessionInfoMap] = useState<Map<string, { date: string; status: string; completedAt: string | null }>>(new Map());
+  const [heuristicSummary, setHeuristicSummary] = useState<HeuristicSummaryRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadProgress, setLoadProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -299,6 +322,65 @@ export default function WeekSummaryPage() {
           const endMs = toLocalMidnight(endBoundaryIso).getTime();
           const dayDiff = Math.max(0, Math.round((endMs - startMs) / 86_400_000));
           setExtraRestDays(Math.max(0, dayDiff - templateItems.length));
+        }
+
+        // ── Heuristics summary ───────────────────────────────────────────
+        // Mirrors the SeasonSummaryPage logic, just scoped to this week's
+        // [actualStart, endBoundary] range. End is capped at today so the
+        // pin/bar don't extend into days the user couldn't have logged yet
+        // (in-progress weeks whose endBoundary defaults to today already
+        // respect this; the cap is defensive for any future boundary case).
+        if (actualStartIso && (await isHeuristicsEnabled())) {
+          const questions = await getQuestions();
+          if (questions.length > 0) {
+            const todayIso = localDateIso();
+            const startIso = localDateIso(toLocalMidnight(actualStartIso));
+            const rawEndIso = localDateIso(toLocalMidnight(endBoundaryIso));
+            const endIso = rawEndIso > todayIso ? todayIso : rawEndIso;
+            const totalDays = Math.max(0, dayDiffInclusive(startIso, endIso));
+
+            if (totalDays > 0) {
+              const entries = await getEntriesForDateRange(startIso, endIso);
+              const byQuestion = new Map<string, typeof entries>();
+              for (const e of entries) {
+                const list = byQuestion.get(e.questionId) ?? [];
+                list.push(e);
+                byQuestion.set(e.questionId, list);
+              }
+
+              const summary: HeuristicSummaryRow[] = questions.map((q) => {
+                const qEntries = byQuestion.get(q.id) ?? [];
+                const datesAnswered = new Set<string>();
+                let sum = 0;
+                for (const e of qEntries) {
+                  if (e.value != null && !datesAnswered.has(e.date)) {
+                    datesAnswered.add(e.date);
+                    sum += e.value;
+                  }
+                }
+                const givenCount = datesAnswered.size;
+                const missingDays = Math.max(0, totalDays - givenCount);
+                const low = (sum + 1 * missingDays) / totalDays;
+                const high = (sum + 5 * missingDays) / totalDays;
+                // Centre estimate matches the season page: assume missing days
+                // were neutral (3) so the pin sits in the middle of the
+                // [low, high] band. Collapses to the simple mean when there
+                // are no missing days.
+                const avg = givenCount > 0 ? (low + high) / 2 : null;
+                return {
+                  questionId: q.id,
+                  label: q.label,
+                  avg,
+                  low,
+                  high,
+                  givenCount,
+                  missingDays,
+                  totalDays,
+                };
+              });
+              setHeuristicSummary(summary);
+            }
+          }
         }
 
         const weekBreadcrumbItems: BreadcrumbWeek[] = await Promise.all(
@@ -563,6 +645,48 @@ export default function WeekSummaryPage() {
               </div>
             ))}
             </div>
+          </section>
+        )}
+
+        {/* ── Heuristics ── */}
+        {heuristicSummary.length > 0 && (
+          <section className="week-summary-section">
+            <h2 className="week-summary-section-title">Heuristics</h2>
+            <ul className="hs-list">
+              {heuristicSummary.map((row) => {
+                const lowPct = ((row.low - 1) / 4) * 100;
+                const highPct = ((row.high - 1) / 4) * 100;
+                const avgPct = row.avg != null ? ((row.avg - 1) / 4) * 100 : null;
+                const hasRange = row.missingDays > 0;
+                return (
+                  <li key={row.questionId} className="hs-row">
+                    <div className="hs-row__head">
+                      <span className="hs-row__label">{row.label}</span>
+                      <span className="hs-row__value">
+                        {row.avg != null ? row.avg.toFixed(1) : "—"}
+                      </span>
+                    </div>
+                    <div className="hs-bar">
+                      {hasRange && (
+                        <div
+                          className="hs-bar__range"
+                          style={{
+                            left: `${lowPct}%`,
+                            width: `${Math.max(highPct - lowPct, 0)}%`,
+                          }}
+                        />
+                      )}
+                      {avgPct != null && (
+                        <div
+                          className="hs-bar__pin"
+                          style={{ left: `${avgPct}%` }}
+                        />
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           </section>
         )}
 
