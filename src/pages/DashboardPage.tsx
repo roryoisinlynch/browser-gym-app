@@ -1419,7 +1419,7 @@ export default function DashboardPage() {
 
   // ─── Achievements ────────────────────────────────────────────────────────
 
-  const ACHIEVEMENT_LIST_LIMIT = 10;
+  const ACHIEVEMENT_LIST_LIMIT = 25;
 
   function renderAchievementRow(
     dates: string[],
@@ -1430,22 +1430,24 @@ export default function DashboardPage() {
     const iconClasses = ["dashboard-achievement__icon", iconClass]
       .filter(Boolean)
       .join(" ");
-    if (dates.length > ACHIEVEMENT_LIST_LIMIT) {
-      return (
-        <div className="dashboard-achievement-row">
-          <div className="dashboard-achievement dashboard-achievement--count">
-            <span className={iconClasses}>{icon}</span>
-            <span className="dashboard-achievement__count">×{dates.length}</span>
-          </div>
-        </div>
-      );
+    const individual = dates.slice(0, ACHIEVEMENT_LIST_LIMIT);
+    const overflowCount = dates.length - individual.length;
+    const overflowBuckets: number[] = [];
+    for (let i = 0; i < overflowCount; i += ACHIEVEMENT_LIST_LIMIT) {
+      overflowBuckets.push(Math.min(ACHIEVEMENT_LIST_LIMIT, overflowCount - i));
     }
     return (
       <div className="dashboard-achievement-row">
-        {dates.map((date, i) => (
-          <div key={i} className="dashboard-achievement">
+        {individual.map((date, i) => (
+          <div key={`d${i}`} className="dashboard-achievement">
             <span className={iconClasses}>{icon}</span>
             <span className="dashboard-achievement__date">{compactAchievementDate(date)}</span>
+          </div>
+        ))}
+        {overflowBuckets.map((n, i) => (
+          <div key={`b${i}`} className="dashboard-achievement dashboard-achievement--count">
+            <span className="dashboard-achievement__count">+{n}×</span>
+            <span className={iconClasses}>{icon}</span>
           </div>
         ))}
       </div>
