@@ -445,18 +445,6 @@
   overflow: visible;
 }
 
-.hs-bar__range {
-  position: absolute;
-  top: -3px;
-  height: 14px;
-  background: rgba(255, 255, 255, 0.18);
-  border: 1.5px solid rgba(255, 255, 255, 0.6);
-  border-radius: 999px;
-  min-width: 6px;
-  box-sizing: border-box;
-  pointer-events: none;
-}
-
 .hs-bar__pin {
   position: absolute;
   top: -5px;
@@ -467,6 +455,12 @@
   transform: translateX(-1.5px);
   box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.45);
   pointer-events: none;
+}
+
+.hs-row__coverage {
+  font-size: 0.75rem;
+  color: var(--text-soft);
+  margin-top: 2px;
 }
 
 

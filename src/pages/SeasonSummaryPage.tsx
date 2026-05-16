@@ -26,6 +26,7 @@ import {
   getQuestions,
   getEntriesForDateRange,
 } from "../repositories/heuristicsRepository";
+import { colorForHeuristicScore } from "../services/heuristicsScale";
 import WeeksBreadcrumb from "../components/WeeksBreadcrumb";
 import type { BreadcrumbWeek } from "../components/WeeksBreadcrumb";
 import TopBar from "../components/TopBar";
@@ -627,34 +628,31 @@ export default function SeasonSummaryPage() {
             <h2 className="season-summary-section-title">Heuristics</h2>
             <ul className="hs-list">
               {heuristicSummary.map((row) => {
-                const lowPct = ((row.low - 1) / 4) * 100;
-                const highPct = ((row.high - 1) / 4) * 100;
                 const avgPct = row.avg != null ? ((row.avg - 1) / 4) * 100 : null;
-                const hasRange = row.missingDays > 0;
+                const coveragePct =
+                  row.totalDays > 0
+                    ? Math.round((row.givenCount / row.totalDays) * 100)
+                    : 0;
+                const valueColor =
+                  row.avg != null ? colorForHeuristicScore(row.avg) : undefined;
                 return (
                   <li key={row.questionId} className="hs-row">
                     <div className="hs-row__head">
                       <span className="hs-row__label">{row.label}</span>
-                      <span className="hs-row__value">
+                      <span className="hs-row__value" style={valueColor ? { color: valueColor } : undefined}>
                         {row.avg != null ? row.avg.toFixed(1) : "—"}
                       </span>
                     </div>
                     <div className="hs-bar">
-                      {hasRange && (
-                        <div
-                          className="hs-bar__range"
-                          style={{
-                            left: `${lowPct}%`,
-                            width: `${Math.max(highPct - lowPct, 0)}%`,
-                          }}
-                        />
-                      )}
                       {avgPct != null && (
                         <div
                           className="hs-bar__pin"
                           style={{ left: `${avgPct}%` }}
                         />
                       )}
+                    </div>
+                    <div className="hs-row__coverage">
+                      {coveragePct}% coverage, {row.missingDays} missed
                     </div>
                   </li>
                 );
