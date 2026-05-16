@@ -800,29 +800,22 @@
 .dashboard-recent-card__grade--grey  { color: #8a8d92; }
 
 /* ── Achievements ── */
-/* The panel reads as a low-fidelity trophy shelf: an outer cabinet with
-   tiered planks, one per achievement category row. Each row has its
-   trophies stand on a thin warm-toned line (the plank) and a subtle
-   shadow below it (the plank's edge). */
+/* The panel reads as a low-fidelity trophy shelf: an outer cabinet whose
+   trophies stand on tiered planks. Each item carries its own border-bottom
+   plus a subtle drop shadow, and the container removes the column gap so
+   adjacent items' borders abut into one continuous shelf line per wrap row.
+   Categories mix together — items render in a single wrapping flow sorted
+   by date, so a new row's shelf starts wherever the wrap naturally falls. */
 .dashboard-achievements {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 14px 12px 4px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  row-gap: 10px;
+  column-gap: 0;
+  padding: 14px 10px 4px;
   border-radius: 14px;
   border: 1px solid var(--panel-border);
   background: var(--panel-bg);
-}
-
-.dashboard-achievement-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 14px;
-  align-items: flex-end;
-  padding: 6px 6px 8px;
-  border-bottom: 2px solid rgba(212, 175, 100, 0.28);
-  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.22);
-  margin-bottom: 4px;
 }
 
 .dashboard-achievement {
@@ -831,6 +824,9 @@
   align-items: center;
   gap: 6px;
   min-width: 0;
+  padding: 4px 6px 8px;
+  border-bottom: 2px solid rgba(212, 175, 100, 0.28);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.22);
 }
 
 .dashboard-achievement--count {

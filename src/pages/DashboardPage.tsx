@@ -1421,39 +1421,6 @@ export default function DashboardPage() {
 
   const ACHIEVEMENT_LIST_LIMIT = 25;
 
-  function renderAchievementRow(
-    dates: string[],
-    icon: string,
-    iconClass?: string
-  ) {
-    if (dates.length === 0) return null;
-    const iconClasses = ["dashboard-achievement__icon", iconClass]
-      .filter(Boolean)
-      .join(" ");
-    const individual = dates.slice(0, ACHIEVEMENT_LIST_LIMIT);
-    const overflowCount = dates.length - individual.length;
-    const overflowBuckets: number[] = [];
-    for (let i = 0; i < overflowCount; i += ACHIEVEMENT_LIST_LIMIT) {
-      overflowBuckets.push(Math.min(ACHIEVEMENT_LIST_LIMIT, overflowCount - i));
-    }
-    return (
-      <div className="dashboard-achievement-row">
-        {individual.map((date, i) => (
-          <div key={`d${i}`} className="dashboard-achievement">
-            <span className={iconClasses}>{icon}</span>
-            <span className="dashboard-achievement__date">{compactAchievementDate(date)}</span>
-          </div>
-        ))}
-        {overflowBuckets.map((n, i) => (
-          <div key={`b${i}`} className="dashboard-achievement dashboard-achievement--count">
-            <span className="dashboard-achievement__count">+{n}×</span>
-            <span className={iconClasses}>{icon}</span>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   function renderAchievements() {
     if (achievements === null) {
       return (
@@ -1467,13 +1434,82 @@ export default function DashboardPage() {
     if (goldSessions.length === 0 && perfectWeeks.length === 0 && aSeasons.length === 0) {
       return null;
     }
+
+    type Individual = { date: string; icon: string; iconClass?: string };
+    type Bucket = { count: number; icon: string; iconClass?: string };
+
+    function partition(
+      dates: string[],
+      icon: string,
+      iconClass?: string
+    ): { individual: Individual[]; buckets: Bucket[] } {
+      const individual = dates
+        .slice(0, ACHIEVEMENT_LIST_LIMIT)
+        .map((date) => ({ date, icon, iconClass }));
+      const overflowCount = dates.length - individual.length;
+      const buckets: Bucket[] = [];
+      for (let i = 0; i < overflowCount; i += ACHIEVEMENT_LIST_LIMIT) {
+        buckets.push({
+          count: Math.min(ACHIEVEMENT_LIST_LIMIT, overflowCount - i),
+          icon,
+          iconClass,
+        });
+      }
+      return { individual, buckets };
+    }
+
+    const session = partition(goldSessions, "🥇");
+    const week = partition(perfectWeeks, "🤩");
+    const season = partition(aSeasons, "A", "dashboard-achievement__icon--grade");
+
+    // Individuals from every category mix together on the shelf in date-desc
+    // order. Overflow buckets are aggregates of older items so they pin to the
+    // end, preserving category grouping among themselves.
+    const allIndividuals: Individual[] = [
+      ...session.individual,
+      ...week.individual,
+      ...season.individual,
+    ].sort((a, b) => b.date.localeCompare(a.date));
+
+    const allBuckets: Bucket[] = [
+      ...session.buckets,
+      ...week.buckets,
+      ...season.buckets,
+    ];
+
     return (
       <section className="dashboard-section">
         <h2 className="dashboard-section-title">Achievements</h2>
         <div className="dashboard-achievements">
-          {renderAchievementRow(goldSessions, "🥇")}
-          {renderAchievementRow(perfectWeeks, "🤩")}
-          {renderAchievementRow(aSeasons, "A", "dashboard-achievement__icon--grade")}
+          {allIndividuals.map((item, i) => (
+            <div key={`i${i}`} className="dashboard-achievement">
+              <span
+                className={["dashboard-achievement__icon", item.iconClass]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                {item.icon}
+              </span>
+              <span className="dashboard-achievement__date">
+                {compactAchievementDate(item.date)}
+              </span>
+            </div>
+          ))}
+          {allBuckets.map((bucket, i) => (
+            <div
+              key={`b${i}`}
+              className="dashboard-achievement dashboard-achievement--count"
+            >
+              <span className="dashboard-achievement__count">+{bucket.count}×</span>
+              <span
+                className={["dashboard-achievement__icon", bucket.iconClass]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                {bucket.icon}
+              </span>
+            </div>
+          ))}
         </div>
       </section>
     );
