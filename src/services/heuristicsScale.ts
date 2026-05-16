@@ -25,3 +25,24 @@ export function colorForHeuristicScore(score: number): string {
   const last = STOPS[STOPS.length - 1].rgb;
   return `rgb(${last[0]}, ${last[1]}, ${last[2]})`;
 }
+
+/**
+ * Linear-interpolation percentile (also known as the C=1 / "type 7" method,
+ * matching Excel's PERCENTILE and numpy's default).
+ *
+ * Returns `null` when there are fewer than two values, because a one-sample
+ * IQR is just the sample itself and would collapse the highlighted band to
+ * a zero-width slit on the bar.
+ */
+export function percentileOrNull(
+  sortedValues: ReadonlyArray<number>,
+  p: number
+): number | null {
+  const n = sortedValues.length;
+  if (n < 2) return null;
+  const idx = p * (n - 1);
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+  if (lo === hi) return sortedValues[lo];
+  return sortedValues[lo] + (sortedValues[hi] - sortedValues[lo]) * (idx - lo);
+}

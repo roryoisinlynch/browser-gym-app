@@ -26,7 +26,7 @@ import {
   getQuestions,
   getEntriesForDateRange,
 } from "../repositories/heuristicsRepository";
-import { colorForHeuristicScore } from "../services/heuristicsScale";
+import { colorForHeuristicScore, percentileOrNull } from "../services/heuristicsScale";
 import WeeksBreadcrumb from "../components/WeeksBreadcrumb";
 import type { BreadcrumbWeek } from "../components/WeeksBreadcrumb";
 import TopBar from "../components/TopBar";
@@ -105,6 +105,9 @@ interface HeuristicSummaryRow {
   givenCount: number;
   missingDays: number;
   totalDays: number;
+  /** Q1/Q3 of the user's actual answers in this window; null when n < 2. */
+  q1: number | null;
+  q3: number | null;
 }
 
 function dayDiffInclusive(startIso: string, endIso: string): number {
@@ -303,11 +306,13 @@ export default function SeasonSummaryPage() {
               const summary: HeuristicSummaryRow[] = questions.map((q) => {
                 const qEntries = byQuestion.get(q.id) ?? [];
                 const datesAnswered = new Set<string>();
+                const values: number[] = [];
                 let sum = 0;
                 for (const e of qEntries) {
                   if (e.value != null && !datesAnswered.has(e.date)) {
                     datesAnswered.add(e.date);
                     sum += e.value;
+                    values.push(e.value);
                   }
                 }
                 const givenCount = datesAnswered.size;
@@ -319,6 +324,9 @@ export default function SeasonSummaryPage() {
                 // the uncertainty visually extends evenly in both directions.
                 // Collapses to the simple mean when no days are missing.
                 const avg = givenCount > 0 ? (low + high) / 2 : null;
+                const sortedValues = [...values].sort((a, b) => a - b);
+                const q1 = percentileOrNull(sortedValues, 0.25);
+                const q3 = percentileOrNull(sortedValues, 0.75);
                 return {
                   questionId: q.id,
                   label: q.label,
@@ -328,6 +336,8 @@ export default function SeasonSummaryPage() {
                   givenCount,
                   missingDays,
                   totalDays,
+                  q1,
+                  q3,
                 };
               });
               // Drop questions the user never answered in this window — an
@@ -635,6 +645,13 @@ export default function SeasonSummaryPage() {
                     : 0;
                 const valueColor =
                   row.avg != null ? colorForHeuristicScore(row.avg) : undefined;
+                const barStyle =
+                  row.q1 != null && row.q3 != null
+                    ? ({
+                        "--iqr-low": `${((row.q1 - 1) / 4) * 100}%`,
+                        "--iqr-high": `${((row.q3 - 1) / 4) * 100}%`,
+                      } as React.CSSProperties)
+                    : undefined;
                 return (
                   <li key={row.questionId} className="hs-row">
                     <div className="hs-row__head">
@@ -643,7 +660,7 @@ export default function SeasonSummaryPage() {
                         {row.avg != null ? row.avg.toFixed(1) : "—"}
                       </span>
                     </div>
-                    <div className="hs-bar">
+                    <div className="hs-bar" style={barStyle}>
                       {avgPct != null && (
                         <div
                           className="hs-bar__pin"

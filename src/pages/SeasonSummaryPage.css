@@ -434,14 +434,29 @@
   position: relative;
   height: 8px;
   border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    #e76f51 0%,
-    #f4a261 25%,
-    #f4d35e 50%,
-    #a8d065 75%,
-    #6bcb77 100%
-  );
+  /* Two stacked gradients: the colour ramp underneath, and a dark mask above
+     that's transparent only between the row's per-question IQR (Q1–Q3 of the
+     user's actual answers for the period). The mask defaults to fully
+     transparent (--iqr-low: 0%, --iqr-high: 100%) so rows with too few
+     answers to compute a meaningful IQR keep the full vivid bar. */
+  background:
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.55) 0%,
+      rgba(0, 0, 0, 0.55) var(--iqr-low, 0%),
+      transparent var(--iqr-low, 0%),
+      transparent var(--iqr-high, 100%),
+      rgba(0, 0, 0, 0.55) var(--iqr-high, 100%),
+      rgba(0, 0, 0, 0.55) 100%
+    ),
+    linear-gradient(
+      90deg,
+      #e76f51 0%,
+      #f4a261 25%,
+      #f4d35e 50%,
+      #a8d065 75%,
+      #6bcb77 100%
+    );
   overflow: visible;
 }
 
