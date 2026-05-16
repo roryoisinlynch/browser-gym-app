@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { SeasonInstance, SessionInstance, WeekInstance } from "../domain/models";
 import type { PREvent, SessionInstanceView, WeekInstanceItemView } from "../repositories/programRepository";
@@ -789,6 +789,8 @@ export default function DashboardPage() {
   const [lastBackupAt, setLastBackupAt] = useState<string | null | "loading">("loading");
   const [hasSettledWeek, setHasSettledWeek] = useState<boolean | "loading">("loading");
   const [achievements, setAchievements] = useState<Achievements | null>(null);
+  const achievementsShelfRef = useRef<HTMLDivElement | null>(null);
+  const [achievementColumns, setAchievementColumns] = useState(0);
   const [showHeuristicsOptIn, setShowHeuristicsOptIn] = useState(false);
   const [heuristicsOptInDeferred, setHeuristicsOptInDeferred] = useState(false);
   const [pendingHeuristicDays, setPendingHeuristicDays] = useState(0);
@@ -1420,6 +1422,29 @@ export default function DashboardPage() {
   // ─── Achievements ────────────────────────────────────────────────────────
 
   const ACHIEVEMENT_LIST_LIMIT = 25;
+  // Must match the slot width set on `.dashboard-achievement` in the CSS so the
+  // column-count math matches what the browser actually lays out.
+  const ACHIEVEMENT_SLOT_WIDTH = 44;
+
+  useLayoutEffect(() => {
+    const el = achievementsShelfRef.current;
+    if (!el) {
+      setAchievementColumns(0);
+      return;
+    }
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      // contentRect.width is the inner width (excluding padding), which matches
+      // the area items actually wrap inside — so dividing by SLOT_WIDTH yields
+      // the column count the browser is using.
+      setAchievementColumns(
+        Math.max(1, Math.floor(entry.contentRect.width / ACHIEVEMENT_SLOT_WIDTH))
+      );
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [achievements]);
 
   function renderAchievements() {
     if (achievements === null) {
@@ -1477,10 +1502,16 @@ export default function DashboardPage() {
       ...season.buckets,
     ];
 
+    const totalRendered = allIndividuals.length + allBuckets.length;
+    const placeholderCount =
+      achievementColumns > 0
+        ? (achievementColumns - (totalRendered % achievementColumns)) % achievementColumns
+        : 0;
+
     return (
       <section className="dashboard-section">
         <h2 className="dashboard-section-title">Achievements</h2>
-        <div className="dashboard-achievements">
+        <div className="dashboard-achievements" ref={achievementsShelfRef}>
           {allIndividuals.map((item, i) => (
             <div key={`i${i}`} className="dashboard-achievement">
               <span
@@ -1500,7 +1531,6 @@ export default function DashboardPage() {
               key={`b${i}`}
               className="dashboard-achievement dashboard-achievement--count"
             >
-              <span className="dashboard-achievement__count">+{bucket.count}×</span>
               <span
                 className={["dashboard-achievement__icon", bucket.iconClass]
                   .filter(Boolean)
@@ -1508,6 +1538,17 @@ export default function DashboardPage() {
               >
                 {bucket.icon}
               </span>
+              <span className="dashboard-achievement__date">×{bucket.count}</span>
+            </div>
+          ))}
+          {Array.from({ length: placeholderCount }, (_, i) => (
+            <div
+              key={`p${i}`}
+              className="dashboard-achievement dashboard-achievement--placeholder"
+              aria-hidden="true"
+            >
+              <span className="dashboard-achievement__slot" />
+              <span className="dashboard-achievement__date">&nbsp;</span>
             </div>
           ))}
         </div>
