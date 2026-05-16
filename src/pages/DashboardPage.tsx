@@ -1573,6 +1573,9 @@ export default function DashboardPage() {
                     <>{pr.previousReps} reps <span className="dashboard-pr-item__arrow">→</span> </>
                   )}
                   <span className="dashboard-pr-item__new">{pr.newReps} reps</span>
+                  {pr.previousReps != null && pr.previousReps > 0 && (
+                    <> (+{Math.round(((pr.newReps - pr.previousReps) / pr.previousReps) * 100)}%)</>
+                  )}
                 </span>
               )}
             </li>
