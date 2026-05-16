@@ -661,6 +661,7 @@ export default function DashboardPage() {
   const [prEvents, setPrEvents] = useState<PREvent[] | null>(null);
   const [recentTooltipOpen, setRecentTooltipOpen] = useState(false);
   const [lastBackupAt, setLastBackupAt] = useState<string | null | "loading">("loading");
+  const [hasSettledWeek, setHasSettledWeek] = useState<boolean | "loading">("loading");
   const [showHeuristicsOptIn, setShowHeuristicsOptIn] = useState(false);
   const [heuristicsOptInDeferred, setHeuristicsOptInDeferred] = useState(false);
   const [pendingHeuristicDays, setPendingHeuristicDays] = useState(0);
@@ -747,6 +748,7 @@ export default function DashboardPage() {
     getById<{ key: string; value: string }>(STORE_NAMES.meta, "lastBackupAt").then(
       (record) => setLastBackupAt(record?.value ?? null)
     );
+    getLastCompletedWeekInstance().then((w) => setHasSettledWeek(w != null));
   }, []);
 
   useEffect(() => {
@@ -1418,7 +1420,8 @@ export default function DashboardPage() {
   // ─── Backup nudge ─────────────────────────────────────────────────────────
 
   function renderBackupNudge() {
-    if (lastBackupAt === "loading") return null;
+    if (lastBackupAt === "loading" || hasSettledWeek === "loading") return null;
+    if (!hasSettledWeek) return null;
     const THRESHOLD_DAYS = 30;
     let daysSince: number | null = null;
     if (lastBackupAt !== null) {
