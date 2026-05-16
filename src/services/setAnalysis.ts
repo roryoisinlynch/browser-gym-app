@@ -19,6 +19,7 @@ export function calculateEstimatedOneRepMax(
 ): number | null {
   if (weight == null || reps == null) return null;
   if (weight <= 0 || reps <= 0) return null;
+  if (reps === 1) return weight;
   return weight * (1 + reps / 30);
 }
 
