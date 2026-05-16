@@ -99,9 +99,9 @@ interface RecentCard {
 }
 
 interface Achievements {
-  goldSessions: number;
-  perfectWeeks: number;
-  aSeasons: number;
+  goldSessions: string[]; // ISO completedAt dates, newest first
+  perfectWeeks: string[];
+  aSeasons: string[];
 }
 
 // ─── Pure helpers ─────────────────────────────────────────────────────────────
@@ -136,6 +136,15 @@ function shortDate(iso: string): string {
   const d = toLocalMidnight(iso);
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   return `${d.getDate()} ${months[d.getMonth()]} '${String(d.getFullYear()).slice(2)}`;
+}
+
+function shortDateOrdinal(iso: string): string {
+  const d = toLocalMidnight(iso);
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const n = d.getDate();
+  const v = n % 100;
+  const suffix = ["th", "st", "nd", "rd"][(v - 20) % 10] || ["th", "st", "nd", "rd"][v] || "th";
+  return `${n}${suffix} ${months[d.getMonth()]} '${String(d.getFullYear()).slice(2)}`;
 }
 
 function computeUpNext(
@@ -671,13 +680,15 @@ async function loadAchievements(): Promise<Achievements> {
     })
   );
 
-  let goldSessions = 0;
+  const goldSessions: string[] = [];
   for (const s of allSessions) {
     if (s.status !== "completed") continue;
+    if (!s.completedAt) continue;
     const v = sessionViews.get(s.id);
     if (!v) continue;
-    if (computeSessionMetrics(v).ragStatus === "green") goldSessions++;
+    if (computeSessionMetrics(v).ragStatus === "green") goldSessions.push(s.completedAt);
   }
+  goldSessions.sort((a, b) => b.localeCompare(a));
 
   // Pre-load week-template items once per unique template so each week's
   // computeWeekMetrics call gets its inputs without a duplicate fetch.
@@ -711,12 +722,14 @@ async function loadAchievements(): Promise<Achievements> {
 
   // Star-eyed weeks: emojiRating 1 (score ≥ 100). Exclude force-completed weeks
   // since the recent-week card already paints them grey rather than green.
-  let perfectWeeks = 0;
+  const perfectWeeks: string[] = [];
   for (const w of completedWeeks) {
     if (w.endedEarly) continue;
+    if (!w.completedAt) continue;
     const wm = weekMetricsByWeekId.get(w.id);
-    if (wm && wm.emojiRating === 1) perfectWeeks++;
+    if (wm && wm.emojiRating === 1) perfectWeeks.push(w.completedAt);
   }
+  perfectWeeks.sort((a, b) => b.localeCompare(a));
 
   const weeksBySeasonId = new Map<string, WeekInstance[]>();
   for (const w of completedWeeks) {
@@ -725,16 +738,18 @@ async function loadAchievements(): Promise<Achievements> {
     weeksBySeasonId.set(w.seasonInstanceId, arr);
   }
 
-  let aSeasons = 0;
+  const aSeasons: string[] = [];
   for (const season of allSeasons) {
     if (season.status !== "completed") continue;
+    if (!season.completedAt) continue;
     const seasonWeekMetrics = (weeksBySeasonId.get(season.id) ?? [])
       .map((w) => weekMetricsByWeekId.get(w.id))
       .filter((m): m is ReturnType<typeof computeWeekMetrics> => m != null);
     const consistencyOverride = await computeSeasonConsistencyForSeason(season);
     const sm = computeSeasonMetrics(season, seasonWeekMetrics, consistencyOverride);
-    if (sm.grade === "A") aSeasons++;
+    if (sm.grade === "A") aSeasons.push(season.completedAt);
   }
+  aSeasons.sort((a, b) => b.localeCompare(a));
 
   return { goldSessions, perfectWeeks, aSeasons };
 }
@@ -1391,29 +1406,52 @@ export default function DashboardPage() {
 
   // ─── Achievements ────────────────────────────────────────────────────────
 
+  const ACHIEVEMENT_LIST_LIMIT = 10;
+
+  function renderAchievementRow(
+    dates: string[],
+    icon: string,
+    iconClass?: string
+  ) {
+    if (dates.length === 0) return null;
+    const iconClasses = ["dashboard-achievement__icon", iconClass]
+      .filter(Boolean)
+      .join(" ");
+    if (dates.length > ACHIEVEMENT_LIST_LIMIT) {
+      return (
+        <div className="dashboard-achievement-row">
+          <div className="dashboard-achievement dashboard-achievement--count">
+            <span className={iconClasses}>{icon}</span>
+            <span className="dashboard-achievement__count">×{dates.length}</span>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="dashboard-achievement-row">
+        {dates.map((date, i) => (
+          <div key={i} className="dashboard-achievement">
+            <span className={iconClasses}>{icon}</span>
+            <span className="dashboard-achievement__date">{shortDateOrdinal(date)}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   function renderAchievements() {
     if (!achievements) return null;
     const { goldSessions, perfectWeeks, aSeasons } = achievements;
-    if (goldSessions === 0 && perfectWeeks === 0 && aSeasons === 0) return null;
+    if (goldSessions.length === 0 && perfectWeeks.length === 0 && aSeasons.length === 0) {
+      return null;
+    }
     return (
       <section className="dashboard-section">
         <h2 className="dashboard-section-title">Achievements</h2>
         <div className="dashboard-achievements">
-          <div className="dashboard-achievement">
-            <span className="dashboard-achievement__icon">🥇</span>
-            <span className="dashboard-achievement__count">{goldSessions}</span>
-            <span className="dashboard-achievement__label">Sessions</span>
-          </div>
-          <div className="dashboard-achievement">
-            <span className="dashboard-achievement__icon">🤩</span>
-            <span className="dashboard-achievement__count">{perfectWeeks}</span>
-            <span className="dashboard-achievement__label">Weeks</span>
-          </div>
-          <div className="dashboard-achievement">
-            <span className="dashboard-achievement__icon dashboard-achievement__icon--grade">A</span>
-            <span className="dashboard-achievement__count">{aSeasons}</span>
-            <span className="dashboard-achievement__label">Seasons</span>
-          </div>
+          {renderAchievementRow(goldSessions, "🥇")}
+          {renderAchievementRow(perfectWeeks, "🤩")}
+          {renderAchievementRow(aSeasons, "A", "dashboard-achievement__icon--grade")}
         </div>
       </section>
     );
