@@ -23,7 +23,6 @@ import {
 import { colorForHeuristicScore } from "../services/heuristicsScale";
 import { computeSessionMetrics } from "../services/sessionMetrics";
 import { computeWeekMetrics, emojiForRating } from "../services/weekMetrics";
-import { type MovementTone, PALETTE, buildGroupToneMap } from "../services/movementTones";
 import type { WeekMetrics } from "../services/weekMetrics";
 import WeeklyBreadcrumb from "../components/WeeklyBreadcrumb";
 import type { BreadcrumbSession } from "../components/WeeklyBreadcrumb";
@@ -116,10 +115,6 @@ export default function WeekSummaryPage() {
   const [weekInstanceItems, setWeekInstanceItems] = useState<WeekInstanceItem[]>([]);
   const [, setCompletedSessionIds] = useState<Set<string>>(new Set());
   const [seasonInstance, setSeasonInstance] = useState<SeasonInstance | null>(null);
-  const [movementGroupSummary, setMovementGroupSummary] = useState<Array<{
-    muscleGroupName: string;
-    movements: Array<{ name: string; count: number; tone: MovementTone }>;
-  }>>([]);
   const [weekStartIso, setWeekStartIso] = useState<string | null>(null);
   const [extraRestDays, setExtraRestDays] = useState<number>(0);
   const [sessionInfoMap, setSessionInfoMap] = useState<Map<string, { date: string; status: string; completedAt: string | null }>>(new Map());
@@ -166,58 +161,20 @@ export default function WeekSummaryPage() {
         );
         setLoadProgress(40);
 
-        // Load views for all sessions: completed views drive metrics; all views
-        // drive the movement breakdown (so skipped/unstarted exercises show as 0).
-        const allSessionViews: SessionInstanceView[] = (
-          await Promise.all(sessions.map((s) => getSessionInstanceView(s.id)))
+        // Load views for settled sessions only — those drive week metrics.
+        const sessionViews: SessionInstanceView[] = (
+          await Promise.all(
+            sessions
+              .filter(
+                (s) => s.status === "completed" || s.status === "skipped"
+              )
+              .map((s) => getSessionInstanceView(s.id))
+          )
         ).filter((sv): sv is SessionInstanceView => sv != null);
-        const sessionViews = allSessionViews.filter(
-          (sv) =>
-            sv.sessionInstance.status === "completed" ||
-            sv.sessionInstance.status === "skipped"
-        );
         setLoadProgress(55);
 
         setMetrics(computeWeekMetrics(weekInstance, templateItems, sessionViews));
 
-        // Aggregate set counts per movement type, grouped by muscle group.
-        const mgMap = new Map<string, {
-          name: string;
-          order: number;
-          movementCounts: Map<string, number>;
-        }>();
-        for (const sv of allSessionViews) {
-          for (const group of sv.muscleGroups) {
-            const mgId = group.muscleGroup.id;
-            if (!mgMap.has(mgId)) {
-              mgMap.set(mgId, {
-                name: group.muscleGroup.name,
-                order: group.muscleGroup.order,
-                movementCounts: new Map(),
-              });
-            }
-            const entry = mgMap.get(mgId)!;
-            for (const ex of group.exercises) {
-              const mtName = ex.movementType.name;
-              entry.movementCounts.set(mtName, (entry.movementCounts.get(mtName) ?? 0) + ex.workingSetCount);
-            }
-          }
-        }
-        setMovementGroupSummary(
-          [...mgMap.values()]
-            .sort((a, b) => a.order - b.order)
-            .map(({ name: muscleGroupName, movementCounts }) => {
-              const toneMap = buildGroupToneMap(
-                [...movementCounts.keys()].map((n) => ({ movementType: { name: n } }))
-              );
-              return {
-                muscleGroupName,
-                movements: [...movementCounts.entries()]
-                  .map(([mtName, count]) => ({ name: mtName, count, tone: toneMap.get(mtName) ?? PALETTE[0] }))
-                  .sort((a, b) => b.count - a.count),
-              };
-            })
-        );
         const weekRir =
           seasonTemplateForRir?.rirSequence?.[weekInstance.order - 1] ??
           weekTemplate?.targetRir;
@@ -623,31 +580,6 @@ export default function WeekSummaryPage() {
         {weeksBreadcrumbWithCurrent.length > 1 && (
           <section className="week-summary-section week-summary-section--breadcrumb">
             <WeeksBreadcrumb weeks={weeksBreadcrumbWithCurrent} />
-          </section>
-        )}
-
-        {/* ── Movement type breakdown ── */}
-        {movementGroupSummary.length > 0 && (
-          <section className="week-summary-section">
-            <div className="week-mt-groups">
-            {movementGroupSummary.map(({ muscleGroupName, movements }) => (
-              <div key={muscleGroupName} className="week-mt-group">
-                <span className="week-mt-group__label">{muscleGroupName}</span>
-                <div className="week-mt-pills">
-                  {movements.map(({ name, count, tone }) => (
-                    <span
-                      key={name}
-                      className="week-mt-pill"
-                      style={{ backgroundColor: tone.bg, color: tone.text, borderColor: tone.border }}
-                    >
-                      {name}
-                      <span className="week-mt-pill__count">{count}</span>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-            </div>
           </section>
         )}
 
