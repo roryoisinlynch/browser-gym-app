@@ -1283,8 +1283,9 @@ export async function getEffectiveE1RM(
     }
   }
 
-  // No substitution needed if recent max matches or exceeds the historical best.
-  if (historicalBest != null && recentMax != null && recentMax >= historicalBest) {
+  // No substitution needed if recent max is within 2.5% of the historical best
+  // — the gap is small enough that the historical PR is still a fair anchor.
+  if (historicalBest != null && recentMax != null && recentMax >= historicalBest * 0.975) {
     recentMax = null;
   }
 
@@ -1613,12 +1614,12 @@ export async function getExerciseInstanceView(
     }
   }
 
-  // No substitution needed if the all-time best was already matched within
-  // the recent seasons (recentMax ≥ historicalBest).
+  // No substitution needed if recent max is within 2.5% of the historical best
+  // — the gap is small enough that the historical PR is still a fair anchor.
   if (
     recentMaxEstimatedOneRepMax != null &&
     historicalBestEstimatedOneRepMax != null &&
-    recentMaxEstimatedOneRepMax >= historicalBestEstimatedOneRepMax
+    recentMaxEstimatedOneRepMax >= historicalBestEstimatedOneRepMax * 0.975
   ) {
     recentMaxEstimatedOneRepMax = null;
     recentMaxDate = null;
