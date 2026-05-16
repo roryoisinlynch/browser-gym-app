@@ -435,18 +435,21 @@
   height: 8px;
   border-radius: 999px;
   /* Two stacked gradients: the colour ramp underneath, and a dark mask above
-     that's transparent only between the row's per-question IQR (Q1–Q3 of the
-     user's actual answers for the period). The mask defaults to fully
-     transparent (--iqr-low: 0%, --iqr-high: 100%) so rows with too few
-     answers to compute a meaningful IQR keep the full vivid bar. */
+     that's transparent only between the row's per-question IQR. Each IQR
+     boundary fades over ±--iqr-fade (set per-row to a fraction of the IQR's
+     own width), so wider IQRs get softer transitions and narrower IQRs get
+     tighter ones — the boundary "meshes" into the muted outside instead of
+     hard-cutting. Defaults (--iqr-low: 0%, --iqr-high: 100%, --iqr-fade: 0%)
+     yield a fully transparent mask, so rows with too few answers to compute
+     a meaningful IQR keep the full vivid bar. */
   background:
     linear-gradient(
       90deg,
       rgba(0, 0, 0, 0.55) 0%,
-      rgba(0, 0, 0, 0.55) var(--iqr-low, 0%),
-      transparent var(--iqr-low, 0%),
-      transparent var(--iqr-high, 100%),
-      rgba(0, 0, 0, 0.55) var(--iqr-high, 100%),
+      rgba(0, 0, 0, 0.55) calc(var(--iqr-low, 0%) - var(--iqr-fade, 0%)),
+      transparent           calc(var(--iqr-low, 0%) + var(--iqr-fade, 0%)),
+      transparent           calc(var(--iqr-high, 100%) - var(--iqr-fade, 0%)),
+      rgba(0, 0, 0, 0.55) calc(var(--iqr-high, 100%) + var(--iqr-fade, 0%)),
       rgba(0, 0, 0, 0.55) 100%
     ),
     linear-gradient(

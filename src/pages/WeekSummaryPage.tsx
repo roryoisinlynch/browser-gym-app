@@ -600,10 +600,18 @@ export default function WeekSummaryPage() {
                   row.avg != null ? colorForHeuristicScore(row.avg) : undefined;
                 const barStyle =
                   row.q1 != null && row.q3 != null
-                    ? ({
-                        "--iqr-low": `${((row.q1 - 1) / 4) * 100}%`,
-                        "--iqr-high": `${((row.q3 - 1) / 4) * 100}%`,
-                      } as React.CSSProperties)
+                    ? (() => {
+                        const lowPct = ((row.q1 - 1) / 4) * 100;
+                        const highPct = ((row.q3 - 1) / 4) * 100;
+                        // Fade radius is a fraction of the IQR width, so wider
+                        // IQRs get softer transitions and narrow ones stay tight.
+                        const fadePct = (highPct - lowPct) * 0.2;
+                        return {
+                          "--iqr-low": `${lowPct}%`,
+                          "--iqr-high": `${highPct}%`,
+                          "--iqr-fade": `${fadePct}%`,
+                        } as React.CSSProperties;
+                      })()
                     : undefined;
                 return (
                   <li key={row.questionId} className="hs-row">
