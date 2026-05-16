@@ -299,15 +299,18 @@ async function loadTimeline(
 
       dayOffset += weekItems.length;
     } else {
-      // Future week not yet generated — project from the current template.
+      // Week not yet generated — project from the current template. A behind
+      // user may have un-generated weeks whose scheduled dates are already in
+      // the past; those sessions should surface as overdue, not upcoming.
       for (const item of templateItems) {
         const scheduledDate = localDateIso(
           new Date(seasonStartMs + (dayOffset + item.order - 1) * 86400000)
         );
+        const isPast = scheduledDate < today;
         if (item.type === "rest") {
-          weekSquares.push({ type: "rest", scheduledDate, status: "rest-future" });
+          weekSquares.push({ type: "rest", scheduledDate, status: isPast ? "rest-past" : "rest-future" });
         } else {
-          weekSquares.push({ type: "session", scheduledDate, status: "grey" });
+          weekSquares.push({ type: "session", scheduledDate, status: isPast ? "overdue" : "grey" });
         }
       }
 
