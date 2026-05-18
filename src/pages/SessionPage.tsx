@@ -44,7 +44,9 @@ function formatDateTime(value: string | null | undefined) {
   });
 }
 
-
+function formatWeight(value: number): string {
+  return Number.isInteger(value) ? `${value}` : value.toFixed(1);
+}
 
 type MovementToneStyle = CSSProperties & {
   "--movement-bg": string;
@@ -668,7 +670,7 @@ export default function SessionPage() {
                       {!isCollapsed && (
                         <ul className="exercise-list">
                           {exercises.map(
-                            ({ sessionInstanceExerciseId, exerciseTemplate, movementType, exerciseInstance, sets, workingSetCount, warmupSetCount }) => {
+                            ({ sessionInstanceExerciseId, exerciseTemplate, movementType, exerciseInstance, sets }) => {
                               const tone = groupToneMap.get(movementType.name) ?? PALETTE[0];
                               const isBodyweight = exerciseTemplate.weightMode === "bodyweight";
                               const hasSeasonPR = seasonPRNames.has(
@@ -697,10 +699,14 @@ export default function SessionPage() {
                                   s.analysis.estimatedOneRepMax >= targetE1RM - 0.0001;
                               }).length;
 
-                              // Build set count label parts
-                              const labelParts: string[] = [];
-                              if (warmupSetCount > 0) labelParts.push(`${warmupSetCount} warmup ${warmupSetCount === 1 ? "set" : "sets"}`);
-                              if (workingSetCount > 0) labelParts.push(`${workingSetCount} working ${workingSetCount === 1 ? "set" : "sets"}`);
+                              const targetWeight = exerciseInstance?.prescribedWeight ?? null;
+                              const targetLabel = isAmrap
+                                ? "AMRAP"
+                                : isBodyweight
+                                  ? (targetReps != null ? `${targetReps} reps` : "—")
+                                  : (targetWeight != null && targetReps != null)
+                                    ? `${formatWeight(targetWeight)}kg × ${targetReps}`
+                                    : "—";
 
                               return (
                                 <li
@@ -740,17 +746,12 @@ export default function SessionPage() {
                                         </h3>
 
                                         <span className="exercise-card__status">
-                                          {labelParts.length === 0
-                                            ? "Not started"
-                                            : <>
-                                                {labelParts.join(", ")}
-                                                {dartCount > 0 && (
-                                                  <span className="exercise-card__darts" aria-label={`${dartCount} sets met intensity target`}>
-                                                    {" "}{"🎯".repeat(dartCount)}
-                                                  </span>
-                                                )}
-                                              </>
-                                          }
+                                          {targetLabel}
+                                          {dartCount > 0 && (
+                                            <span className="exercise-card__darts" aria-label={`${dartCount} sets met intensity target`}>
+                                              {" "}{"🎯".repeat(dartCount)}
+                                            </span>
+                                          )}
                                         </span>
                                       </div>
 
