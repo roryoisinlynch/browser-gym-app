@@ -39,7 +39,7 @@ type UpNextState =
   | { type: "loading" }
   | { type: "no_program" }
   | { type: "active_session"; sessionId: string; sessionName: string }
-  | { type: "overdue_session"; sessionId: string; sessionName: string; date: string; daysOverdue: number }
+  | { type: "overdue_session"; sessionId: string; sessionName: string; date: string; daysOverdue: number; sessionCompletedToday: boolean }
   | { type: "today_session"; sessionId: string; sessionName: string }
   | { type: "rest_day"; nextSessionName: string | null; nextDate: string | null; daysUntil: number | null }
   | { type: "upcoming"; sessionId: string; sessionName: string; date: string; daysUntil: number }
@@ -210,12 +210,22 @@ function computeUpNext(
   const oldestDate = itemDate(oldest);
 
   if (oldestDate < today) {
+    // If the user already finished a real session today, they're unlikely to
+    // do another even if a prior day's session is still overdue. Mark the
+    // state so the heuristics CTA can take priority over the overdue card.
+    const sessionCompletedToday = sessionItems.some((item) => {
+      const si = item.sessionInstance;
+      if (!si || si.status !== "completed") return false;
+      const d = new Date(si.completedAt ?? si.date);
+      return localDateIso(d) === today;
+    });
     return {
       type: "overdue_session",
       sessionId: oldest.sessionInstance!.id,
       sessionName: oldest.sessionTemplate?.name ?? "Session",
       date: oldestDate,
       daysOverdue: daysBetween(oldestDate, today),
+      sessionCompletedToday,
     };
   }
 
@@ -888,7 +898,8 @@ export default function DashboardPage() {
   }, []);
 
   const showHeuristicsUpNext = pendingHeuristicDays > 0 &&
-    (upNext.type === "rest_day" || upNext.type === "upcoming" || upNext.type === "week_complete");
+    (upNext.type === "rest_day" || upNext.type === "upcoming" || upNext.type === "week_complete" ||
+      (upNext.type === "overdue_session" && upNext.sessionCompletedToday));
 
   // ─── Up Next ──────────────────────────────────────────────────────────────
 
@@ -934,6 +945,28 @@ export default function DashboardPage() {
         );
 
       case "overdue_session":
+        if (showHeuristicsUpNext) {
+          return (
+            <div
+              className="dashboard-up-next dashboard-up-next--heuristics dashboard-up-next--with-cta"
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate("/heuristics")}
+              onKeyDown={(e) => e.key === "Enter" && navigate("/heuristics")}
+            >
+              <div className="dashboard-up-next__content">
+                <span className="dashboard-up-next__pill dashboard-up-next__pill--heuristics">Done today</span>
+                <p className="dashboard-up-next__heading">Log today's heuristics</p>
+                <p className="dashboard-up-next__sub">
+                  {pendingHeuristicDays === 1
+                    ? "1 day to fill in"
+                    : `${pendingHeuristicDays} days to fill in`}
+                </p>
+              </div>
+              <span className="dashboard-up-next__cta dashboard-up-next__cta--heuristics">Log heuristics →</span>
+            </div>
+          );
+        }
         return (
           <div
             className="dashboard-up-next dashboard-up-next--overdue dashboard-up-next--with-cta"
