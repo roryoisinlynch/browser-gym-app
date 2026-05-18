@@ -742,13 +742,14 @@ export default function SessionPage() {
                                     ]
                                       .filter(Boolean)
                                       .join(" ")}
-                                    onClick={() =>
+                                    onClick={() => {
+                                      if (!sessionStarted) return;
                                       handleOpenExercise(
                                         sessionInstanceExerciseId,
                                         exerciseInstance?.id ?? null
-                                      )
-                                    }
-                                    disabled={!sessionStarted}
+                                      );
+                                    }}
+                                    aria-disabled={!sessionStarted}
                                   >
                                     <div className="exercise-card__top-row">
                                       <div className="exercise-card__title-block">

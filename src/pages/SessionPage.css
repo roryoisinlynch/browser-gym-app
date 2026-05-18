@@ -586,11 +586,16 @@
 .exercise-card--locked {
   opacity: 0.38;
   cursor: default;
-  pointer-events: none;
 }
 
 .exercise-card--locked:hover {
   transform: none;
+  background: #262c35;
+}
+
+.exercise-card--locked:active {
+  transform: none;
+  background: #262c35;
 }
 
 .session-add-exercise {
