@@ -158,7 +158,8 @@ function compactAchievementDate(iso: string): string {
 
 function computeUpNext(
   activeSeason: SeasonInstance | null | undefined,
-  weekItems: WeekInstanceItemView[]
+  weekItems: WeekInstanceItemView[],
+  lastCompletedSession: SessionInstance | null
 ): UpNextState {
   const today = localDateIso();
   if (!activeSeason) return { type: "no_program" };
@@ -210,15 +211,14 @@ function computeUpNext(
   const oldestDate = itemDate(oldest);
 
   if (oldestDate < today) {
-    // If the user already finished a real session today, they're unlikely to
-    // do another even if a prior day's session is still overdue. Mark the
+    // If the user already finished a real session today (anywhere in the
+    // season, not just the current week — finishing the last session of
+    // week N rolls the dashboard into week N+1), they're unlikely to do
+    // another even if a prior day's session is still overdue. Mark the
     // state so the heuristics CTA can take priority over the overdue card.
-    const sessionCompletedToday = sessionItems.some((item) => {
-      const si = item.sessionInstance;
-      if (!si || si.status !== "completed") return false;
-      const d = new Date(si.completedAt ?? si.date);
-      return localDateIso(d) === today;
-    });
+    const sessionCompletedToday =
+      lastCompletedSession?.completedAt != null &&
+      localDateIso(new Date(lastCompletedSession.completedAt)) === today;
     return {
       type: "overdue_session",
       sessionId: oldest.sessionInstance!.id,
@@ -814,13 +814,14 @@ export default function DashboardPage() {
     cancelled.current = false;
 
     async function loadBase() {
-      const [activeSeason, weekItems] = await Promise.all([
+      const [activeSeason, weekItems, lastCompletedSession] = await Promise.all([
         getActiveSeasonInstance(),
         getWeekInstanceItemsForCurrentWeek(),
+        getLastCompletedSessionInstance(),
       ]);
       if (cancelled.current) return;
 
-      setUpNext(computeUpNext(activeSeason, weekItems));
+      setUpNext(computeUpNext(activeSeason, weekItems, lastCompletedSession));
 
       const seasonToShow = activeSeason ?? (await getLastEndedSeasonInstance());
       if (cancelled.current) return;
