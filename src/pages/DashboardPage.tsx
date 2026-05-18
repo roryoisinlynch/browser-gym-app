@@ -800,7 +800,7 @@ export default function DashboardPage() {
   const [achievementColumns, setAchievementColumns] = useState(0);
   const [pendingHeuristicDays, setPendingHeuristicDays] = useState(0);
   const [exerciseNeedingWeight, setExerciseNeedingWeight] = useState<
-    { exerciseTemplateId: string; exerciseName: string } | null
+    { exerciseTemplateId: string; exerciseName: string; sessionName: string } | null
   >(null);
   const recentTooltipRef = useRef<HTMLDivElement | null>(null);
 
@@ -922,7 +922,7 @@ export default function DashboardPage() {
 
   function renderExerciseNeedsWeightCard() {
     if (!exerciseNeedingWeight) return null;
-    const { exerciseTemplateId, exerciseName } = exerciseNeedingWeight;
+    const { exerciseTemplateId, exerciseName, sessionName } = exerciseNeedingWeight;
     const target = `/config/exercises/${exerciseTemplateId}?returnTo=${encodeURIComponent("/")}`;
     return (
       <div
@@ -935,7 +935,7 @@ export default function DashboardPage() {
         <div className="dashboard-up-next__content">
           <span className="dashboard-up-next__pill dashboard-up-next__pill--heuristics">Up next</span>
           <p className="dashboard-up-next__heading">Set working weight</p>
-          <p className="dashboard-up-next__sub">{exerciseName}</p>
+          <p className="dashboard-up-next__sub">{exerciseName} · {sessionName}</p>
         </div>
         <span className="dashboard-up-next__cta dashboard-up-next__cta--heuristics">Configure →</span>
       </div>

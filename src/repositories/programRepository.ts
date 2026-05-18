@@ -2988,12 +2988,19 @@ export async function getLastCompletedSeasonInstance(): Promise<SeasonInstance |
  */
 export async function findExerciseNeedingWeight(
   seasonInstanceId: string
-): Promise<{ exerciseTemplateId: string; exerciseName: string } | null> {
+): Promise<{
+  exerciseTemplateId: string;
+  exerciseName: string;
+  sessionName: string;
+} | null> {
   const weeks = (await getWeekInstancesForSeasonInstance(seasonInstanceId))
     .sort((a, b) => a.order - b.order);
 
   const seenTemplateIds = new Set<string>();
-  const candidates: SessionInstanceExercise[] = [];
+  // Pair each candidate snapshot with its session so we can surface the
+  // program-day name (sessionName is denormalised on SessionInstance — a
+  // season-start snapshot, independent of later template renames).
+  const candidates: { sie: SessionInstanceExercise; sessionName: string }[] = [];
 
   for (const week of weeks) {
     const sessions = (await getSessionInstancesForWeekInstance(week.id))
@@ -3007,12 +3014,12 @@ export async function findExerciseNeedingWeight(
 
         if (sie.weightMode === "bodyweight") continue;
         if (sie.prescribedWeight != null) continue;
-        candidates.push(sie);
+        candidates.push({ sie, sessionName: session.sessionName });
       }
     }
   }
 
-  for (const sie of candidates) {
+  for (const { sie, sessionName } of candidates) {
     // The session view tolerates a missing live template because the snapshot
     // carries denormalised data, but ConfigExercisePage cannot — it loads by
     // id and falls back to an empty "new exercise" form when the template is
@@ -3027,6 +3034,7 @@ export async function findExerciseNeedingWeight(
       return {
         exerciseTemplateId: sie.sourceExerciseTemplateId,
         exerciseName: sie.exerciseName,
+        sessionName,
       };
     }
   }
