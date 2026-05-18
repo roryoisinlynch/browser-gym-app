@@ -7,6 +7,7 @@ import {
   getActiveSeasonInstance,
   getAllTimePREvents,
   getCanonicalWeekTemplateForSeason,
+  findExerciseNeedingWeight,
   getLastCompletedSessionInstance,
   getLastCompletedWeekInstance,
   getLastEndedSeasonInstance,
@@ -798,6 +799,9 @@ export default function DashboardPage() {
   const achievementsShelfRef = useRef<HTMLDivElement | null>(null);
   const [achievementColumns, setAchievementColumns] = useState(0);
   const [pendingHeuristicDays, setPendingHeuristicDays] = useState(0);
+  const [exerciseNeedingWeight, setExerciseNeedingWeight] = useState<
+    { exerciseTemplateId: string; exerciseName: string } | null
+  >(null);
   const recentTooltipRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -842,6 +846,10 @@ export default function DashboardPage() {
       if (activeSeason) {
         loadRecentDays(activeSeason).then((data) => {
           if (!cancelled.current) setRecentDays(data);
+        });
+
+        findExerciseNeedingWeight(activeSeason.id).then((ex) => {
+          if (!cancelled.current) setExerciseNeedingWeight(ex);
         });
       }
 
@@ -898,9 +906,41 @@ export default function DashboardPage() {
     loadHeuristics();
   }, []);
 
-  const showHeuristicsUpNext = pendingHeuristicDays > 0 &&
-    (upNext.type === "rest_day" || upNext.type === "upcoming" || upNext.type === "week_complete" ||
-      (upNext.type === "overdue_session" && upNext.sessionCompletedToday));
+  // Cards that yield priority to a higher-priority secondary CTA (exercise
+  // needing weight, then heuristics, in that order). Sessions in active/today
+  // states never yield — only states where the user is between sessions or
+  // their overdue card has already been deprioritised by a completion today.
+  const yieldsToSecondaryCta =
+    upNext.type === "rest_day" ||
+    upNext.type === "upcoming" ||
+    upNext.type === "week_complete" ||
+    (upNext.type === "overdue_session" && upNext.sessionCompletedToday);
+
+  const showExerciseNeedsWeight = exerciseNeedingWeight != null && yieldsToSecondaryCta;
+  const showHeuristicsUpNext =
+    !showExerciseNeedsWeight && pendingHeuristicDays > 0 && yieldsToSecondaryCta;
+
+  function renderExerciseNeedsWeightCard() {
+    if (!exerciseNeedingWeight) return null;
+    const { exerciseTemplateId, exerciseName } = exerciseNeedingWeight;
+    const target = `/config/exercises/${exerciseTemplateId}?returnTo=${encodeURIComponent("/")}`;
+    return (
+      <div
+        className="dashboard-up-next dashboard-up-next--heuristics dashboard-up-next--with-cta"
+        role="button"
+        tabIndex={0}
+        onClick={() => navigate(target)}
+        onKeyDown={(e) => e.key === "Enter" && navigate(target)}
+      >
+        <div className="dashboard-up-next__content">
+          <span className="dashboard-up-next__pill dashboard-up-next__pill--heuristics">Up next</span>
+          <p className="dashboard-up-next__heading">Set working weight</p>
+          <p className="dashboard-up-next__sub">{exerciseName}</p>
+        </div>
+        <span className="dashboard-up-next__cta dashboard-up-next__cta--heuristics">Configure →</span>
+      </div>
+    );
+  }
 
   // ─── Up Next ──────────────────────────────────────────────────────────────
 
@@ -946,6 +986,9 @@ export default function DashboardPage() {
         );
 
       case "overdue_session":
+        if (showExerciseNeedsWeight) {
+          return renderExerciseNeedsWeightCard();
+        }
         if (showHeuristicsUpNext) {
           return (
             <div
@@ -1005,6 +1048,9 @@ export default function DashboardPage() {
         );
 
       case "rest_day":
+        if (showExerciseNeedsWeight) {
+          return renderExerciseNeedsWeightCard();
+        }
         if (showHeuristicsUpNext) {
           return (
             <div
@@ -1042,6 +1088,9 @@ export default function DashboardPage() {
         );
 
       case "upcoming":
+        if (showExerciseNeedsWeight) {
+          return renderExerciseNeedsWeightCard();
+        }
         if (showHeuristicsUpNext) {
           return (
             <div
@@ -1076,6 +1125,9 @@ export default function DashboardPage() {
         );
 
       case "week_complete":
+        if (showExerciseNeedsWeight) {
+          return renderExerciseNeedsWeightCard();
+        }
         if (showHeuristicsUpNext) {
           return (
             <div

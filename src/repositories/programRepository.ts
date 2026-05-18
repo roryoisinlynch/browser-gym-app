@@ -2977,6 +2977,55 @@ export async function getLastCompletedSeasonInstance(): Promise<SeasonInstance |
 }
 
 /**
+ * Returns the first exercise in the active season that needs a working
+ * weight set: non-bodyweight, no prescribedWeight on its snapshot, and
+ * with prior session history for its exerciseName (otherwise it's a true
+ * AMRAP first-attempt and the config page can't suggest a baseline).
+ *
+ * Returns null if no such exercise exists. Order is deterministic but
+ * arbitrary — first match wins by week order, then session order, then
+ * snapshot id.
+ */
+export async function findExerciseNeedingWeight(
+  seasonInstanceId: string
+): Promise<{ exerciseTemplateId: string; exerciseName: string } | null> {
+  const weeks = (await getWeekInstancesForSeasonInstance(seasonInstanceId))
+    .sort((a, b) => a.order - b.order);
+
+  const seenTemplateIds = new Set<string>();
+  const candidates: SessionInstanceExercise[] = [];
+
+  for (const week of weeks) {
+    const sessions = (await getSessionInstancesForWeekInstance(week.id))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    for (const session of sessions) {
+      const sies = (await getSessionInstanceExercisesForSession(session.id))
+        .sort((a, b) => a.id.localeCompare(b.id));
+      for (const sie of sies) {
+        if (seenTemplateIds.has(sie.sourceExerciseTemplateId)) continue;
+        seenTemplateIds.add(sie.sourceExerciseTemplateId);
+
+        if (sie.weightMode === "bodyweight") continue;
+        if (sie.prescribedWeight != null) continue;
+        candidates.push(sie);
+      }
+    }
+  }
+
+  for (const sie of candidates) {
+    const { historicalBest } = await getEffectiveE1RM(sie.exerciseName);
+    if (historicalBest != null) {
+      return {
+        exerciseTemplateId: sie.sourceExerciseTemplateId,
+        exerciseName: sie.exerciseName,
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
  * Computes season-level consistency: working days delivered / working days
  * the program would have prescribed in the elapsed time. Generated weeks use
  * their own snapshot; time past the last generated week extrapolates the
