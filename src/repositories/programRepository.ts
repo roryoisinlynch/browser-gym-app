@@ -1181,7 +1181,7 @@ export function isDormantSince(lastAttemptedDate: string | null): boolean {
  */
 export function computePrescription(input: {
   weightMode: WeightMode;
-  configuredWeight: number | null;
+  configuredWeight: number | null | undefined;
   effectiveOneRepMax: number | null;
   effectiveReps: number | null;
   weekRir: number;
