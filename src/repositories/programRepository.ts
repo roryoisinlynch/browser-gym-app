@@ -15,6 +15,7 @@ import type {
   WeekTemplateItem,
   MuscleGroup,
   MovementType,
+  WeightMode,
 } from "../domain/models";
 
 import {
@@ -91,6 +92,14 @@ export interface SessionInstanceExerciseView {
   workingSetCount: number;
   warmupSetCount: number;
   effectiveE1RM: number | null;
+  /**
+   * Prescription computed from history for THIS session's week-RIR, regardless
+   * of whether the user has opened the exercise yet. Mirrors what
+   * getExerciseInstanceView would compute on open. Null fields = AMRAP / no
+   * baseline yet.
+   */
+  prescribedWeight: number | null;
+  prescribedRepTarget: number | null;
 }
 
 export interface SessionInstanceMuscleGroupView {
@@ -1165,6 +1174,52 @@ export function isDormantSince(lastAttemptedDate: string | null): boolean {
 }
 
 /**
+ * Computes the prescribed weight × rep target for an exercise from its
+ * weight-mode, configured weight, and historical e1RM / rep baselines.
+ * Returns null on both fields for AMRAP cases — no history, dormant, or
+ * (weighted) the configured weight already exceeds the effective e1RM.
+ */
+export function computePrescription(input: {
+  weightMode: WeightMode;
+  configuredWeight: number | null;
+  effectiveOneRepMax: number | null;
+  effectiveReps: number | null;
+  weekRir: number;
+  isDormant: boolean;
+}): { prescribedWeight: number | null; prescribedRepTarget: number | null } {
+  if (input.isDormant) {
+    return { prescribedWeight: null, prescribedRepTarget: null };
+  }
+
+  if (input.weightMode === "bodyweight") {
+    if (input.effectiveReps == null) {
+      return { prescribedWeight: null, prescribedRepTarget: null };
+    }
+    return {
+      prescribedWeight: null,
+      prescribedRepTarget: Math.max(1, input.effectiveReps - input.weekRir),
+    };
+  }
+
+  if (
+    input.effectiveOneRepMax == null ||
+    input.configuredWeight == null ||
+    input.configuredWeight <= 0 ||
+    input.configuredWeight >= input.effectiveOneRepMax
+  ) {
+    return { prescribedWeight: null, prescribedRepTarget: null };
+  }
+
+  const zeroRirReps = Math.floor(
+    (input.effectiveOneRepMax / input.configuredWeight - 1) * 30 + 0.0001
+  );
+  return {
+    prescribedWeight: input.configuredWeight,
+    prescribedRepTarget: Math.max(1, zeroRirReps - input.weekRir),
+  };
+}
+
+/**
  * Returns the historical best e1RM and, when the all-time best hasn't been
  * matched in the last three seasons, a "recent max" that reflects current
  * capacity. This mirrors the prescription logic in getExerciseInstanceView so
@@ -1662,42 +1717,16 @@ export async function getExerciseInstanceView(
     0;
 
   // Always recompute from history — never carry over stale stored values.
-  // No history → both remain null → AMRAP prompt shown to user.
-  // Dormant (>DORMANT_GAP_YEARS since last attempt) → same: both stay null.
-  let prescribedWeight: number | null = null;
-  let prescribedRepTarget: number | null = null;
-
-  if (isDormant) {
-    // Leave both null → AMRAP. Old prescriptions can't be trusted after a
-    // long gap, so the user re-establishes weight and reps from scratch.
-  } else if (exerciseTemplate.weightMode === "bodyweight") {
-    // Historical best is a 0 RIR effort, so prescription = best - weekRir.
-    // Use the recent max when available so targets stay fair after a long gap.
-    const effectiveReps = recentMaxReps ?? historicalBestReps;
-    if (effectiveReps != null) {
-      prescribedRepTarget = Math.max(1, effectiveReps - weekRir);
-    }
-  } else if (
-    historicalBestEstimatedOneRepMax != null &&
-    exerciseTemplate.prescribedWeight != null &&
-    exerciseTemplate.prescribedWeight > 0
-  ) {
-    // Weight is fixed by the user's settings choice.
-    // Reps float: 0 RIR = max reps at this weight without exceeding e1RM.
-    // Use the recent max when available so targets stay fair after a long gap.
-    const effectiveOneRepMax = recentMaxEstimatedOneRepMax ?? historicalBestEstimatedOneRepMax;
-
-    // If the configured weight exceeds the effective e1RM the rep formula
-    // produces nonsense (negative reps). Leave the target blank until a
-    // proper solution is in place.
-    if (exerciseTemplate.prescribedWeight < effectiveOneRepMax) {
-      prescribedWeight = exerciseTemplate.prescribedWeight;
-      const zeroRirReps = Math.floor(
-        (effectiveOneRepMax / prescribedWeight - 1) * 30 + 0.0001
-      );
-      prescribedRepTarget = Math.max(1, zeroRirReps - weekRir);
-    }
-  }
+  // No history → both null → AMRAP prompt shown to user.
+  // Dormant (>DORMANT_GAP_YEARS since last attempt) → same: both null.
+  const { prescribedWeight, prescribedRepTarget } = computePrescription({
+    weightMode: exerciseTemplate.weightMode,
+    configuredWeight: exerciseTemplate.prescribedWeight,
+    effectiveOneRepMax: recentMaxEstimatedOneRepMax ?? historicalBestEstimatedOneRepMax,
+    effectiveReps: recentMaxReps ?? historicalBestReps,
+    weekRir,
+    isDormant,
+  });
 
   let resolvedExerciseInstance = exerciseInstance;
   if (
@@ -1881,7 +1910,7 @@ export async function getSessionInstanceView(
             .sort((a, b) => a.setIndex - b.setIndex)
         : [];
 
-      const { historicalBest, recentMax, historicalBestReps, recentMaxReps } = await getEffectiveE1RM(
+      const { historicalBest, recentMax, historicalBestReps, recentMaxReps, lastAttemptedDate } = await getEffectiveE1RM(
         sie.exerciseName,
         sessionInstance.seasonInstanceId,
         currentSessionExerciseInstanceIds
@@ -1892,7 +1921,23 @@ export async function getSessionInstanceView(
       const effectiveBaselineReps =
         sie.weightMode === "bodyweight" ? (recentMaxReps ?? historicalBestReps) : null;
 
-      const analyzedSets = buildAnalyzedSetList(currentRawSets, allHistoricalSets, effectiveE1RM, effectiveBaselineReps, exerciseInstance?.prescribedRepTarget ?? null, exerciseInstance?.prescribedWeight ?? null);
+      const weekRir =
+        weekInstance.rirTarget ??
+        seasonTemplate?.rirSequence?.[weekInstance.order - 1] ??
+        weekTemplate.targetRir ??
+        exerciseInstance?.prescribedRir ??
+        0;
+
+      const { prescribedWeight, prescribedRepTarget } = computePrescription({
+        weightMode: sie.weightMode,
+        configuredWeight: sie.prescribedWeight,
+        effectiveOneRepMax: effectiveE1RM,
+        effectiveReps: recentMaxReps ?? historicalBestReps,
+        weekRir,
+        isDormant: isDormantSince(lastAttemptedDate),
+      });
+
+      const analyzedSets = buildAnalyzedSetList(currentRawSets, allHistoricalSets, effectiveE1RM, effectiveBaselineReps, prescribedRepTarget, prescribedWeight);
 
       const workingSetCount = analyzedSets.filter(
         (item) => item.analysis.setType === "working"
@@ -1911,6 +1956,8 @@ export async function getSessionInstanceView(
         workingSetCount,
         warmupSetCount,
         effectiveE1RM,
+        prescribedWeight,
+        prescribedRepTarget,
       });
     }
 

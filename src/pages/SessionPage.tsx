@@ -670,7 +670,7 @@ export default function SessionPage() {
                       {!isCollapsed && (
                         <ul className="exercise-list">
                           {exercises.map(
-                            ({ sessionInstanceExerciseId, exerciseTemplate, movementType, exerciseInstance, sets }) => {
+                            ({ sessionInstanceExerciseId, exerciseTemplate, movementType, exerciseInstance, sets, prescribedWeight, prescribedRepTarget }) => {
                               const tone = groupToneMap.get(movementType.name) ?? PALETTE[0];
                               const isBodyweight = exerciseTemplate.weightMode === "bodyweight";
                               const hasSeasonPR = seasonPRNames.has(
@@ -681,14 +681,14 @@ export default function SessionPage() {
                               const targetE1RM = isBodyweight
                                 ? null
                                 : calculateEstimatedOneRepMax(
-                                    exerciseInstance?.prescribedWeight ?? null,
-                                    exerciseInstance?.prescribedRepTarget ?? null
+                                    prescribedWeight,
+                                    prescribedRepTarget
                                   );
-                              const targetReps = exerciseInstance?.prescribedRepTarget ?? null;
+                              const targetReps = prescribedRepTarget;
 
                               // Count how many working sets met the intensity target.
                               // AMRAP has no target, so every working set counts.
-                              const isAmrap = exerciseInstance?.prescribedRepTarget == null;
+                              const isAmrap = prescribedRepTarget == null;
                               const dartCount = sets.filter((s) => {
                                 if (s.analysis.setType !== "working") return false;
                                 if (isAmrap) return true;
@@ -699,14 +699,15 @@ export default function SessionPage() {
                                   s.analysis.estimatedOneRepMax >= targetE1RM - 0.0001;
                               }).length;
 
-                              const targetWeight = exerciseInstance?.prescribedWeight ?? null;
-                              const targetLabel = isAmrap
-                                ? "AMRAP"
-                                : isBodyweight
-                                  ? (targetReps != null ? `${targetReps} reps` : "—")
-                                  : (targetWeight != null && targetReps != null)
-                                    ? `${formatWeight(targetWeight)}kg × ${targetReps}`
-                                    : "—";
+                              const hasConfiguredWeight =
+                                !isBodyweight && exerciseTemplate.prescribedWeight != null;
+                              const targetLabel = isBodyweight
+                                ? (targetReps != null ? `${targetReps} reps` : "AMRAP")
+                                : !hasConfiguredWeight
+                                  ? "—"
+                                  : (prescribedWeight != null && targetReps != null)
+                                    ? `${formatWeight(prescribedWeight)}kg × ${targetReps}`
+                                    : "AMRAP";
 
                               return (
                                 <li
