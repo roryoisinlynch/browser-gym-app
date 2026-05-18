@@ -3013,6 +3013,15 @@ export async function findExerciseNeedingWeight(
   }
 
   for (const sie of candidates) {
+    // The session view tolerates a missing live template because the snapshot
+    // carries denormalised data, but ConfigExercisePage cannot — it loads by
+    // id and falls back to an empty "new exercise" form when the template is
+    // gone (deleted template / reorganised program). Skip those snapshots so
+    // we never hand the user a dead-end CTA.
+    const liveTemplate = await getExerciseTemplateById(sie.sourceExerciseTemplateId);
+    if (!liveTemplate) continue;
+    if (liveTemplate.prescribedWeight != null) continue;
+
     const { historicalBest } = await getEffectiveE1RM(sie.exerciseName);
     if (historicalBest != null) {
       return {
