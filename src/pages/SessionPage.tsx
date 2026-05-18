@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { SessionInstanceView } from "../repositories/programRepository";
 import {
@@ -391,6 +391,14 @@ export default function SessionPage() {
     }
   }
 
+  function handleConfigureExercise(exerciseTemplateId: string) {
+    if (!sessionInstanceId) return;
+    const returnTo = `/session/${sessionInstanceId}`;
+    navigate(
+      `/config/exercises/${exerciseTemplateId}?returnTo=${encodeURIComponent(returnTo)}`
+    );
+  }
+
   async function handleOpenExercise(
     sessionInstanceExerciseId: string,
     existingExerciseInstanceId: string | null
@@ -701,10 +709,21 @@ export default function SessionPage() {
 
                               const hasConfiguredWeight =
                                 !isBodyweight && exerciseTemplate.prescribedWeight != null;
-                              const targetLabel = isBodyweight
+                              const targetLabel: ReactNode = isBodyweight
                                 ? (targetReps != null ? `${targetReps} reps` : "AMRAP")
                                 : !hasConfiguredWeight
-                                  ? "—"
+                                  ? (
+                                      <button
+                                        type="button"
+                                        className="exercise-card__status-link"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleConfigureExercise(exerciseTemplate.id);
+                                        }}
+                                      >
+                                        Set working weight
+                                      </button>
+                                    )
                                   : (prescribedWeight != null && targetReps != null)
                                     ? `${formatWeight(prescribedWeight)}kg × ${targetReps}`
                                     : "AMRAP";
