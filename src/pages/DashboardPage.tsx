@@ -956,7 +956,7 @@ export default function DashboardPage() {
               onKeyDown={(e) => e.key === "Enter" && navigate("/heuristics")}
             >
               <div className="dashboard-up-next__content">
-                <span className="dashboard-up-next__pill dashboard-up-next__pill--heuristics">Heuristics</span>
+                <span className="dashboard-up-next__pill dashboard-up-next__pill--heuristics">Up next</span>
                 <p className="dashboard-up-next__heading">Log today's heuristics</p>
                 <p className="dashboard-up-next__sub">
                   {pendingHeuristicDays === 1
