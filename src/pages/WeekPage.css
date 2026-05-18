@@ -241,12 +241,18 @@
   cursor: pointer;
   font-family: inherit;
   font-weight: 700;
-  min-height: 36px;
+  min-height: 28px;
   border-radius: 999px;
 }
 
 .day-pill--skip:active {
   transform: scale(0.96);
+}
+
+.week-day__pill--actions .day-pill {
+  min-height: 28px;
+  font-size: 0.85rem;
+  padding: 0 14px;
 }
 
 /* ─── Row state colours (on content wrapper for seamless fill) ────────────── */
