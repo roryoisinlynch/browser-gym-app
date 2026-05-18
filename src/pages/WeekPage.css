@@ -233,9 +233,9 @@
 }
 
 .day-pill--skip {
-  background: rgba(248, 113, 113, 0.14);
-  color: #f87171;
-  border: 1px solid rgba(248, 113, 113, 0.40);
+  background: var(--pill-muted-bg);
+  color: var(--pill-muted-text);
+  border: 1px solid rgba(176, 185, 198, 0.25);
   font-size: 0.85rem;
   padding: 0 12px;
   cursor: pointer;
