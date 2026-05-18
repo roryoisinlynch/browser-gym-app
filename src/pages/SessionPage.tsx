@@ -678,7 +678,7 @@ export default function SessionPage() {
                       {!isCollapsed && (
                         <ul className="exercise-list">
                           {exercises.map(
-                            ({ sessionInstanceExerciseId, exerciseTemplate, movementType, exerciseInstance, sets, prescribedWeight, prescribedRepTarget }) => {
+                            ({ sessionInstanceExerciseId, exerciseTemplate, movementType, exerciseInstance, sets, prescribedWeight, prescribedRepTarget, effectiveE1RM }) => {
                               const tone = groupToneMap.get(movementType.name) ?? PALETTE[0];
                               const isBodyweight = exerciseTemplate.weightMode === "bodyweight";
                               const hasSeasonPR = seasonPRNames.has(
@@ -707,11 +707,15 @@ export default function SessionPage() {
                                   s.analysis.estimatedOneRepMax >= targetE1RM - 0.0001;
                               }).length;
 
-                              const hasConfiguredWeight =
-                                !isBodyweight && exerciseTemplate.prescribedWeight != null;
+                              // Only point users at the config page when there's history to base
+                              // a suggested weight on; otherwise the page can only offer AMRAP.
+                              const needsWeightConfig =
+                                !isBodyweight &&
+                                exerciseTemplate.prescribedWeight == null &&
+                                effectiveE1RM != null;
                               const targetLabel: ReactNode = isBodyweight
                                 ? (targetReps != null ? `${targetReps} reps` : "AMRAP")
-                                : !hasConfiguredWeight
+                                : needsWeightConfig
                                   ? (
                                       <button
                                         type="button"
