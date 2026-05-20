@@ -1922,23 +1922,7 @@ export default function DashboardPage() {
           {renderUpNext()}
         </section>
 
-        <TutorialBlock
-          id="schedule"
-          title="Your season schedule"
-          blurb="Once your program is running, this view shows every planned session, rest day, and how closely you're tracking the schedule — green squares are sessions done, crosses are rest days, orange means overdue."
-        >
-          {renderScheduleMock()}
-        </TutorialBlock>
-
         {renderTimeline()}
-
-        <TutorialBlock
-          id="reports"
-          title="Session, week & season reports"
-          blurb="Every session, week, and season gets a graded report card with consistency, volume and intensity scores so you can see, at a glance, how each block went."
-        >
-          {renderReportMock()}
-        </TutorialBlock>
 
         {hasAnyRecent && (
           <section className="dashboard-section">
@@ -1963,6 +1947,30 @@ export default function DashboardPage() {
           </section>
         )}
 
+        {renderAchievements()}
+
+        {renderBackupNudge()}
+
+        {renderPRSpotlight()}
+
+        {renderAllPRs()}
+
+        <TutorialBlock
+          id="schedule"
+          title="Your season schedule"
+          blurb="Once your program is running, this view shows every planned session, rest day, and how closely you're tracking the schedule — green squares are sessions done, crosses are rest days, orange means overdue."
+        >
+          {renderScheduleMock()}
+        </TutorialBlock>
+
+        <TutorialBlock
+          id="reports"
+          title="Session, week & season reports"
+          blurb="Every session, week, and season gets a graded report card with consistency, volume and intensity scores so you can see, at a glance, how each block went."
+        >
+          {renderReportMock()}
+        </TutorialBlock>
+
         <TutorialBlock
           id="metrics"
           title="The three metrics"
@@ -1970,10 +1978,6 @@ export default function DashboardPage() {
         >
           {renderMetricsMock()}
         </TutorialBlock>
-
-        {renderAchievements()}
-
-        {renderBackupNudge()}
 
         <TutorialBlock
           id="exercise_graph"
@@ -1983,8 +1987,6 @@ export default function DashboardPage() {
           {renderGraphMock()}
         </TutorialBlock>
 
-        {renderPRSpotlight()}
-
         <TutorialBlock
           id="recent_prs"
           title="Recent personal records"
@@ -1992,8 +1994,6 @@ export default function DashboardPage() {
         >
           {renderPRsMock()}
         </TutorialBlock>
-
-        {renderAllPRs()}
 
         <TutorialBlock
           id="programs"
