@@ -1707,8 +1707,8 @@ export default function DashboardPage() {
   // ─── Tutorial mocks ───────────────────────────────────────────────────────
 
   function renderScheduleMock() {
-    // Mirrors the real season-progress grid: two done weeks, a current week
-    // that's run behind, then three upcoming. Today lands on a rest cross.
+    // Reuse the real season-progress markup so the mock renders identically
+    // by construction — only the day-status data is fake.
     type Cell = "green" | "skipped" | "overdue" | "grey" | "rest";
     type Day = { cell: Cell; today?: boolean };
     const weeks: Day[][] = [
@@ -1720,24 +1720,51 @@ export default function DashboardPage() {
       [{cell:"grey"},{cell:"grey"},{cell:"rest"},{cell:"grey"},{cell:"grey"},{cell:"rest"},{cell:"rest"}],
     ];
     return (
-      <div className="tutorial-mock-schedule">
-        {weeks.map((week, wi) => (
-          <div key={wi} className="tutorial-mock-schedule__row">
-            <span className="tutorial-mock-schedule__label">W{wi + 1}</span>
-            <div className="tutorial-mock-schedule__days">
-              {week.map((d, ci) => (
+      <div className="dashboard-timeline">
+        <div className="dashboard-timeline__label">Schedule (planned)</div>
+        <div className="dashboard-timeline__body">
+          <div className="dashboard-timeline__grid">
+            {weeks.map((week, wi) => (
+              <div key={wi} className="dashboard-timeline__week-row">
+                <span className="dashboard-timeline__week-label">W{wi + 1}</span>
                 <div
-                  key={ci}
-                  className={[
-                    "tutorial-mock-schedule__day",
-                    `tutorial-mock-schedule__day--${d.cell}`,
-                    d.today ? "tutorial-mock-schedule__day--today" : "",
-                  ].filter(Boolean).join(" ")}
-                />
-              ))}
+                  className="dashboard-timeline__days"
+                  style={{ ["--day-count" as string]: week.length }}
+                >
+                  {week.map((d, di) => {
+                    const classes = [
+                      "dashboard-timeline__day",
+                      `dashboard-timeline__day--${d.cell}`,
+                      d.cell === "rest" ? "dashboard-timeline__day--rest" : "",
+                      d.today ? "dashboard-timeline__day--today" : "",
+                    ].filter(Boolean).join(" ");
+                    return (
+                      <div key={di} className="dashboard-timeline__slot">
+                        <div className={classes} />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="dashboard-timeline__sidebar">
+            <div className="dashboard-timeline__sidebar-status">
+              <span className="dashboard-timeline__sidebar-week">Week 3 of 6</span>
+              <span className="dashboard-timeline__status--behind">Behind schedule</span>
+            </div>
+            <div className="dashboard-timeline__sidebar-dates">
+              <div className="dashboard-timeline__sidebar-date">
+                <span className="dashboard-timeline__sidebar-caption">Start</span>
+                <span className="dashboard-timeline__sidebar-value">27 Apr '26</span>
+              </div>
+              <div className="dashboard-timeline__sidebar-date">
+                <span className="dashboard-timeline__sidebar-caption">Finish</span>
+                <span className="dashboard-timeline__sidebar-value">19 Jun '26</span>
+              </div>
             </div>
           </div>
-        ))}
+        </div>
       </div>
     );
   }
@@ -1967,6 +1994,7 @@ export default function DashboardPage() {
           id="schedule"
           title="Your season schedule"
           blurb="Once your program is running, this view shows every planned session, rest day, and how closely you're tracking the schedule — green squares are sessions done, crosses are rest days, orange means overdue."
+          unwrapped
         >
           {renderScheduleMock()}
         </TutorialBlock>

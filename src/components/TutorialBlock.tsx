@@ -11,12 +11,15 @@ interface Props {
   title: string;
   blurb: string;
   children?: React.ReactNode;
+  // Render children directly without the inset preview panel — useful when
+  // the child already has its own panel chrome (e.g. dashboard-timeline).
+  unwrapped?: boolean;
 }
 
 // Each tutorial block remembers its own dismissed state via the meta store.
 // While the state is loading we render nothing so dismissed blocks don't
 // flicker into view on dashboard mount.
-export default function TutorialBlock({ id, title, blurb, children }: Props) {
+export default function TutorialBlock({ id, title, blurb, children, unwrapped }: Props) {
   const [state, setState] = useState<"loading" | "visible" | "dismissed">("loading");
 
   useEffect(() => {
@@ -53,7 +56,11 @@ export default function TutorialBlock({ id, title, blurb, children }: Props) {
           ×
         </button>
       </header>
-      {children && <div className="tutorial-block__preview">{children}</div>}
+      {children && (
+        unwrapped
+          ? <div className="tutorial-block__preview-bare">{children}</div>
+          : <div className="tutorial-block__preview">{children}</div>
+      )}
       <p className="tutorial-block__blurb">{blurb}</p>
     </section>
   );
