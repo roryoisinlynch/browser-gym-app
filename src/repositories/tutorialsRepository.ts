@@ -7,6 +7,8 @@ export const TUTORIAL_IDS = [
   "exercise_graph",
   "recent_prs",
   "programs",
+  "weeks_breadcrumb",
+  "all_seasons",
 ] as const;
 
 export type TutorialId = (typeof TUTORIAL_IDS)[number];

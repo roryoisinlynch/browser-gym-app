@@ -30,6 +30,8 @@ import Medal from "../components/Medal";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import TutorialBlock from "../components/TutorialBlock";
+import WeeksBreadcrumb from "../components/WeeksBreadcrumb";
+import type { BreadcrumbWeek } from "../components/WeeksBreadcrumb";
 import { computeSessionMetrics } from "../services/sessionMetrics";
 import { computeWeekMetrics, emojiForRating } from "../services/weekMetrics";
 import { computeSeasonMetrics, gradeColor } from "../services/seasonMetrics";
@@ -1965,6 +1967,80 @@ export default function DashboardPage() {
     );
   }
 
+  function renderWeeksBreadcrumbMock() {
+    // Reuses the real WeeksBreadcrumb component with fabricated week ratings:
+    // three completed weeks with descending ratings, then the current week and
+    // two un-started.
+    const weeks: BreadcrumbWeek[] = [
+      { weekInstanceId: "mock-1", emojiRating: 1, isCurrent: false },
+      { weekInstanceId: "mock-2", emojiRating: 2, isCurrent: false },
+      { weekInstanceId: "mock-3", emojiRating: 3, isCurrent: false },
+      { weekInstanceId: "mock-4", emojiRating: null, isCurrent: true },
+      { weekInstanceId: "mock-5", emojiRating: null, isCurrent: false },
+      { weekInstanceId: "mock-6", emojiRating: null, isCurrent: false },
+    ];
+    return <WeeksBreadcrumb weeks={weeks} />;
+  }
+
+  function renderAllSeasonsMock() {
+    // Reuses the real season-summary-seasons-list markup with three fabricated
+    // seasons: most-recent in progress, two completed at A and B grades.
+    type Row = {
+      id: string;
+      name: string;
+      score: number | null;
+      grade: "A" | "B" | "C" | "D" | null;
+      duration: string | null;
+      prs: number;
+      dates: string | null;
+      isCurrent: boolean;
+    };
+    const rows: Row[] = [
+      { id: "m1", name: "Push / Pull / Legs · Spring '26", score: null, grade: null, duration: "in week 3 of 6", prs: 4, dates: "27 Apr 2026 – 8 Jun 2026", isCurrent: true },
+      { id: "m2", name: "Push / Pull / Legs · Winter '26", score: 92, grade: "A", duration: "6 weeks", prs: 11, dates: "9 Feb 2026 – 22 Mar 2026", isCurrent: false },
+      { id: "m3", name: "Upper / Lower · Autumn '25", score: 84, grade: "B", duration: "5 weeks", prs: 7, dates: "13 Oct 2025 – 16 Nov 2025", isCurrent: false },
+    ];
+    return (
+      <section className="season-summary-section">
+        <h2 className="season-summary-section-title">All seasons</h2>
+        <ul className="season-summary-seasons-list">
+          {rows.map((row) => {
+            const color = row.grade ? gradeColor(row.grade) : null;
+            return (
+              <li
+                key={row.id}
+                className={`season-summary-season-row${row.isCurrent ? " season-summary-season-row--current" : ""}`}
+              >
+                <div className="season-summary-season-row__main">
+                  <span className="season-summary-season-row__name">{row.name}</span>
+                  <span className="season-summary-season-row__meta">
+                    {row.score != null && (
+                      <span className="season-summary-season-row__score">{row.score}</span>
+                    )}
+                    {row.grade && color && (
+                      <span className={`season-summary-season-row__grade season-summary-season-row__grade--${color}`}>
+                        {row.grade}
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <div className="season-summary-season-row__sub">
+                  {row.duration && (
+                    <span className="season-summary-season-row__duration">{row.duration}</span>
+                  )}
+                  <span className="season-summary-season-row__prs">{row.prs} PRs</span>
+                  {row.dates && (
+                    <span className="season-summary-season-row__date">{row.dates}</span>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    );
+  }
+
   function renderProgramMock() {
     // Reuses the real config-programs__list markup so the rows look exactly
     // like what users will see at Settings → Programs.
@@ -2082,6 +2158,15 @@ export default function DashboardPage() {
         </TutorialBlock>
 
         <TutorialBlock
+          id="weeks_breadcrumb"
+          title="Weeks this season"
+          blurb="On any week summary you'll see a breadcrumb trail of every week in the season, each with the emoji rating it earned. It's an at-a-glance read of how the block is going."
+          unwrapped
+        >
+          {renderWeeksBreadcrumbMock()}
+        </TutorialBlock>
+
+        <TutorialBlock
           id="metrics"
           title="The three metrics"
           blurb="Every report card is built from these three scores. They compare what your program prescribed with what you actually did."
@@ -2104,6 +2189,15 @@ export default function DashboardPage() {
           blurb="When you hit a new e1RM or rep record, it'll show up here with the improvement over your previous best so you can celebrate the wins."
         >
           {renderPRsMock()}
+        </TutorialBlock>
+
+        <TutorialBlock
+          id="all_seasons"
+          title="All seasons"
+          blurb="At the bottom of any season summary you'll find a list of every season you've trained, each with its final grade, score, duration and PR count, so you can compare blocks side-by-side."
+          unwrapped
+        >
+          {renderAllSeasonsMock()}
         </TutorialBlock>
 
         <TutorialBlock
