@@ -80,6 +80,15 @@
   color: var(--text-muted);
 }
 
+/* Step the week-summary score block down a notch inside tutorials so the
+   primary number, emoji, % metrics and their labels don't crowd against the
+   tutorial card's tighter horizontal budget. Scoped to .tutorial-block so the
+   real WeekSummaryPage layout is untouched. */
+.tutorial-block .week-summary-emoji          { font-size: 2.5rem; }
+.tutorial-block .week-summary-score-total    { font-size: 3rem; }
+.tutorial-block .week-summary-score-item__pct   { font-size: 1.05rem; }
+.tutorial-block .week-summary-score-item__label { font-size: 0.64rem; }
+
 /* ── Mock: metrics legend ────────────────────────────────────────────────── */
 .tutorial-mock-metrics {
   display: flex;
