@@ -1770,39 +1770,40 @@ export default function DashboardPage() {
   }
 
   function renderReportMock() {
+    // Reuses the real week-summary score block markup so the report looks
+    // identical to what the user sees when tapping any completed week.
     return (
-      <div className="tutorial-mock-report">
-        <div className="tutorial-mock-report__head">
-          <span className="tutorial-mock-report__title">Week 3 report</span>
-          <span className="tutorial-mock-report__grade">🤩</span>
+      <section className="week-summary-section">
+        <h2 className="week-summary-section-title">Week 3 results</h2>
+        <p className="week-summary-narrative">
+          You logged enough sets to meet your volume target, lifted enough weight
+          to hit your intensity target and stayed consistent with your schedule.
+        </p>
+        <div className="week-summary-score-block">
+          <div className="week-summary-score-primary">
+            <span className="week-summary-emoji" aria-label="Week score 94">🤩</span>
+            <div className="week-summary-score-center">
+              <span className="week-summary-score-total">94</span>
+              <span className="week-summary-score-label">Week score</span>
+            </div>
+          </div>
+          <div className="week-summary-score-divider" />
+          <div className="week-summary-score-secondary">
+            <div className="week-summary-score-item">
+              <span className="week-summary-score-item__pct">92%</span>
+              <span className="week-summary-score-item__label">Volume</span>
+            </div>
+            <div className="week-summary-score-item">
+              <span className="week-summary-score-item__pct">90%</span>
+              <span className="week-summary-score-item__label">Intensity</span>
+            </div>
+            <div className="week-summary-score-item">
+              <span className="week-summary-score-item__pct">100%</span>
+              <span className="week-summary-score-item__label">Consistency</span>
+            </div>
+          </div>
         </div>
-        <div className="tutorial-mock-report__rows">
-          <div className="tutorial-mock-report__row">
-            <span className="tutorial-mock-report__metric">Consistency</span>
-            <span className="tutorial-mock-report__bar">
-              <span className="tutorial-mock-report__bar-fill" style={{ width: "100%" }} />
-            </span>
-            <span className="tutorial-mock-report__value">4/4</span>
-          </div>
-          <div className="tutorial-mock-report__row">
-            <span className="tutorial-mock-report__metric">Volume</span>
-            <span className="tutorial-mock-report__bar">
-              <span className="tutorial-mock-report__bar-fill" style={{ width: "92%" }} />
-            </span>
-            <span className="tutorial-mock-report__value">92%</span>
-          </div>
-          <div className="tutorial-mock-report__row">
-            <span className="tutorial-mock-report__metric">Intensity</span>
-            <span className="tutorial-mock-report__bar">
-              <span
-                className="tutorial-mock-report__bar-fill tutorial-mock-report__bar-fill--amber"
-                style={{ width: "78%" }}
-              />
-            </span>
-            <span className="tutorial-mock-report__value">78%</span>
-          </div>
-        </div>
-      </div>
+      </section>
     );
   }
 
@@ -1841,95 +1842,167 @@ export default function DashboardPage() {
   }
 
   function renderGraphMock() {
-    // Fake e1RM trend: 8 evenly-spaced sessions trending upward with a couple
-    // of dips. Coords are SVG units; viewBox keeps it crisp at any size.
+    // Reuses ExerciseInsights' CSS classes and renders a static chart that
+    // matches the real chart's geometry, padding, axes and stroke styling.
+    const CHART_W = 300;
+    const CHART_H = 128;
+    const PAD = { top: 14, right: 10, bottom: 28, left: 38 };
+    const PLOT_W = CHART_W - PAD.left - PAD.right;
+    const PLOT_H = CHART_H - PAD.top - PAD.bottom;
     const points = [60, 62, 61, 65, 68, 66, 72, 75];
-    const minY = Math.min(...points) - 4;
-    const maxY = Math.max(...points) + 4;
-    const w = 100;
-    const h = 30;
-    const xStep = w / (points.length - 1);
-    const coords = points.map((p, i) => {
-      const x = i * xStep;
-      const y = h - ((p - minY) / (maxY - minY)) * h;
-      return [x, y];
+    const n = points.length;
+    const minVal = Math.min(...points);
+    const maxVal = Math.max(...points);
+    const range = maxVal - minVal;
+    const yPadding = range * 0.2;
+    const yMin = Math.max(0, minVal - yPadding);
+    const yMax = maxVal + yPadding;
+    const xScale = (i: number) => PAD.left + (i / (n - 1)) * PLOT_W;
+    const yScale = (v: number) => PAD.top + PLOT_H - ((v - yMin) / (yMax - yMin)) * PLOT_H;
+    const yTicks = [0, 1, 2].map((i) => {
+      const v = yMin + (i / 2) * (yMax - yMin);
+      return { label: Math.round(v), y: yScale(v) };
     });
-    const path = coords.map(([x, y], i) => `${i === 0 ? "M" : "L"} ${x} ${y}`).join(" ");
+    const linePoints = points
+      .map((p, i) => `${xScale(i)},${yScale(p)}`)
+      .join(" ");
+    const areaD =
+      `M ${xScale(0)},${yScale(points[0])} ` +
+      points
+        .slice(1)
+        .map((p, i) => `L ${xScale(i + 1)},${yScale(p)}`)
+        .join(" ") +
+      ` L ${xScale(n - 1)},${PAD.top + PLOT_H} L ${xScale(0)},${PAD.top + PLOT_H} Z`;
+
     return (
-      <div className="tutorial-mock-graph">
-        <span className="tutorial-mock-graph__title">Bench press · e1RM</span>
-        <svg
-          className="tutorial-mock-graph__svg"
-          viewBox={`0 0 ${w} ${h}`}
-          preserveAspectRatio="none"
-          aria-hidden="true"
-        >
-          <path d={path} fill="none" stroke="#d8f06a" strokeWidth="1.2" />
-          {coords.map(([x, y], i) => (
-            <circle key={i} cx={x} cy={y} r="1.4" fill="#d8f06a" />
-          ))}
-        </svg>
-        <div className="tutorial-mock-graph__caption">
-          <span>8 weeks ago</span>
-          <span>+25% e1RM</span>
+      <section className="exercise-insights">
+        <div className="exercise-insights__header-row">
+          <p className="exercise-insights__eyebrow">Insights</p>
+          <div className="exercise-insights__bin-toggle">
+            <button type="button" className="exercise-insights__bin-btn exercise-insights__bin-btn--active">Week</button>
+            <button type="button" className="exercise-insights__bin-btn">Season</button>
+            <button type="button" className="exercise-insights__bin-btn">Quarter</button>
+            <button type="button" className="exercise-insights__bin-btn">Year</button>
+          </div>
         </div>
-      </div>
+        <div className="exercise-insights__chart">
+          <p className="exercise-insights__chart-label">e1RM over time (kg)</p>
+          <svg
+            viewBox={`0 0 ${CHART_W} ${CHART_H}`}
+            style={{ width: "100%", height: "auto", display: "block", overflow: "visible" }}
+            aria-hidden="true"
+          >
+            <defs>
+              <linearGradient id="tutorial-mock-graph-fill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#d8f06a" stopOpacity="0.14" />
+                <stop offset="100%" stopColor="#d8f06a" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            {yTicks.map(({ label, y }) => (
+              <g key={label}>
+                <line x1={PAD.left} y1={y} x2={CHART_W - PAD.right} y2={y} stroke="#2b313a" strokeWidth="1" />
+                <text x={PAD.left - 6} y={y + 4} textAnchor="end" fontSize="9" fill="#7e8794">
+                  {label}
+                </text>
+              </g>
+            ))}
+            <path d={areaD} fill="url(#tutorial-mock-graph-fill)" />
+            <polyline points={linePoints} fill="none" stroke="#c4e23c" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+            {points.map((p, i) => (
+              <circle key={i} cx={xScale(i)} cy={yScale(p)} r="3" fill="#1a1f26" stroke="#c4e23c" strokeWidth="2" />
+            ))}
+            <text x={xScale(0)} y={CHART_H - 4} textAnchor="start" fontSize="9" fill="#7e8794">Mar '26</text>
+            <text x={xScale(Math.floor(n / 2))} y={CHART_H - 4} textAnchor="middle" fontSize="9" fill="#7e8794">Apr '26</text>
+            <text x={xScale(n - 1)} y={CHART_H - 4} textAnchor="end" fontSize="9" fill="#7e8794">May '26</text>
+          </svg>
+        </div>
+        <div className="exercise-insights__metrics-grid">
+          <div className="exercise-insights__metric">
+            <span className="exercise-insights__metric-eyebrow">Previous lift</span>
+            <span className="exercise-insights__metric-date">7 May '26</span>
+            <strong className="exercise-insights__metric-value">90kg × 5</strong>
+            <span className="exercise-insights__metric-e1rm">105kg e1RM</span>
+          </div>
+          <div className="exercise-insights__metric">
+            <span className="exercise-insights__metric-eyebrow">Best lift</span>
+            <span className="exercise-insights__metric-date">14 May '26</span>
+            <strong className="exercise-insights__metric-value">95kg × 5</strong>
+            <span className="exercise-insights__metric-e1rm">110.8kg e1RM</span>
+          </div>
+        </div>
+      </section>
     );
   }
 
   function renderPRsMock() {
+    // Reuses the exact dashboard-pr-list markup from renderAllPRs so the
+    // tutorial looks like a real PR row, just with fabricated values.
     return (
-      <div className="tutorial-mock-prs">
-        <div className="tutorial-mock-prs__item">
-          <div className="tutorial-mock-prs__top">
-            <span>Squat</span>
-            <span>2 days ago</span>
+      <ul className="dashboard-pr-list">
+        <li className="dashboard-pr-item">
+          <div className="dashboard-pr-item__top">
+            <span className="dashboard-pr-item__exercise">Squat</span>
+            <span className="dashboard-pr-item__date">12 May '26</span>
           </div>
-          <span className="tutorial-mock-prs__detail">
-            115kg<span className="tutorial-mock-prs__arrow">→</span>
-            <span className="tutorial-mock-prs__new">122kg</span> e1RM (+6%)
+          <span className="dashboard-pr-item__ago">2 days ago</span>
+          <span className="dashboard-pr-item__detail">
+            115kg <span className="dashboard-pr-item__arrow">→</span>{" "}
+            <span className="dashboard-pr-item__new">122kg</span> e1RM (+6%)
           </span>
-        </div>
-        <div className="tutorial-mock-prs__item">
-          <div className="tutorial-mock-prs__top">
-            <span>Pull-up</span>
-            <span>5 days ago</span>
+        </li>
+        <li className="dashboard-pr-item">
+          <div className="dashboard-pr-item__top">
+            <span className="dashboard-pr-item__exercise">Pull-up</span>
+            <span className="dashboard-pr-item__date">9 May '26</span>
           </div>
-          <span className="tutorial-mock-prs__detail">
-            10 reps<span className="tutorial-mock-prs__arrow">→</span>
-            <span className="tutorial-mock-prs__new">12 reps</span> (+20%)
+          <span className="dashboard-pr-item__ago">5 days ago</span>
+          <span className="dashboard-pr-item__detail">
+            10 reps <span className="dashboard-pr-item__arrow">→</span>{" "}
+            <span className="dashboard-pr-item__new">12 reps</span> (+20%)
           </span>
-        </div>
-      </div>
+        </li>
+      </ul>
     );
   }
 
   function renderProgramMock() {
+    // Reuses the real config-programs__list markup so the rows look exactly
+    // like what users will see at Settings → Programs.
     return (
-      <div className="tutorial-mock-program">
-        <div className="tutorial-mock-program__row">
-          <span className="tutorial-mock-program__step">1</span>
-          <span className="tutorial-mock-program__text">
-            Open <strong>Settings → Programs</strong>
-          </span>
+      <div className="config-programs__list">
+        <div className="config-programs__row">
+          <div className="config-programs__card config-programs__card--active">
+            <span className="config-programs__card-body">
+              <span className="config-programs__card-name">Push / Pull / Legs</span>
+              <span className="config-programs__card-rir">RIR 4, 3, 2, 1, 0</span>
+            </span>
+            <span className="config-programs__card-right">
+              <span className="config-programs__active-pill">Active</span>
+              <span className="config-programs__chevron">›</span>
+            </span>
+          </div>
         </div>
-        <div className="tutorial-mock-program__row">
-          <span className="tutorial-mock-program__step">2</span>
-          <span className="tutorial-mock-program__text">
-            Add a new program and define its <strong>week structure</strong>
-          </span>
+        <div className="config-programs__row">
+          <div className="config-programs__card">
+            <span className="config-programs__card-body">
+              <span className="config-programs__card-name">Upper / Lower 4×</span>
+              <span className="config-programs__card-rir">RIR 3, 2, 1, 0</span>
+            </span>
+            <span className="config-programs__card-right">
+              <span className="config-programs__chevron">›</span>
+            </span>
+          </div>
         </div>
-        <div className="tutorial-mock-program__row">
-          <span className="tutorial-mock-program__step">3</span>
-          <span className="tutorial-mock-program__text">
-            For each session, set <strong>muscle-group targets</strong> and exercises
-          </span>
-        </div>
-        <div className="tutorial-mock-program__row">
-          <span className="tutorial-mock-program__step">4</span>
-          <span className="tutorial-mock-program__text">
-            <strong>Start a season</strong> to lock in dates and begin tracking
-          </span>
+        <div className="config-programs__row">
+          <div className="config-programs__card">
+            <span className="config-programs__card-body">
+              <span className="config-programs__card-name">Full body 3×</span>
+              <span className="config-programs__card-rir">RIR 4, 3, 2, 1, 0</span>
+            </span>
+            <span className="config-programs__card-right">
+              <span className="config-programs__chevron">›</span>
+            </span>
+          </div>
         </div>
       </div>
     );
@@ -2003,6 +2076,7 @@ export default function DashboardPage() {
           id="reports"
           title="Session, week & season reports"
           blurb="Every session, week, and season gets a graded report card with consistency, volume and intensity scores so you can see, at a glance, how each block went."
+          unwrapped
         >
           {renderReportMock()}
         </TutorialBlock>
@@ -2019,6 +2093,7 @@ export default function DashboardPage() {
           id="exercise_graph"
           title="Exercise summaries"
           blurb="Tap any exercise on the exercises page to see its e1RM progress over time and spot trends across seasons."
+          unwrapped
         >
           {renderGraphMock()}
         </TutorialBlock>
@@ -2035,6 +2110,7 @@ export default function DashboardPage() {
           id="programs"
           title="Create your own program"
           blurb="Build a program from scratch in Settings → Programs. Define your week structure, sessions, muscle-group targets and exercises — then start a season to begin tracking."
+          unwrapped
         >
           {renderProgramMock()}
         </TutorialBlock>
