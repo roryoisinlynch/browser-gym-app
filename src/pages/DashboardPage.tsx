@@ -2066,7 +2066,7 @@ export default function DashboardPage() {
         <TutorialBlock
           id="schedule"
           title="Your season schedule"
-          blurb="Once your program is running, this view shows every planned session, rest day, and how closely you're tracking the schedule — green squares are sessions done, crosses are rest days, orange means overdue."
+          blurb="Once your program is running, this view shows every planned session, rest day, and how closely you're tracking the schedule. Green squares are sessions done, crosses are rest days, orange means overdue."
           unwrapped
         >
           {renderScheduleMock()}
@@ -2109,7 +2109,7 @@ export default function DashboardPage() {
         <TutorialBlock
           id="programs"
           title="Create your own program"
-          blurb="Build a program from scratch in Settings → Programs. Define your week structure, sessions, muscle-group targets and exercises — then start a season to begin tracking."
+          blurb="Build a program from scratch in Settings → Programs. Define your week structure, sessions, muscle-group targets and exercises, then start a season to begin tracking."
           unwrapped
         >
           {renderProgramMock()}
