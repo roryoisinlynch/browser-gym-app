@@ -32,6 +32,7 @@ import BottomNav from "../components/BottomNav";
 import TutorialBlock from "../components/TutorialBlock";
 import WeeksBreadcrumb from "../components/WeeksBreadcrumb";
 import type { BreadcrumbWeek } from "../components/WeeksBreadcrumb";
+import ExerciseSummaryCard from "../components/ExerciseSummaryCard";
 import { computeSessionMetrics } from "../services/sessionMetrics";
 import { computeWeekMetrics, emojiForRating } from "../services/weekMetrics";
 import { computeSeasonMetrics, gradeColor } from "../services/seasonMetrics";
@@ -2041,6 +2042,25 @@ export default function DashboardPage() {
     );
   }
 
+  function renderExerciseSummaryCardMock() {
+    // Reuses the real ExerciseSummaryCard component with fabricated targets:
+    // 80kg × 8 at 3 RIR, with the user's all-time PR a few months back.
+    const historicalBestDate = new Date(Date.now() - 70 * 86400000).toISOString();
+    return (
+      <ExerciseSummaryCard
+        targetRir={3}
+        targetWeight={80}
+        targetReps={8}
+        targetEstimatedOneRepMax={101.3}
+        topSetEstimatedOneRepMax={null}
+        historicalBestEstimatedOneRepMax={110}
+        historicalBestDate={historicalBestDate}
+        recentMaxEstimatedOneRepMax={null}
+        recentMaxDate={null}
+      />
+    );
+  }
+
   function renderProgramMock() {
     // Reuses the real config-programs__list markup so the rows look exactly
     // like what users will see at Settings → Programs.
@@ -2181,6 +2201,15 @@ export default function DashboardPage() {
           unwrapped
         >
           {renderGraphMock()}
+        </TutorialBlock>
+
+        <TutorialBlock
+          id="exercise_summary_card"
+          title="Targets on the exercise page"
+          blurb="Every exercise screen during a session shows today's target weight and reps, the matching e1RM, and a dash that tracks how each set lands against your working range."
+          unwrapped
+        >
+          {renderExerciseSummaryCardMock()}
         </TutorialBlock>
 
         <TutorialBlock

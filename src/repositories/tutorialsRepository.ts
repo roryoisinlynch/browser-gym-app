@@ -9,6 +9,7 @@ export const TUTORIAL_IDS = [
   "programs",
   "weeks_breadcrumb",
   "all_seasons",
+  "exercise_summary_card",
 ] as const;
 
 export type TutorialId = (typeof TUTORIAL_IDS)[number];
