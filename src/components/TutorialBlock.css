@@ -86,10 +86,14 @@
 }
 
 /* ── Mock: schedule grid ─────────────────────────────────────────────────── */
+/* Real schedule occupies ~50% of its card (sidebar gets the other half). The
+   tutorial preview is full-width, so we cap the mock so cells render at a
+   similar size to the actual grid rather than blowing up to fill the row. */
 .tutorial-mock-schedule {
   display: flex;
   flex-direction: column;
   gap: 3px;
+  max-width: 260px;
 }
 
 .tutorial-mock-schedule__row {
