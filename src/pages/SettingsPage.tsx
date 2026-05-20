@@ -6,6 +6,7 @@ import {
   setHeuristicsEnabled,
   seedDefaultQuestions,
 } from "../repositories/heuristicsRepository";
+import { resetAllTutorials } from "../repositories/tutorialsRepository";
 import BottomNav from "../components/BottomNav";
 import TopBar from "../components/TopBar";
 import "./SettingsPage.css";
@@ -13,6 +14,7 @@ import "./SettingsPage.css";
 export default function SettingsPage() {
   const navigate = useNavigate();
   const [heuristicsOn, setHeuristicsOn] = useState(false);
+  const [tutorialsResetMsg, setTutorialsResetMsg] = useState<string | null>(null);
 
   useEffect(() => {
     isHeuristicsEnabled().then(setHeuristicsOn);
@@ -23,6 +25,12 @@ export default function SettingsPage() {
     await setHeuristicsEnabled(next);
     if (next) await seedDefaultQuestions();
     setHeuristicsOn(next);
+  }
+
+  async function handleResetTutorials() {
+    await resetAllTutorials();
+    setTutorialsResetMsg("Tutorials re-enabled");
+    setTimeout(() => setTutorialsResetMsg(null), 2000);
   }
 
   return (
@@ -148,6 +156,24 @@ export default function SettingsPage() {
                 </span>
               </div>
               <span className="settings-nav-card__chevron">›</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <p className="settings-section-label">Tutorials</p>
+          <div className="settings-card-list">
+            <button
+              type="button"
+              className="settings-nav-card"
+              onClick={handleResetTutorials}
+            >
+              <div className="settings-nav-card__body">
+                <span className="settings-nav-card__title">Re-enable tutorials</span>
+                <span className="settings-nav-card__desc">
+                  {tutorialsResetMsg ?? "Reset all dismissed tutorial blocks on the dashboard"}
+                </span>
+              </div>
             </button>
           </div>
         </div>

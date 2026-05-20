@@ -29,6 +29,7 @@ import ExerciseInsights from "../components/ExerciseInsights";
 import Medal from "../components/Medal";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
+import TutorialBlock from "../components/TutorialBlock";
 import { computeSessionMetrics } from "../services/sessionMetrics";
 import { computeWeekMetrics, emojiForRating } from "../services/weekMetrics";
 import { computeSeasonMetrics, gradeColor } from "../services/seasonMetrics";
@@ -1703,6 +1704,202 @@ export default function DashboardPage() {
     );
   }
 
+  // ─── Tutorial mocks ───────────────────────────────────────────────────────
+
+  function renderScheduleMock() {
+    // Three weeks of fake data: w1 done, w2 done with skip + today marker,
+    // w3 mostly upcoming. Last day of every row is a rest cross.
+    type Cell = "green" | "skipped" | "overdue" | "grey" | "rest" | "today";
+    const weeks: Cell[][] = [
+      ["green", "green", "rest", "green", "green", "rest", "rest"],
+      ["green", "skipped", "rest", "green", "today", "rest", "rest"],
+      ["grey", "grey", "rest", "grey", "grey", "rest", "rest"],
+    ];
+    return (
+      <div className="tutorial-mock-schedule">
+        {weeks.map((week, wi) => (
+          <div key={wi} className="tutorial-mock-schedule__row">
+            <span className="tutorial-mock-schedule__label">W{wi + 1}</span>
+            <div className="tutorial-mock-schedule__days">
+              {week.map((c, ci) => (
+                <div
+                  key={ci}
+                  className={`tutorial-mock-schedule__day tutorial-mock-schedule__day--${c}`}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  function renderReportMock() {
+    return (
+      <div className="tutorial-mock-report">
+        <div className="tutorial-mock-report__head">
+          <span className="tutorial-mock-report__title">Week 3 report</span>
+          <span className="tutorial-mock-report__grade">🤩</span>
+        </div>
+        <div className="tutorial-mock-report__rows">
+          <div className="tutorial-mock-report__row">
+            <span className="tutorial-mock-report__metric">Consistency</span>
+            <span className="tutorial-mock-report__bar">
+              <span className="tutorial-mock-report__bar-fill" style={{ width: "100%" }} />
+            </span>
+            <span className="tutorial-mock-report__value">4/4</span>
+          </div>
+          <div className="tutorial-mock-report__row">
+            <span className="tutorial-mock-report__metric">Volume</span>
+            <span className="tutorial-mock-report__bar">
+              <span className="tutorial-mock-report__bar-fill" style={{ width: "92%" }} />
+            </span>
+            <span className="tutorial-mock-report__value">92%</span>
+          </div>
+          <div className="tutorial-mock-report__row">
+            <span className="tutorial-mock-report__metric">Intensity</span>
+            <span className="tutorial-mock-report__bar">
+              <span
+                className="tutorial-mock-report__bar-fill tutorial-mock-report__bar-fill--amber"
+                style={{ width: "78%" }}
+              />
+            </span>
+            <span className="tutorial-mock-report__value">78%</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderMetricsMock() {
+    return (
+      <div className="tutorial-mock-metrics">
+        <div className="tutorial-mock-metrics__item">
+          <span className="tutorial-mock-metrics__dot" />
+          <div>
+            <span className="tutorial-mock-metrics__name">Consistency</span>
+            <span className="tutorial-mock-metrics__desc">
+              Did you train on the days your program said to?
+            </span>
+          </div>
+        </div>
+        <div className="tutorial-mock-metrics__item">
+          <span className="tutorial-mock-metrics__dot tutorial-mock-metrics__dot--volume" />
+          <div>
+            <span className="tutorial-mock-metrics__name">Volume</span>
+            <span className="tutorial-mock-metrics__desc">
+              Did you hit the working-set targets for each muscle group?
+            </span>
+          </div>
+        </div>
+        <div className="tutorial-mock-metrics__item">
+          <span className="tutorial-mock-metrics__dot tutorial-mock-metrics__dot--intensity" />
+          <div>
+            <span className="tutorial-mock-metrics__name">Intensity</span>
+            <span className="tutorial-mock-metrics__desc">
+              Did each set reach the prescribed effort relative to your historical best?
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderGraphMock() {
+    // Fake e1RM trend: 8 evenly-spaced sessions trending upward with a couple
+    // of dips. Coords are SVG units; viewBox keeps it crisp at any size.
+    const points = [60, 62, 61, 65, 68, 66, 72, 75];
+    const minY = Math.min(...points) - 4;
+    const maxY = Math.max(...points) + 4;
+    const w = 100;
+    const h = 30;
+    const xStep = w / (points.length - 1);
+    const coords = points.map((p, i) => {
+      const x = i * xStep;
+      const y = h - ((p - minY) / (maxY - minY)) * h;
+      return [x, y];
+    });
+    const path = coords.map(([x, y], i) => `${i === 0 ? "M" : "L"} ${x} ${y}`).join(" ");
+    return (
+      <div className="tutorial-mock-graph">
+        <span className="tutorial-mock-graph__title">Bench press · e1RM</span>
+        <svg
+          className="tutorial-mock-graph__svg"
+          viewBox={`0 0 ${w} ${h}`}
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <path d={path} fill="none" stroke="#d8f06a" strokeWidth="1.2" />
+          {coords.map(([x, y], i) => (
+            <circle key={i} cx={x} cy={y} r="1.4" fill="#d8f06a" />
+          ))}
+        </svg>
+        <div className="tutorial-mock-graph__caption">
+          <span>8 weeks ago</span>
+          <span>+25% e1RM</span>
+        </div>
+      </div>
+    );
+  }
+
+  function renderPRsMock() {
+    return (
+      <div className="tutorial-mock-prs">
+        <div className="tutorial-mock-prs__item">
+          <div className="tutorial-mock-prs__top">
+            <span>Squat</span>
+            <span>2 days ago</span>
+          </div>
+          <span className="tutorial-mock-prs__detail">
+            115kg<span className="tutorial-mock-prs__arrow">→</span>
+            <span className="tutorial-mock-prs__new">122kg</span> e1RM (+6%)
+          </span>
+        </div>
+        <div className="tutorial-mock-prs__item">
+          <div className="tutorial-mock-prs__top">
+            <span>Pull-up</span>
+            <span>5 days ago</span>
+          </div>
+          <span className="tutorial-mock-prs__detail">
+            10 reps<span className="tutorial-mock-prs__arrow">→</span>
+            <span className="tutorial-mock-prs__new">12 reps</span> (+20%)
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  function renderProgramMock() {
+    return (
+      <div className="tutorial-mock-program">
+        <div className="tutorial-mock-program__row">
+          <span className="tutorial-mock-program__step">1</span>
+          <span className="tutorial-mock-program__text">
+            Open <strong>Settings → Programs</strong>
+          </span>
+        </div>
+        <div className="tutorial-mock-program__row">
+          <span className="tutorial-mock-program__step">2</span>
+          <span className="tutorial-mock-program__text">
+            Add a new program and define its <strong>week structure</strong>
+          </span>
+        </div>
+        <div className="tutorial-mock-program__row">
+          <span className="tutorial-mock-program__step">3</span>
+          <span className="tutorial-mock-program__text">
+            For each session, set <strong>muscle-group targets</strong> and exercises
+          </span>
+        </div>
+        <div className="tutorial-mock-program__row">
+          <span className="tutorial-mock-program__step">4</span>
+          <span className="tutorial-mock-program__text">
+            <strong>Start a season</strong> to lock in dates and begin tracking
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   // ─── Render ───────────────────────────────────────────────────────────────
 
   if (isDesktop) {
@@ -1725,7 +1922,23 @@ export default function DashboardPage() {
           {renderUpNext()}
         </section>
 
+        <TutorialBlock
+          id="schedule"
+          title="Your season schedule"
+          blurb="Once your program is running, this view shows every planned session, rest day, and how closely you're tracking the schedule — green squares are sessions done, crosses are rest days, orange means overdue."
+        >
+          {renderScheduleMock()}
+        </TutorialBlock>
+
         {renderTimeline()}
+
+        <TutorialBlock
+          id="reports"
+          title="Session, week & season reports"
+          blurb="Every session, week, and season gets a graded report card with consistency, volume and intensity scores so you can see, at a glance, how each block went."
+        >
+          {renderReportMock()}
+        </TutorialBlock>
 
         {hasAnyRecent && (
           <section className="dashboard-section">
@@ -1750,13 +1963,45 @@ export default function DashboardPage() {
           </section>
         )}
 
+        <TutorialBlock
+          id="metrics"
+          title="The three metrics"
+          blurb="Every report card is built from these three scores. They compare what your program prescribed with what you actually did."
+        >
+          {renderMetricsMock()}
+        </TutorialBlock>
+
         {renderAchievements()}
 
         {renderBackupNudge()}
 
+        <TutorialBlock
+          id="exercise_graph"
+          title="Exercise summaries"
+          blurb="Tap any exercise on the exercises page to see its e1RM progress over time and spot trends across seasons."
+        >
+          {renderGraphMock()}
+        </TutorialBlock>
+
         {renderPRSpotlight()}
 
+        <TutorialBlock
+          id="recent_prs"
+          title="Recent personal records"
+          blurb="When you hit a new e1RM or rep record, it'll show up here with the improvement over your previous best so you can celebrate the wins."
+        >
+          {renderPRsMock()}
+        </TutorialBlock>
+
         {renderAllPRs()}
+
+        <TutorialBlock
+          id="programs"
+          title="Create your own program"
+          blurb="Build a program from scratch in Settings → Programs. Define your week structure, sessions, muscle-group targets and exercises — then start a season to begin tracking."
+        >
+          {renderProgramMock()}
+        </TutorialBlock>
       </section>
 
       <BottomNav activeTab="home" />
