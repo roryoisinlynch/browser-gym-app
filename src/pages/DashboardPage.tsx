@@ -38,6 +38,162 @@ import { computeWeekMetrics, emojiForRating } from "../services/weekMetrics";
 import { computeSeasonMetrics, gradeColor } from "../services/seasonMetrics";
 import "./DashboardPage.css";
 
+// ─── Tutorial: exercise graph mock ─────────────────────────────────────────
+// Standalone component so it can hold its own bin-toggle state. Each bin shows
+// a different fabricated dataset + x-axis labels so the toggle is functional.
+
+type GraphBin = "week" | "season" | "quarter" | "year";
+
+const GRAPH_DATASETS: Record<
+  GraphBin,
+  { points: number[]; labels: [string, string, string]; previousLabel: string; bestLabel: string; previousValue: string; bestValue: string; previousE1RM: string; bestE1RM: string }
+> = {
+  week: {
+    points: [88, 91, 90, 94, 97, 96, 102, 105],
+    labels: ["Mar '26", "Apr '26", "May '26"],
+    previousLabel: "7 May '26",
+    bestLabel: "14 May '26",
+    previousValue: "90kg × 5",
+    bestValue: "95kg × 5",
+    previousE1RM: "105kg e1RM",
+    bestE1RM: "110.8kg e1RM",
+  },
+  season: {
+    points: [82, 92, 105],
+    labels: ["Autumn '25", "Winter '26", "Spring '26"],
+    previousLabel: "Winter '26",
+    bestLabel: "Spring '26",
+    previousValue: "85kg × 5",
+    bestValue: "95kg × 5",
+    previousE1RM: "99.2kg e1RM",
+    bestE1RM: "110.8kg e1RM",
+  },
+  quarter: {
+    points: [78, 84, 95, 105],
+    labels: ["Q2 '25", "Q3 '25", "Q1 '26"],
+    previousLabel: "Q1 '26",
+    bestLabel: "Q2 '26",
+    previousValue: "85kg × 5",
+    bestValue: "95kg × 5",
+    previousE1RM: "99.2kg e1RM",
+    bestE1RM: "110.8kg e1RM",
+  },
+  year: {
+    points: [70, 88, 105],
+    labels: ["2024", "2025", "2026"],
+    previousLabel: "2025",
+    bestLabel: "2026",
+    previousValue: "80kg × 5",
+    bestValue: "95kg × 5",
+    previousE1RM: "93.3kg e1RM",
+    bestE1RM: "110.8kg e1RM",
+  },
+};
+
+function ExerciseGraphMock() {
+  const [bin, setBin] = useState<GraphBin>("week");
+  const data = GRAPH_DATASETS[bin];
+
+  const CHART_W = 300;
+  const CHART_H = 128;
+  const PAD = { top: 14, right: 10, bottom: 28, left: 38 };
+  const PLOT_W = CHART_W - PAD.left - PAD.right;
+  const PLOT_H = CHART_H - PAD.top - PAD.bottom;
+  const n = data.points.length;
+  const minVal = Math.min(...data.points);
+  const maxVal = Math.max(...data.points);
+  const range = maxVal - minVal || 10;
+  const yPadding = range * 0.2;
+  const yMin = Math.max(0, minVal - yPadding);
+  const yMax = maxVal + yPadding;
+  const xScale = (i: number) => PAD.left + (n > 1 ? (i / (n - 1)) * PLOT_W : PLOT_W / 2);
+  const yScale = (v: number) => PAD.top + PLOT_H - ((v - yMin) / (yMax - yMin)) * PLOT_H;
+  const yTicks = [0, 1, 2].map((i) => {
+    const v = yMin + (i / 2) * (yMax - yMin);
+    return { label: Math.round(v), y: yScale(v) };
+  });
+  const linePoints = data.points.map((p, i) => `${xScale(i)},${yScale(p)}`).join(" ");
+  const areaD =
+    n > 1
+      ? `M ${xScale(0)},${yScale(data.points[0])} ` +
+        data.points.slice(1).map((p, i) => `L ${xScale(i + 1)},${yScale(p)}`).join(" ") +
+        ` L ${xScale(n - 1)},${PAD.top + PLOT_H} L ${xScale(0)},${PAD.top + PLOT_H} Z`
+      : "";
+
+  return (
+    <section className="exercise-insights">
+      <div className="exercise-insights__header-row">
+        <p className="exercise-insights__eyebrow">Insights</p>
+        <div className="exercise-insights__bin-toggle">
+          {(["week", "season", "quarter", "year"] as GraphBin[]).map((b) => (
+            <button
+              key={b}
+              type="button"
+              className={`exercise-insights__bin-btn${bin === b ? " exercise-insights__bin-btn--active" : ""}`}
+              onClick={() => setBin(b)}
+            >
+              {b.charAt(0).toUpperCase() + b.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="exercise-insights__chart">
+        <p className="exercise-insights__chart-label">e1RM over time (kg)</p>
+        <svg
+          viewBox={`0 0 ${CHART_W} ${CHART_H}`}
+          style={{ width: "100%", height: "auto", display: "block", overflow: "visible" }}
+          aria-hidden="true"
+        >
+          <defs>
+            <linearGradient id="tutorial-mock-graph-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#d8f06a" stopOpacity="0.14" />
+              <stop offset="100%" stopColor="#d8f06a" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {yTicks.map(({ label, y }) => (
+            <g key={label}>
+              <line x1={PAD.left} y1={y} x2={CHART_W - PAD.right} y2={y} stroke="#2b313a" strokeWidth="1" />
+              <text x={PAD.left - 6} y={y + 4} textAnchor="end" fontSize="9" fill="#7e8794">
+                {label}
+              </text>
+            </g>
+          ))}
+          {areaD && <path d={areaD} fill="url(#tutorial-mock-graph-fill)" />}
+          {n > 1 && (
+            <polyline points={linePoints} fill="none" stroke="#c4e23c" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+          )}
+          {data.points.map((p, i) => (
+            <circle key={i} cx={xScale(i)} cy={yScale(p)} r="3" fill="#1a1f26" stroke="#c4e23c" strokeWidth="2" />
+          ))}
+          <text x={xScale(0)} y={CHART_H - 4} textAnchor="start" fontSize="9" fill="#7e8794">{data.labels[0]}</text>
+          {n > 2 && (
+            <text x={xScale(Math.floor((n - 1) / 2))} y={CHART_H - 4} textAnchor="middle" fontSize="9" fill="#7e8794">
+              {data.labels[1]}
+            </text>
+          )}
+          <text x={xScale(n - 1)} y={CHART_H - 4} textAnchor="end" fontSize="9" fill="#7e8794">
+            {n > 2 ? data.labels[2] : data.labels[1]}
+          </text>
+        </svg>
+      </div>
+      <div className="exercise-insights__metrics-grid">
+        <div className="exercise-insights__metric">
+          <span className="exercise-insights__metric-eyebrow">Previous lift</span>
+          <span className="exercise-insights__metric-date">{data.previousLabel}</span>
+          <strong className="exercise-insights__metric-value">{data.previousValue}</strong>
+          <span className="exercise-insights__metric-e1rm">{data.previousE1RM}</span>
+        </div>
+        <div className="exercise-insights__metric">
+          <span className="exercise-insights__metric-eyebrow">Best lift</span>
+          <span className="exercise-insights__metric-date">{data.bestLabel}</span>
+          <strong className="exercise-insights__metric-value">{data.bestValue}</strong>
+          <span className="exercise-insights__metric-e1rm">{data.bestE1RM}</span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type UpNextState =
@@ -1774,35 +1930,42 @@ export default function DashboardPage() {
 
   function renderReportMock() {
     // Reuses the real week-summary score block markup so the report looks
-    // identical to what the user sees when tapping any completed week.
+    // identical to what the user sees when tapping any completed week. The
+    // narrative sits inside the same card as the score breakdown so the whole
+    // block reads as one self-contained example rather than as commentary.
     return (
       <section className="week-summary-section">
         <h2 className="week-summary-section-title">Week 3 results</h2>
-        <p className="week-summary-narrative">
-          You logged enough sets to meet your volume target, lifted enough weight
-          to hit your intensity target and stayed consistent with your schedule.
-        </p>
-        <div className="week-summary-score-block">
-          <div className="week-summary-score-primary">
-            <span className="week-summary-emoji" aria-label="Week score 94">🤩</span>
-            <div className="week-summary-score-center">
-              <span className="week-summary-score-total">94</span>
-              <span className="week-summary-score-label">Week score</span>
+        <div
+          className="week-summary-score-block"
+          style={{ flexDirection: "column", alignItems: "stretch", gap: 12 }}
+        >
+          <p className="week-summary-narrative" style={{ margin: 0 }}>
+            You logged enough sets to meet your volume target, lifted enough weight
+            to hit your intensity target and stayed consistent with your schedule.
+          </p>
+          <div style={{ display: "flex", flexDirection: "row", alignItems: "stretch" }}>
+            <div className="week-summary-score-primary">
+              <span className="week-summary-emoji" aria-label="Week score 94">🤩</span>
+              <div className="week-summary-score-center">
+                <span className="week-summary-score-total">94</span>
+                <span className="week-summary-score-label">Week score</span>
+              </div>
             </div>
-          </div>
-          <div className="week-summary-score-divider" />
-          <div className="week-summary-score-secondary">
-            <div className="week-summary-score-item">
-              <span className="week-summary-score-item__pct">92%</span>
-              <span className="week-summary-score-item__label">Volume</span>
-            </div>
-            <div className="week-summary-score-item">
-              <span className="week-summary-score-item__pct">90%</span>
-              <span className="week-summary-score-item__label">Intensity</span>
-            </div>
-            <div className="week-summary-score-item">
-              <span className="week-summary-score-item__pct">100%</span>
-              <span className="week-summary-score-item__label">Consistency</span>
+            <div className="week-summary-score-divider" />
+            <div className="week-summary-score-secondary">
+              <div className="week-summary-score-item">
+                <span className="week-summary-score-item__pct">92%</span>
+                <span className="week-summary-score-item__label">Volume</span>
+              </div>
+              <div className="week-summary-score-item">
+                <span className="week-summary-score-item__pct">90%</span>
+                <span className="week-summary-score-item__label">Intensity</span>
+              </div>
+              <div className="week-summary-score-item">
+                <span className="week-summary-score-item__pct">100%</span>
+                <span className="week-summary-score-item__label">Consistency</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1845,96 +2008,7 @@ export default function DashboardPage() {
   }
 
   function renderGraphMock() {
-    // Reuses ExerciseInsights' CSS classes and renders a static chart that
-    // matches the real chart's geometry, padding, axes and stroke styling.
-    const CHART_W = 300;
-    const CHART_H = 128;
-    const PAD = { top: 14, right: 10, bottom: 28, left: 38 };
-    const PLOT_W = CHART_W - PAD.left - PAD.right;
-    const PLOT_H = CHART_H - PAD.top - PAD.bottom;
-    const points = [60, 62, 61, 65, 68, 66, 72, 75];
-    const n = points.length;
-    const minVal = Math.min(...points);
-    const maxVal = Math.max(...points);
-    const range = maxVal - minVal;
-    const yPadding = range * 0.2;
-    const yMin = Math.max(0, minVal - yPadding);
-    const yMax = maxVal + yPadding;
-    const xScale = (i: number) => PAD.left + (i / (n - 1)) * PLOT_W;
-    const yScale = (v: number) => PAD.top + PLOT_H - ((v - yMin) / (yMax - yMin)) * PLOT_H;
-    const yTicks = [0, 1, 2].map((i) => {
-      const v = yMin + (i / 2) * (yMax - yMin);
-      return { label: Math.round(v), y: yScale(v) };
-    });
-    const linePoints = points
-      .map((p, i) => `${xScale(i)},${yScale(p)}`)
-      .join(" ");
-    const areaD =
-      `M ${xScale(0)},${yScale(points[0])} ` +
-      points
-        .slice(1)
-        .map((p, i) => `L ${xScale(i + 1)},${yScale(p)}`)
-        .join(" ") +
-      ` L ${xScale(n - 1)},${PAD.top + PLOT_H} L ${xScale(0)},${PAD.top + PLOT_H} Z`;
-
-    return (
-      <section className="exercise-insights">
-        <div className="exercise-insights__header-row">
-          <p className="exercise-insights__eyebrow">Insights</p>
-          <div className="exercise-insights__bin-toggle">
-            <button type="button" className="exercise-insights__bin-btn exercise-insights__bin-btn--active">Week</button>
-            <button type="button" className="exercise-insights__bin-btn">Season</button>
-            <button type="button" className="exercise-insights__bin-btn">Quarter</button>
-            <button type="button" className="exercise-insights__bin-btn">Year</button>
-          </div>
-        </div>
-        <div className="exercise-insights__chart">
-          <p className="exercise-insights__chart-label">e1RM over time (kg)</p>
-          <svg
-            viewBox={`0 0 ${CHART_W} ${CHART_H}`}
-            style={{ width: "100%", height: "auto", display: "block", overflow: "visible" }}
-            aria-hidden="true"
-          >
-            <defs>
-              <linearGradient id="tutorial-mock-graph-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#d8f06a" stopOpacity="0.14" />
-                <stop offset="100%" stopColor="#d8f06a" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-            {yTicks.map(({ label, y }) => (
-              <g key={label}>
-                <line x1={PAD.left} y1={y} x2={CHART_W - PAD.right} y2={y} stroke="#2b313a" strokeWidth="1" />
-                <text x={PAD.left - 6} y={y + 4} textAnchor="end" fontSize="9" fill="#7e8794">
-                  {label}
-                </text>
-              </g>
-            ))}
-            <path d={areaD} fill="url(#tutorial-mock-graph-fill)" />
-            <polyline points={linePoints} fill="none" stroke="#c4e23c" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-            {points.map((p, i) => (
-              <circle key={i} cx={xScale(i)} cy={yScale(p)} r="3" fill="#1a1f26" stroke="#c4e23c" strokeWidth="2" />
-            ))}
-            <text x={xScale(0)} y={CHART_H - 4} textAnchor="start" fontSize="9" fill="#7e8794">Mar '26</text>
-            <text x={xScale(Math.floor(n / 2))} y={CHART_H - 4} textAnchor="middle" fontSize="9" fill="#7e8794">Apr '26</text>
-            <text x={xScale(n - 1)} y={CHART_H - 4} textAnchor="end" fontSize="9" fill="#7e8794">May '26</text>
-          </svg>
-        </div>
-        <div className="exercise-insights__metrics-grid">
-          <div className="exercise-insights__metric">
-            <span className="exercise-insights__metric-eyebrow">Previous lift</span>
-            <span className="exercise-insights__metric-date">7 May '26</span>
-            <strong className="exercise-insights__metric-value">90kg × 5</strong>
-            <span className="exercise-insights__metric-e1rm">105kg e1RM</span>
-          </div>
-          <div className="exercise-insights__metric">
-            <span className="exercise-insights__metric-eyebrow">Best lift</span>
-            <span className="exercise-insights__metric-date">14 May '26</span>
-            <strong className="exercise-insights__metric-value">95kg × 5</strong>
-            <span className="exercise-insights__metric-e1rm">110.8kg e1RM</span>
-          </div>
-        </div>
-      </section>
-    );
+    return <ExerciseGraphMock />;
   }
 
   function renderPRsMock() {
@@ -2188,7 +2262,7 @@ export default function DashboardPage() {
 
         <TutorialBlock
           id="metrics"
-          title="The three metrics"
+          title="How sessions are graded"
           blurb="Every report card is built from these three scores. They compare what your program prescribed with what you actually did."
         >
           {renderMetricsMock()}

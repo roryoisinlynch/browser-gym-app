@@ -2,13 +2,8 @@
   position: relative;
   padding: 14px 14px 14px;
   border-radius: 14px;
-  border: 1px dashed rgba(127, 177, 255, 0.35);
-  background: linear-gradient(
-      135deg,
-      rgba(127, 177, 255, 0.07),
-      rgba(127, 177, 255, 0.02)
-    ),
-    var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  background: var(--panel-bg);
   display: flex;
   flex-direction: column;
   gap: 10px;
