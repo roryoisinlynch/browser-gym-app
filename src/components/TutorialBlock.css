@@ -89,39 +89,46 @@
 .tutorial-mock-schedule {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 3px;
 }
 
 .tutorial-mock-schedule__row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 
 .tutorial-mock-schedule__label {
-  font-size: 0.62rem;
+  font-size: 0.64rem;
   font-weight: 700;
   color: var(--text-soft);
-  width: 22px;
+  width: 18px;
   text-align: right;
+  flex-shrink: 0;
 }
 
 .tutorial-mock-schedule__days {
   flex: 1;
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  gap: 3px;
 }
 
+/* Slot kept square (aspect-ratio:1) and the day sized to 66% of it, matching
+   the real schedule's square-within-slot proportions. */
 .tutorial-mock-schedule__day {
   aspect-ratio: 1;
+  width: 66%;
+  margin: 0 auto;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.18);
 }
 .tutorial-mock-schedule__day--green { background: #6bcb77; }
 .tutorial-mock-schedule__day--skipped { background: #e63946; }
 .tutorial-mock-schedule__day--overdue { background: #f4a261; }
 .tutorial-mock-schedule__day--rest {
+  width: 100%;
+  border-radius: 0;
   background: transparent
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' preserveAspectRatio='none'><path d='M2 2 L8 8 M8 2 L2 8' stroke='rgba(255,255,255,0.50)' stroke-width='1.6' stroke-linecap='round' fill='none'/></svg>")
     center / 100% 100% no-repeat;

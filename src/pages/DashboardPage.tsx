@@ -1707,13 +1707,17 @@ export default function DashboardPage() {
   // ─── Tutorial mocks ───────────────────────────────────────────────────────
 
   function renderScheduleMock() {
-    // Three weeks of fake data: w1 done, w2 done with skip + today marker,
-    // w3 mostly upcoming. Last day of every row is a rest cross.
-    type Cell = "green" | "skipped" | "overdue" | "grey" | "rest" | "today";
-    const weeks: Cell[][] = [
-      ["green", "green", "rest", "green", "green", "rest", "rest"],
-      ["green", "skipped", "rest", "green", "today", "rest", "rest"],
-      ["grey", "grey", "rest", "grey", "grey", "rest", "rest"],
+    // Mirrors the real season-progress grid: two done weeks, a current week
+    // that's run behind, then three upcoming. Today lands on a rest cross.
+    type Cell = "green" | "skipped" | "overdue" | "grey" | "rest";
+    type Day = { cell: Cell; today?: boolean };
+    const weeks: Day[][] = [
+      [{cell:"green"},{cell:"green"},{cell:"rest"},{cell:"green"},{cell:"green"},{cell:"rest"},{cell:"rest"}],
+      [{cell:"green"},{cell:"green"},{cell:"rest"},{cell:"green"},{cell:"green"},{cell:"rest"},{cell:"rest"}],
+      [{cell:"green"},{cell:"overdue"},{cell:"rest"},{cell:"overdue"},{cell:"overdue"},{cell:"rest",today:true},{cell:"rest"}],
+      [{cell:"grey"},{cell:"grey"},{cell:"rest"},{cell:"grey"},{cell:"grey"},{cell:"rest"},{cell:"rest"}],
+      [{cell:"grey"},{cell:"grey"},{cell:"rest"},{cell:"grey"},{cell:"grey"},{cell:"rest"},{cell:"rest"}],
+      [{cell:"grey"},{cell:"grey"},{cell:"rest"},{cell:"grey"},{cell:"grey"},{cell:"rest"},{cell:"rest"}],
     ];
     return (
       <div className="tutorial-mock-schedule">
@@ -1721,10 +1725,14 @@ export default function DashboardPage() {
           <div key={wi} className="tutorial-mock-schedule__row">
             <span className="tutorial-mock-schedule__label">W{wi + 1}</span>
             <div className="tutorial-mock-schedule__days">
-              {week.map((c, ci) => (
+              {week.map((d, ci) => (
                 <div
                   key={ci}
-                  className={`tutorial-mock-schedule__day tutorial-mock-schedule__day--${c}`}
+                  className={[
+                    "tutorial-mock-schedule__day",
+                    `tutorial-mock-schedule__day--${d.cell}`,
+                    d.today ? "tutorial-mock-schedule__day--today" : "",
+                  ].filter(Boolean).join(" ")}
                 />
               ))}
             </div>
