@@ -80,6 +80,17 @@
   color: var(--text-muted);
 }
 
+/* The achievement shelf is a fixed-44px grid, so its leftover-on-the-right
+   scales with container width. The tutorial-block's 14px horizontal padding
+   makes the shelf 28px narrower than the live dashboard-section context,
+   which drops a column and visibly enlarges the right-side gap. Bleeding
+   the shelf out through the padding restores the live column count so the
+   gold trophy-line lands in the same spot as on the real dashboard. */
+.tutorial-block__preview-bare > .dashboard-achievements {
+  margin-left: -14px;
+  margin-right: -14px;
+}
+
 /* Step the week-summary score block down a notch inside tutorials so the
    primary number, emoji, % metrics and their labels don't crowd against the
    tutorial card's tighter horizontal budget. Scoped to .tutorial-block so the
