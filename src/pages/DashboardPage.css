@@ -867,8 +867,53 @@
   color: var(--text-soft);
 }
 
-.dashboard-pr-spotlight__chart {
+.dashboard-pr-spotlight__sparkline {
   margin-top: 4px;
+  width: 100%;
+}
+
+.dashboard-pr-spotlight__sparkline--empty {
+  height: 56px;
+}
+
+.dashboard-pr-spotlight__stats {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+@media (max-width: 480px) {
+  .dashboard-pr-spotlight__stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.dashboard-pr-spotlight__stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.02);
+  min-width: 0;
+}
+
+.dashboard-pr-spotlight__stat-value {
+  font-size: 1.18rem;
+  font-weight: 800;
+  color: var(--text-strong);
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.dashboard-pr-spotlight__stat-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  line-height: 1.2;
 }
 
 /* ── All PRs ── */

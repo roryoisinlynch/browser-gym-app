@@ -1052,6 +1052,7 @@ export interface ExerciseSessionDataPoint {
   topReps: number | null;
   topEstimatedOneRepMax: number | null;
   topRepCount: number | null; // raw max reps in session, used for bodyweight exercises
+  setCount: number;           // sets contributing to this session/date — for imported data this is the count of imported sets on that date
 }
 
 export async function getExerciseSessionHistory(
@@ -1108,6 +1109,7 @@ export async function getExerciseSessionHistory(
         topReps: topReps ?? topRepCount,
         topEstimatedOneRepMax: topE1RM,
         topRepCount,
+        setCount: sets.length,
       });
     }
   }
@@ -1118,7 +1120,7 @@ export async function getExerciseSessionHistory(
   );
 
   const importedByDate = new Map<string, {
-    weight: number | null; reps: number; e1RM: number | null; topRepCount: number;
+    weight: number | null; reps: number; e1RM: number | null; topRepCount: number; setCount: number;
   }>();
   for (const s of matchingImported) {
     if (s.reps <= 0) continue;
@@ -1133,9 +1135,11 @@ export async function getExerciseSessionHistory(
         reps: s.reps,
         e1RM,
         topRepCount: existing == null ? s.reps : Math.max(existing.topRepCount, s.reps),
+        setCount: (existing?.setCount ?? 0) + 1,
       });
     } else if (existing != null) {
       existing.topRepCount = Math.max(existing.topRepCount, s.reps);
+      existing.setCount += 1;
     }
   }
 
@@ -1149,6 +1153,7 @@ export async function getExerciseSessionHistory(
       topReps: topSet.reps,
       topEstimatedOneRepMax: topSet.e1RM,
       topRepCount: topSet.topRepCount,
+      setCount: topSet.setCount,
     });
   }
 

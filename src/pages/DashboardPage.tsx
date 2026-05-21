@@ -1,13 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { SeasonInstance, SessionInstance, WeekInstance } from "../domain/models";
-import type { PREvent, SessionInstanceView, WeekInstanceItemView } from "../repositories/programRepository";
+import type { ExerciseSessionDataPoint, PREvent, SessionInstanceView, WeekInstanceItemView } from "../repositories/programRepository";
 import {
   computeSeasonConsistencyForSeason,
   getActiveSeasonInstance,
   getAllTimePREvents,
   getCanonicalWeekTemplateForSeason,
   findExerciseNeedingWeight,
+  getExerciseSessionHistory,
   getLastCompletedSessionInstance,
   getLastCompletedWeekInstance,
   getLastEndedSeasonInstance,
@@ -25,7 +26,6 @@ import {
   isHeuristicsEnabled,
   getPendingHeuristicDates,
 } from "../repositories/heuristicsRepository";
-import ExerciseInsights from "../components/ExerciseInsights";
 import Medal from "../components/Medal";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
@@ -952,6 +952,7 @@ export default function DashboardPage() {
   const [recentWeek, setRecentWeek] = useState<RecentCard | null | typeof LOADING_CARD>(LOADING_CARD);
   const [recentSeason, setRecentSeason] = useState<RecentCard | null | typeof LOADING_CARD>(LOADING_CARD);
   const [prEvents, setPrEvents] = useState<PREvent[] | null>(null);
+  const [spotlightHistory, setSpotlightHistory] = useState<ExerciseSessionDataPoint[] | null>(null);
   const [recentTooltipOpen, setRecentTooltipOpen] = useState(false);
   const [lastBackupAt, setLastBackupAt] = useState<string | null | "loading">("loading");
   const [hasSettledWeek, setHasSettledWeek] = useState<boolean | "loading">("loading");
@@ -1026,6 +1027,15 @@ export default function DashboardPage() {
       if (cancelled.current) return;
 
       setPrEvents(prList);
+
+      const spotlightPR = prList[0] ?? null;
+      if (spotlightPR) {
+        getExerciseSessionHistory(spotlightPR.exerciseName).then((h) => {
+          if (!cancelled.current) setSpotlightHistory(h);
+        });
+      } else {
+        setSpotlightHistory([]);
+      }
 
       const [sessionCard, weekCard, seasonCard] = await Promise.all([
         lastSession ? buildSessionCard(lastSession) : null,
@@ -1720,6 +1730,26 @@ export default function DashboardPage() {
         ? Math.round(((spotlight.newReps - spotlight.previousReps) / spotlight.previousReps) * 100)
         : null;
 
+    // Stats since the spotlight PR's predecessor — i.e. the work it took to set
+    // this PR after the prior one. previousDate is the date of the previous
+    // all-time best; absence means this is the user's first recorded PR for
+    // the exercise, so "since last PR" == "all time".
+    const sinceDate = spotlight.previousDate ?? null;
+    let setsAllTime = 0;
+    let setsSincePR = 0;
+    let sessionsAllTime = 0;
+    let sessionsSincePR = 0;
+    if (spotlightHistory) {
+      for (const dp of spotlightHistory) {
+        setsAllTime += dp.setCount;
+        sessionsAllTime += 1;
+        if (sinceDate == null || dp.date > sinceDate) {
+          setsSincePR += dp.setCount;
+          sessionsSincePR += 1;
+        }
+      }
+    }
+
     return (
       <section className="dashboard-section">
         <h2 className="dashboard-section-title">Most recent PR</h2>
@@ -1757,20 +1787,123 @@ export default function DashboardPage() {
               <span>{daysSincePrev} days after previous PR</span>
             )}
           </div>
-          {spotlight.previousDate && (
-            <div className="dashboard-pr-spotlight__chart">
-              <ExerciseInsights
-                exerciseTemplateId={spotlight.exerciseName}
-                exerciseName={spotlight.exerciseName}
-                currentExerciseInstanceId=""
-                isBodyweight={spotlight.isBodyweight}
-                fromDate={spotlight.previousDate.split("T")[0]}
-                minSessions={5}
-              />
+          {renderSpotlightSparkline(spotlight, spotlightHistory, sinceDate)}
+          <div className="dashboard-pr-spotlight__stats">
+            <div className="dashboard-pr-spotlight__stat">
+              <span className="dashboard-pr-spotlight__stat-value">{setsSincePR}</span>
+              <span className="dashboard-pr-spotlight__stat-label">Sets since last PR</span>
             </div>
-          )}
+            <div className="dashboard-pr-spotlight__stat">
+              <span className="dashboard-pr-spotlight__stat-value">{setsAllTime}</span>
+              <span className="dashboard-pr-spotlight__stat-label">Sets all time</span>
+            </div>
+            <div className="dashboard-pr-spotlight__stat">
+              <span className="dashboard-pr-spotlight__stat-value">{sessionsSincePR}</span>
+              <span className="dashboard-pr-spotlight__stat-label">Sessions since last PR</span>
+            </div>
+            <div className="dashboard-pr-spotlight__stat">
+              <span className="dashboard-pr-spotlight__stat-value">{sessionsAllTime}</span>
+              <span className="dashboard-pr-spotlight__stat-label">Sessions all time</span>
+            </div>
+          </div>
         </div>
       </section>
+    );
+  }
+
+  function renderSpotlightSparkline(
+    pr: PREvent,
+    history: ExerciseSessionDataPoint[] | null,
+    sinceDate: string | null
+  ) {
+    if (history === null) {
+      return <div className="dashboard-pr-spotlight__sparkline dashboard-pr-spotlight__sparkline--empty" />;
+    }
+    const points = history
+      .map((dp) => {
+        const v = pr.prType === "reps" ? dp.topRepCount : dp.topEstimatedOneRepMax;
+        return v != null && v > 0 ? { date: dp.date, value: v } : null;
+      })
+      .filter((p): p is { date: string; value: number } => p != null)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    if (points.length < 2) return null;
+
+    const W = 320;
+    const H = 56;
+    const PAD = { top: 6, right: 4, bottom: 6, left: 4 };
+    const plotW = W - PAD.left - PAD.right;
+    const plotH = H - PAD.top - PAD.bottom;
+    const xs = points.map((p) => toLocalMidnight(p.date).getTime());
+    const xMin = xs[0];
+    const xMax = xs[xs.length - 1];
+    const xRange = xMax - xMin || 1;
+    const ys = points.map((p) => p.value);
+    const yMin = Math.min(...ys);
+    const yMax = Math.max(...ys);
+    const yPad = (yMax - yMin) * 0.15 || 1;
+    const yLo = yMin - yPad;
+    const yHi = yMax + yPad;
+    const xScale = (t: number) => PAD.left + ((t - xMin) / xRange) * plotW;
+    const yScale = (v: number) => PAD.top + plotH - ((v - yLo) / (yHi - yLo)) * plotH;
+
+    // Highlight the segment running from the previous PR up to the current PR.
+    // splitTime sits on the previous-PR date so the highlighted span covers
+    // every session between (exclusive of) the prior PR and (inclusive of)
+    // the new one.
+    const splitTime = sinceDate ? toLocalMidnight(sinceDate).getTime() : null;
+    const baseSegment: { x: number; y: number }[] = [];
+    const highlightSegment: { x: number; y: number }[] = [];
+    for (let i = 0; i < points.length; i++) {
+      const t = xs[i];
+      const xy = { x: xScale(t), y: yScale(points[i].value) };
+      if (splitTime != null && t > splitTime) {
+        // Stitch the transition: include the prior point so the highlight
+        // segment connects continuously to the base segment.
+        if (highlightSegment.length === 0 && baseSegment.length > 0) {
+          highlightSegment.push(baseSegment[baseSegment.length - 1]);
+        }
+        highlightSegment.push(xy);
+      } else {
+        baseSegment.push(xy);
+      }
+    }
+    const polyStr = (seg: { x: number; y: number }[]) =>
+      seg.map((p) => `${p.x},${p.y}`).join(" ");
+
+    const lastPoint = points[points.length - 1];
+    const lastXY = { x: xScale(xs[xs.length - 1]), y: yScale(lastPoint.value) };
+
+    return (
+      <div className="dashboard-pr-spotlight__sparkline" aria-hidden="true">
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="none"
+          style={{ width: "100%", height: H, display: "block" }}
+        >
+          {baseSegment.length >= 2 && (
+            <polyline
+              points={polyStr(baseSegment)}
+              fill="none"
+              stroke="var(--text-soft)"
+              strokeOpacity="0.55"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          )}
+          {highlightSegment.length >= 2 && (
+            <polyline
+              points={polyStr(highlightSegment)}
+              fill="none"
+              stroke="var(--accent)"
+              strokeWidth="2"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          )}
+          <circle cx={lastXY.x} cy={lastXY.y} r="2.6" fill="var(--accent)" />
+        </svg>
+      </div>
     );
   }
 
