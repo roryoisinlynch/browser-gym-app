@@ -1862,7 +1862,9 @@ export default function DashboardPage() {
       })
       .filter((p): p is { date: string; value: number } => p != null)
       .sort((a, b) => a.date.localeCompare(b.date));
-    if (points.length < 2) return null;
+    // Suppress the sparkline until there's enough history for a trend line
+    // to read as meaningful — a handful of dots conveys noise, not progress.
+    if (points.length <= 10) return null;
 
     const W = 320;
     const H = 56;
