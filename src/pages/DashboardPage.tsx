@@ -2144,6 +2144,45 @@ export default function DashboardPage() {
     return <ExerciseGraphMock />;
   }
 
+  function renderAchievementsMock() {
+    // Reuses the real dashboard-achievements grid markup with fabricated
+    // entries spanning all three icon types and every date-label band:
+    // weekday for the past week, ordinal day for this month, month for the
+    // year so far, and bare year for anything older. Closes with a ×N
+    // overflow bucket to show how aged items pile up at the end.
+    type Item = { icon: string; iconClass?: string; date: string };
+    const items: Item[] = [
+      { icon: "🥇", date: "Tue" },
+      { icon: "🤩", date: "13th" },
+      { icon: "🥇", date: "Sat" },
+      { icon: "A", iconClass: "dashboard-achievement__icon--grade", date: "Mar" },
+      { icon: "🥇", date: "Apr" },
+      { icon: "🤩", date: "Feb" },
+      { icon: "🥇", date: "2024" },
+      { icon: "A", iconClass: "dashboard-achievement__icon--grade", date: "2024" },
+    ];
+    return (
+      <div className="dashboard-achievements">
+        {items.map((item, i) => (
+          <div key={`i${i}`} className="dashboard-achievement">
+            <span
+              className={["dashboard-achievement__icon", item.iconClass]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              {item.icon}
+            </span>
+            <span className="dashboard-achievement__date">{item.date}</span>
+          </div>
+        ))}
+        <div className="dashboard-achievement dashboard-achievement--count">
+          <span className="dashboard-achievement__icon">🥇</span>
+          <span className="dashboard-achievement__date">×25</span>
+        </div>
+      </div>
+    );
+  }
+
   function renderPRSpotlightMock() {
     // Reuses the real spotlight markup with fabricated values: an 8-session
     // climb where the last three points (post-previous-PR) carry the accent
@@ -2482,6 +2521,15 @@ export default function DashboardPage() {
           unwrapped
         >
           {renderExerciseSummaryCardMock()}
+        </TutorialBlock>
+
+        <TutorialBlock
+          id="achievements"
+          title="Your trophy shelf"
+          blurb="Every gold-grade session (🥇), perfect week (🤩) and A-grade season (A) gets its own slot. Dates compress as items age — weekday for the past week, day-of-month for this month, month for this year, year for older — and once you collect more than 25 of any kind they pile up into a ×N badge at the end."
+          unwrapped
+        >
+          {renderAchievementsMock()}
         </TutorialBlock>
 
         <TutorialBlock
