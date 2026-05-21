@@ -934,6 +934,105 @@ async function loadAchievements(): Promise<Achievements> {
   return { goldSessions, perfectWeeks, aSeasons };
 }
 
+// ─── AchievementsShelf ────────────────────────────────────────────────────────
+// Shared between the real dashboard render and the tutorial mock so both
+// render with identical markup, CSS, and ResizeObserver-driven placeholder
+// fill. Date labels are pre-formatted by the caller (the live render passes
+// values through compactAchievementDate; the mock passes static labels).
+
+// Must match the slot width set on `.dashboard-achievement` in the CSS so the
+// column-count math matches what the browser actually lays out.
+const ACHIEVEMENT_SLOT_WIDTH = 44;
+
+interface ShelfIndividual {
+  icon: string;
+  iconClass?: string;
+  displayDate: string;
+}
+
+interface ShelfBucket {
+  icon: string;
+  iconClass?: string;
+  count: number;
+}
+
+interface AchievementsShelfProps {
+  individuals: ShelfIndividual[];
+  buckets: ShelfBucket[];
+}
+
+function AchievementsShelf({ individuals, buckets }: AchievementsShelfProps) {
+  const shelfRef = useRef<HTMLDivElement | null>(null);
+  const [columns, setColumns] = useState(0);
+
+  useLayoutEffect(() => {
+    const el = shelfRef.current;
+    if (!el) {
+      setColumns(0);
+      return;
+    }
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      // contentRect.width is the inner width (excluding padding), which matches
+      // the area items actually wrap inside — so dividing by SLOT_WIDTH yields
+      // the column count the browser is using.
+      setColumns(
+        Math.max(1, Math.floor(entry.contentRect.width / ACHIEVEMENT_SLOT_WIDTH))
+      );
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const totalRendered = individuals.length + buckets.length;
+  const placeholderCount =
+    columns > 0
+      ? (columns - (totalRendered % columns)) % columns
+      : 0;
+
+  return (
+    <div className="dashboard-achievements" ref={shelfRef}>
+      {individuals.map((item, i) => (
+        <div key={`i${i}`} className="dashboard-achievement">
+          <span
+            className={["dashboard-achievement__icon", item.iconClass]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            {item.icon}
+          </span>
+          <span className="dashboard-achievement__date">{item.displayDate}</span>
+        </div>
+      ))}
+      {buckets.map((bucket, i) => (
+        <div
+          key={`b${i}`}
+          className="dashboard-achievement dashboard-achievement--count"
+        >
+          <span
+            className={["dashboard-achievement__icon", bucket.iconClass]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            {bucket.icon}
+          </span>
+          <span className="dashboard-achievement__date">×{bucket.count}</span>
+        </div>
+      ))}
+      {Array.from({ length: placeholderCount }, (_, i) => (
+        <div
+          key={`p${i}`}
+          className="dashboard-achievement dashboard-achievement--placeholder"
+          aria-hidden="true"
+        >
+          <span className="dashboard-achievement__slot" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const LOADING_CARD = Symbol("loading");
@@ -957,8 +1056,6 @@ export default function DashboardPage() {
   const [lastBackupAt, setLastBackupAt] = useState<string | null | "loading">("loading");
   const [hasSettledWeek, setHasSettledWeek] = useState<boolean | "loading">("loading");
   const [achievements, setAchievements] = useState<Achievements | null>(null);
-  const achievementsShelfRef = useRef<HTMLDivElement | null>(null);
-  const [achievementColumns, setAchievementColumns] = useState(0);
   const [pendingHeuristicDays, setPendingHeuristicDays] = useState(0);
   const [exerciseNeedingWeight, setExerciseNeedingWeight] = useState<
     { exerciseTemplateId: string; exerciseName: string; sessionName: string } | null
@@ -1572,29 +1669,6 @@ export default function DashboardPage() {
   // ─── Achievements ────────────────────────────────────────────────────────
 
   const ACHIEVEMENT_LIST_LIMIT = 25;
-  // Must match the slot width set on `.dashboard-achievement` in the CSS so the
-  // column-count math matches what the browser actually lays out.
-  const ACHIEVEMENT_SLOT_WIDTH = 44;
-
-  useLayoutEffect(() => {
-    const el = achievementsShelfRef.current;
-    if (!el) {
-      setAchievementColumns(0);
-      return;
-    }
-    const ro = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-      // contentRect.width is the inner width (excluding padding), which matches
-      // the area items actually wrap inside — so dividing by SLOT_WIDTH yields
-      // the column count the browser is using.
-      setAchievementColumns(
-        Math.max(1, Math.floor(entry.contentRect.width / ACHIEVEMENT_SLOT_WIDTH))
-      );
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [achievements]);
 
   function renderAchievements() {
     if (achievements === null) {
@@ -1611,7 +1685,7 @@ export default function DashboardPage() {
     }
 
     type Individual = { date: string; icon: string; iconClass?: string };
-    type Bucket = { count: number; icon: string; iconClass?: string };
+    type Bucket = ShelfBucket;
 
     function partition(
       dates: string[],
@@ -1640,67 +1714,28 @@ export default function DashboardPage() {
     // Individuals from every category mix together on the shelf in date-desc
     // order. Overflow buckets are aggregates of older items so they pin to the
     // end, preserving category grouping among themselves.
-    const allIndividuals: Individual[] = [
+    const allIndividuals: ShelfIndividual[] = [
       ...session.individual,
       ...week.individual,
       ...season.individual,
-    ].sort((a, b) => b.date.localeCompare(a.date));
+    ]
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .map(({ icon, iconClass, date }) => ({
+        icon,
+        iconClass,
+        displayDate: compactAchievementDate(date),
+      }));
 
-    const allBuckets: Bucket[] = [
+    const allBuckets: ShelfBucket[] = [
       ...session.buckets,
       ...week.buckets,
       ...season.buckets,
     ];
 
-    const totalRendered = allIndividuals.length + allBuckets.length;
-    const placeholderCount =
-      achievementColumns > 0
-        ? (achievementColumns - (totalRendered % achievementColumns)) % achievementColumns
-        : 0;
-
     return (
       <section className="dashboard-section">
         <h2 className="dashboard-section-title">Achievements</h2>
-        <div className="dashboard-achievements" ref={achievementsShelfRef}>
-          {allIndividuals.map((item, i) => (
-            <div key={`i${i}`} className="dashboard-achievement">
-              <span
-                className={["dashboard-achievement__icon", item.iconClass]
-                  .filter(Boolean)
-                  .join(" ")}
-              >
-                {item.icon}
-              </span>
-              <span className="dashboard-achievement__date">
-                {compactAchievementDate(item.date)}
-              </span>
-            </div>
-          ))}
-          {allBuckets.map((bucket, i) => (
-            <div
-              key={`b${i}`}
-              className="dashboard-achievement dashboard-achievement--count"
-            >
-              <span
-                className={["dashboard-achievement__icon", bucket.iconClass]
-                  .filter(Boolean)
-                  .join(" ")}
-              >
-                {bucket.icon}
-              </span>
-              <span className="dashboard-achievement__date">×{bucket.count}</span>
-            </div>
-          ))}
-          {Array.from({ length: placeholderCount }, (_, i) => (
-            <div
-              key={`p${i}`}
-              className="dashboard-achievement dashboard-achievement--placeholder"
-              aria-hidden="true"
-            >
-              <span className="dashboard-achievement__slot" />
-            </div>
-          ))}
-        </div>
+        <AchievementsShelf individuals={allIndividuals} buckets={allBuckets} />
       </section>
     );
   }
@@ -2145,42 +2180,22 @@ export default function DashboardPage() {
   }
 
   function renderAchievementsMock() {
-    // Reuses the real dashboard-achievements grid markup with fabricated
-    // entries spanning all three icon types and every date-label band:
-    // weekday for the past week, ordinal day for this month, month for the
-    // year so far, and bare year for anything older. Closes with a ×N
-    // overflow bucket to show how aged items pile up at the end.
-    type Item = { icon: string; iconClass?: string; date: string };
-    const items: Item[] = [
-      { icon: "🥇", date: "Tue" },
-      { icon: "🤩", date: "13th" },
-      { icon: "🥇", date: "Sat" },
-      { icon: "A", iconClass: "dashboard-achievement__icon--grade", date: "Mar" },
-      { icon: "🥇", date: "Apr" },
-      { icon: "🤩", date: "Feb" },
-      { icon: "🥇", date: "2024" },
-      { icon: "A", iconClass: "dashboard-achievement__icon--grade", date: "2024" },
+    // Drives the real AchievementsShelf with fabricated entries spanning all
+    // three icon types and every compact-date band (weekday, ordinal day,
+    // month, bare year). The shelf's ResizeObserver fills any partial row
+    // with placeholder dots — same code path as the live render.
+    const individuals: ShelfIndividual[] = [
+      { icon: "🥇", displayDate: "Tue" },
+      { icon: "🤩", displayDate: "13th" },
+      { icon: "🥇", displayDate: "Sat" },
+      { icon: "A", iconClass: "dashboard-achievement__icon--grade", displayDate: "Mar" },
+      { icon: "🥇", displayDate: "Apr" },
+      { icon: "🤩", displayDate: "Feb" },
+      { icon: "🥇", displayDate: "2024" },
+      { icon: "A", iconClass: "dashboard-achievement__icon--grade", displayDate: "2024" },
     ];
-    return (
-      <div className="dashboard-achievements">
-        {items.map((item, i) => (
-          <div key={`i${i}`} className="dashboard-achievement">
-            <span
-              className={["dashboard-achievement__icon", item.iconClass]
-                .filter(Boolean)
-                .join(" ")}
-            >
-              {item.icon}
-            </span>
-            <span className="dashboard-achievement__date">{item.date}</span>
-          </div>
-        ))}
-        <div className="dashboard-achievement dashboard-achievement--count">
-          <span className="dashboard-achievement__icon">🥇</span>
-          <span className="dashboard-achievement__date">×25</span>
-        </div>
-      </div>
-    );
+    const buckets: ShelfBucket[] = [{ icon: "🥇", count: 25 }];
+    return <AchievementsShelf individuals={individuals} buckets={buckets} />;
   }
 
   function renderPRSpotlightMock() {
