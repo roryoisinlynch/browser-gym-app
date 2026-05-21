@@ -302,7 +302,8 @@ function compactAchievementDate(iso: string): string {
   const d = toLocalMidnight(iso);
   const today = toLocalMidnight(localDateIso());
   const daysAgo = Math.round((today.getTime() - d.getTime()) / 86400000);
-  if (daysAgo >= 0 && daysAgo <= 6) {
+  if (daysAgo === 0) return "Today";
+  if (daysAgo >= 1 && daysAgo <= 6) {
     return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()];
   }
   if (d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth()) {
@@ -2185,13 +2186,22 @@ export default function DashboardPage() {
     // month, bare year). The shelf's ResizeObserver fills any partial row
     // with placeholder dots — same code path as the live render.
     const individuals: ShelfIndividual[] = [
-      { icon: "🥇", displayDate: "Tue" },
-      { icon: "🤩", displayDate: "13th" },
-      { icon: "🥇", displayDate: "Sat" },
-      { icon: "A", iconClass: "dashboard-achievement__icon--grade", displayDate: "Mar" },
-      { icon: "🥇", displayDate: "Apr" },
+      { icon: "🥇", displayDate: "Today" },
+      { icon: "🤩", displayDate: "Mon" },
+      { icon: "🥇", displayDate: "Wed" },
+      { icon: "🤩", displayDate: "Sat" },
+      { icon: "🥇", displayDate: "3rd" },
+      { icon: "🤩", displayDate: "12th" },
+      { icon: "🥇", displayDate: "19th" },
+      { icon: "🤩", displayDate: "23rd" },
+      { icon: "🥇", displayDate: "Jan" },
       { icon: "🤩", displayDate: "Feb" },
-      { icon: "🥇", displayDate: "2024" },
+      { icon: "A", iconClass: "dashboard-achievement__icon--grade", displayDate: "Mar" },
+      { icon: "🤩", displayDate: "Apr" },
+      { icon: "🥇", displayDate: "May" },
+      { icon: "🤩", displayDate: "Jun" },
+      { icon: "🤩", displayDate: "Jul" },
+      { icon: "🥇", displayDate: "Aug" },
       { icon: "A", iconClass: "dashboard-achievement__icon--grade", displayDate: "2024" },
     ];
     const buckets: ShelfBucket[] = [{ icon: "🥇", count: 25 }];
@@ -2199,9 +2209,10 @@ export default function DashboardPage() {
   }
 
   function renderPRSpotlightMock() {
-    // Reuses the real spotlight markup with fabricated values: an 8-session
-    // climb where the last three points (post-previous-PR) carry the accent
-    // highlight, mirroring the live renderSpotlightSparkline output.
+    // Reuses the real spotlight markup with fabricated values: a 14-session
+    // climb with mild week-to-week noise, where the last four points
+    // (post-previous-PR) carry the accent highlight, mirroring the live
+    // renderSpotlightSparkline output.
     return (
       <div className="dashboard-pr-spotlight">
         <p className="dashboard-pr-spotlight__exercise">Squat</p>
@@ -2222,7 +2233,7 @@ export default function DashboardPage() {
             style={{ width: "100%", height: 56, display: "block" }}
           >
             <polyline
-              points="4,45 48.6,41.1 93.1,35.3 137.7,33.3 182.3,25.6 226.9,19.8"
+              points="4,44.9 28,42.2 52,46.3 76,38 100,40.8 124,33.9 148,36.6 172,29.7 196,25.6 220,28.4 244,22.8"
               fill="none"
               stroke="var(--text-soft)"
               strokeOpacity="0.55"
@@ -2231,14 +2242,14 @@ export default function DashboardPage() {
               strokeLinecap="round"
             />
             <polyline
-              points="226.9,19.8 271.4,15.9 316,11"
+              points="244,22.8 268,18.7 292,14.5 316,11.1"
               fill="none"
               stroke="var(--accent)"
               strokeWidth="2"
               strokeLinejoin="round"
               strokeLinecap="round"
             />
-            <circle cx="316" cy="11" r="2.6" fill="var(--accent)" />
+            <circle cx="316" cy="11.1" r="2.6" fill="var(--accent)" />
           </svg>
         </div>
         <div className="dashboard-pr-spotlight__stats">

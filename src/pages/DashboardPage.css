@@ -805,6 +805,16 @@
   line-height: 1;
 }
 
+/* Faint accent glow behind aggregate (x N) cells so they read as a different
+   kind of slot from the individual achievements next to them. */
+.dashboard-achievement--count {
+  background: radial-gradient(
+    ellipse at 50% 40%,
+    rgba(216, 240, 106, 0.13) 0%,
+    rgba(216, 240, 106, 0) 70%
+  );
+}
+
 .dashboard-achievement__date {
   font-size: 0.62rem;
   font-weight: 600;
