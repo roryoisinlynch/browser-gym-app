@@ -2191,7 +2191,6 @@ export default function DashboardPage() {
       { icon: "A", iconClass: "dashboard-achievement__icon--grade", displayDate: "Mar" },
       { icon: "🥇", displayDate: "Apr" },
       { icon: "🤩", displayDate: "Feb" },
-      { icon: "🥇", displayDate: "Jan" },
       { icon: "🥇", displayDate: "2024" },
       { icon: "A", iconClass: "dashboard-achievement__icon--grade", displayDate: "2024" },
     ];
