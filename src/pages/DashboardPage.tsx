@@ -2185,23 +2185,28 @@ export default function DashboardPage() {
     // three icon types and every compact-date band (weekday, ordinal day,
     // month, bare year). The shelf's ResizeObserver fills any partial row
     // with placeholder dots — same code path as the live render.
+    // Ordered date-desc to match the live shelf. Recent gold sessions cluster
+    // first (since they haven't been compressed into the bucket yet); week
+    // emojis are sprinkled in at week boundaries; A-grade seasons appear
+    // among the older entries. The 25-bucket at the end represents the older
+    // gold sessions that have rolled off the individual list.
     const individuals: ShelfIndividual[] = [
       { icon: "🥇", displayDate: "Today" },
-      { icon: "🤩", displayDate: "Mon" },
       { icon: "🥇", displayDate: "Wed" },
-      { icon: "🤩", displayDate: "Sat" },
-      { icon: "🥇", displayDate: "3rd" },
-      { icon: "🤩", displayDate: "12th" },
-      { icon: "🥇", displayDate: "19th" },
-      { icon: "🤩", displayDate: "23rd" },
-      { icon: "🥇", displayDate: "Jan" },
-      { icon: "🤩", displayDate: "Feb" },
-      { icon: "A", iconClass: "dashboard-achievement__icon--grade", displayDate: "Mar" },
+      { icon: "🥇", displayDate: "Tue" },
+      { icon: "🤩", displayDate: "Sun" },
+      { icon: "🥇", displayDate: "Sat" },
+      { icon: "🥇", displayDate: "14th" },
+      { icon: "🤩", displayDate: "11th" },
+      { icon: "🥇", displayDate: "8th" },
+      { icon: "🤩", displayDate: "4th" },
+      { icon: "🥇", displayDate: "1st" },
       { icon: "🤩", displayDate: "Apr" },
-      { icon: "🥇", displayDate: "May" },
-      { icon: "🤩", displayDate: "Jun" },
-      { icon: "🤩", displayDate: "Jul" },
-      { icon: "🥇", displayDate: "Aug" },
+      { icon: "A", iconClass: "dashboard-achievement__icon--grade", displayDate: "Apr" },
+      { icon: "🤩", displayDate: "Mar" },
+      { icon: "🤩", displayDate: "Feb" },
+      { icon: "🤩", displayDate: "Jan" },
+      { icon: "🤩", displayDate: "2025" },
       { icon: "A", iconClass: "dashboard-achievement__icon--grade", displayDate: "2024" },
     ];
     const buckets: ShelfBucket[] = [{ icon: "🥇", count: 25 }];

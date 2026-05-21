@@ -810,8 +810,8 @@
 .dashboard-achievement--count {
   background: radial-gradient(
     ellipse at 50% 40%,
-    rgba(216, 240, 106, 0.13) 0%,
-    rgba(216, 240, 106, 0) 70%
+    rgba(216, 240, 106, 0.20) 0%,
+    rgba(216, 240, 106, 0) 55%
   );
 }
 
