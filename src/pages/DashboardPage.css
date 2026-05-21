@@ -731,11 +731,15 @@
    Categories mix together — items render in a single wrapping flow sorted
    by date, so a new row's shelf starts wherever the wrap naturally falls. */
 .dashboard-achievements {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
+  /* CSS Grid with fixed 44px tracks locks the column structure regardless of
+     cell-content width. Flex with `flex: 0 0 44px` was vulnerable to
+     `min-width: auto` letting the bucket cell's emoji glyph or "xN" label
+     expand the cell, which then shifted every subsequent column on that row
+     out of alignment with the row above. */
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 44px);
+  align-items: end;
   row-gap: 10px;
-  column-gap: 0;
   padding: 14px 10px 4px;
   border-radius: 14px;
   border: 1px solid var(--panel-border);
@@ -747,10 +751,8 @@
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  /* Fixed slot width keeps individuals, buckets, and placeholders in identical
-     grid cells — required so trailing placeholders fill the last row exactly
-     to the column boundary the layout actually used. */
-  flex: 0 0 44px;
+  /* Match the grid column width exactly so individuals, buckets, and
+     placeholders share identical cells. */
   width: 44px;
   padding: 4px 6px 8px;
   border-bottom: 2px solid rgba(212, 175, 100, 0.28);
