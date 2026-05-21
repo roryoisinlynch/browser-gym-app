@@ -2144,6 +2144,71 @@ export default function DashboardPage() {
     return <ExerciseGraphMock />;
   }
 
+  function renderPRSpotlightMock() {
+    // Reuses the real spotlight markup with fabricated values: an 8-session
+    // climb where the last three points (post-previous-PR) carry the accent
+    // highlight, mirroring the live renderSpotlightSparkline output.
+    return (
+      <div className="dashboard-pr-spotlight">
+        <p className="dashboard-pr-spotlight__exercise">Squat</p>
+        <div className="dashboard-pr-spotlight__values">
+          <span className="dashboard-pr-spotlight__prev">105kg e1RM</span>
+          <span className="dashboard-pr-spotlight__arrow">→</span>
+          <span className="dashboard-pr-spotlight__new">112.5kg e1RM</span>
+          <span className="dashboard-pr-spotlight__pct">+7%</span>
+        </div>
+        <div className="dashboard-pr-spotlight__meta">
+          <span>12 May '26</span>
+          <span>28 days after previous PR</span>
+        </div>
+        <div className="dashboard-pr-spotlight__sparkline" aria-hidden="true">
+          <svg
+            viewBox="0 0 320 56"
+            preserveAspectRatio="none"
+            style={{ width: "100%", height: 56, display: "block" }}
+          >
+            <polyline
+              points="4,45 48.6,41.1 93.1,35.3 137.7,33.3 182.3,25.6 226.9,19.8"
+              fill="none"
+              stroke="var(--text-soft)"
+              strokeOpacity="0.55"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+            <polyline
+              points="226.9,19.8 271.4,15.9 316,11"
+              fill="none"
+              stroke="var(--accent)"
+              strokeWidth="2"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+            <circle cx="316" cy="11" r="2.6" fill="var(--accent)" />
+          </svg>
+        </div>
+        <div className="dashboard-pr-spotlight__stats">
+          <div className="dashboard-pr-spotlight__stat">
+            <span className="dashboard-pr-spotlight__stat-value">18</span>
+            <span className="dashboard-pr-spotlight__stat-label">Sets since last PR</span>
+          </div>
+          <div className="dashboard-pr-spotlight__stat">
+            <span className="dashboard-pr-spotlight__stat-value">124</span>
+            <span className="dashboard-pr-spotlight__stat-label">Sets all time</span>
+          </div>
+          <div className="dashboard-pr-spotlight__stat">
+            <span className="dashboard-pr-spotlight__stat-value">4</span>
+            <span className="dashboard-pr-spotlight__stat-label">Sessions since last PR</span>
+          </div>
+          <div className="dashboard-pr-spotlight__stat">
+            <span className="dashboard-pr-spotlight__stat-value">32</span>
+            <span className="dashboard-pr-spotlight__stat-label">Sessions all time</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   function renderPRsMock() {
     // Reuses the exact dashboard-pr-list markup from renderAllPRs so the
     // tutorial looks like a real PR row, just with fabricated values.
@@ -2417,6 +2482,15 @@ export default function DashboardPage() {
           unwrapped
         >
           {renderExerciseSummaryCardMock()}
+        </TutorialBlock>
+
+        <TutorialBlock
+          id="pr_spotlight"
+          title="Your most recent PR"
+          blurb="When you set a new personal best, this card celebrates it: the e1RM jump from your previous record, a sparkline of your full history (with the run-up since the last PR in accent), and the volume of sets and sessions it took to get there."
+          unwrapped
+        >
+          {renderPRSpotlightMock()}
         </TutorialBlock>
 
         <TutorialBlock

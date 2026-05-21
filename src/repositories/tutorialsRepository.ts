@@ -6,6 +6,7 @@ export const TUTORIAL_IDS = [
   "metrics",
   "exercise_graph",
   "recent_prs",
+  "pr_spotlight",
   "programs",
   "weeks_breadcrumb",
   "all_seasons",
