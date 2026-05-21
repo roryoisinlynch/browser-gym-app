@@ -2525,8 +2525,8 @@ export default function DashboardPage() {
 
         <TutorialBlock
           id="achievements"
-          title="Your trophy shelf"
-          blurb="Every gold-grade session (🥇), perfect week (🤩) and A-grade season (A) gets its own slot. Dates compress as items age — weekday for the past week, day-of-month for this month, month for this year, year for older — and once you collect more than 25 of any kind they pile up into a ×N badge at the end."
+          title="Achievements collection"
+          blurb="Every gold-grade session (🥇), perfect week (🤩) and A-grade season (A) earns a slot. Once you collect more than 25 of any kind they pile up into a ×N badge at the end."
           unwrapped
         >
           {renderAchievementsMock()}

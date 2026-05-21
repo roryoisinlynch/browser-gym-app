@@ -80,6 +80,15 @@
   color: var(--text-muted);
 }
 
+/* Stretch achievement cells to fill the shelf width inside tutorials so the
+   gold trophy-shelf line spans edge-to-edge regardless of how many sampler
+   items we mock. The real shelf relies on placeholder cells (computed from
+   the live column count) for this; the mock can't easily replicate that. */
+.tutorial-block .dashboard-achievement {
+  flex: 1 1 0;
+  min-width: 44px;
+}
+
 /* Step the week-summary score block down a notch inside tutorials so the
    primary number, emoji, % metrics and their labels don't crowd against the
    tutorial card's tighter horizontal budget. Scoped to .tutorial-block so the

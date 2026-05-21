@@ -778,12 +778,19 @@
 }
 
 .dashboard-achievement__icon {
+  /* Fixed-height flex box so emoji glyphs (which fill their line box)
+     and letter glyphs like "A" (which only occupy cap-height) sit at the
+     same visual height when stacked in a row. */
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 26px;
   line-height: 1;
 }
 
 .dashboard-achievement__icon--grade {
-  font-size: 32px;
+  font-size: 34px;
   font-weight: 800;
   letter-spacing: -0.02em;
   color: #6bcb77;
