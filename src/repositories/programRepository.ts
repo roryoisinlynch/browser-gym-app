@@ -1237,7 +1237,8 @@ export function computePrescription(input: {
 export async function getEffectiveE1RM(
   exerciseName: string,
   currentSeasonInstanceId?: string,
-  excludeExerciseInstanceIds?: ReadonlySet<string>
+  excludeExerciseInstanceIds?: ReadonlySet<string>,
+  asOfDate?: string
 ): Promise<{
   historicalBest: number | null;
   recentMax: number | null;
@@ -1246,12 +1247,19 @@ export async function getEffectiveE1RM(
   lastAttemptedDate: string | null;
 }> {
   const rawHistory = await getExerciseSessionHistory(exerciseName);
+  // Exclude data points from sessions completed strictly after the as-of date.
+  // Pinning the baseline to a point in time prevents a future PR from
+  // retroactively raising the warmup/working threshold for an already-completed
+  // session — which otherwise flips working sets to warmups and drops medals.
+  const dateScopedHistory = asOfDate != null
+    ? rawHistory.filter((dp) => dp.date <= asOfDate)
+    : rawHistory;
   // Exclude data points from the current session so that PRs set during the
   // session do not retroactively raise the baseline used for prescription and
   // working-set classification mid-session.
   const filteredHistory = excludeExerciseInstanceIds && excludeExerciseInstanceIds.size > 0
-    ? rawHistory.filter((dp) => !excludeExerciseInstanceIds.has(dp.exerciseInstanceId))
-    : rawHistory;
+    ? dateScopedHistory.filter((dp) => !excludeExerciseInstanceIds.has(dp.exerciseInstanceId))
+    : dateScopedHistory;
   // Fall back to the unfiltered history when the exclusion erased all data —
   // i.e. a first-ever attempt at this exercise. Without this, classification
   // would have no baseline and every set would default to "warmup". Frozen-
@@ -1270,10 +1278,13 @@ export async function getEffectiveE1RM(
     return best == null || dp.topRepCount > best ? dp.topRepCount : best;
   }, null);
 
-  // Use rawHistory (not the exclusion-filtered list) so that sets just logged
-  // in the current session still count as a recent attempt — we don't want
-  // the AMRAP override to fire mid-session.
-  const lastAttemptedDate = rawHistory.reduce<string | null>(
+  // For mid-session views, use rawHistory so that sets just logged in the
+  // current session still count as a recent attempt — we don't want the AMRAP
+  // override to fire mid-session. For as-of-date views (completed past
+  // sessions), use the date-scoped list so dormancy reflects the world at
+  // session-completion time, not today.
+  const lastAttemptedSource = asOfDate != null ? dateScopedHistory : rawHistory;
+  const lastAttemptedDate = lastAttemptedSource.reduce<string | null>(
     (latest, dp) => (latest == null || dp.date > latest ? dp.date : latest),
     null
   );
@@ -1291,7 +1302,10 @@ export async function getEffectiveE1RM(
   type SeasonBucket = { sortDate: string; bestE1RM: number | null; bestReps: number | null };
   const seasonBuckets = new Map<string, SeasonBucket>();
 
-  if (currentSeasonInstanceId) {
+  // Skip the synthetic current-season bucket when scoping to a past date:
+  // the "empty bucket for a freshly-started season" trick only makes sense
+  // for live/in-progress views, not for replaying a completed session.
+  if (currentSeasonInstanceId && asOfDate == null) {
     const nowDate = new Date().toISOString().slice(0, 10);
     seasonBuckets.set(currentSeasonInstanceId, { sortDate: nowDate, bestE1RM: null, bestReps: null });
   }
@@ -1915,10 +1929,19 @@ export async function getSessionInstanceView(
             .sort((a, b) => a.setIndex - b.setIndex)
         : [];
 
+      // For completed sessions, pin the baseline to the session's completion
+      // date so a later PR can't retroactively flip working sets to warmups.
+      // For in-progress/not-started sessions, leave undefined to keep live
+      // prescriptions responsive to the latest data.
+      const sessionAsOfDate =
+        sessionInstance.status === "completed"
+          ? sessionCompletedDate(sessionInstance)
+          : undefined;
       const { historicalBest, recentMax, historicalBestReps, recentMaxReps, lastAttemptedDate } = await getEffectiveE1RM(
         sie.exerciseName,
         sessionInstance.seasonInstanceId,
-        currentSessionExerciseInstanceIds
+        currentSessionExerciseInstanceIds,
+        sessionAsOfDate
       );
       const effectiveE1RM = recentMax ?? historicalBest;
       // For bodyweight exercises, use the same recency-adjusted rep baseline as
