@@ -1302,12 +1302,19 @@ export async function getEffectiveE1RM(
   type SeasonBucket = { sortDate: string; bestE1RM: number | null; bestReps: number | null };
   const seasonBuckets = new Map<string, SeasonBucket>();
 
-  // Skip the synthetic current-season bucket when scoping to a past date:
-  // the "empty bucket for a freshly-started season" trick only makes sense
-  // for live/in-progress views, not for replaying a completed session.
-  if (currentSeasonInstanceId && asOfDate == null) {
-    const nowDate = new Date().toISOString().slice(0, 10);
-    seasonBuckets.set(currentSeasonInstanceId, { sortDate: nowDate, bestE1RM: null, bestReps: null });
+  // Always seed an empty current-season bucket so the current season holds a
+  // slot in the 3-most-recent-seasons window. Without it, replaying a completed
+  // session frees that slot and lets an older, higher-rep month slide back into
+  // the window — inflating the recent-max baseline above what it was when the
+  // session was performed live, which retroactively flips working sets to
+  // warmups (the very thing as-of-date pinning is meant to prevent). Seeding
+  // with asOfDate (the session's completion date) keeps this consistent with
+  // getExerciseInstanceView, which seeds the same bucket unconditionally. The
+  // bucket is empty (bestE1RM/bestReps null), so it only reserves the slot —
+  // it never contributes a value to the recent max.
+  if (currentSeasonInstanceId) {
+    const seedDate = asOfDate ?? new Date().toISOString().slice(0, 10);
+    seasonBuckets.set(currentSeasonInstanceId, { sortDate: seedDate, bestE1RM: null, bestReps: null });
   }
 
   for (const dp of history) {
