@@ -233,15 +233,15 @@ interface RecentDayCell {
 }
 
 interface RecentDayRow {
+  cols: number;            // columns in this row = this program week's actual length
   headerLetters: string[]; // weekday letters for each cell in this row
   cells: (RecentDayCell | null)[]; // null = future placeholder in current row
-  done: number;     // sessions completed within this row's calendar window
-  expected: number; // template-projected sessions within this row's window
-  delta: number;    // running season delta (done - expected) at row end
+  done: number;     // sessions completed within this week's calendar window
+  expected: number; // template-projected sessions within this week's window
+  delta: number;    // running season delta (done - expected) at week end
 }
 
 interface RecentDaysData {
-  cols: number; // training-week length (columns per row)
   rows: RecentDayRow[];
 }
 
@@ -575,9 +575,16 @@ async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | 
     originalDateIso: string;
   };
   const slots: Slot[] = [];
+  // Day-index span of each program week. Generated weeks keep their original
+  // snapshotted length, so after a mid-season template change earlier weeks can
+  // be shorter/longer than the current template — the actual-schedule rows are
+  // built from these spans (not a fixed width) so each "Week N" row maps to one
+  // real week. See the row-building loop below.
+  const weekSpans: { start: number; length: number }[] = [];
   let dayOffset = 0;
 
   for (const calWeek of calendarWeeks) {
+    const weekStart = dayOffset;
     if (calWeek.weekInstance) {
       const items = (
         await getWeekInstanceItemsForWeekInstance(calWeek.weekInstance.id)
@@ -605,6 +612,7 @@ async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | 
       }
       dayOffset += templateItems.length;
     }
+    weekSpans.push({ start: weekStart, length: dayOffset - weekStart });
   }
 
   // Index completed sessions by their actual completion date. Skipped sessions
@@ -706,21 +714,22 @@ async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | 
     return { dateIso, status: fallbackStatus(dateIso, isToday), isToday };
   }
 
-  // Columns per row = training-week length, so the grid mirrors the program's
-  // configured rhythm. With non-7 weeks the weekday alignment shifts each row,
+  // One row per program week, each spanning that week's actual length. A fixed
+  // width keyed off the current template would, after a mid-season length
+  // change, bleed a neighbouring week's session into the wrong week's tally
+  // (e.g. a 9-day week 1 charged against a 10-day row picks up week 2's first
+  // session → "3/7"). With non-7 weeks the weekday alignment shifts each row,
   // so headers are computed per-row from the actual calendar dates.
   const allLetters = ["S", "M", "T", "W", "T", "F", "S"];
-  const cols = templateItems.length;
-
-  const totalRows = Math.floor(daysSinceStart / cols) + 1;
   const rows: RecentDayRow[] = [];
   let prevDoneCum = 0;
   let prevExpectedCum = 0;
-  for (let r = 0; r < totalRows; r++) {
+  for (const { start, length } of weekSpans) {
+    if (start > daysSinceStart) break; // week hasn't begun yet
     const cells: (RecentDayCell | null)[] = [];
     const headerLetters: string[] = [];
-    for (let c = 0; c < cols; c++) {
-      const dayIndex = r * cols + c;
+    for (let c = 0; c < length; c++) {
+      const dayIndex = start + c;
       const dms = seasonStartMs + dayIndex * 86400000;
       headerLetters.push(allLetters[new Date(dms).getDay()]);
       if (dayIndex > daysSinceStart) {
@@ -729,10 +738,10 @@ async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | 
         cells.push(buildCell(dms, dayIndex === daysSinceStart));
       }
     }
-    // Cap the row's effective end at today for the in-progress (last) row so
-    // expected/delta don't yet include sessions scheduled later this week.
-    const isLastRow = r === totalRows - 1;
-    const lastDayIndex = isLastRow ? daysSinceStart : (r + 1) * cols - 1;
+    // Cap the in-progress (last started) week at today so expected/delta don't
+    // yet include sessions scheduled later this week. Earlier weeks have fully
+    // elapsed, so their end index is already <= daysSinceStart.
+    const lastDayIndex = Math.min(start + length - 1, daysSinceStart);
     const lastDayIso = localDateIso(new Date(seasonStartMs + lastDayIndex * 86400000));
     const doneCum = countLessOrEqual(completedDates, lastDayIso);
     const expectedCum = countLessOrEqual(sessionOriginalDates, lastDayIso);
@@ -741,10 +750,10 @@ async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | 
     const delta = doneCum - expectedCum;
     prevDoneCum = doneCum;
     prevExpectedCum = expectedCum;
-    rows.push({ cells, headerLetters, done, expected, delta });
+    rows.push({ cols: length, cells, headerLetters, done, expected, delta });
   }
 
-  return { cols, rows };
+  return { rows };
 }
 
 async function buildSessionCard(session: SessionInstance): Promise<RecentCard | null> {
@@ -1547,10 +1556,7 @@ export default function DashboardPage() {
         {recentDays && (
           <div className="dashboard-timeline-recent">
             <div className="dashboard-timeline-recent__label">Schedule (actual)</div>
-            <div
-              className="dashboard-timeline-recent__grid"
-              style={{ ["--cols" as string]: recentDays.cols }}
-            >
+            <div className="dashboard-timeline-recent__grid">
               {recentDays.rows.map((row, ri) => {
                 const deltaLabel = row.delta > 0
                   ? `Total: +${row.delta}`
@@ -1560,7 +1566,10 @@ export default function DashboardPage() {
                 const deltaModifier = row.delta > 0 ? "ahead" : row.delta < 0 ? "behind" : "ok";
                 return (
                   <div key={ri} className="dashboard-timeline-recent__row-block">
-                    <div className="dashboard-timeline-recent__row-main">
+                    <div
+                      className="dashboard-timeline-recent__row-main"
+                      style={{ ["--cols" as string]: row.cols }}
+                    >
                       <div className="dashboard-timeline-recent__row-headers">
                         {row.headerLetters.map((letter, i) => (
                           <span key={i} className="dashboard-timeline-recent__header-cell">{letter}</span>
