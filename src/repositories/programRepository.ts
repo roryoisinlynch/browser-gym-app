@@ -140,8 +140,8 @@ export interface ExerciseInstanceView {
   /** Date (ISO string) of the all-time PR — null when it came from imported data. */
   historicalBestDate: string | null;
   /**
-   * Set when the all-time PR hasn't been matched within the last three seasons
-   * that include this exercise. Prescription logic uses this value instead of
+   * Set when the all-time PR hasn't been matched within the trailing 6-month
+   * window. Prescription logic uses this value instead of
    * historicalBestEstimatedOneRepMax so intensity targets stay achievable.
    * Null when the historical best is still current.
    */
@@ -149,9 +149,9 @@ export interface ExerciseInstanceView {
   /** Date (ISO string) of the recent-max PR. */
   recentMaxDate: string | null;
   /**
-   * Set when the all-time rep PR hasn't been matched within the last three
-   * seasons. Only populated for bodyweight exercises. Null when the historical
-   * best is still current.
+   * Set when the all-time rep PR hasn't been matched within the trailing
+   * 6-month window. Only populated for bodyweight exercises. Null when the
+   * historical best is still current.
    */
   recentMaxReps: number | null;
   /** Date (ISO string) of the recent-max rep PR. */
@@ -669,7 +669,7 @@ export async function startSeasonFromTemplate(
   const effectiveByName = new Map<string, EffectiveEntry>();
   await Promise.all(
     uniqueExerciseNames.map(async (name) => {
-      const { historicalBest, recentMax, lastAttemptedDate } = await getEffectiveE1RM(name, newSeasonInstanceId);
+      const { historicalBest, recentMax, lastAttemptedDate } = await getEffectiveE1RM(name);
       effectiveByName.set(name, {
         effectiveE1RM: recentMax ?? historicalBest,
         dormant: isDormantSince(lastAttemptedDate),
@@ -1160,22 +1160,31 @@ export async function getExerciseSessionHistory(
   return dataPoints.sort((a, b) => a.date.localeCompare(b.date));
 }
 
-// An exercise is "dormant" when it hasn't been attempted in this many years.
-// Dormant exercises default to AMRAP because old prescriptions may no longer
-// reflect the user's current capacity. The same threshold also excludes stale
-// seasons from the recent-max baseline so an old PR can't sneak back in when
-// the user has very sparse history for an exercise.
-const DORMANT_GAP_YEARS = 2;
+// Recent-form window. An exercise's "recent max" baseline and its dormancy are
+// both judged over the trailing RECENT_WINDOW_MONTHS months relative to the
+// attempt being evaluated (the as-of date for a completed session, or today for
+// a live view). An exercise with no attempt inside this window is "dormant" and
+// defaults to AMRAP, because a prescription older than the window may no longer
+// reflect the user's current capacity.
+const RECENT_WINDOW_MONTHS = 6;
 
-function dormantCutoffDate(): string {
-  const d = new Date();
-  d.setFullYear(d.getFullYear() - DORMANT_GAP_YEARS);
-  return d.toISOString().slice(0, 10);
+// Start of the recent-form window: RECENT_WINDOW_MONTHS before the anchor date
+// (asOfDate, or today when omitted). Computed in UTC from the YYYY-MM-DD parts
+// so the cutoff never drifts by a day across time zones.
+function recentWindowStart(asOfDate?: string): string {
+  const anchor = asOfDate ?? new Date().toISOString().slice(0, 10);
+  const [y, m, d] = anchor.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1 - RECENT_WINDOW_MONTHS, d))
+    .toISOString()
+    .slice(0, 10);
 }
 
-export function isDormantSince(lastAttemptedDate: string | null): boolean {
+export function isDormantSince(
+  lastAttemptedDate: string | null,
+  asOfDate?: string
+): boolean {
   if (lastAttemptedDate == null) return false;
-  return lastAttemptedDate < dormantCutoffDate();
+  return lastAttemptedDate < recentWindowStart(asOfDate);
 }
 
 /**
@@ -1226,17 +1235,16 @@ export function computePrescription(input: {
 
 /**
  * Returns the historical best e1RM and, when the all-time best hasn't been
- * matched in the last three seasons, a "recent max" that reflects current
- * capacity. This mirrors the prescription logic in getExerciseInstanceView so
- * that ConfigExercisePage generates weight options against the same baseline.
+ * matched within the trailing RECENT_WINDOW_MONTHS-month window, a "recent max"
+ * that reflects current capacity. This mirrors the prescription logic in
+ * getExerciseInstanceView so that ConfigExercisePage generates weight options
+ * against the same baseline.
  *
- * Pass currentSeasonInstanceId when a new season has just started (e.g. after
- * startSeasonFromTemplate) so its empty bucket is counted among the three most
- * recent seasons before any sets are logged.
+ * Pass asOfDate to anchor the window (and dormancy) to a completed session's
+ * date instead of today, keeping that session's scores stable as time passes.
  */
 export async function getEffectiveE1RM(
   exerciseName: string,
-  currentSeasonInstanceId?: string,
   excludeExerciseInstanceIds?: ReadonlySet<string>,
   asOfDate?: string
 ): Promise<{
@@ -1299,70 +1307,18 @@ export async function getEffectiveE1RM(
     };
   }
 
-  type SeasonBucket = { sortDate: string; bestE1RM: number | null; bestReps: number | null };
-  const seasonBuckets = new Map<string, SeasonBucket>();
+  const windowStart = recentWindowStart(asOfDate);
 
-  // Always seed an empty current-season bucket so the current season holds a
-  // slot in the 3-most-recent-seasons window. Without it, replaying a completed
-  // session frees that slot and lets an older, higher-rep month slide back into
-  // the window — inflating the recent-max baseline above what it was when the
-  // session was performed live, which retroactively flips working sets to
-  // warmups (the very thing as-of-date pinning is meant to prevent). Seeding
-  // with asOfDate (the session's completion date) keeps this consistent with
-  // getExerciseInstanceView, which seeds the same bucket unconditionally. The
-  // bucket is empty (bestE1RM/bestReps null), so it only reserves the slot —
-  // it never contributes a value to the recent max.
-  if (currentSeasonInstanceId) {
-    const seedDate = asOfDate ?? new Date().toISOString().slice(0, 10);
-    seasonBuckets.set(currentSeasonInstanceId, { sortDate: seedDate, bestE1RM: null, bestReps: null });
-  }
-
-  for (const dp of history) {
-    const key = resolveExerciseSeasonKey(dp.seasonInstanceId, dp.date);
-    const existing = seasonBuckets.get(key);
-    if (!existing) {
-      seasonBuckets.set(key, {
-        sortDate: dp.date,
-        bestE1RM: dp.topEstimatedOneRepMax,
-        bestReps: dp.topRepCount ?? null,
-      });
-    } else {
-      if (dp.date > existing.sortDate) existing.sortDate = dp.date;
-      if (
-        dp.topEstimatedOneRepMax != null &&
-        (existing.bestE1RM == null || dp.topEstimatedOneRepMax > existing.bestE1RM)
-      ) {
-        existing.bestE1RM = dp.topEstimatedOneRepMax;
-      }
-      if (
-        dp.topRepCount != null &&
-        (existing.bestReps == null || dp.topRepCount > existing.bestReps)
-      ) {
-        existing.bestReps = dp.topRepCount;
-      }
-    }
-  }
-
-  // Filter out seasons whose most-recent activity is older than the dormant
-  // threshold before taking the top 3. Without this, a single very old season
-  // can dominate the recent-max baseline when the user has fewer than 3 total
-  // seasons containing this exercise.
-  const cutoff = dormantCutoffDate();
-  const recentSeasonKeys = new Set(
-    [...seasonBuckets.entries()]
-      .filter(([, b]) => b.sortDate >= cutoff)
-      .sort((a, b) => b[1].sortDate.localeCompare(a[1].sortDate))
-      .slice(0, 3)
-      .map(([key]) => key)
-  );
-
-  let recentMax: number | null = null;
-  for (const [key, bucket] of seasonBuckets.entries()) {
-    if (!recentSeasonKeys.has(key) || bucket.bestE1RM == null) continue;
-    if (recentMax == null || bucket.bestE1RM > recentMax) {
-      recentMax = bucket.bestE1RM;
-    }
-  }
+  // Recent max — best e1RM among attempts inside the trailing window (the
+  // current session is already excluded from `history`). Substitutes for the
+  // all-time best when the user hasn't matched it recently, so prescriptions
+  // and the warmup threshold track current capacity after a layoff.
+  let recentMax = history.reduce<number | null>((best, dp) => {
+    if (dp.topEstimatedOneRepMax == null || dp.date < windowStart) return best;
+    return best == null || dp.topEstimatedOneRepMax > best
+      ? dp.topEstimatedOneRepMax
+      : best;
+  }, null);
 
   // No substitution needed if recent max is within 2.5% of the historical best
   // — the gap is small enough that the historical PR is still a fair anchor.
@@ -1370,15 +1326,12 @@ export async function getEffectiveE1RM(
     recentMax = null;
   }
 
-  let recentMaxReps: number | null = null;
-  for (const [key, bucket] of seasonBuckets.entries()) {
-    if (!recentSeasonKeys.has(key) || bucket.bestReps == null) continue;
-    if (recentMaxReps == null || bucket.bestReps > recentMaxReps) {
-      recentMaxReps = bucket.bestReps;
-    }
-  }
+  let recentMaxReps = history.reduce<number | null>((best, dp) => {
+    if (dp.topRepCount == null || dp.date < windowStart) return best;
+    return best == null || dp.topRepCount > best ? dp.topRepCount : best;
+  }, null);
 
-  // No substitution needed if the all-time rep best was matched recently.
+  // No substitution needed if the all-time rep best was matched within the window.
   if (historicalBestReps != null && recentMaxReps != null && recentMaxReps >= historicalBestReps) {
     recentMaxReps = null;
   }
@@ -1563,135 +1516,85 @@ export async function getExerciseInstanceView(
     return best == null || set.performedReps > best ? set.performedReps : best;
   }, null);
 
-  // ── Recent-max computation ────────────────────────────────────────────────
-  // If the all-time best e1RM hasn't been matched within the last three seasons
-  // where this exercise was actually attempted, substitute a "recent max" so
-  // that intensity targets remain fair and achievable.
-  //
-  // Season membership uses resolveExerciseSeasonKey — the same logic as the
-  // ExerciseInsights chart — so real SeasonInstance IDs and calendar-month
-  // pseudo-seasons for imported data are handled identically in both places.
+  // ── Recent-form window ────────────────────────────────────────────────────
+  // Substitute a "recent max" for the all-time best when the user hasn't matched
+  // their PR within the trailing RECENT_WINDOW_MONTHS-month window, so intensity
+  // targets stay fair after a layoff. An empty window means dormant → AMRAP.
+  // Anchored to today: this is the live view for the exercise being performed.
 
-  // Build a session-level map from exerciseInstanceId → { seasonKey, date }.
-  // seasonKey = SeasonInstance ID for real sessions; no SeasonInstance lookup
-  // needed since SessionInstance already carries seasonInstanceId directly.
-  type InstanceMeta = { seasonKey: string; date: string };
-  const instanceMetaMap = new Map<string, InstanceMeta>();
-
+  // exerciseInstanceId → completion date for every prior instance of this
+  // exercise (the current instance never counts as history).
+  const instanceDateById = new Map<string, string>();
   await Promise.all(
     allMatchingInstances
       .filter((inst) => inst.id !== exerciseInstance.id)
       .map(async (inst) => {
         const instSession = await getSessionInstanceById(inst.sessionInstanceId);
         if (!instSession) return;
-        instanceMetaMap.set(inst.id, {
-          seasonKey: resolveExerciseSeasonKey(instSession.seasonInstanceId, instSession.date),
-          date: sessionCompletedDate(instSession),
-        });
+        instanceDateById.set(inst.id, sessionCompletedDate(instSession));
       })
   );
 
-  // One bucket per season key — tracks the most-recent session date (for
-  // chronological ordering) and the best e1RM / best reps with their dates.
-  type SeasonBucket = {
-    sortDate: string;
-    bestE1RM: number | null;
-    bestDate: string | null;
-    bestReps: number | null;
-    bestRepsDate: string | null;
-  };
-  const seasonBuckets = new Map<string, SeasonBucket>();
-
-  function mergeIntoBucket(
-    key: string,
-    date: string,
-    e1rm: number | null,
-    reps: number | null = null
-  ): void {
-    const existing = seasonBuckets.get(key);
-    if (!existing) {
-      seasonBuckets.set(key, {
-        sortDate: date,
-        bestE1RM: e1rm,
-        bestDate: e1rm != null ? date : null,
-        bestReps: reps,
-        bestRepsDate: reps != null ? date : null,
-      });
-    } else {
-      if (date > existing.sortDate) existing.sortDate = date;
-      if (e1rm != null && (existing.bestE1RM == null || e1rm > existing.bestE1RM)) {
-        existing.bestE1RM = e1rm;
-        existing.bestDate = date;
-      }
-      if (reps != null && (existing.bestReps == null || reps > existing.bestReps)) {
-        existing.bestReps = reps;
-        existing.bestRepsDate = date;
-      }
-    }
-  }
-
-  // Current season always participates, even on a first attempt.
-  mergeIntoBucket(seasonInstance.id, sessionCompletedDate(sessionInstance), null, null);
-
-  // Real prior sets.
+  // Flatten prior attempts to { date, e1rm, reps }. Real sets take their date
+  // from the owning session; imported sets use their raw record date (the merged
+  // ExerciseSet view doesn't carry per-set dates).
+  type Attempt = { date: string; e1rm: number | null; reps: number | null };
+  const attempts: Attempt[] = [];
   for (const set of priorHistoricalSets) {
     if (set.exerciseInstanceId === "__imported__") continue;
-    const meta = instanceMetaMap.get(set.exerciseInstanceId);
-    if (!meta) continue;
-    mergeIntoBucket(
-      meta.seasonKey,
-      meta.date,
-      calculateEstimatedOneRepMax(set.performedWeight, set.performedReps),
-      set.performedReps ?? null
-    );
+    const date = instanceDateById.get(set.exerciseInstanceId);
+    if (date == null) continue;
+    attempts.push({
+      date,
+      e1rm: calculateEstimatedOneRepMax(set.performedWeight, set.performedReps),
+      reps: set.performedReps ?? null,
+    });
   }
-
-  // Imported sets — grouped into calendar-month pseudo-seasons using raw
-  // ImportedSet records (which carry dates, unlike the merged ExerciseSet view).
   const allRawImported = await loadAllImportedSets();
   for (const s of allRawImported) {
     if (s.exerciseName.trim().toLowerCase() !== normalizedExerciseName) continue;
     if (s.reps <= 0) continue;
-    const e1rm = !isBodyweight && s.weight > 0
-      ? calculateEstimatedOneRepMax(s.weight, s.reps)
-      : null;
-    mergeIntoBucket(resolveExerciseSeasonKey(null, s.date), s.date, e1rm, s.reps);
+    attempts.push({
+      date: s.date,
+      e1rm:
+        !isBodyweight && s.weight > 0
+          ? calculateEstimatedOneRepMax(s.weight, s.reps)
+          : null,
+      reps: s.reps,
+    });
   }
 
-  // Filter out seasons whose most-recent activity is older than the dormant
-  // threshold, then sort by recency and take the top 3. The dormancy filter
-  // prevents a single very old season from dominating the recent-max baseline
-  // when the user has only sparse history for this exercise.
-  const recentCutoff = dormantCutoffDate();
-  const recentSeasonKeys = new Set(
-    [...seasonBuckets.entries()]
-      .filter(([, b]) => b.sortDate >= recentCutoff)
-      .sort((a, b) => b[1].sortDate.localeCompare(a[1].sortDate))
-      .slice(0, 3)
-      .map(([key]) => key)
-  );
+  const windowStart = recentWindowStart();
 
-  // Historical best date — from whichever bucket produced the all-time best e1RM.
-  let historicalBestDate: string | null = null;
-  for (const bucket of seasonBuckets.values()) {
-    if (
-      bucket.bestE1RM != null &&
-      historicalBestEstimatedOneRepMax != null &&
-      bucket.bestE1RM >= historicalBestEstimatedOneRepMax
-    ) {
-      historicalBestDate = bucket.bestDate;
-      break;
-    }
-  }
-
-  // Recent max — best e1RM across the three most-recent season buckets.
   let recentMaxEstimatedOneRepMax: number | null = null;
   let recentMaxDate: string | null = null;
-  for (const [key, bucket] of seasonBuckets.entries()) {
-    if (!recentSeasonKeys.has(key) || bucket.bestE1RM == null) continue;
-    if (recentMaxEstimatedOneRepMax == null || bucket.bestE1RM > recentMaxEstimatedOneRepMax) {
-      recentMaxEstimatedOneRepMax = bucket.bestE1RM;
-      recentMaxDate = bucket.bestDate;
+  let recentMaxReps: number | null = null;
+  let recentMaxRepsDate: string | null = null;
+  let historicalBestDate: string | null = null;
+  let lastAttemptedDate: string | null = null;
+  for (const a of attempts) {
+    if (lastAttemptedDate == null || a.date > lastAttemptedDate) {
+      lastAttemptedDate = a.date;
+    }
+    if (
+      historicalBestDate == null &&
+      a.e1rm != null &&
+      historicalBestEstimatedOneRepMax != null &&
+      a.e1rm >= historicalBestEstimatedOneRepMax
+    ) {
+      historicalBestDate = a.date;
+    }
+    if (a.date < windowStart) continue;
+    if (
+      a.e1rm != null &&
+      (recentMaxEstimatedOneRepMax == null || a.e1rm > recentMaxEstimatedOneRepMax)
+    ) {
+      recentMaxEstimatedOneRepMax = a.e1rm;
+      recentMaxDate = a.date;
+    }
+    if (a.reps != null && (recentMaxReps == null || a.reps > recentMaxReps)) {
+      recentMaxReps = a.reps;
+      recentMaxRepsDate = a.date;
     }
   }
 
@@ -1705,34 +1608,12 @@ export async function getExerciseInstanceView(
     recentMaxEstimatedOneRepMax = null;
     recentMaxDate = null;
   }
-
-  // Recent max reps — best rep count across the three most-recent season buckets.
-  let recentMaxReps: number | null = null;
-  let recentMaxRepsDate: string | null = null;
-  for (const [key, bucket] of seasonBuckets.entries()) {
-    if (!recentSeasonKeys.has(key) || bucket.bestReps == null) continue;
-    if (recentMaxReps == null || bucket.bestReps > recentMaxReps) {
-      recentMaxReps = bucket.bestReps;
-      recentMaxRepsDate = bucket.bestRepsDate;
-    }
-  }
-  // No substitution needed if the all-time rep best was matched recently.
+  // No substitution needed if the all-time rep best was matched within the window.
   if (recentMaxReps != null && historicalBestReps != null && recentMaxReps >= historicalBestReps) {
     recentMaxReps = null;
     recentMaxRepsDate = null;
   }
-  // ─────────────────────────────────────────────────────────────────────────
 
-  // Dormant check: if the most recent prior attempt is older than the dormant
-  // threshold, force AMRAP. The current-season placeholder bucket (no logged
-  // effort) is skipped so its synthetic sortDate doesn't mask a real gap.
-  let lastAttemptedDate: string | null = null;
-  for (const bucket of seasonBuckets.values()) {
-    if (bucket.bestE1RM == null && bucket.bestReps == null) continue;
-    if (lastAttemptedDate == null || bucket.sortDate > lastAttemptedDate) {
-      lastAttemptedDate = bucket.sortDate;
-    }
-  }
   const isDormant = isDormantSince(lastAttemptedDate);
 
   const weekRir =
@@ -1744,7 +1625,7 @@ export async function getExerciseInstanceView(
 
   // Always recompute from history — never carry over stale stored values.
   // No history → both null → AMRAP prompt shown to user.
-  // Dormant (>DORMANT_GAP_YEARS since last attempt) → same: both null.
+  // Dormant (no attempt within the trailing 6-month window) → same: both null.
   const { prescribedWeight, prescribedRepTarget } = computePrescription({
     weightMode: exerciseTemplate.weightMode,
     configuredWeight: exerciseTemplate.prescribedWeight,
@@ -1946,7 +1827,6 @@ export async function getSessionInstanceView(
           : undefined;
       const { historicalBest, recentMax, historicalBestReps, recentMaxReps, lastAttemptedDate } = await getEffectiveE1RM(
         sie.exerciseName,
-        sessionInstance.seasonInstanceId,
         currentSessionExerciseInstanceIds,
         sessionAsOfDate
       );
@@ -1969,7 +1849,7 @@ export async function getSessionInstanceView(
         effectiveOneRepMax: effectiveE1RM,
         effectiveReps: recentMaxReps ?? historicalBestReps,
         weekRir,
-        isDormant: isDormantSince(lastAttemptedDate),
+        isDormant: isDormantSince(lastAttemptedDate, sessionAsOfDate),
       });
 
       const analyzedSets = buildAnalyzedSetList(currentRawSets, allHistoricalSets, effectiveE1RM, effectiveBaselineReps, prescribedRepTarget, prescribedWeight);

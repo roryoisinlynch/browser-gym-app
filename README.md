@@ -573,7 +573,7 @@ warmup if effective_max_reps − performed_reps > 4
 
 The connection to the weighted rule: 60% e1RM ≈ 6 RPE ≈ 4 RIR. A bodyweight set with more than 4 reps in reserve relative to the effective max represents the same general effort level as a weighted set below 60% e1RM — clearly preparatory rather than a genuine working effort.
 
-The baseline uses **`recentMaxReps` (last 3 seasons) in preference to the all-time best**, using the same recent-max fallback logic as the prescription system. This keeps the warmup threshold fair after a long training gap without anchoring it to a stale all-time record.
+The baseline uses **`recentMaxReps` (best in the trailing 6 months) in preference to the all-time best**, using the same recent-max fallback logic as the prescription system. This keeps the warmup threshold fair after a long training gap without anchoring it to a stale all-time record.
 
 If no prior history exists, the set defaults to working — consistent with the weighted exercise behaviour.
 
@@ -631,7 +631,7 @@ When the user switches to a new program while a season is still in progress, the
 
 ## Effect on e1RM — no impact
 
-The e1RM recent-max window groups historical sets into **season buckets** by `seasonInstanceId`, sorted by the most-recent session date, and takes the three most-recent buckets. This grouping is purely by activity — it does not filter by season status. A cancelled season that had sets logged in it counts as a normal season bucket and contributes to the window exactly like a completed one.
+The e1RM recent-max window is purely date-based: it takes the best e1RM among sets performed in the **trailing 6 months** relative to the attempt being evaluated, regardless of which season those sets belong to. Season status is irrelevant — a set logged in a cancelled season contributes to the window exactly like one from a completed season, as long as it falls inside the 6-month window. The same 6-month horizon defines **dormancy**: an exercise with no set inside the window defaults to AMRAP.
 
 ## Effect on the Season Summary list — excluded
 
@@ -652,16 +652,12 @@ Not-started weeks in the displaced season are left as `not_started` — they are
 
 # To do:
  - Filter exercise insights graph by period or date 
- - Support treating abandoned seasons exactly as normal seasons, include then in the season list flagged as 'stopped early' and proportion their metrics in relation to the number of days cut short. Punish the user for any scheduled days missed before the skip, but not after.
+ - need much better handholding when creating a program for the first time. Pre-available options in dropwdowns need sanitising too
  - add an exercise detail screen where you can see a table of all exercises and their: last lift, e1RM local, e1RM max, total lifts, days since PR. Sortable by each column.
  - i should build unit tests which try to restore an old backup before every new deploy
+ - short programs on big screens look bad on schedule view
  - max request: pre-define ordered list of exercises
- - heuristics survey to track protein, calories, creatine, sleep, fibre, water
  - feature to share program templates (send and recieve json)
- - generate a backup import json file to upload to the desktop/pixel user which is prepopulated with data to use as a screenshot/screenrecord/demo
- - dashboard 'start sesion' mayb should read 'view sesion'
- - redesign rest days on week instance screen (weekday name and visual border)
- - locker number feature
+ - generate a backup import json file to upload to the demo desktop/pixel user 
  - When initialising a new season, if no -1 day in the RIR scheme, offer it to the user before initialising. 
  - superset support
- - When i match my local e1rm, should the target auto adjust there and then?
