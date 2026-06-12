@@ -1,9 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { SeasonInstance, SessionInstance, WeekInstance } from "../domain/models";
-import type { ExerciseSessionDataPoint, PREvent, SessionInstanceView, WeekInstanceItemView } from "../repositories/programRepository";
+import type { ExerciseSessionDataPoint, PREvent, WeekInstanceItemView } from "../repositories/programRepository";
 import {
-  computeSeasonConsistencyForSeason,
   getActiveSeasonInstance,
   getAllTimePREvents,
   getCanonicalWeekTemplateForSeason,
@@ -13,12 +12,13 @@ import {
   getLastCompletedWeekInstance,
   getLastEndedSeasonInstance,
   getSeasonCalendarWeeks,
+  getSeasonMetrics,
   getSessionInstanceById,
   getSessionInstanceView,
-  getSessionInstancesForWeekInstance,
+  getSessionMetrics,
   getWeekInstanceItemsForCurrentWeek,
   getWeekInstanceItemsForWeekInstance,
-  getWeekInstancesForSeasonInstance,
+  getWeekMetrics,
   getWeekTemplateItemsForWeekTemplate,
 } from "../repositories/programRepository";
 import { getAll, getById, STORE_NAMES } from "../db/db";
@@ -34,8 +34,8 @@ import WeeksBreadcrumb from "../components/WeeksBreadcrumb";
 import type { BreadcrumbWeek } from "../components/WeeksBreadcrumb";
 import ExerciseSummaryCard from "../components/ExerciseSummaryCard";
 import { computeSessionMetrics } from "../services/sessionMetrics";
-import { computeWeekMetrics, emojiForRating } from "../services/weekMetrics";
-import { computeSeasonMetrics, gradeColor } from "../services/seasonMetrics";
+import { emojiForRating } from "../services/weekMetrics";
+import { gradeColor } from "../services/seasonMetrics";
 import "./DashboardPage.css";
 
 // ─── Tutorial: exercise graph mock ─────────────────────────────────────────
@@ -787,17 +787,7 @@ async function buildSessionCard(session: SessionInstance): Promise<RecentCard | 
 
 async function buildWeekCard(week: WeekInstance): Promise<RecentCard | null> {
   try {
-    const [templateItems, sessions] = await Promise.all([
-      getWeekTemplateItemsForWeekTemplate(week.weekTemplateId),
-      getSessionInstancesForWeekInstance(week.id),
-    ]);
-    const settled = sessions.filter(
-      (s) => s.status === "completed" || s.status === "skipped"
-    );
-    const views: SessionInstanceView[] = (
-      await Promise.all(settled.map((s) => getSessionInstanceView(s.id)))
-    ).filter((v): v is SessionInstanceView => v != null);
-    const wm = computeWeekMetrics(week, templateItems, views);
+    const wm = await getWeekMetrics(week);
     const scoreColor: "green" | "amber" | "red" | "grey" = week.endedEarly
       ? "grey"
       : wm.weekScore >= 96 ? "green" : wm.weekScore >= 88 ? "amber" : "red";
@@ -816,26 +806,7 @@ async function buildWeekCard(week: WeekInstance): Promise<RecentCard | null> {
 
 async function buildSeasonCard(season: SeasonInstance): Promise<RecentCard | null> {
   try {
-    const weeks = await getWeekInstancesForSeasonInstance(season.id);
-    const completedWeeks = weeks.filter((w) => w.status === "completed");
-    const weekMetrics = await Promise.all(
-      completedWeeks.map(async (w) => {
-        const [sessions, items] = await Promise.all([
-          getSessionInstancesForWeekInstance(w.id),
-          getWeekTemplateItemsForWeekTemplate(w.weekTemplateId),
-        ]);
-        const views: SessionInstanceView[] = (
-          await Promise.all(
-            sessions
-              .filter((s) => s.status === "completed" || s.status === "skipped")
-              .map((s) => getSessionInstanceView(s.id))
-          )
-        ).filter((v): v is SessionInstanceView => v != null);
-        return computeWeekMetrics(w, items, views);
-      })
-    );
-    const consistencyOverride = await computeSeasonConsistencyForSeason(season);
-    const sm = computeSeasonMetrics(season, weekMetrics, consistencyOverride);
+    const sm = await getSeasonMetrics(season);
     return {
       id: season.id,
       name: season.name,
@@ -856,87 +827,32 @@ async function loadAchievements(): Promise<Achievements> {
     getAll<SeasonInstance>(STORE_NAMES.seasonInstances),
   ]);
 
-  // Build a session view for every settled session once. Both session-level
-  // scoring and the week metrics below feed off these views, so this keeps the
-  // scan from re-hitting IndexedDB three times per session.
-  const settledSessions = allSessions.filter(
-    (s) => s.status === "completed" || s.status === "skipped"
-  );
-  const sessionViews = new Map<string, SessionInstanceView>();
-  await Promise.all(
-    settledSessions.map(async (s) => {
-      const v = await getSessionInstanceView(s.id);
-      if (v) sessionViews.set(s.id, v);
-    })
-  );
+  // Read each settled record's frozen metrics (computed + cached on first
+  // access). Earlier dashboard loads pay the one-time backfill; after that this
+  // is just stored-value reads — no session-view rebuilds.
 
   const goldSessions: string[] = [];
   for (const s of allSessions) {
-    if (s.status !== "completed") continue;
-    if (!s.completedAt) continue;
-    const v = sessionViews.get(s.id);
-    if (!v) continue;
-    if (computeSessionMetrics(v).ragStatus === "green") goldSessions.push(s.completedAt);
+    if (s.status !== "completed" || !s.completedAt) continue;
+    const m = await getSessionMetrics(s);
+    if (m && m.ragStatus === "green") goldSessions.push(s.completedAt);
   }
   goldSessions.sort((a, b) => b.localeCompare(a));
-
-  // Pre-load week-template items once per unique template so each week's
-  // computeWeekMetrics call gets its inputs without a duplicate fetch.
-  const completedWeeks = allWeeks.filter((w) => w.status === "completed");
-  const uniqueWeekTemplateIds = [...new Set(completedWeeks.map((w) => w.weekTemplateId))];
-  const templateItemsByTemplateId = new Map<
-    string,
-    Awaited<ReturnType<typeof getWeekTemplateItemsForWeekTemplate>>
-  >();
-  await Promise.all(
-    uniqueWeekTemplateIds.map(async (id) => {
-      templateItemsByTemplateId.set(id, await getWeekTemplateItemsForWeekTemplate(id));
-    })
-  );
-
-  const sessionsByWeekId = new Map<string, SessionInstance[]>();
-  for (const s of settledSessions) {
-    const arr = sessionsByWeekId.get(s.weekInstanceId) ?? [];
-    arr.push(s);
-    sessionsByWeekId.set(s.weekInstanceId, arr);
-  }
-
-  const weekMetricsByWeekId = new Map<string, ReturnType<typeof computeWeekMetrics>>();
-  for (const w of completedWeeks) {
-    const views = (sessionsByWeekId.get(w.id) ?? [])
-      .map((s) => sessionViews.get(s.id))
-      .filter((v): v is SessionInstanceView => v != null);
-    const items = templateItemsByTemplateId.get(w.weekTemplateId) ?? [];
-    weekMetricsByWeekId.set(w.id, computeWeekMetrics(w, items, views));
-  }
 
   // Star-eyed weeks: emojiRating 1 (score ≥ 100). Exclude force-completed weeks
   // since the recent-week card already paints them grey rather than green.
   const perfectWeeks: string[] = [];
-  for (const w of completedWeeks) {
-    if (w.endedEarly) continue;
-    if (!w.completedAt) continue;
-    const wm = weekMetricsByWeekId.get(w.id);
-    if (wm && wm.emojiRating === 1) perfectWeeks.push(w.completedAt);
+  for (const w of allWeeks) {
+    if (w.status !== "completed" || w.endedEarly || !w.completedAt) continue;
+    const wm = await getWeekMetrics(w);
+    if (wm.emojiRating === 1) perfectWeeks.push(w.completedAt);
   }
   perfectWeeks.sort((a, b) => b.localeCompare(a));
 
-  const weeksBySeasonId = new Map<string, WeekInstance[]>();
-  for (const w of completedWeeks) {
-    const arr = weeksBySeasonId.get(w.seasonInstanceId) ?? [];
-    arr.push(w);
-    weeksBySeasonId.set(w.seasonInstanceId, arr);
-  }
-
   const aSeasons: string[] = [];
   for (const season of allSeasons) {
-    if (season.status !== "completed") continue;
-    if (!season.completedAt) continue;
-    const seasonWeekMetrics = (weeksBySeasonId.get(season.id) ?? [])
-      .map((w) => weekMetricsByWeekId.get(w.id))
-      .filter((m): m is ReturnType<typeof computeWeekMetrics> => m != null);
-    const consistencyOverride = await computeSeasonConsistencyForSeason(season);
-    const sm = computeSeasonMetrics(season, seasonWeekMetrics, consistencyOverride);
+    if (season.status !== "completed" || !season.completedAt) continue;
+    const sm = await getSeasonMetrics(season);
     if (sm.grade === "A") aSeasons.push(season.completedAt);
   }
   aSeasons.sort((a, b) => b.localeCompare(a));

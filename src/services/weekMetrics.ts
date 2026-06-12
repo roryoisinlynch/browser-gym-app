@@ -1,23 +1,20 @@
-import type { WeekInstance, WeekTemplateItem } from "../domain/models";
+import type {
+  EmojiRating,
+  SessionInstanceStatus,
+  SessionMetrics,
+  WeekInstance,
+  WeekMetrics,
+  WeekTemplateItem,
+} from "../domain/models";
 import type { SessionInstanceView } from "../repositories/programRepository";
 import { computeSessionMetrics } from "./sessionMetrics";
 
-/**
- * 1 = best (😍), 5 = worst (😵).
- * Thresholds: 100 → 1, ≥96 → 2, ≥92 → 3, ≥88 → 4, <88 → 5.
- */
-export type EmojiRating = 1 | 2 | 3 | 4 | 5;
+export type { EmojiRating, WeekMetrics };
 
-export interface WeekMetrics {
-  totalSets: number;
-  totalSessions: number;
-  durationLabel: string | null;
-  volumeScore: number;
-  intensityScore: number;
-  consistencyScore: number;
-  weekScore: number;
-  emojiRating: EmojiRating;
-  skippedSessions: number;
+/** One settled session's status + metrics — the input to week aggregation. */
+export interface SessionMetricsEntry {
+  status: SessionInstanceStatus;
+  metrics: SessionMetrics;
 }
 
 export function getEmojiRating(score: number): EmojiRating {
@@ -68,19 +65,34 @@ export function computeWeekMetrics(
   weekTemplateItems: WeekTemplateItem[],
   sessionViews: SessionInstanceView[]
 ): WeekMetrics {
+  return computeWeekMetricsFromSessions(
+    weekInstance,
+    weekTemplateItems,
+    sessionViews.map((sv) => ({
+      status: sv.sessionInstance.status,
+      metrics: computeSessionMetrics(sv),
+    }))
+  );
+}
+
+/**
+ * Same as computeWeekMetrics but driven by already-computed session metrics
+ * (frozen or fresh) instead of full session views — so week aggregation never
+ * needs to rebuild a view.
+ */
+export function computeWeekMetricsFromSessions(
+  weekInstance: WeekInstance,
+  weekTemplateItems: WeekTemplateItem[],
+  sessions: SessionMetricsEntry[]
+): WeekMetrics {
   // Skipped sessions are treated as zero-effort completions: they count toward
   // the session totals (so the week settles) and pull volume/intensity averages
   // toward zero so the user is rated honestly for opting out.
-  const completedViews = sessionViews.filter(
-    (sv) =>
-      sv.sessionInstance.status === "completed" ||
-      sv.sessionInstance.status === "skipped"
+  const completedViews = sessions.filter(
+    (s) => s.status === "completed" || s.status === "skipped"
   );
 
-  const totalSets = completedViews.reduce(
-    (sum, sv) => sum + computeSessionMetrics(sv).totalSets,
-    0
-  );
+  const totalSets = completedViews.reduce((sum, s) => sum + s.metrics.totalSets, 0);
 
   const totalSessions = completedViews.length;
 
@@ -92,12 +104,11 @@ export function computeWeekMetrics(
   let volumeScore = 0;
   let intensityScore = 0;
   if (completedViews.length > 0) {
-    const sessionMetrics = completedViews.map(computeSessionMetrics);
     volumeScore = Math.round(
-      sessionMetrics.reduce((s, m) => s + m.volumeScore, 0) / sessionMetrics.length
+      completedViews.reduce((s, x) => s + x.metrics.volumeScore, 0) / completedViews.length
     );
     intensityScore = Math.round(
-      sessionMetrics.reduce((s, m) => s + m.intensityScore, 0) / sessionMetrics.length
+      completedViews.reduce((s, x) => s + x.metrics.intensityScore, 0) / completedViews.length
     );
   }
 
@@ -111,7 +122,7 @@ export function computeWeekMetrics(
   const expectedLength = weekTemplateItems.length; // calendar days the week was designed to span
   const scheduledSessionCount = weekTemplateItems.filter((i) => i.type === "session").length;
   const genuinelyCompletedCount = completedViews.filter(
-    (sv) => sv.sessionInstance.status === "completed"
+    (s) => s.status === "completed"
   ).length;
   const skippedSessions = Math.max(0, scheduledSessionCount - genuinelyCompletedCount);
 

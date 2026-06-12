@@ -153,6 +153,57 @@ export interface ExerciseTemplate {
   availableWeights?: number[];
 }
 
+// ── Frozen performance metrics ──────────────────────────────────────────────
+// Computed once when a session / week / season settles and stored on its
+// record, so the dashboard and summaries read stable numbers instead of
+// rebuilding session views on every render. All optional: older records (and
+// pre-freeze backups) simply recompute and backfill on first access.
+
+export type RagStatus = "green" | "amber" | "red";
+
+export interface SessionMetrics {
+  totalSets: number;
+  durationSeconds: number | null;
+  workingSetsCompleted: number;
+  workingSetsTarget: number;
+  volumeScore: number;
+  setsMetIntensity: number;
+  intensityTarget: number;
+  intensityScore: number;
+  sessionScore: number;
+  ragStatus: RagStatus;
+}
+
+export type EmojiRating = 1 | 2 | 3 | 4 | 5;
+
+export interface WeekMetrics {
+  totalSets: number;
+  totalSessions: number;
+  durationLabel: string | null;
+  volumeScore: number;
+  intensityScore: number;
+  consistencyScore: number;
+  weekScore: number;
+  emojiRating: EmojiRating;
+  skippedSessions: number;
+}
+
+export type SeasonGrade = "A" | "B" | "C" | "D" | "F" | "U";
+
+export interface SeasonMetrics {
+  totalSets: number;
+  totalSessions: number;
+  totalWeeks: number;
+  durationLabel: string | null;
+  volumeScore: number;
+  intensityScore: number;
+  consistencyScore: number;
+  seasonScore: number;
+  grade: SeasonGrade;
+  totalSkippedSessions: number;
+  endedEarly: boolean;
+}
+
 /**
  * A real user-facing run through a season template.
  */
@@ -167,6 +218,9 @@ export interface SeasonInstance {
 
   startedAt?: string | null;
   completedAt?: string | null;
+
+  /** Frozen at season completion; recomputed + backfilled if absent. */
+  frozenMetrics?: SeasonMetrics | null;
 }
 
 /**
@@ -195,6 +249,9 @@ export interface WeekInstance {
 
   summary?: string | null;
   grade?: string | null;
+
+  /** Frozen at week completion; recomputed + backfilled if absent. */
+  frozenMetrics?: WeekMetrics | null;
 }
 
 /**
@@ -228,6 +285,9 @@ export interface SessionInstance {
   startedAt?: string | null;
   completedAt?: string | null;
   durationSeconds?: number | null;
+
+  /** Frozen when the session settles (completed/skipped); backfilled if absent. */
+  frozenMetrics?: SessionMetrics | null;
 }
 
 /**

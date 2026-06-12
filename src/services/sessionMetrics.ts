@@ -1,20 +1,8 @@
 import { calculateEstimatedOneRepMax } from "./setAnalysis";
 import type { SessionInstanceView } from "../repositories/programRepository";
+import type { RagStatus, SessionMetrics } from "../domain/models";
 
-export type RagStatus = "green" | "amber" | "red";
-
-export interface SessionMetrics {
-  totalSets: number;
-  durationSeconds: number | null;
-  workingSetsCompleted: number;
-  workingSetsTarget: number;
-  volumeScore: number;
-  setsMetIntensity: number;
-  intensityTarget: number;
-  intensityScore: number;
-  sessionScore: number;
-  ragStatus: RagStatus;
-}
+export type { RagStatus, SessionMetrics };
 
 /**
  * Computes the core performance metrics for a completed session.

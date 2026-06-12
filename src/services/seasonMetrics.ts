@@ -1,26 +1,14 @@
 import type {
+  SeasonGrade,
   SeasonInstance,
+  SeasonMetrics,
   WeekInstance,
   WeekInstanceItem,
+  WeekMetrics,
   WeekTemplateItem,
 } from "../domain/models";
-import type { WeekMetrics } from "./weekMetrics";
 
-export type SeasonGrade = "A" | "B" | "C" | "D" | "F" | "U";
-
-export interface SeasonMetrics {
-  totalSets: number;
-  totalSessions: number;
-  totalWeeks: number;
-  durationLabel: string | null;
-  volumeScore: number;
-  intensityScore: number;
-  consistencyScore: number;
-  seasonScore: number;
-  grade: SeasonGrade;
-  totalSkippedSessions: number;
-  endedEarly: boolean;
-}
+export type { SeasonGrade, SeasonMetrics };
 
 export function getSeasonGrade(score: number): SeasonGrade {
   if (score >= 100) return "A";

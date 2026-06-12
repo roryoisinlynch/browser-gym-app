@@ -16,6 +16,9 @@ import type {
   MuscleGroup,
   MovementType,
   WeightMode,
+  SessionMetrics,
+  WeekMetrics,
+  SeasonMetrics,
 } from "../domain/models";
 
 import {
@@ -32,7 +35,9 @@ import {
   calculateEstimatedOneRepMax,
 } from "../services/setAnalysis";
 
-import { computeSeasonConsistency } from "../services/seasonMetrics";
+import { computeSeasonConsistency, computeSeasonMetrics } from "../services/seasonMetrics";
+import { computeSessionMetrics } from "../services/sessionMetrics";
+import { computeWeekMetricsFromSessions } from "../services/weekMetrics";
 
 import { mergeWithImportedSets } from "../services/importMerge";
 import { loadAllImportedSets, loadImportedSetsForExercise } from "../services/importedSetStore";
@@ -3145,6 +3150,81 @@ export async function getSeasonPRs(seasonInstanceId: string): Promise<SessionPR[
     ));
   }
   return prs;
+}
+
+// ─── Frozen performance metrics ─────────────────────────────────────────────
+// Settled sessions/weeks/seasons store their computed metrics on the record the
+// first time they're needed, so the dashboard and summaries read stable numbers
+// instead of rebuilding session views on every render. A settled record is
+// frozen exactly once; live (in-progress) records always compute fresh.
+
+/**
+ * Metrics for a session: the frozen copy if the session is settled and already
+ * has one, otherwise computed from its view. Settled sessions are frozen
+ * (backfilled) on first access. Returns null if the view can't be built.
+ */
+export async function getSessionMetrics(
+  session: SessionInstance
+): Promise<SessionMetrics | null> {
+  const settled = session.status === "completed" || session.status === "skipped";
+  if (settled && session.frozenMetrics != null) return session.frozenMetrics;
+
+  const view = await getSessionInstanceView(session.id);
+  if (!view) return null;
+  const metrics = computeSessionMetrics(view);
+
+  if (settled) {
+    await putItem(STORE_NAMES.sessionInstances, { ...session, frozenMetrics: metrics });
+  }
+  return metrics;
+}
+
+/**
+ * Metrics for a week: frozen copy if the week is completed and has one,
+ * otherwise aggregated from its settled sessions' (frozen-or-computed) metrics.
+ * Completed weeks are frozen on first access.
+ */
+export async function getWeekMetrics(week: WeekInstance): Promise<WeekMetrics> {
+  if (week.status === "completed" && week.frozenMetrics != null) return week.frozenMetrics;
+
+  const sessions = await getSessionInstancesForWeekInstance(week.id);
+  const items = await getWeekTemplateItemsForWeekTemplate(week.weekTemplateId);
+
+  const entries: { status: SessionInstance["status"]; metrics: SessionMetrics }[] = [];
+  for (const s of sessions) {
+    if (s.status !== "completed" && s.status !== "skipped") continue;
+    const metrics = await getSessionMetrics(s);
+    if (metrics) entries.push({ status: s.status, metrics });
+  }
+
+  const metrics = computeWeekMetricsFromSessions(week, items, entries);
+  if (week.status === "completed") {
+    await putItem(STORE_NAMES.weekInstances, { ...week, frozenMetrics: metrics });
+  }
+  return metrics;
+}
+
+/**
+ * Metrics for a season: frozen copy if the season is completed and has one,
+ * otherwise aggregated from its completed weeks' (frozen-or-computed) metrics.
+ * Completed seasons are frozen on first access.
+ */
+export async function getSeasonMetrics(season: SeasonInstance): Promise<SeasonMetrics> {
+  if (season.status === "completed" && season.frozenMetrics != null) return season.frozenMetrics;
+
+  const weeks = await getWeekInstancesForSeasonInstance(season.id);
+  const weekMetricsList: WeekMetrics[] = [];
+  for (const w of weeks) {
+    if (w.status !== "completed") continue;
+    weekMetricsList.push(await getWeekMetrics(w));
+  }
+
+  const consistencyOverride = await computeSeasonConsistencyForSeason(season);
+  const metrics = computeSeasonMetrics(season, weekMetricsList, consistencyOverride);
+  if (season.status === "completed") {
+    await putItem(STORE_NAMES.seasonInstances, { ...season, frozenMetrics: metrics });
+  }
+  return metrics;
 }
 
 // ─── Dashboard helpers ────────────────────────────────────────────────────────
