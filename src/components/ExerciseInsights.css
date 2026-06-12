@@ -49,6 +49,10 @@
 
 .exercise-insights__chart {
   margin-bottom: 14px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(15, 19, 24, 0.36);
+  border: 1px solid var(--panel-border);
 }
 
 .exercise-insights__chart-label {
@@ -66,13 +70,19 @@
   color: var(--text-soft);
 }
 
-.exercise-insights__metrics-grid {
+.exercise-insights__stats {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.exercise-insights__stats-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
-.exercise-insights__metric {
+.exercise-insights__stat {
   padding: 12px;
   border-radius: 14px;
   background: rgba(15, 19, 24, 0.36);
@@ -82,7 +92,7 @@
   gap: 3px;
 }
 
-.exercise-insights__metric-eyebrow {
+.exercise-insights__stat-eyebrow {
   font-size: 0.72rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -90,19 +100,19 @@
   color: var(--text-soft);
 }
 
-.exercise-insights__metric-date {
+.exercise-insights__stat-date {
   font-size: 0.76rem;
   font-weight: 600;
   color: var(--text-muted);
 }
 
-.exercise-insights__metric-value {
+.exercise-insights__stat-value {
   font-size: 0.96rem;
   font-weight: 800;
   color: var(--text-strong);
 }
 
-.exercise-insights__metric-e1rm {
+.exercise-insights__stat-e1rm {
   font-size: 0.76rem;
   font-weight: 700;
   color: var(--accent);

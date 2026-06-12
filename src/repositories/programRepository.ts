@@ -1255,6 +1255,24 @@ export async function getEffectiveE1RM(
   lastAttemptedDate: string | null;
 }> {
   const rawHistory = await getExerciseSessionHistory(exerciseName);
+  return effectiveE1RMFromHistory(rawHistory, excludeExerciseInstanceIds, asOfDate);
+}
+
+// Pure computation of the effective-e1RM baseline from already-loaded history.
+// Extracted from getEffectiveE1RM so callers that evaluate many sessions (e.g.
+// the exercise stats panel) can load history once and classify every session
+// in-memory instead of re-querying per session.
+function effectiveE1RMFromHistory(
+  rawHistory: ExerciseSessionDataPoint[],
+  excludeExerciseInstanceIds: ReadonlySet<string> | undefined,
+  asOfDate: string | undefined
+): {
+  historicalBest: number | null;
+  recentMax: number | null;
+  historicalBestReps: number | null;
+  recentMaxReps: number | null;
+  lastAttemptedDate: string | null;
+} {
   // Exclude data points from sessions completed strictly after the as-of date.
   // Pinning the baseline to a point in time prevents a future PR from
   // retroactively raising the warmup/working threshold for an already-completed
@@ -1337,6 +1355,174 @@ export async function getEffectiveE1RM(
   }
 
   return { historicalBest, recentMax, historicalBestReps, recentMaxReps, lastAttemptedDate };
+}
+
+export interface ExerciseInstanceStats {
+  /** Date (YYYY-MM-DD) of the most recent prior session for this exercise. */
+  lastLiftDate: string | null;
+  /** Working sets logged this season (the current instance's season), incl. the current session. */
+  workingSetsThisSeason: number;
+  /** Date of the most recent all-time PR before the current session, or null. */
+  lastPrDate: string | null;
+  /** Working sets logged after the last PR; null when there is no PR. */
+  workingSetsSinceLastPr: number | null;
+  /** The top set that set the last PR. */
+  lastPr: {
+    date: string;
+    topWeight: number | null;
+    topReps: number | null;
+    topEstimatedOneRepMax: number | null;
+    topRepCount: number | null;
+  } | null;
+}
+
+/**
+ * Computes the headline stats shown beneath the exercise insights chart:
+ * recency of the last lift, working-set volume this season, and the most
+ * recent all-time PR with working-set volume accrued since.
+ *
+ * Working sets are classified with the same machinery the live session view
+ * uses (computePrescription + analyzeSet), anchored per session to the
+ * effective e1RM baseline as of that session's date so a later PR never
+ * retroactively reclassifies older sets.
+ */
+export async function getExerciseStats(
+  exerciseName: string,
+  currentExerciseInstanceId: string,
+  isBodyweight: boolean
+): Promise<ExerciseInstanceStats> {
+  const rawHistory = await getExerciseSessionHistory(exerciseName);
+
+  const normalizedName = exerciseName.trim().toLowerCase();
+  const allInstances = await getAll<ExerciseInstance>(STORE_NAMES.exerciseInstances);
+  const instances = allInstances.filter(
+    (i) => i.exerciseName.trim().toLowerCase() === normalizedName
+  );
+
+  const workingByInstance = new Map<string, number>();
+  const seasonKeyByInstance = new Map<string, string>();
+  const dateByInstance = new Map<string, string>();
+
+  for (const instance of instances) {
+    const session = await getById<SessionInstance>(
+      STORE_NAMES.sessionInstances,
+      instance.sessionInstanceId
+    );
+    if (!session) continue;
+
+    const date = sessionCompletedDate(session);
+    dateByInstance.set(instance.id, date);
+    seasonKeyByInstance.set(
+      instance.id,
+      resolveExerciseSeasonKey(session.seasonInstanceId, date)
+    );
+
+    const sets = (await getExerciseSetsForExerciseInstance(instance.id)).sort(
+      (a, b) => a.setIndex - b.setIndex
+    );
+    if (sets.length === 0) {
+      workingByInstance.set(instance.id, 0);
+      continue;
+    }
+
+    const sie = await getById<SessionInstanceExercise>(
+      STORE_NAMES.sessionInstanceExercises,
+      instance.sessionInstanceExerciseId
+    );
+
+    // Pin the baseline to the session's completion date for completed sessions;
+    // leave it live for an in-progress current session. Exclude the session's
+    // own instances from the baseline, mirroring getSessionInstanceView.
+    const asOfDate = session.status === "completed" ? date : undefined;
+    const excludeIds = new Set(
+      instances
+        .filter((i) => i.sessionInstanceId === instance.sessionInstanceId)
+        .map((i) => i.id)
+    );
+    const { historicalBest, recentMax, historicalBestReps, recentMaxReps, lastAttemptedDate } =
+      effectiveE1RMFromHistory(rawHistory, excludeIds, asOfDate);
+    const effectiveE1RM = recentMax ?? historicalBest;
+    const effectiveReps = recentMaxReps ?? historicalBestReps;
+
+    const { prescribedWeight, prescribedRepTarget } = computePrescription({
+      weightMode: sie?.weightMode ?? (isBodyweight ? "bodyweight" : "increment"),
+      configuredWeight: sie?.prescribedWeight ?? null,
+      effectiveOneRepMax: effectiveE1RM,
+      effectiveReps,
+      weekRir: instance.prescribedRir ?? 0,
+      isDormant: isDormantSince(lastAttemptedDate, asOfDate),
+    });
+
+    const effectiveBaselineReps = isBodyweight ? effectiveReps : null;
+    let working = 0;
+    for (const set of sets) {
+      const { setType } = analyzeSet(
+        set,
+        [],
+        effectiveE1RM,
+        effectiveBaselineReps,
+        prescribedRepTarget,
+        prescribedWeight
+      );
+      if (setType === "working") working++;
+    }
+    workingByInstance.set(instance.id, working);
+  }
+
+  // Last lift: most recent prior session (history is sorted ascending by date).
+  let lastLiftDate: string | null = null;
+  for (const dp of rawHistory) {
+    if (dp.exerciseInstanceId === currentExerciseInstanceId) continue;
+    lastLiftDate = dp.date;
+  }
+
+  // Last PR: the most recent prior session whose top metric beat all earlier
+  // history. Mirrors detectPRsForInstances — the very first attempt never counts.
+  const metricOf = (dp: ExerciseSessionDataPoint) =>
+    isBodyweight ? dp.topRepCount : dp.topEstimatedOneRepMax;
+  let runningBest: number | null = null;
+  let lastPr: ExerciseSessionDataPoint | null = null;
+  for (const dp of rawHistory) {
+    if (dp.exerciseInstanceId === currentExerciseInstanceId) continue;
+    const m = metricOf(dp);
+    if (m == null) continue;
+    if (runningBest != null && m > runningBest) lastPr = dp;
+    if (runningBest == null || m > runningBest) runningBest = m;
+  }
+
+  const currentSeasonKey = seasonKeyByInstance.get(currentExerciseInstanceId) ?? null;
+  let workingSetsThisSeason = 0;
+  if (currentSeasonKey != null) {
+    for (const [id, count] of workingByInstance) {
+      if (seasonKeyByInstance.get(id) === currentSeasonKey) workingSetsThisSeason += count;
+    }
+  }
+
+  let workingSetsSinceLastPr: number | null = null;
+  if (lastPr != null) {
+    let sum = 0;
+    for (const [id, count] of workingByInstance) {
+      const d = dateByInstance.get(id);
+      if (d != null && d > lastPr.date) sum += count;
+    }
+    workingSetsSinceLastPr = sum;
+  }
+
+  return {
+    lastLiftDate,
+    workingSetsThisSeason,
+    lastPrDate: lastPr?.date ?? null,
+    workingSetsSinceLastPr,
+    lastPr: lastPr
+      ? {
+          date: lastPr.date,
+          topWeight: lastPr.topWeight,
+          topReps: lastPr.topReps,
+          topEstimatedOneRepMax: lastPr.topEstimatedOneRepMax,
+          topRepCount: lastPr.topRepCount,
+        }
+      : null,
+  };
 }
 
 function buildAnalyzedSetList(

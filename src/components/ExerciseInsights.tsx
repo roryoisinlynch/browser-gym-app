@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import type { ExerciseSessionDataPoint } from "../repositories/programRepository";
-import { getExerciseSessionHistory, resolveExerciseSeasonKey } from "../repositories/programRepository";
+import type { ExerciseSessionDataPoint, ExerciseInstanceStats } from "../repositories/programRepository";
+import { getExerciseSessionHistory, getExerciseStats, resolveExerciseSeasonKey } from "../repositories/programRepository";
+import { formatDurationSince } from "../services/relativeTime";
 import "./ExerciseInsights.css";
 
 interface ExerciseInsightsProps {
@@ -325,11 +326,16 @@ export default function ExerciseInsights({
   minSessions,
 }: ExerciseInsightsProps) {
   const [history, setHistory] = useState<ExerciseSessionDataPoint[] | null>(null);
+  const [stats, setStats] = useState<ExerciseInstanceStats | null>(null);
   const [binType, setBinType] = useState<BinType>("week");
 
   useEffect(() => {
     getExerciseSessionHistory(exerciseName).then(setHistory);
   }, [exerciseTemplateId, exerciseName]);
+
+  useEffect(() => {
+    getExerciseStats(exerciseName, currentExerciseInstanceId, isBodyweight).then(setStats);
+  }, [exerciseName, currentExerciseInstanceId, isBodyweight]);
 
   if (history === null) {
     return null;
@@ -345,21 +351,6 @@ export default function ExerciseInsights({
     (d) => d.exerciseInstanceId !== currentExerciseInstanceId
   );
 
-  const previousLift =
-    historicalSessions.length > 0
-      ? historicalSessions[historicalSessions.length - 1]
-      : null;
-
-  const bestLift = isBodyweight
-    ? historicalSessions.reduce<ExerciseSessionDataPoint | null>((best, d) => {
-        if (best == null || (d.topRepCount ?? 0) > (best.topRepCount ?? 0)) return d;
-        return best;
-      }, null)
-    : historicalSessions.reduce<ExerciseSessionDataPoint | null>((best, d) => {
-        if (best == null || (d.topEstimatedOneRepMax ?? 0) > (best.topEstimatedOneRepMax ?? 0)) return d;
-        return best;
-      }, null);
-
   const distinctSessions = new Set(filteredHistory.map((d) => d.date.split("T")[0])).size;
   const meetsMinSessions = minSessions == null || distinctSessions >= minSessions;
 
@@ -368,6 +359,8 @@ export default function ExerciseInsights({
 
   const hasChartData = filteredHistory.length > 0;
   const hasHistory = historicalSessions.length > 0;
+  const showStats =
+    stats != null && (hasHistory || stats.workingSetsThisSeason > 0);
 
   return (
     <section className="exercise-insights">
@@ -400,61 +393,63 @@ export default function ExerciseInsights({
         <p className="exercise-insights__empty">No data recorded yet.</p>
       )}
 
-      {hasHistory && (
-        <div className="exercise-insights__metrics-grid">
-          <div className="exercise-insights__metric">
-            <span className="exercise-insights__metric-eyebrow">Previous lift</span>
-            {previousLift ? (
-              <>
-                <span className="exercise-insights__metric-date">
-                  {formatDate(previousLift.date)}
-                </span>
-                {isBodyweight ? (
-                  <strong className="exercise-insights__metric-value">
-                    {previousLift.topRepCount ?? "—"} reps
-                  </strong>
-                ) : (
-                  <>
-                    <strong className="exercise-insights__metric-value">
-                      {formatMetricValue(previousLift.topWeight, "kg")} ×{" "}
-                      {previousLift.topReps}
-                    </strong>
-                    <span className="exercise-insights__metric-e1rm">
-                      {formatMetricValue(previousLift.topEstimatedOneRepMax, "kg")} e1RM
-                    </span>
-                  </>
-                )}
-              </>
-            ) : (
-              <strong className="exercise-insights__metric-value">—</strong>
-            )}
+      {showStats && (
+        <div className="exercise-insights__stats">
+          <div className="exercise-insights__stats-grid">
+            <div className="exercise-insights__stat">
+              <span className="exercise-insights__stat-eyebrow">Since last lift</span>
+              <strong className="exercise-insights__stat-value">
+                {stats.lastLiftDate ? formatDurationSince(stats.lastLiftDate) : "—"}
+              </strong>
+            </div>
+
+            <div className="exercise-insights__stat">
+              <span className="exercise-insights__stat-eyebrow">Working sets this season</span>
+              <strong className="exercise-insights__stat-value">
+                {stats.workingSetsThisSeason}
+              </strong>
+            </div>
+
+            <div className="exercise-insights__stat">
+              <span className="exercise-insights__stat-eyebrow">Since last PR</span>
+              <strong className="exercise-insights__stat-value">
+                {stats.lastPrDate ? formatDurationSince(stats.lastPrDate) : "—"}
+              </strong>
+            </div>
+
+            <div className="exercise-insights__stat">
+              <span className="exercise-insights__stat-eyebrow">Working sets since last PR</span>
+              <strong className="exercise-insights__stat-value">
+                {stats.workingSetsSinceLastPr ?? "—"}
+              </strong>
+            </div>
           </div>
 
-          <div className="exercise-insights__metric">
-            <span className="exercise-insights__metric-eyebrow">Best lift</span>
-            {bestLift ? (
+          <div className="exercise-insights__stat exercise-insights__stat--wide">
+            <span className="exercise-insights__stat-eyebrow">Last PR</span>
+            {stats.lastPr ? (
               <>
-                <span className="exercise-insights__metric-date">
-                  {formatDate(bestLift.date)}
+                <span className="exercise-insights__stat-date">
+                  {formatDate(stats.lastPr.date)}
                 </span>
                 {isBodyweight ? (
-                  <strong className="exercise-insights__metric-value">
-                    {bestLift.topRepCount ?? "—"} reps
+                  <strong className="exercise-insights__stat-value">
+                    {stats.lastPr.topRepCount ?? "—"} reps
                   </strong>
                 ) : (
                   <>
-                    <strong className="exercise-insights__metric-value">
-                      {formatMetricValue(bestLift.topWeight, "kg")} ×{" "}
-                      {bestLift.topReps}
+                    <strong className="exercise-insights__stat-value">
+                      {formatMetricValue(stats.lastPr.topWeight, "kg")} ×{" "}
+                      {stats.lastPr.topReps}
                     </strong>
-                    <span className="exercise-insights__metric-e1rm">
-                      {formatMetricValue(bestLift.topEstimatedOneRepMax, "kg")} e1RM
+                    <span className="exercise-insights__stat-e1rm">
+                      {formatMetricValue(stats.lastPr.topEstimatedOneRepMax, "kg")} e1RM
                     </span>
                   </>
                 )}
               </>
             ) : (
-              <strong className="exercise-insights__metric-value">—</strong>
+              <strong className="exercise-insights__stat-value">—</strong>
             )}
           </div>
         </div>

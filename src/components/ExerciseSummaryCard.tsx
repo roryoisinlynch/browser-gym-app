@@ -1,6 +1,7 @@
 import "./ExerciseSummaryCard.css";
 import ExerciseRepDashProgress from "./ExerciseRepDashProgress";
 import ExerciseRepDashProgressBodyweight from "./ExerciseRepDashProgressBodyweight";
+import { formatTimeAgo } from "../services/relativeTime";
 
 interface ExerciseSummaryCardProps {
   targetRir: number | null;
@@ -35,36 +36,6 @@ function formatDate(isoDate: string): string {
     month: "short",
     year: "numeric",
   });
-}
-
-function daysSince(isoDate: string): number {
-  return Math.round(
-    (Date.now() - new Date(isoDate).getTime()) / (1000 * 60 * 60 * 24)
-  );
-}
-
-// Phrasing buckets:
-//   < 6 months   →  "N days ago"
-//   < 21 months  →  "N months ago" (round to nearest 30-day month)
-//   ≥ 21 months  →  derive years from months/12 and bucket by quarter:
-//                     Q1 [0, 0.25)    → "N years ago"
-//                     Q2/Q3 [0.25, 0.75) → "over N years ago"
-//                     Q4 [0.75, 1)    → "nearly N+1 years ago"
-//                   Driving years off months (not raw days) keeps the
-//                   21-month cutoff aligned to the Q4 boundary so 21 mo
-//                   rolls cleanly into "nearly 2 years".
-function formatTimeAgo(isoDate: string): string {
-  const days = daysSince(isoDate);
-  if (days < 180) {
-    return `${days} ${days === 1 ? "day" : "days"} ago`;
-  }
-  const months = Math.round(days / 30);
-  if (months < 21) return `${months} months ago`;
-  const floorYears = Math.floor(months / 12);
-  const fraction = (months % 12) / 12;
-  if (fraction < 0.25) return `${floorYears} years ago`;
-  if (fraction < 0.75) return `over ${floorYears} years ago`;
-  return `nearly ${floorYears + 1} years ago`;
 }
 
 export default function ExerciseSummaryCard({
