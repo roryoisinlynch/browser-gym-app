@@ -2113,18 +2113,21 @@ export async function getSessionInstanceView(
 
       const isDormant = isDormantSince(lastAttemptedDate, sessionAsOfDate);
 
-      // On an open (not-yet-completed) session, silently fill in a working
-      // weight for any exercise that lacks one. Completed sessions stay frozen
-      // so we never rewrite their historical working-set classification.
-      const autoWeight =
-        sessionInstance.status !== "completed"
-          ? await resolveSessionWorkingWeight(
-              sie,
-              effectiveE1RM,
-              isDormant,
-              seasonTemplate?.rirSequence
-            )
-          : null;
+      // Only on a session the user will actually perform (not started or in
+      // progress) silently fill in a working weight for any exercise that lacks
+      // one. Completed sessions stay frozen; skipped sessions are settled and
+      // shouldn't trigger writes when their view is built (e.g. metric backfill).
+      const isOpenSession =
+        sessionInstance.status === "not_started" ||
+        sessionInstance.status === "in_progress";
+      const autoWeight = isOpenSession
+        ? await resolveSessionWorkingWeight(
+            sie,
+            effectiveE1RM,
+            isDormant,
+            seasonTemplate?.rirSequence
+          )
+        : null;
       if (autoWeight != null) {
         exerciseTemplate.prescribedWeight = autoWeight;
       }
