@@ -15,18 +15,9 @@ import {
 } from "../repositories/programRepository";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
+import { computeWeightOptions } from "../services/weightOptions";
+import type { WeightOption } from "../services/weightOptions";
 import "./ConfigExercisePage.css";
-
-interface WeightOption {
-  weight: number;
-  zeroRirReps: number;   // floor((e1RM / weight - 1) * 30) — the 0 RIR rep count
-  repRange: number[];    // one rep count per week, sorted RIR high→low (fewest first)
-}
-
-// Fixed rep-range bounds. The min/max rep filter UI was removed; every
-// candidate weight whose per-week reps fall within these bounds is offered.
-const MIN_REPS = 1;
-const MAX_REPS = 30;
 
 export default function ConfigExercisePage() {
   const { exerciseTemplateId } = useParams<{ exerciseTemplateId: string }>();
@@ -143,46 +134,17 @@ export default function ConfigExercisePage() {
 
   const effectiveE1RM = recentMaxE1RM ?? historicalBestE1RM;
 
-  const weightOptions = useMemo<WeightOption[]>(() => {
-    if (!effectiveE1RM || rirScheme.length === 0) return [];
-    if (weightMode === "bodyweight") return [];
-
-    const inc = parseFloat(weightIncrement) || 2.5;
-    const sortedRir = [...rirScheme].sort((a, b) => b - a); // high RIR first → fewest reps first
-
-    let candidates: number[];
-    if (weightMode === "explicit_list") {
-      candidates = [...availableWeights].sort((a, b) => a - b);
-    } else {
-      candidates = [];
-      for (let w = inc; w < effectiveE1RM; w = Math.round((w + inc) * 1000) / 1000) {
-        candidates.push(w);
-      }
-    }
-
-    const options: WeightOption[] = [];
-    for (const weight of candidates) {
-      const zeroRirReps = Math.floor((effectiveE1RM / weight - 1) * 30);
-      if (zeroRirReps < 1) continue;
-
-      const repRange = sortedRir.map((rir) => zeroRirReps - rir);
-      const minRep = Math.min(...repRange);
-      const maxRep = Math.max(...repRange);
-
-      if (minRep < 1) continue;
-      if (maxRep < MIN_REPS || minRep > MAX_REPS) continue;
-
-      options.push({ weight, zeroRirReps, repRange });
-    }
-
-    return options.reverse();
-  }, [
-    effectiveE1RM,
-    weightMode,
-    weightIncrement,
-    availableWeights,
-    rirScheme,
-  ]);
+  const weightOptions = useMemo<WeightOption[]>(
+    () =>
+      computeWeightOptions({
+        effectiveE1RM,
+        weightMode,
+        weightIncrement: parseFloat(weightIncrement) || 2.5,
+        availableWeights,
+        rirScheme,
+      }),
+    [effectiveE1RM, weightMode, weightIncrement, availableWeights, rirScheme]
+  );
 
   function addWeight() {
     const val = parseFloat(newWeightInput);

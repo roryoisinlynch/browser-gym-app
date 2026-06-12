@@ -36,6 +36,7 @@ import { computeSeasonConsistency } from "../services/seasonMetrics";
 
 import { mergeWithImportedSets } from "../services/importMerge";
 import { loadAllImportedSets, loadImportedSetsForExercise } from "../services/importedSetStore";
+import { computeWeightOptions, pickBestWeightOption } from "../services/weightOptions";
 
 export interface SessionTemplateListItem {
   sessionTemplate: SessionTemplate;
@@ -1865,6 +1866,56 @@ export async function getExerciseInstanceView(
   };
 }
 
+/**
+ * Silently picks a working weight for a non-bodyweight exercise that has none
+ * set, when there is enough recent history to choose sensibly. The chosen
+ * option is the one whose per-week rep targets sit closest to 6–12 reps.
+ *
+ * Skipped (returns null, leaving the exercise as AMRAP) when:
+ *  - the exercise is bodyweight, or already has a configured weight;
+ *  - it is dormant (no attempt in the trailing window → no effective baseline);
+ *  - there is no effective e1RM or no scheme to derive options from;
+ *  - no candidate weights exist (e.g. a fixed list with no weights yet);
+ *  - the live template is missing or already has a weight (mirrors
+ *    findExerciseNeedingWeight — never persist against an orphaned template).
+ *
+ * Persists through the live template via saveExerciseTemplate so the pick
+ * propagates to every snapshot, exactly as a manual selection would.
+ */
+async function autoSelectWorkingWeight(
+  sie: SessionInstanceExercise,
+  effectiveE1RM: number | null,
+  isDormant: boolean,
+  rirScheme: number[] | undefined
+): Promise<number | null> {
+  if (
+    sie.weightMode === "bodyweight" ||
+    sie.prescribedWeight != null ||
+    effectiveE1RM == null ||
+    isDormant ||
+    rirScheme == null ||
+    rirScheme.length === 0
+  ) {
+    return null;
+  }
+
+  const liveTemplate = await getExerciseTemplateById(sie.sourceExerciseTemplateId);
+  if (liveTemplate == null || liveTemplate.prescribedWeight != null) return null;
+
+  const options = computeWeightOptions({
+    effectiveE1RM,
+    weightMode: sie.weightMode,
+    weightIncrement: sie.weightIncrement ?? 2.5,
+    availableWeights: sie.availableWeights ?? [],
+    rirScheme,
+  });
+  const best = pickBestWeightOption(options);
+  if (best == null) return null;
+
+  await saveExerciseTemplate({ ...liveTemplate, prescribedWeight: best.weight });
+  return best.weight;
+}
+
 export async function getSessionInstanceView(
   sessionInstanceId: string
 ): Promise<SessionInstanceView | undefined> {
@@ -2029,13 +2080,31 @@ export async function getSessionInstanceView(
         exerciseInstance?.prescribedRir ??
         0;
 
+      const isDormant = isDormantSince(lastAttemptedDate, sessionAsOfDate);
+
+      // On an open (not-yet-completed) session, silently pick a working weight
+      // for any exercise that lacks one. Completed sessions stay frozen so we
+      // never rewrite their historical working-set classification.
+      const autoWeight =
+        sessionInstance.status !== "completed"
+          ? await autoSelectWorkingWeight(
+              sie,
+              effectiveE1RM,
+              isDormant,
+              seasonTemplate?.rirSequence
+            )
+          : null;
+      if (autoWeight != null) {
+        exerciseTemplate.prescribedWeight = autoWeight;
+      }
+
       const { prescribedWeight, prescribedRepTarget } = computePrescription({
         weightMode: sie.weightMode,
-        configuredWeight: sie.prescribedWeight,
+        configuredWeight: autoWeight ?? sie.prescribedWeight,
         effectiveOneRepMax: effectiveE1RM,
         effectiveReps: recentMaxReps ?? historicalBestReps,
         weekRir,
-        isDormant: isDormantSince(lastAttemptedDate, sessionAsOfDate),
+        isDormant,
       });
 
       const analyzedSets = buildAnalyzedSetList(currentRawSets, allHistoricalSets, effectiveE1RM, effectiveBaselineReps, prescribedRepTarget, prescribedWeight);
