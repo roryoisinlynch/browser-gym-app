@@ -1880,53 +1880,66 @@ export async function getExerciseInstanceView(
 }
 
 /**
- * Silently picks a working weight for a non-bodyweight exercise that has none
- * set, when there is enough recent history to choose sensibly. The chosen
- * option is the one whose per-week rep targets sit closest to 6–12 reps.
+ * Resolves the working weight for one not-yet-completed session's exercise,
+ * silently filling one in when it's missing. Returns the weight this session
+ * should use, or null to leave it AMRAP.
  *
- * Skipped (returns null, leaving the exercise as AMRAP) when:
- *  - the exercise is bodyweight, or already has a configured weight;
- *  - it is dormant (no attempt in the trailing window → no effective baseline);
- *  - there is no effective e1RM or no scheme to derive options from;
- *  - no candidate weights exist (e.g. a fixed list with no weights yet);
- *  - the live template is missing or already has a weight (mirrors
- *    findExerciseNeedingWeight — never persist against an orphaned template).
+ * Two cheap, self-healing cases — each writes at most the live template and
+ * THIS session's snapshot (never the whole season's snapshots), so a new
+ * season's first session loads in bounded time and an interrupted load can't
+ * leave a template/snapshot mismatch (the next open reconciles it):
  *
- * Persists through the live template via saveExerciseTemplate so the pick
- * propagates to every snapshot, exactly as a manual selection would.
+ *  1. The template already has a weight (picked earlier, or set manually) but
+ *     this snapshot doesn't → copy it down to the snapshot.
+ *  2. Neither has a weight and the exercise is eligible (non-bodyweight, not
+ *     dormant, has an effective e1RM + scheme, and at least one candidate
+ *     weight) → pick the option whose per-week reps sit closest to 6–12,
+ *     write it to the live template, then to this snapshot.
+ *
+ * Other sessions in the season inherit the pick lazily the same way (case 1)
+ * when they're opened, so we never fan out writes across every snapshot here.
+ *
+ * Skipped (returns null) for bodyweight, an already-set snapshot, a missing
+ * live template (orphaned — mirrors findExerciseNeedingWeight), or when no
+ * weight can be chosen.
  */
-async function autoSelectWorkingWeight(
+async function resolveSessionWorkingWeight(
   sie: SessionInstanceExercise,
   effectiveE1RM: number | null,
   isDormant: boolean,
   rirScheme: number[] | undefined
 ): Promise<number | null> {
-  if (
-    sie.weightMode === "bodyweight" ||
-    sie.prescribedWeight != null ||
-    effectiveE1RM == null ||
-    isDormant ||
-    rirScheme == null ||
-    rirScheme.length === 0
-  ) {
-    return null;
-  }
+  if (sie.weightMode === "bodyweight" || sie.prescribedWeight != null) return null;
 
   const liveTemplate = await getExerciseTemplateById(sie.sourceExerciseTemplateId);
-  if (liveTemplate == null || liveTemplate.prescribedWeight != null) return null;
+  if (liveTemplate == null) return null;
 
-  const options = computeWeightOptions({
-    effectiveE1RM,
-    weightMode: sie.weightMode,
-    weightIncrement: sie.weightIncrement ?? 2.5,
-    availableWeights: sie.availableWeights ?? [],
-    rirScheme,
-  });
-  const best = pickBestWeightOption(options);
-  if (best == null) return null;
+  let weight = liveTemplate.prescribedWeight ?? null;
 
-  await saveExerciseTemplate({ ...liveTemplate, prescribedWeight: best.weight });
-  return best.weight;
+  if (weight == null) {
+    // Case 2: no decision anywhere yet — pick one if eligible.
+    if (effectiveE1RM == null || isDormant || rirScheme == null || rirScheme.length === 0) {
+      return null;
+    }
+    const best = pickBestWeightOption(
+      computeWeightOptions({
+        effectiveE1RM,
+        weightMode: sie.weightMode,
+        weightIncrement: sie.weightIncrement ?? 2.5,
+        availableWeights: sie.availableWeights ?? [],
+        rirScheme,
+      })
+    );
+    if (best == null) return null;
+    weight = best.weight;
+    // Template first: if we're interrupted here, case 1 heals the snapshot next
+    // time. (Writing the snapshot first could orphan the pick on the template.)
+    await putItem(STORE_NAMES.exerciseTemplates, { ...liveTemplate, prescribedWeight: weight });
+  }
+
+  // Case 1 (and the tail of case 2): bring this snapshot in line with the template.
+  await putItem(STORE_NAMES.sessionInstanceExercises, { ...sie, prescribedWeight: weight });
+  return weight;
 }
 
 export async function getSessionInstanceView(
@@ -2095,12 +2108,12 @@ export async function getSessionInstanceView(
 
       const isDormant = isDormantSince(lastAttemptedDate, sessionAsOfDate);
 
-      // On an open (not-yet-completed) session, silently pick a working weight
-      // for any exercise that lacks one. Completed sessions stay frozen so we
-      // never rewrite their historical working-set classification.
+      // On an open (not-yet-completed) session, silently fill in a working
+      // weight for any exercise that lacks one. Completed sessions stay frozen
+      // so we never rewrite their historical working-set classification.
       const autoWeight =
         sessionInstance.status !== "completed"
-          ? await autoSelectWorkingWeight(
+          ? await resolveSessionWorkingWeight(
               sie,
               effectiveE1RM,
               isDormant,
