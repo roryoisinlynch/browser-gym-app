@@ -327,18 +327,8 @@
   color: var(--accent);
 }
 
-.config-exercise__e1rm-note {
-  margin: 0 0 10px;
-  font-size: 0.82rem;
-  color: var(--text-soft);
-}
-
-.config-exercise__e1rm-note strong {
-  color: var(--text-muted);
-}
-
 .config-exercise__e1rm-recency-note {
-  margin: -6px 0 10px;
+  margin: 0 0 10px;
   font-size: 0.78rem;
   color: var(--text-soft);
   font-style: italic;
@@ -362,7 +352,7 @@
 .config-exercise__option-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0;
   max-height: 320px;
   overflow-y: auto;
 }
@@ -373,22 +363,25 @@
   justify-content: space-between;
   gap: 12px;
   width: 100%;
-  padding: 11px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--panel-border);
-  background: rgba(15, 19, 24, 0.36);
+  padding: 12px 6px;
+  border: none;
+  border-bottom: 1px solid var(--panel-border);
+  background: transparent;
   cursor: pointer;
   text-align: left;
-  transition: background 0.12s, border-color 0.12s;
+  transition: background 0.12s, color 0.12s;
+}
+
+.config-exercise__option:last-child {
+  border-bottom: none;
 }
 
 .config-exercise__option:hover {
-  background: rgba(15, 19, 24, 0.6);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .config-exercise__option--selected {
-  border-color: rgba(216, 240, 106, 0.4);
-  background: rgba(216, 240, 106, 0.07);
+  background: rgba(216, 240, 106, 0.06);
 }
 
 .config-exercise__option-weight {
@@ -423,10 +416,6 @@
 
 .config-exercise__option--selected .config-exercise__option-reps {
   color: var(--text-muted);
-}
-
-.config-exercise__e1rm-scheme {
-  color: var(--text-soft);
 }
 
 /* ── Action buttons ── */

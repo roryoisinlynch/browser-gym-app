@@ -539,20 +539,6 @@ export default function ConfigExercisePage() {
 
             {effectiveE1RM != null ? (
               <>
-                <p className="config-exercise__e1rm-note">
-                  {recentMaxE1RM != null ? "Effective e1RM" : "e1RM"}:{" "}
-                  <strong>
-                    {Number.isInteger(effectiveE1RM)
-                      ? effectiveE1RM
-                      : effectiveE1RM.toFixed(1)}
-                    kg
-                  </strong>
-                  {"  ·  "}
-                  <span className="config-exercise__e1rm-scheme">
-                    Scheme: {rirScheme.join(" · ")}
-                  </span>
-                </p>
-
                 {recentMaxE1RM != null && historicalBestE1RM != null && (
                   <p className="config-exercise__e1rm-recency-note">
                     Using recent best instead of all-time PR to keep prescriptions
