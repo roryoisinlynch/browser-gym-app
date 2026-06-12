@@ -20,9 +20,13 @@ import "./ConfigExercisePage.css";
 interface WeightOption {
   weight: number;
   zeroRirReps: number;   // floor((e1RM / weight - 1) * 30) — the 0 RIR rep count
-  remainder: number;     // e1RM − implied e1RM at zeroRirReps (accuracy gap)
   repRange: number[];    // one rep count per week, sorted RIR high→low (fewest first)
 }
+
+// Fixed rep-range bounds. The min/max rep filter UI was removed; every
+// candidate weight whose per-week reps fall within these bounds is offered.
+const MIN_REPS = 1;
+const MAX_REPS = 30;
 
 export default function ConfigExercisePage() {
   const { exerciseTemplateId } = useParams<{ exerciseTemplateId: string }>();
@@ -49,8 +53,6 @@ export default function ConfigExercisePage() {
   const [historicalBestE1RM, setHistoricalBestE1RM] = useState<number | null>(null);
   const [recentMaxE1RM, setRecentMaxE1RM] = useState<number | null>(null);
   const [rirScheme, setRirScheme] = useState<number[]>([]);
-  const [minRepsFilter, setMinRepsFilter] = useState(1);
-  const [maxRepsFilter, setMaxRepsFilter] = useState(30);
 
   // Movement type options
   const [movementTypes, setMovementTypes] = useState<MovementType[]>([]);
@@ -168,12 +170,9 @@ export default function ConfigExercisePage() {
       const maxRep = Math.max(...repRange);
 
       if (minRep < 1) continue;
-      if (maxRep < minRepsFilter || minRep > maxRepsFilter) continue;
+      if (maxRep < MIN_REPS || minRep > MAX_REPS) continue;
 
-      const impliedE1RM = weight * (1 + zeroRirReps / 30);
-      const remainder = effectiveE1RM - impliedE1RM;
-
-      options.push({ weight, zeroRirReps, remainder, repRange });
+      options.push({ weight, zeroRirReps, repRange });
     }
 
     return options.reverse();
@@ -183,8 +182,6 @@ export default function ConfigExercisePage() {
     weightIncrement,
     availableWeights,
     rirScheme,
-    minRepsFilter,
-    maxRepsFilter,
   ]);
 
   function addWeight() {
@@ -563,34 +560,9 @@ export default function ConfigExercisePage() {
                   </p>
                 )}
 
-                <div className="config-exercise__rep-filter">
-                  <span className="config-exercise__rep-filter-label">
-                    Rep range
-                  </span>
-                  <input
-                    className="config-exercise__input config-exercise__input--number"
-                    type="number"
-                    min="1"
-                    value={minRepsFilter}
-                    onChange={(e) =>
-                      setMinRepsFilter(Math.max(1, parseInt(e.target.value) || 1))
-                    }
-                  />
-                  <span className="config-exercise__rep-filter-label">to</span>
-                  <input
-                    className="config-exercise__input config-exercise__input--number"
-                    type="number"
-                    min="1"
-                    value={maxRepsFilter}
-                    onChange={(e) =>
-                      setMaxRepsFilter(Math.max(1, parseInt(e.target.value) || 1))
-                    }
-                  />
-                </div>
-
                 {weightOptions.length === 0 ? (
                   <p className="config-exercise__no-options">
-                    No options in this rep range. Try adjusting the filter.
+                    No weight options available.
                   </p>
                 ) : (
                   <div className="config-exercise__option-list">
@@ -612,14 +584,9 @@ export default function ConfigExercisePage() {
                           </span>
                           <span className="config-exercise__option-middle">
                             <span className="config-exercise__option-reps">
-                              {opt.repRange.join(" · ")}
+                              Rep range: {Math.min(...opt.repRange)} -{" "}
+                              {Math.max(...opt.repRange)}
                             </span>
-                            <span className="config-exercise__option-zero-rir">
-                              0 RIR: {opt.zeroRirReps} reps
-                            </span>
-                          </span>
-                          <span className="config-exercise__option-remainder">
-                            +{opt.remainder.toFixed(1)}kg
                           </span>
                         </button>
                       );

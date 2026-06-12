@@ -10,7 +10,8 @@ function daysSince(isoDate: string): number {
 
 // Magnitude + unit of elapsed time since `isoDate`, with no "ago" suffix.
 // Buckets:
-//   < 6 months   →  "N days"
+//   < 6 weeks    →  "N days"
+//   < 6 months   →  "N weeks" (round to nearest week)
 //   < 21 months  →  "N months" (round to nearest 30-day month)
 //   ≥ 21 months  →  derive years from months/12 and bucket by quarter:
 //                     Q1 [0, 0.25)       → "N years"
@@ -21,8 +22,12 @@ function daysSince(isoDate: string): number {
 //                   rolls cleanly into "nearly 2 years".
 export function formatDurationSince(isoDate: string): string {
   const days = daysSince(isoDate);
-  if (days < 180) {
+  if (days < 42) {
     return `${days} ${days === 1 ? "day" : "days"}`;
+  }
+  if (days < 180) {
+    const weeks = Math.round(days / 7);
+    return `${weeks} ${weeks === 1 ? "week" : "weeks"}`;
   }
   const months = Math.round(days / 30);
   if (months < 21) return `${months} months`;

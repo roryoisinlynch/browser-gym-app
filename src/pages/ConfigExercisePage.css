@@ -351,24 +351,6 @@
   line-height: 1.5;
 }
 
-.config-exercise__rep-filter {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.config-exercise__rep-filter-label {
-  font-size: 0.8rem;
-  color: var(--text-soft);
-  white-space: nowrap;
-}
-
-.config-exercise__rep-filter .config-exercise__input {
-  width: 60px;
-  text-align: center;
-}
-
 .config-exercise__no-options {
   margin: 0;
   font-size: 0.84rem;
@@ -440,30 +422,6 @@
 }
 
 .config-exercise__option--selected .config-exercise__option-reps {
-  color: var(--text-muted);
-}
-
-.config-exercise__option-zero-rir {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--text-soft);
-  opacity: 0.7;
-}
-
-.config-exercise__option--selected .config-exercise__option-zero-rir {
-  color: var(--accent);
-  opacity: 0.8;
-}
-
-.config-exercise__option-remainder {
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: var(--text-soft);
-  flex-shrink: 0;
-  text-align: right;
-}
-
-.config-exercise__option--selected .config-exercise__option-remainder {
   color: var(--text-muted);
 }
 
