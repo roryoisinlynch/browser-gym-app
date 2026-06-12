@@ -101,6 +101,12 @@ export interface SessionInstanceExerciseView {
    */
   prescribedWeight: number | null;
   prescribedRepTarget: number | null;
+  /**
+   * No attempt within the trailing 6-month window. The exercise is AMRAP
+   * regardless of any configured weight, so the UI should not prompt to set
+   * one — a recent session must re-establish the baseline first.
+   */
+  isDormant: boolean;
 }
 
 export interface SessionInstanceMuscleGroupView {
@@ -168,6 +174,12 @@ export interface ExerciseInstanceView {
    * data exists, so it flips non-null mid-session as the user logs sets.
    */
   hasPriorHistory: boolean;
+  /**
+   * No attempt within the trailing 6-month window — the exercise is AMRAP
+   * regardless of any configured weight, so the UI should offer AMRAP rather
+   * than prompt to set a working weight.
+   */
+  isDormant: boolean;
 }
 
 export interface SessionInstanceListItem {
@@ -1855,6 +1867,7 @@ export async function getExerciseInstanceView(
     targetEstimatedOneRepMax,
     effectiveRir: weekRir,
     hasPriorHistory: priorHistoricalSets.length > 0,
+    isDormant,
     sets: buildAnalyzedSetList(
       currentSets,
       allHistoricalSets,
@@ -2128,6 +2141,7 @@ export async function getSessionInstanceView(
         effectiveE1RM,
         prescribedWeight,
         prescribedRepTarget,
+        isDormant,
       });
     }
 
@@ -3199,8 +3213,10 @@ export async function findExerciseNeedingWeight(
     if (!liveTemplate) continue;
     if (liveTemplate.prescribedWeight != null) continue;
 
-    const { historicalBest } = await getEffectiveE1RM(sie.exerciseName);
-    if (historicalBest != null) {
+    // Dormant exercises (no recent attempt) are AMRAP regardless of weight, so
+    // don't nudge the user to set one — a recent session must re-baseline first.
+    const { historicalBest, lastAttemptedDate } = await getEffectiveE1RM(sie.exerciseName);
+    if (historicalBest != null && !isDormantSince(lastAttemptedDate)) {
       return {
         exerciseTemplateId: sie.sourceExerciseTemplateId,
         exerciseName: sie.exerciseName,

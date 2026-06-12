@@ -678,7 +678,7 @@ export default function SessionPage() {
                       {!isCollapsed && (
                         <ul className="exercise-list">
                           {exercises.map(
-                            ({ sessionInstanceExerciseId, exerciseTemplate, movementType, exerciseInstance, sets, prescribedWeight, prescribedRepTarget, effectiveE1RM }) => {
+                            ({ sessionInstanceExerciseId, exerciseTemplate, movementType, exerciseInstance, sets, prescribedWeight, prescribedRepTarget, effectiveE1RM, isDormant }) => {
                               const tone = groupToneMap.get(movementType.name) ?? PALETTE[0];
                               const isBodyweight = exerciseTemplate.weightMode === "bodyweight";
                               const hasSeasonPR = seasonPRNames.has(
@@ -707,12 +707,14 @@ export default function SessionPage() {
                                   s.analysis.estimatedOneRepMax >= targetE1RM - 0.0001;
                               }).length;
 
-                              // Only point users at the config page when there's history to base
-                              // a suggested weight on; otherwise the page can only offer AMRAP.
+                              // Only point users at the config page when there's a usable recent
+                              // baseline to suggest a weight from; otherwise (no history, or
+                              // dormant) the exercise is AMRAP until a recent session re-baselines.
                               const needsWeightConfig =
                                 !isBodyweight &&
                                 exerciseTemplate.prescribedWeight == null &&
-                                effectiveE1RM != null;
+                                effectiveE1RM != null &&
+                                !isDormant;
                               const targetLabel: ReactNode = isBodyweight
                                 ? (targetReps != null ? `${targetReps} reps` : "AMRAP")
                                 : needsWeightConfig

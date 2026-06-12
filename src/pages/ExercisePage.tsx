@@ -120,6 +120,7 @@ export default function ExercisePage() {
     exerciseView != null &&
     !isBodyweight &&
     exerciseView.hasPriorHistory &&
+    !exerciseView.isDormant &&
     exerciseView.exerciseTemplate.prescribedWeight == null;
 
   // AMRAP whenever there's no computable rep target (no prior history, dormant,
