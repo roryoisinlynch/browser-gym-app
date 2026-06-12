@@ -3646,14 +3646,19 @@ export async function saveExerciseTemplate(
 ): Promise<void> {
   await putItem(STORE_NAMES.exerciseTemplates, template);
 
-  // Propagate weight-related changes to all SessionInstanceExercise snapshots
-  // so that mid-season weight adjustments take effect immediately.
+  // Propagate weight-related changes to SessionInstanceExercise snapshots so
+  // mid-season weight adjustments take effect immediately — but never to a
+  // snapshot belonging to a completed session. Completed sessions are frozen:
+  // re-prescribing them retroactively would reclassify their working/warmup
+  // sets (and, before metrics were frozen, re-score them).
   const sies = await getAllByIndex<SessionInstanceExercise>(
     STORE_NAMES.sessionInstanceExercises,
     "bySourceExerciseTemplateId",
     template.id
   );
   for (const sie of sies) {
+    const session = await getSessionInstanceById(sie.sessionInstanceId);
+    if (session?.status === "completed") continue;
     const updated: SessionInstanceExercise = {
       ...sie,
       prescribedWeight: template.prescribedWeight ?? null,

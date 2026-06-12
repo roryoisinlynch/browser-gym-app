@@ -1,24 +1,20 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import type { SessionInstanceView, SessionPR } from "../repositories/programRepository";
+import type { SessionPR } from "../repositories/programRepository";
 import {
-  computeSeasonConsistencyForSeason,
   getSeasonInstanceById,
   getAllSeasonInstances,
+  getSeasonMetrics,
   getWeekInstancesForSeasonInstance,
+  getWeekMetrics,
   getSessionInstancesForWeekInstance,
-  getSessionInstanceView,
   getWeekTemplateItemsForWeekTemplate,
   getWeekInstanceItemsForWeekInstance,
   getSeasonPRs,
   getSeasonTemplateById,
 } from "../repositories/programRepository";
 import type { SessionInstance } from "../domain/models";
-import { computeWeekMetrics } from "../services/weekMetrics";
-import {
-  computeSeasonMetrics,
-  gradeColor,
-} from "../services/seasonMetrics";
+import { gradeColor } from "../services/seasonMetrics";
 import type { SeasonMetrics, SeasonGrade } from "../services/seasonMetrics";
 import type { SeasonInstance } from "../domain/models";
 import {
@@ -161,7 +157,9 @@ export default function SeasonSummaryPage() {
         const sessionsByWeek = new Map<string, SessionInstance[]>();
         let weekLength = 0;
 
-        const weekMetricsList = await Promise.all(
+        // Fetch sessions per completed week for the day-square timeline (and
+        // the week length); the season's score itself comes from frozen metrics.
+        await Promise.all(
           completedWeeks.map(async (w) => {
             const [sessions, templateItems] = await Promise.all([
               getSessionInstancesForWeekInstance(w.id),
@@ -169,19 +167,11 @@ export default function SeasonSummaryPage() {
             ]);
             sessionsByWeek.set(w.id, sessions);
             if (weekLength === 0) weekLength = templateItems.length;
-            const settledSessions = sessions.filter(
-              s => s.status === "completed" || s.status === "skipped"
-            );
-            const sessionViews: SessionInstanceView[] = (
-              await Promise.all(settledSessions.map(s => getSessionInstanceView(s.id)))
-            ).filter((sv): sv is SessionInstanceView => sv != null);
-            return computeWeekMetrics(w, templateItems, sessionViews);
           })
         );
         setLoadProgress(50);
 
-        const consistencyOverride = await computeSeasonConsistencyForSeason(seasonInstance);
-        const computed = computeSeasonMetrics(seasonInstance, weekMetricsList, consistencyOverride);
+        const computed = await getSeasonMetrics(seasonInstance);
         setMetrics(computed);
         setSeasonName(seasonTemplate?.name ?? "Season summary");
         setPrs(seasonPRs);
@@ -365,26 +355,7 @@ export default function SeasonSummaryPage() {
               const tmpl = await getSeasonTemplateById(s.seasonTemplateId);
               programName = tmpl?.name ?? null;
 
-              const sWeeks = await getWeekInstancesForSeasonInstance(s.id);
-              const sCompletedWeeks = sWeeks.filter(w => w.status === "completed");
-              const sWeekMetrics = await Promise.all(
-                sCompletedWeeks.map(async (w) => {
-                  const [wSessions, wItems] = await Promise.all([
-                    getSessionInstancesForWeekInstance(w.id),
-                    getWeekTemplateItemsForWeekTemplate(w.weekTemplateId),
-                  ]);
-                  const wViews: SessionInstanceView[] = (
-                    await Promise.all(
-                      wSessions
-                        .filter(s => s.status === "completed" || s.status === "skipped")
-                        .map(s => getSessionInstanceView(s.id))
-                    )
-                  ).filter((sv): sv is SessionInstanceView => sv != null);
-                  return computeWeekMetrics(w, wItems, wViews);
-                })
-              );
-              const sConsistency = await computeSeasonConsistencyForSeason(s);
-              const sMetrics = isCurrent ? computed : computeSeasonMetrics(s, sWeekMetrics, sConsistency);
+              const sMetrics = isCurrent ? computed : await getSeasonMetrics(s);
               grade = sMetrics.grade;
               seasonScore = sMetrics.seasonScore;
               durationLabel = sMetrics.durationLabel;
@@ -416,11 +387,8 @@ export default function SeasonSummaryPage() {
           weeks.map(async (w): Promise<BreadcrumbWeek> => {
             const endedEarly = w.endedEarly === true;
             if (w.status !== "completed") return { weekInstanceId: w.id, emojiRating: null, isCurrent: false, endedEarly };
-            const idx = completedWeeks.indexOf(w);
-            if (idx !== -1 && weekMetricsList[idx]) {
-              return { weekInstanceId: w.id, emojiRating: weekMetricsList[idx].emojiRating, isCurrent: false, endedEarly };
-            }
-            return { weekInstanceId: w.id, emojiRating: null, isCurrent: false, endedEarly };
+            const wm = await getWeekMetrics(w);
+            return { weekInstanceId: w.id, emojiRating: wm.emojiRating, isCurrent: false, endedEarly };
           })
         );
         setWeeksBreadcrumb(wbItems);

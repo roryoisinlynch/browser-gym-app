@@ -4,6 +4,7 @@ import type { SessionInstanceView, SessionPR } from "../repositories/programRepo
 import {
   getSessionInstanceView,
   getSessionInstancesForWeekInstance,
+  getSessionMetrics,
   getSessionPRs,
 } from "../repositories/programRepository";
 import {
@@ -107,11 +108,14 @@ export default function SessionSummaryPage() {
             }
 
             try {
-              const sv = isCurrent ? view : await getSessionInstanceView(session.id);
-              if (!sv) {
+              // Reuse the already-built view for the current session; siblings
+              // read their frozen metrics (or backfill) without rebuilding.
+              const metrics = isCurrent
+                ? (view.sessionInstance.frozenMetrics ?? computeSessionMetrics(view))
+                : await getSessionMetrics(session);
+              if (!metrics) {
                 return { sessionInstanceId: session.id, ragStatus: null, isCurrent };
               }
-              const metrics = computeSessionMetrics(sv);
               return {
                 sessionInstanceId: session.id,
                 ragStatus: metrics.ragStatus,
@@ -139,7 +143,10 @@ export default function SessionSummaryPage() {
   }, [sessionInstanceId]);
 
   const metrics = useMemo(
-    () => (sessionView ? computeSessionMetrics(sessionView) : null),
+    () =>
+      sessionView
+        ? (sessionView.sessionInstance.frozenMetrics ?? computeSessionMetrics(sessionView))
+        : null,
     [sessionView]
   );
 

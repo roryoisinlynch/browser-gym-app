@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import type { SessionInstanceView, SessionPR } from "../repositories/programRepository";
+import type { SessionPR } from "../repositories/programRepository";
 import {
   getWeekInstanceById,
   getWeekTemplateById,
   getWeekTemplateItemsForWeekTemplate,
   getSessionInstancesForWeekInstance,
-  getSessionInstanceView,
+  getSessionMetrics,
   getWeekInstancesForSeasonInstance,
+  getWeekMetrics,
   getWeekPRs,
   getWeekInstanceItemsForWeekInstance,
   getSeasonInstanceById,
@@ -21,8 +22,7 @@ import {
   getEntriesForDateRange,
 } from "../repositories/heuristicsRepository";
 import { colorForHeuristicScore, percentileOrNull } from "../services/heuristicsScale";
-import { computeSessionMetrics } from "../services/sessionMetrics";
-import { computeWeekMetrics, emojiForRating } from "../services/weekMetrics";
+import { emojiForRating } from "../services/weekMetrics";
 import type { WeekMetrics } from "../services/weekMetrics";
 import WeeklyBreadcrumb from "../components/WeeklyBreadcrumb";
 import type { BreadcrumbSession } from "../components/WeeklyBreadcrumb";
@@ -108,7 +108,7 @@ export default function WeekSummaryPage() {
   const { weekInstanceId } = useParams<{ weekInstanceId: string }>();
   const [weekName, setWeekName] = useState<string | null>(null);
   const [weekEndedEarly, setWeekEndedEarly] = useState(false);
-  const [metrics, setMetrics] = useState<ReturnType<typeof computeWeekMetrics> | null>(null);
+  const [metrics, setMetrics] = useState<WeekMetrics | null>(null);
   const [sessionBreadcrumb, setSessionBreadcrumb] = useState<BreadcrumbSession[]>([]);
   const [weeksBreadcrumb, setWeeksBreadcrumb] = useState<BreadcrumbWeek[]>([]);
   const [prs, setPrs] = useState<SessionPR[]>([]);
@@ -162,19 +162,11 @@ export default function WeekSummaryPage() {
         );
         setLoadProgress(40);
 
-        // Load views for settled sessions only — those drive week metrics.
-        const sessionViews: SessionInstanceView[] = (
-          await Promise.all(
-            sessions
-              .filter(
-                (s) => s.status === "completed" || s.status === "skipped"
-              )
-              .map((s) => getSessionInstanceView(s.id))
-          )
-        ).filter((sv): sv is SessionInstanceView => sv != null);
         setLoadProgress(55);
 
-        setMetrics(computeWeekMetrics(weekInstance, templateItems, sessionViews));
+        // Frozen for completed weeks; recomputed from frozen session metrics
+        // for the live week.
+        setMetrics(await getWeekMetrics(weekInstance));
 
         const weekRir =
           seasonTemplateForRir?.rirSequence?.[weekInstance.order - 1] ??
@@ -221,10 +213,8 @@ export default function WeekSummaryPage() {
               return { sessionInstanceId: session.id, ragStatus: null, isCurrent: false };
             }
             try {
-              const sv = sessionViews.find((v) => v.sessionInstance.id === session.id)
-                ?? await getSessionInstanceView(session.id);
-              if (!sv) return { sessionInstanceId: session.id, ragStatus: null, isCurrent: false };
-              const m = computeSessionMetrics(sv);
+              const m = await getSessionMetrics(session);
+              if (!m) return { sessionInstanceId: session.id, ragStatus: null, isCurrent: false };
               return { sessionInstanceId: session.id, ragStatus: m.ragStatus, isCurrent: false };
             } catch {
               return { sessionInstanceId: session.id, ragStatus: null, isCurrent: false };
@@ -362,16 +352,7 @@ export default function WeekSummaryPage() {
               return { weekInstanceId: w.id, emojiRating: null, isCurrent: false, endedEarly };
             }
             try {
-              const wSessions = await getSessionInstancesForWeekInstance(w.id);
-              const wItems = await getWeekTemplateItemsForWeekTemplate(w.weekTemplateId);
-              const wViews: SessionInstanceView[] = (
-                await Promise.all(
-                  wSessions
-                    .filter((s) => s.status === "completed")
-                    .map((s) => getSessionInstanceView(s.id))
-                )
-              ).filter((sv): sv is SessionInstanceView => sv != null);
-              const wMetrics = computeWeekMetrics(w, wItems, wViews);
+              const wMetrics = await getWeekMetrics(w);
               return { weekInstanceId: w.id, emojiRating: wMetrics.emojiRating, isCurrent: false, endedEarly };
             } catch {
               return { weekInstanceId: w.id, emojiRating: null, isCurrent: false, endedEarly };
