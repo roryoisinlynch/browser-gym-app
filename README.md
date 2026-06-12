@@ -34,7 +34,7 @@ Example:
 Consistency = 2 / 3 sessions completed
 ```
 
-Consistency evaluates **adherence to the program structure over time**.
+More precisely, the denominator is the sessions **expected as of today** (those whose scheduled day has already elapsed), not the whole season — a session whose scheduled date is still in the future doesn't count against you yet, and the figure is capped at 100%. Consistency evaluates **adherence to the program structure over time**.
 
 ---
 
@@ -76,47 +76,46 @@ Total chest volume = **6 working sets**.
 
 ### Working Set Definition
 
-A set is classified as a **working set** if its estimated intensity is at least **60% of the user's historical maximum** for that exercise.
-
-To evaluate this, the system computes an **estimated 1RM (e1RM)** using the Epley formula:
+The system computes an **estimated 1RM (e1RM)** for every set using the Epley formula (a single rep returns the weight unchanged):
 
 ```
 e1RM = weight × (1 + reps / 30)
 ```
 
-The set's e1RM is compared to the user's **historical best e1RM** for that exercise:
+A set is classified as a **working set** when its e1RM clears an **RIR-6 threshold** measured against the user's **effective baseline e1RM** for that exercise (i.e. the set leaves fewer than 6 reps in reserve):
 
 ```
-intensity = set_e1RM / historical_best_e1RM
+threshold_e1RM = effective_baseline_e1RM − working_weight × (6 / 30)
+working if set_e1RM ≥ threshold_e1RM   (otherwise warmup)
 ```
 
-Classification rule:
+The **effective baseline** is the recency-adjusted best (`recentMax ?? historicalBest`), not the raw all-time PR (see Intensity, below). The reference weight is the prescribed weight when set, otherwise the performed weight.
 
-```
-intensity ≥ 0.60 → working set
-intensity < 0.60 → warmup set
-```
+Two special cases:
 
-This allows sets with different weight-rep combinations to be evaluated on a **common intensity scale**.
+- **AMRAP** (no prescribed rep target): every logged set counts as working — there is no ramp toward a target.
+- **Target pull-down**: if the prescribed target's own e1RM sits below the threshold, the threshold is lowered to the target so that hitting the prescription still qualifies.
+
+Because every weight-rep combination converts to an e1RM, sets are compared on a **common scale**.
 
 ---
 
 ## Intensity
 
-Intensity measures how hard the user trained relative to their historical capability.
+Intensity measures how hard the user trained relative to their **recent** capability.
 
 For each exercise:
 
 - every set has a **set e1RM**
-- the user's **historical e1RM** represents their best estimated strength for that exercise
+- the **effective baseline e1RM** represents the user's best estimated strength, recency-adjusted: `recentMax ?? historicalBest`. The recent max substitutes for the all-time PR when that PR hasn't been matched within the trailing 6 months, so targets stay fair after a layoff.
 
-Intensity can therefore be expressed as:
+The per-set intensity ratio is therefore:
 
 ```
-set_intensity = set_e1RM / historical_best_e1RM
+set_intensity = set_e1RM / effective_baseline_e1RM
 ```
 
-This allows sets with different weight–rep combinations to be compared on a common scale.
+This ratio is shown for context. The **session-level Intensity score** (how many sets met their prescribed target) is a separate calculation — see Evaluating Intensity below.
 
 ---
 
@@ -262,16 +261,13 @@ Week 5 → 12 reps (0 RIR)
 
 ## Weight Selection
 
-The prescribed weight is selected automatically by an optimisation process which:
+The prescribed weight is **chosen by the user** from a generated shortlist of candidates. When configuring an exercise the app:
 
-1. Considers the **exercise's allowed rep range**
-2. Considers **available weight increments** configured for the exercise
-3. Selects a weight that best fits the rep progression across the season
+1. Generates candidate weights from the configured increment or explicit weight list
+2. Filters them to those whose resulting rep targets fall in the **allowed rep range**
+3. Shows each option with the rep target it would produce, and the user taps one
 
-This ensures:
-
-- the rep targets remain within the desired rep range
-- the same weight can be used consistently throughout the season.
+The chosen weight is then prescribed **unchanged for every week** of the season; only the rep target moves week to week. There is no automatic optimiser that picks the weight — saving is blocked until the user selects an option.
 
 ---
 
@@ -310,15 +306,11 @@ actual_e1RM = weight × (1 + reps / 30)
 
 ## Evaluating Intensity
 
-The set intensity is evaluated by comparing:
+A performed set "meets its intended intensity" by comparison to the **prescribed target**, not the all-time best:
 
-```
-actual_e1RM
-vs
-historical_best_e1RM
-```
-
-This determines whether the performed set meets the intended training intensity.
+- **Weighted:** the set's e1RM must reach the prescribed target's e1RM, `e1RM(prescribed_weight, prescribed_rep_target)`.
+- **Bodyweight:** performed reps must reach the prescribed rep target.
+- **AMRAP / no target:** any logged set auto-passes.
 
 This approach allows:
 
@@ -334,7 +326,7 @@ This approach allows:
 
 ## `date` — the scheduled date
 
-Set once at season creation by `replicateSeasonWeeks`. Never updated after that.
+Set when each week is generated by `populateWeekFromTemplate` (week 1 at season start; each later week when the prior week completes). Never updated after a week is generated.
 
 ```
 date = SeasonInstance.startedAt + (weekIndex × weekLength + (sessionOrder − 1)) days
@@ -342,7 +334,7 @@ date = SeasonInstance.startedAt + (weekIndex × weekLength + (sessionOrder − 1
 
 where `weekLength` is the total number of items (sessions + rest days) in the `WeekTemplate`.
 
-`SeasonInstance.startedAt` is the sole anchor. Every scheduled session date in the season is an offset from that value.
+`SeasonInstance.startedAt` is the sole anchor — it stays constant for the whole season, so even though weeks are generated incrementally, every scheduled date is a fixed offset from that one value.
 
 **Use this field for:** schedule adherence / consistency KPI (did the user train on the day the program said to?), display of the program calendar.
 
@@ -356,7 +348,7 @@ Written by `stopSessionInstance` as `new Date().toISOString()` at the moment the
 
 ## `sessionCompletedDate(session)` — the helper
 
-`src/repositories/programRepository.ts` exports a private helper that extracts a `YYYY-MM-DD` local-calendar date from a session, to be used wherever a display date is needed:
+`src/repositories/programRepository.ts` defines a module-private helper that extracts a `YYYY-MM-DD` local-calendar date from a session, to be used wherever a display date is needed:
 
 ```ts
 // Uses completedAt if present, falls back to date for in-progress/legacy records.
@@ -393,7 +385,7 @@ When the last session of a season is completed the season is marked done, but a 
 
 ## How `startedAt` propagates
 
-`startSeasonFromTemplate(seasonTemplateId, startedAt?)` accepts an optional ISO timestamp. When provided, it is written to `SeasonInstance.startedAt` and passed directly to `replicateSeasonWeeks`, which uses it as the anchor for every session's `date` field. When omitted it falls back to `new Date().toISOString()` (preserving the existing behaviour for any programmatic call that does not involve the UI flow).
+`startSeasonFromTemplate(seasonTemplateId, startedAt?)` accepts an optional ISO timestamp. When provided, it is written to `SeasonInstance.startedAt` and passed to `populateWeekFromTemplate`, which uses it as the anchor for every session's `date` field. When omitted it falls back to `new Date().toISOString()` (preserving the existing behaviour for any programmatic call that does not involve the UI flow).
 
 ---
 
@@ -511,11 +503,12 @@ This means changing the prescribed weight on a template retroactively updates al
 
 ## Backup version
 
-This change is a breaking schema change. The backup version was bumped from **1 → 2**. Backups produced before this change cannot be restored directly; the migration script `migrate-backup-v1-to-v2.js` transforms a v1 backup into v2 format by:
+The instance-isolation change was a breaking schema change, and the backup format has continued to evolve since. `BackupPage.tsx` defines two constants:
 
-- Generating `SessionInstanceMuscleGroup` and `SessionInstanceExercise` records from the template data for every existing session instance.
-- Rewriting each `ExerciseInstance`'s `exerciseTemplateId` to `sessionInstanceExerciseId`.
-- Adding `sessionName` to every `SessionInstance`.
+- `BACKUP_VERSION` (currently **5**) — stamped onto every export.
+- `MIN_COMPATIBLE_VERSION` (**2**) — the oldest version `handleRestore` will accept.
+
+There is **no migration script**. On restore, `handleRestore` rejects any backup below `MIN_COMPATIBLE_VERSION` with an error, and otherwise performs a blind `clear()` + `put()` of every record per store with no per-record transformation. Because the restore is unvalidated beyond the version floor, breaking model changes must bump `BACKUP_VERSION` (and raise `MIN_COMPATIBLE_VERSION` if old backups can no longer be loaded as-is) rather than rely on a migration step.
 
 ---
 
@@ -556,22 +549,22 @@ These are handled under the `weightMode: "bodyweight"` flag on `ExerciseTemplate
 | Set logging | weight + reps | reps only |
 | Intensity metric | e1RM (Epley) | max reps |
 | Historical best | highest e1RM | highest rep count |
-| Working set threshold | 60% of best e1RM | effective max reps − performed reps ≤ 4 |
+| Working set threshold | set e1RM ≥ baseline − weight×(6/30) (RIR < 6) | effective max reps − performed reps ≤ 5 (RIR < 6) |
 | Season prescription | weight + rep target | rep target only |
 | Progress chart y-axis | e1RM over time | max reps over time |
 
 ## Warmup classification for bodyweight exercises
 
-For weighted exercises, a set is a warmup if its e1RM falls below 60% of the best prior e1RM. This threshold cannot be applied directly to bodyweight exercises: since bodyweight is a constant, the Epley e1RM ratio is insensitive to changes in rep count — reducing reps from 20 to 12 only moves e1RM intensity from 100% to around 84%, so almost no bodyweight set would ever be classified as warmup under the weighted rule.
+For weighted exercises, the warmup cutoff is the RIR-6 e1RM gap described above. This cannot be applied directly to bodyweight exercises: since bodyweight is a constant, the Epley e1RM ratio is insensitive to changes in rep count — reducing reps from 20 to 12 only moves e1RM intensity from 100% to around 84%, so almost no bodyweight set would ever be classified as warmup under the weighted rule.
 
 Instead, warmup classification for bodyweight exercises uses a **rep gap threshold**, mirroring the same underlying RIR concept:
 
 ```
 effective_max_reps = recentMaxReps ?? historicalBestReps
-warmup if effective_max_reps − performed_reps > 4
+warmup if effective_max_reps − performed_reps > 5
 ```
 
-The connection to the weighted rule: 60% e1RM ≈ 6 RPE ≈ 4 RIR. A bodyweight set with more than 4 reps in reserve relative to the effective max represents the same general effort level as a weighted set below 60% e1RM — clearly preparatory rather than a genuine working effort.
+The connection to the weighted rule: both use a 6-RIR cutoff. A bodyweight set with more than 5 reps in reserve relative to the effective max represents the same general effort level as a weighted set more than 6 RIR below its baseline — clearly preparatory rather than a genuine working effort.
 
 The baseline uses **`recentMaxReps` (best in the trailing 6 months) in preference to the all-time best**, using the same recent-max fallback logic as the prescription system. This keeps the warmup threshold fair after a long training gap without anchoring it to a stale all-time record.
 
@@ -579,13 +572,14 @@ If no prior history exists, the set defaults to working — consistent with the 
 
 ## RIR and rep targets
 
-The RIR progression still applies. The prescribed rep target for a given week is derived directly from the historical max rep count:
+The RIR progression still applies. The prescribed rep target for a given week is derived from the **effective** max rep count (recency-adjusted, same baseline as the warmup rule), floored at 1:
 
 ```
-prescribed_reps = historical_max_reps - target_RIR
+effective_max_reps = recentMaxReps ?? historicalBestReps
+prescribed_reps = max(1, effective_max_reps - target_RIR)
 ```
 
-For example, if the user's best set of pull-ups is 12 reps and the week prescribes 4 RIR:
+For example, if the user's effective best set of pull-ups is 12 reps and the week prescribes 4 RIR:
 
 ```
 prescribed_reps = 12 - 4 = 8 reps
@@ -619,7 +613,7 @@ This behaviour applies consistently across:
 Imported sets for bodyweight exercises frequently appear as `0kg × n reps` since the source spreadsheet had no weight column. The import pipeline handles this in two stages:
 
 1. **Template match**: if the exercise name matches a template marked `weightMode: "bodyweight"`, the weight column is ignored entirely and the set is treated as rep-only regardless of what the CSV contains.
-2. **Heuristic fallback**: if no matching template exists, an exercise where the majority of imported rows have zero weight is automatically classified as rep-only. Stray non-zero weight rows in an otherwise zero-weight exercise are discarded.
+2. **Heuristic fallback**: if no matching template exists, an exercise where **more than 80%** of imported rows have zero weight is classified as rep-only. The weight is then ignored on **all** of that exercise's rows (their reps are still used — no rows are dropped).
 
 ---
 
@@ -633,20 +627,20 @@ When the user switches to a new program while a season is still in progress, the
 
 The e1RM recent-max window is purely date-based: it takes the best e1RM among sets performed in the **trailing 6 months** relative to the attempt being evaluated, regardless of which season those sets belong to. Season status is irrelevant — a set logged in a cancelled season contributes to the window exactly like one from a completed season, as long as it falls inside the 6-month window. The same 6-month horizon defines **dormancy**: an exercise with no set inside the window defaults to AMRAP.
 
-## Effect on the Season Summary list — excluded
+## Effect on the Season Summary list — included
 
-The All Seasons list on `SeasonSummaryPage` filters to `status === "completed"`. Cancelled seasons are excluded, so only genuinely finished blocks appear in the comparison table.
+The All Seasons list on `SeasonSummaryPage` filters to ended seasons — `status === "completed"` **or** `"cancelled"`, with a non-null `completedAt`. Cancelled seasons therefore **do** appear in the comparison table alongside completed ones, which is why cancellation stamps a real `completedAt` rather than leaving it null.
 
 ## How cancellation happens
 
 `activateProgram()` in `programRepository.ts` handles the transition:
 
-1. Any in-progress sessions (and their exercises) within the displaced season are drained to `completed` so they do not appear as an active session after the switch.
-2. The in-progress week is marked `completed` for the same reason.
-3. The season itself is written back with `status: "cancelled"` and `completedAt: null`.
+1. In-progress sessions in the displaced season are settled so they don't linger as the active session: sessions **with** logged sets are promoted to `completed`; sessions with **no** logged sets are reset to `not_started` (so they don't inflate the completed count).
+2. The in-progress week is marked `completed` with `endedEarly: true`.
+3. The season itself is written back with `status: "cancelled"` and `completedAt` set to the cancellation timestamp.
 4. A fresh season is then created from the new template.
 
-Not-started weeks in the displaced season are left as `not_started` — they are never touched.
+Not-started weeks in the displaced season are left as `not_started` — they are never touched. (Special case: if the displaced season has **no logged sets at all**, it is deleted entirely via `deleteSeasonInstanceTree` rather than marked cancelled.)
 
 ---
 
