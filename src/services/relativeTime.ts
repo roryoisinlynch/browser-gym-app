@@ -8,7 +8,9 @@ function daysSince(isoDate: string): number {
   );
 }
 
-// Magnitude + unit of elapsed time since `isoDate`, with no "ago" suffix.
+// Magnitude + unit for an elapsed-day count, with no "ago" suffix. This is the
+// shared bucketing core: callers either pass `daysSince(isoDate)` (time since a
+// date) or the gap between two arbitrary dates.
 // Buckets:
 //   < 6 weeks    →  "N days"
 //   < 6 months   →  "N weeks" (round to nearest week)
@@ -20,8 +22,7 @@ function daysSince(isoDate: string): number {
 //                   Driving years off months (not raw days) keeps the
 //                   21-month cutoff aligned to the Q4 boundary so 21 mo
 //                   rolls cleanly into "nearly 2 years".
-export function formatDurationSince(isoDate: string): string {
-  const days = daysSince(isoDate);
+export function formatDayCount(days: number): string {
   if (days < 42) {
     return `${days} ${days === 1 ? "day" : "days"}`;
   }
@@ -36,6 +37,11 @@ export function formatDurationSince(isoDate: string): string {
   if (fraction < 0.25) return `${floorYears} years`;
   if (fraction < 0.75) return `over ${floorYears} years`;
   return `nearly ${floorYears + 1} years`;
+}
+
+// Magnitude + unit of elapsed time since `isoDate`, with no "ago" suffix.
+export function formatDurationSince(isoDate: string): string {
+  return formatDayCount(daysSince(isoDate));
 }
 
 export function formatTimeAgo(isoDate: string): string {

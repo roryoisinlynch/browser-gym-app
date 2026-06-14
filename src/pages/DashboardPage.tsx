@@ -22,6 +22,7 @@ import {
   getWeekTemplateItemsForWeekTemplate,
 } from "../repositories/programRepository";
 import { getAll, getById, STORE_NAMES } from "../db/db";
+import { formatDayCount } from "../services/relativeTime";
 import {
   isHeuristicsEnabled,
   getPendingHeuristicDates,
@@ -1696,46 +1697,46 @@ export default function DashboardPage() {
     // all-time best; absence means this is the user's first recorded PR for
     // the exercise, so "since last PR" == "all time".
     const sinceDate = spotlight.previousDate ?? null;
-    let setsAllTime = 0;
-    let setsSincePR = 0;
     let sessionsAllTime = 0;
     let sessionsSincePR = 0;
     if (spotlightHistory) {
       for (const dp of spotlightHistory) {
-        setsAllTime += dp.setCount;
         sessionsAllTime += 1;
         if (sinceDate == null || dp.date > sinceDate) {
-          setsSincePR += dp.setCount;
           sessionsSincePR += 1;
         }
       }
     }
 
-    // "All time" span for days = first recorded session through this PR.
-    // History is sorted ascending, so [0] is the earliest session.
-    const daysAllTime =
+    // Span from the user's first recorded attempt through this PR. History is
+    // sorted ascending, so [0] is the earliest session.
+    const daysSinceFirst =
       spotlightHistory && spotlightHistory.length > 0
         ? daysBetween(spotlightHistory[0].date, spotlight.date)
         : null;
 
-    type SpotlightStat = { since: number; allTime: number | null; label: string };
+    // since/allTime are pre-formatted display strings: durations are bucketed
+    // into weeks/months/years via the shared formatDayCount, counts stay raw.
+    type SpotlightStat = {
+      since: string;
+      allTime: string | null;
+      label: string;
+      allTimeSuffix: string;
+    };
     const narrativeItems: SpotlightStat[] = [];
     if (daysSincePrev != null) {
       narrativeItems.push({
-        since: daysSincePrev,
-        allTime: daysAllTime,
-        label: `${daysSincePrev === 1 ? "day" : "days"} passed`,
+        since: formatDayCount(daysSincePrev),
+        allTime: daysSinceFirst != null ? formatDayCount(daysSinceFirst) : null,
+        label: "passed",
+        allTimeSuffix: "since first attempt",
       });
     }
     narrativeItems.push({
-      since: setsSincePR,
-      allTime: setsAllTime,
-      label: `${setsSincePR === 1 ? "set" : "sets"} logged`,
-    });
-    narrativeItems.push({
-      since: sessionsSincePR,
-      allTime: sessionsAllTime,
+      since: String(sessionsSincePR),
+      allTime: String(sessionsAllTime),
       label: `${sessionsSincePR === 1 ? "session" : "sessions"} with this exercise`,
+      allTimeSuffix: "all time",
     });
 
     return (
@@ -1786,7 +1787,7 @@ export default function DashboardPage() {
                   <strong>{item.since}</strong> {item.label}
                   {item.allTime != null && item.allTime !== item.since && (
                     <span className="dashboard-pr-spotlight__narrative-alltime">
-                      {" "}(<strong>{item.allTime}</strong> all time)
+                      {" "}(<strong>{item.allTime}</strong> {item.allTimeSuffix})
                     </span>
                   )}
                 </li>
@@ -2215,15 +2216,9 @@ export default function DashboardPage() {
           </p>
           <ul className="dashboard-pr-spotlight__narrative-list">
             <li className="dashboard-pr-spotlight__narrative-item">
-              <strong>28</strong> days passed
+              <strong>4 weeks</strong> passed
               <span className="dashboard-pr-spotlight__narrative-alltime">
-                {" "}(<strong>96</strong> all time)
-              </span>
-            </li>
-            <li className="dashboard-pr-spotlight__narrative-item">
-              <strong>18</strong> sets logged
-              <span className="dashboard-pr-spotlight__narrative-alltime">
-                {" "}(<strong>124</strong> all time)
+                {" "}(<strong>3 months</strong> since first attempt)
               </span>
             </li>
             <li className="dashboard-pr-spotlight__narrative-item">
