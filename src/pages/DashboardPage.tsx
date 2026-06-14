@@ -1864,7 +1864,7 @@ export default function DashboardPage() {
         <svg
           viewBox={`0 0 ${W} ${H}`}
           preserveAspectRatio="none"
-          style={{ width: "100%", height: H, display: "block" }}
+          style={{ width: "66%", height: Math.round(H * 0.66), display: "block", margin: "0 auto" }}
         >
           {baseSegment.length >= 2 && (
             <polyline
@@ -2184,7 +2184,7 @@ export default function DashboardPage() {
           <svg
             viewBox="0 0 320 56"
             preserveAspectRatio="none"
-            style={{ width: "100%", height: 56, display: "block" }}
+            style={{ width: "66%", height: 37, display: "block", margin: "0 auto" }}
           >
             <polyline
               points="4,44.9 28,42.2 52,46.3 76,38 100,40.8 124,33.9 148,36.6 172,29.7 196,25.6 220,28.4 244,22.8"
