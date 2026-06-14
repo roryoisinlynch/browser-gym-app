@@ -926,6 +926,18 @@
   font-weight: 800;
 }
 
+.dashboard-pr-spotlight__narrative-summary {
+  margin: 10px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.dashboard-pr-spotlight__narrative-summary strong {
+  color: var(--text-strong);
+  font-weight: 800;
+}
+
 /* ── All PRs ── */
 .dashboard-pr-list {
   list-style: none;

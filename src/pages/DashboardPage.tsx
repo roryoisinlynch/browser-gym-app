@@ -1724,14 +1724,11 @@ export default function DashboardPage() {
     const sinceItems: SpotlightStat[] = [];
     if (sinceDate != null && daysSincePrev != null) {
       sinceItems.push({ value: formatDayCount(daysSincePrev), label: "passed" });
-      sinceItems.push({ value: String(sessionsSincePR), label: `${exerciseName} sessions` });
+      sinceItems.push({
+        value: String(sessionsSincePR),
+        label: `${exerciseName} ${sessionsSincePR === 1 ? "session" : "sessions"}`,
+      });
     }
-
-    const overallItems: SpotlightStat[] = [];
-    if (daysSinceFirst != null) {
-      overallItems.push({ value: formatDayCount(daysSinceFirst), label: "since first attempt" });
-    }
-    overallItems.push({ value: String(sessionsAllTime), label: `${exerciseName} sessions` });
 
     return (
       <section className="dashboard-section">
@@ -1785,21 +1782,14 @@ export default function DashboardPage() {
               </ul>
             </div>
           )}
-          <div className="dashboard-pr-spotlight__narrative">
-            <p className="dashboard-pr-spotlight__narrative-intro">
-              Overall {exerciseName} stats
+          {daysSinceFirst != null && (
+            <p className="dashboard-pr-spotlight__narrative-summary">
+              It has been <strong>{formatDayCount(daysSinceFirst)}</strong> since
+              your first {exerciseName} attempt, over which time you have logged{" "}
+              <strong>{sessionsAllTime}</strong> {exerciseName}{" "}
+              {sessionsAllTime === 1 ? "session" : "sessions"}.
             </p>
-            <ul className="dashboard-pr-spotlight__narrative-list">
-              {overallItems.map((item) => (
-                <li
-                  key={item.label}
-                  className="dashboard-pr-spotlight__narrative-item"
-                >
-                  <strong>{item.value}</strong> {item.label}
-                </li>
-              ))}
-            </ul>
-          </div>
+          )}
         </div>
       </section>
     );
@@ -2229,19 +2219,10 @@ export default function DashboardPage() {
             </li>
           </ul>
         </div>
-        <div className="dashboard-pr-spotlight__narrative">
-          <p className="dashboard-pr-spotlight__narrative-intro">
-            Overall Squat stats
-          </p>
-          <ul className="dashboard-pr-spotlight__narrative-list">
-            <li className="dashboard-pr-spotlight__narrative-item">
-              <strong>3 months</strong> since first attempt
-            </li>
-            <li className="dashboard-pr-spotlight__narrative-item">
-              <strong>32</strong> Squat sessions
-            </li>
-          </ul>
-        </div>
+        <p className="dashboard-pr-spotlight__narrative-summary">
+          It has been <strong>3 months</strong> since your first Squat attempt,
+          over which time you have logged <strong>32</strong> Squat sessions.
+        </p>
       </div>
     );
   }
