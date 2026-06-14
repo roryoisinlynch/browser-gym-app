@@ -1711,6 +1711,33 @@ export default function DashboardPage() {
       }
     }
 
+    // "All time" span for days = first recorded session through this PR.
+    // History is sorted ascending, so [0] is the earliest session.
+    const daysAllTime =
+      spotlightHistory && spotlightHistory.length > 0
+        ? daysBetween(spotlightHistory[0].date, spotlight.date)
+        : null;
+
+    type SpotlightStat = { since: number; allTime: number | null; label: string };
+    const narrativeItems: SpotlightStat[] = [];
+    if (daysSincePrev != null) {
+      narrativeItems.push({
+        since: daysSincePrev,
+        allTime: daysAllTime,
+        label: `${daysSincePrev === 1 ? "day" : "days"} passed`,
+      });
+    }
+    narrativeItems.push({
+      since: setsSincePR,
+      allTime: setsAllTime,
+      label: `${setsSincePR === 1 ? "set" : "sets"} logged`,
+    });
+    narrativeItems.push({
+      since: sessionsSincePR,
+      allTime: sessionsAllTime,
+      label: `${sessionsSincePR === 1 ? "session" : "sessions"} with this exercise`,
+    });
+
     return (
       <section className="dashboard-section">
         <h2 className="dashboard-section-title">Most recent PR</h2>
@@ -1744,28 +1771,27 @@ export default function DashboardPage() {
           </div>
           <div className="dashboard-pr-spotlight__meta">
             <span>{shortDate(spotlight.date)}</span>
-            {daysSincePrev != null && (
-              <span>{daysSincePrev} days after previous PR</span>
-            )}
           </div>
           {renderSpotlightSparkline(spotlight, spotlightHistory, sinceDate)}
-          <div className="dashboard-pr-spotlight__stats">
-            <div className="dashboard-pr-spotlight__stat">
-              <span className="dashboard-pr-spotlight__stat-value">{setsSincePR}</span>
-              <span className="dashboard-pr-spotlight__stat-label">Sets since last PR</span>
-            </div>
-            <div className="dashboard-pr-spotlight__stat">
-              <span className="dashboard-pr-spotlight__stat-value">{setsAllTime}</span>
-              <span className="dashboard-pr-spotlight__stat-label">Sets all time</span>
-            </div>
-            <div className="dashboard-pr-spotlight__stat">
-              <span className="dashboard-pr-spotlight__stat-value">{sessionsSincePR}</span>
-              <span className="dashboard-pr-spotlight__stat-label">Sessions since last PR</span>
-            </div>
-            <div className="dashboard-pr-spotlight__stat">
-              <span className="dashboard-pr-spotlight__stat-value">{sessionsAllTime}</span>
-              <span className="dashboard-pr-spotlight__stat-label">Sessions all time</span>
-            </div>
+          <div className="dashboard-pr-spotlight__narrative">
+            <p className="dashboard-pr-spotlight__narrative-intro">
+              {sinceDate ? "Since your last PR…" : "Since you started this exercise…"}
+            </p>
+            <ul className="dashboard-pr-spotlight__narrative-list">
+              {narrativeItems.map((item) => (
+                <li
+                  key={item.label}
+                  className="dashboard-pr-spotlight__narrative-item"
+                >
+                  <strong>{item.since}</strong> {item.label}
+                  {item.allTime != null && item.allTime !== item.since && (
+                    <span className="dashboard-pr-spotlight__narrative-alltime">
+                      {" "}(<strong>{item.allTime}</strong> all time)
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>
@@ -2156,7 +2182,6 @@ export default function DashboardPage() {
         </div>
         <div className="dashboard-pr-spotlight__meta">
           <span>12 May '26</span>
-          <span>28 days after previous PR</span>
         </div>
         <div className="dashboard-pr-spotlight__sparkline" aria-hidden="true">
           <svg
@@ -2184,23 +2209,30 @@ export default function DashboardPage() {
             <circle cx="316" cy="11.1" r="2.6" fill="var(--accent)" />
           </svg>
         </div>
-        <div className="dashboard-pr-spotlight__stats">
-          <div className="dashboard-pr-spotlight__stat">
-            <span className="dashboard-pr-spotlight__stat-value">18</span>
-            <span className="dashboard-pr-spotlight__stat-label">Sets since last PR</span>
-          </div>
-          <div className="dashboard-pr-spotlight__stat">
-            <span className="dashboard-pr-spotlight__stat-value">124</span>
-            <span className="dashboard-pr-spotlight__stat-label">Sets all time</span>
-          </div>
-          <div className="dashboard-pr-spotlight__stat">
-            <span className="dashboard-pr-spotlight__stat-value">4</span>
-            <span className="dashboard-pr-spotlight__stat-label">Sessions since last PR</span>
-          </div>
-          <div className="dashboard-pr-spotlight__stat">
-            <span className="dashboard-pr-spotlight__stat-value">32</span>
-            <span className="dashboard-pr-spotlight__stat-label">Sessions all time</span>
-          </div>
+        <div className="dashboard-pr-spotlight__narrative">
+          <p className="dashboard-pr-spotlight__narrative-intro">
+            Since your last PR…
+          </p>
+          <ul className="dashboard-pr-spotlight__narrative-list">
+            <li className="dashboard-pr-spotlight__narrative-item">
+              <strong>28</strong> days passed
+              <span className="dashboard-pr-spotlight__narrative-alltime">
+                {" "}(<strong>96</strong> all time)
+              </span>
+            </li>
+            <li className="dashboard-pr-spotlight__narrative-item">
+              <strong>18</strong> sets logged
+              <span className="dashboard-pr-spotlight__narrative-alltime">
+                {" "}(<strong>124</strong> all time)
+              </span>
+            </li>
+            <li className="dashboard-pr-spotlight__narrative-item">
+              <strong>4</strong> sessions with this exercise
+              <span className="dashboard-pr-spotlight__narrative-alltime">
+                {" "}(<strong>32</strong> all time)
+              </span>
+            </li>
+          </ul>
         </div>
       </div>
     );
