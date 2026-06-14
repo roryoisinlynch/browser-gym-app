@@ -926,15 +926,6 @@
   font-weight: 800;
 }
 
-.dashboard-pr-spotlight__narrative-alltime {
-  color: var(--text-soft);
-}
-
-.dashboard-pr-spotlight__narrative-alltime strong {
-  color: var(--text-soft);
-  font-weight: 700;
-}
-
 /* ── All PRs ── */
 .dashboard-pr-list {
   list-style: none;

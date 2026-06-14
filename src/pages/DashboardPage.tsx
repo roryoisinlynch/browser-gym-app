@@ -1697,6 +1697,7 @@ export default function DashboardPage() {
     // all-time best; absence means this is the user's first recorded PR for
     // the exercise, so "since last PR" == "all time".
     const sinceDate = spotlight.previousDate ?? null;
+    const exerciseName = spotlight.exerciseName;
     let sessionsAllTime = 0;
     let sessionsSincePR = 0;
     if (spotlightHistory) {
@@ -1715,29 +1716,22 @@ export default function DashboardPage() {
         ? daysBetween(spotlightHistory[0].date, spotlight.date)
         : null;
 
-    // since/allTime are pre-formatted display strings: durations are bucketed
-    // into weeks/months/years via the shared formatDayCount, counts stay raw.
-    type SpotlightStat = {
-      since: string;
-      allTime: string | null;
-      label: string;
-      allTimeSuffix: string;
-    };
-    const narrativeItems: SpotlightStat[] = [];
-    if (daysSincePrev != null) {
-      narrativeItems.push({
-        since: formatDayCount(daysSincePrev),
-        allTime: daysSinceFirst != null ? formatDayCount(daysSinceFirst) : null,
-        label: "passed",
-        allTimeSuffix: "since first attempt",
-      });
+    // Each stat is a bolded value plus trailing text. Day spans are bucketed
+    // into weeks/months/years via the shared formatDayCount; counts stay raw.
+    type SpotlightStat = { value: string; label: string };
+
+    // "Since your last PR" only applies when there's a prior PR to measure from.
+    const sinceItems: SpotlightStat[] = [];
+    if (sinceDate != null && daysSincePrev != null) {
+      sinceItems.push({ value: formatDayCount(daysSincePrev), label: "passed" });
+      sinceItems.push({ value: String(sessionsSincePR), label: `${exerciseName} sessions` });
     }
-    narrativeItems.push({
-      since: String(sessionsSincePR),
-      allTime: String(sessionsAllTime),
-      label: `${sessionsSincePR === 1 ? "session" : "sessions"} with this exercise`,
-      allTimeSuffix: "all time",
-    });
+
+    const overallItems: SpotlightStat[] = [];
+    if (daysSinceFirst != null) {
+      overallItems.push({ value: formatDayCount(daysSinceFirst), label: "since first attempt" });
+    }
+    overallItems.push({ value: String(sessionsAllTime), label: `${exerciseName} sessions` });
 
     return (
       <section className="dashboard-section">
@@ -1774,22 +1768,34 @@ export default function DashboardPage() {
             <span>{shortDate(spotlight.date)}</span>
           </div>
           {renderSpotlightSparkline(spotlight, spotlightHistory, sinceDate)}
+          {sinceItems.length > 0 && (
+            <div className="dashboard-pr-spotlight__narrative">
+              <p className="dashboard-pr-spotlight__narrative-intro">
+                Since your last {exerciseName} PR…
+              </p>
+              <ul className="dashboard-pr-spotlight__narrative-list">
+                {sinceItems.map((item) => (
+                  <li
+                    key={item.label}
+                    className="dashboard-pr-spotlight__narrative-item"
+                  >
+                    <strong>{item.value}</strong> {item.label}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <div className="dashboard-pr-spotlight__narrative">
             <p className="dashboard-pr-spotlight__narrative-intro">
-              {sinceDate ? "Since your last PR…" : "Since you started this exercise…"}
+              Overall {exerciseName} stats
             </p>
             <ul className="dashboard-pr-spotlight__narrative-list">
-              {narrativeItems.map((item) => (
+              {overallItems.map((item) => (
                 <li
                   key={item.label}
                   className="dashboard-pr-spotlight__narrative-item"
                 >
-                  <strong>{item.since}</strong> {item.label}
-                  {item.allTime != null && item.allTime !== item.since && (
-                    <span className="dashboard-pr-spotlight__narrative-alltime">
-                      {" "}(<strong>{item.allTime}</strong> {item.allTimeSuffix})
-                    </span>
-                  )}
+                  <strong>{item.value}</strong> {item.label}
                 </li>
               ))}
             </ul>
@@ -2212,20 +2218,27 @@ export default function DashboardPage() {
         </div>
         <div className="dashboard-pr-spotlight__narrative">
           <p className="dashboard-pr-spotlight__narrative-intro">
-            Since your last PR…
+            Since your last Squat PR…
           </p>
           <ul className="dashboard-pr-spotlight__narrative-list">
             <li className="dashboard-pr-spotlight__narrative-item">
               <strong>4 weeks</strong> passed
-              <span className="dashboard-pr-spotlight__narrative-alltime">
-                {" "}(<strong>3 months</strong> since first attempt)
-              </span>
             </li>
             <li className="dashboard-pr-spotlight__narrative-item">
-              <strong>4</strong> sessions with this exercise
-              <span className="dashboard-pr-spotlight__narrative-alltime">
-                {" "}(<strong>32</strong> all time)
-              </span>
+              <strong>4</strong> Squat sessions
+            </li>
+          </ul>
+        </div>
+        <div className="dashboard-pr-spotlight__narrative">
+          <p className="dashboard-pr-spotlight__narrative-intro">
+            Overall Squat stats
+          </p>
+          <ul className="dashboard-pr-spotlight__narrative-list">
+            <li className="dashboard-pr-spotlight__narrative-item">
+              <strong>3 months</strong> since first attempt
+            </li>
+            <li className="dashboard-pr-spotlight__narrative-item">
+              <strong>32</strong> Squat sessions
             </li>
           </ul>
         </div>
