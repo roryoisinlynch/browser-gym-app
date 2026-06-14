@@ -891,6 +891,19 @@ interface AchievementsShelfProps {
   buckets: ShelfBucket[];
 }
 
+// Bucket glow opacity as a function of its count. Bounds are ABSOLUTE (not
+// relative to the user's own max), so an ×25 bucket glows identically for every
+// user regardless of whether their largest bucket is ×27 or ×1000. A gentle log
+// curve keeps small counts faint and large counts from blowing out: ×1 ≈ 0.12,
+// ×25 ≈ 0.30, ×100 ≈ 0.38, capped at 0.42 by ~×200.
+function bucketGlowAlpha(count: number): number {
+  const MIN = 0.12;
+  const MAX = 0.42;
+  const SLOPE = 0.057;
+  const alpha = MIN + SLOPE * Math.log(Math.max(1, count));
+  return Math.round(Math.min(MAX, alpha) * 1000) / 1000;
+}
+
 function AchievementsShelf({ individuals, buckets }: AchievementsShelfProps) {
   const shelfRef = useRef<HTMLDivElement | null>(null);
   const [columns, setColumns] = useState(0);
@@ -939,6 +952,9 @@ function AchievementsShelf({ individuals, buckets }: AchievementsShelfProps) {
         <div
           key={`b${i}`}
           className="dashboard-achievement dashboard-achievement--count"
+          style={
+            { "--bucket-glow": bucketGlowAlpha(bucket.count) } as React.CSSProperties
+          }
         >
           <span
             className={["dashboard-achievement__icon", bucket.iconClass]

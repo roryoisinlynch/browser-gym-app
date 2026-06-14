@@ -821,12 +821,14 @@
   white-space: nowrap;
 }
 
-/* Faint accent glow behind aggregate (x N) cells so they read as a different
-   kind of slot from the individual achievements next to them. */
+/* Accent glow behind aggregate (x N) cells so they read as a different kind of
+   slot from the individual achievements next to them. Opacity scales with the
+   bucket's count via --bucket-glow (set inline by bucketGlowAlpha), so a denser
+   bucket glows brighter. Bounds are absolute, not per-user. */
 .dashboard-achievement--count {
   background: radial-gradient(
     ellipse at 50% 40%,
-    rgba(216, 240, 106, 0.20) 0%,
+    rgba(216, 240, 106, var(--bucket-glow, 0.20)) 0%,
     rgba(216, 240, 106, 0) 55%
   );
 }
