@@ -731,17 +731,17 @@
    Categories mix together — items render in a single wrapping flow sorted
    by date, so a new row's shelf starts wherever the wrap naturally falls. */
 .dashboard-achievements {
-  /* CSS Grid with fixed 44px tracks locks the column structure regardless of
-     cell-content width. Flex with `flex: 0 0 44px` was vulnerable to
-     `min-width: auto` letting the bucket cell's emoji glyph or "xN" label
-     expand the cell, which then shifted every subsequent column on that row
-     out of alignment with the row above. */
+  /* CSS Grid locks the column structure regardless of cell-content width. Flex
+     with `flex: 0 0 44px` was vulnerable to `min-width: auto` letting the bucket
+     cell's emoji glyph or "xN" label expand the cell, which then shifted every
+     subsequent column on that row out of alignment with the row above. */
   display: grid;
-  grid-template-columns: repeat(auto-fill, 44px);
-  /* Centre the 44px tracks within the full section width so the shelf sits
-     centred on screen rather than packed against the left edge (the leftover
-     width / 44 remainder is split evenly either side). */
-  justify-content: center;
+  /* Fit as many 44px-min tracks as the width allows, then stretch them evenly
+     (1fr) so the row spans the full section width — the shelf underline then
+     runs edge to edge, matching the cards above and below it, instead of
+     leaving a leftover-remainder gap. Track count still equals
+     floor(width / 44), so the ResizeObserver placeholder fill stays correct. */
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
   align-items: end;
   row-gap: 10px;
   padding: 4px 0 0;
@@ -752,9 +752,10 @@
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  /* Match the grid column width exactly so individuals, buckets, and
-     placeholders share identical cells. */
-  width: 44px;
+  /* Fill the (stretched) grid track so each cell's bottom border butts against
+     its neighbour's, forming one continuous full-width shelf line. The glyph
+     and label stay centred via align-items above. */
+  width: 100%;
   padding: 4px 6px 8px;
   border-bottom: 2px solid rgba(212, 175, 100, 0.28);
   box-shadow: 0 2px 0 rgba(0, 0, 0, 0.22);
