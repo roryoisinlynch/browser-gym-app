@@ -12,6 +12,10 @@ export interface SetAnalysis {
 const WORKING_SET_INTENSITY_THRESHOLD = 0.6;
 const WORKING_SET_RIR_THRESHOLD = 6; // must have fewer than 6 RIR to count as working
 const BODYWEIGHT_WARMUP_GAP_THRESHOLD = 5; // warmup if gap > 5 (= RIR ≥ 6)
+// Float-noise guard for the strict RIR-6 boundary. Integer rep counts step e1RM
+// by weight/30 — far larger than this — so it only absorbs rounding error at a
+// set that lands exactly on the line, never a genuinely heavier set.
+const WORKING_SET_E1RM_EPSILON = 1e-6;
 
 export function calculateEstimatedOneRepMax(
   weight: number | null | undefined,
@@ -57,12 +61,13 @@ export function getPriorBestEstimatedOneRepMax(
  * Full set analysis for one set, given earlier comparable sets.
  *
  * Working-set definition:
- *   Weighted  — set e1RM ≥ threshold e1RM, where the threshold is what an
- *               RIR-6 set at the working weight produces:
+ *   Weighted  — set e1RM > threshold e1RM (strict; RIR < 6), where the threshold
+ *               is what an RIR-6 set at the working weight produces:
  *                 thresholdE1RM = baselineE1RM − workingWeight × (6/30)
- *               Defining the cutoff as an e1RM (rather than a rep count at one
- *               weight) keeps the rule consistent across weights — any set's
- *               e1RM converts trivially.
+ *               A set landing exactly on the RIR-6 line is a warmup. Defining
+ *               the cutoff as an e1RM (rather than a rep count at one weight)
+ *               keeps the rule consistent across weights — any set's e1RM
+ *               converts trivially.
  *   Bodyweight — rep gap to effective baseline ≤ 5 (≡ RIR < 6)
  *
  * The reference weight for the threshold is `prescribedWeight` when supplied,
@@ -129,15 +134,20 @@ export function analyzeSet(
   }
 
   // Threshold e1RM: the e1RM that an RIR-6 set at the working weight produces.
-  // Anything at or above this counts as working (RIR < 6).
+  // A working set must sit STRICTLY above this (RIR < 6); a set exactly on the
+  // RIR-6 line is a warmup. This matches the bodyweight path (a 6-rep gap is a
+  // warmup) and the rep-dash narrative.
   const referenceWeight = prescribedWeight ?? currentSet.performedWeight;
   let workingThresholdE1RM: number | null =
     priorBestEstimatedOneRepMax != null && referenceWeight != null && referenceWeight > 0
       ? priorBestEstimatedOneRepMax - referenceWeight * (WORKING_SET_RIR_THRESHOLD / 30)
       : null;
 
-  // If the prescribed target's own e1RM falls below the threshold, pull the
-  // threshold down to the target so meeting the prescription still qualifies.
+  // If the prescribed target's own e1RM falls below the threshold (the target
+  // itself sits at RIR ≥ 6), pull the threshold down to the target so meeting
+  // the prescription still qualifies. Unlike the RIR-6 line, this boundary is
+  // INCLUSIVE: a set that exactly matches the target counts as working.
+  let thresholdIsTarget = false;
   if (
     prescribedWeight != null &&
     prescribedWeight > 0 &&
@@ -147,13 +157,19 @@ export function analyzeSet(
     const targetE1RM = calculateEstimatedOneRepMax(prescribedWeight, prescribedRepTarget);
     if (targetE1RM != null && targetE1RM < workingThresholdE1RM) {
       workingThresholdE1RM = targetE1RM;
+      thresholdIsTarget = true;
     }
   }
+
+  const meetsThreshold = (e1rm: number, threshold: number): boolean =>
+    thresholdIsTarget
+      ? e1rm >= threshold // pulled-down target: hitting it exactly still counts
+      : e1rm > threshold + WORKING_SET_E1RM_EPSILON; // RIR-6 line: strict (RIR < 6)
 
   const setType: SetType =
     workingThresholdE1RM == null || estimatedOneRepMax == null
       ? "warmup"
-      : estimatedOneRepMax >= workingThresholdE1RM
+      : meetsThreshold(estimatedOneRepMax, workingThresholdE1RM)
         ? "working"
         : "warmup";
 
