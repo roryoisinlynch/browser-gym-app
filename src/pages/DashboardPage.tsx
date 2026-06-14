@@ -978,7 +978,11 @@ export default function DashboardPage() {
   const [recentWeek, setRecentWeek] = useState<RecentCard | null | typeof LOADING_CARD>(LOADING_CARD);
   const [recentSeason, setRecentSeason] = useState<RecentCard | null | typeof LOADING_CARD>(LOADING_CARD);
   const [prEvents, setPrEvents] = useState<PREvent[] | null>(null);
-  const [spotlightHistory, setSpotlightHistory] = useState<ExerciseSessionDataPoint[] | null>(null);
+  // Histories keyed by exercise name for every PR sharing the most recent PR
+  // date (one card per same-date PR). null while still loading.
+  const [spotlightHistories, setSpotlightHistories] = useState<
+    Record<string, ExerciseSessionDataPoint[]> | null
+  >(null);
   const [recentTooltipOpen, setRecentTooltipOpen] = useState(false);
   const [lastBackupAt, setLastBackupAt] = useState<string | null | "loading">("loading");
   const [hasSettledWeek, setHasSettledWeek] = useState<boolean | "loading">("loading");
@@ -1052,13 +1056,26 @@ export default function DashboardPage() {
 
       setPrEvents(prList);
 
-      const spotlightPR = prList[0] ?? null;
-      if (spotlightPR) {
-        getExerciseSessionHistory(spotlightPR.exerciseName).then((h) => {
-          if (!cancelled.current) setSpotlightHistory(h);
+      // Fetch histories for every exercise that PR'd on the most recent PR
+      // date — multiple exercises can share that date and all get stacked.
+      const spotlightDate = prList[0]?.date ?? null;
+      const spotlightNames = spotlightDate
+        ? [
+            ...new Set(
+              prList.filter((p) => p.date === spotlightDate).map((p) => p.exerciseName)
+            ),
+          ]
+        : [];
+      if (spotlightNames.length > 0) {
+        Promise.all(
+          spotlightNames.map((name) =>
+            getExerciseSessionHistory(name).then((h) => [name, h] as const)
+          )
+        ).then((entries) => {
+          if (!cancelled.current) setSpotlightHistories(Object.fromEntries(entries));
         });
       } else {
-        setSpotlightHistory([]);
+        setSpotlightHistories({});
       }
 
       const [sessionCard, weekCard, seasonCard] = await Promise.all([
@@ -1681,27 +1698,48 @@ export default function DashboardPage() {
       );
     }
     if (!spotlight) return null;
+
+    // Stack every PR set on the most recent PR date — different exercises can
+    // peak on the same day. Title goes plural when there's more than one.
+    const spotlightPRs = prEvents.filter((pr) => pr.date === spotlight.date);
+
+    return (
+      <section className="dashboard-section">
+        <h2 className="dashboard-section-title">
+          {spotlightPRs.length > 1 ? "Most recent PRs" : "Most recent PR"}
+        </h2>
+        <div className="dashboard-pr-spotlight-stack">
+          {spotlightPRs.map((pr) =>
+            renderSpotlightCard(pr, spotlightHistories?.[pr.exerciseName] ?? null)
+          )}
+        </div>
+      </section>
+    );
+  }
+
+  function renderSpotlightCard(
+    pr: PREvent,
+    history: ExerciseSessionDataPoint[] | null
+  ) {
     const daysSincePrev =
-      spotlight.previousDate
-        ? daysBetween(spotlight.previousDate, spotlight.date)
-        : null;
+      pr.previousDate ? daysBetween(pr.previousDate, pr.date) : null;
     const pctImprovement =
-      spotlight.prType === "e1rm" && spotlight.newE1RM && spotlight.previousE1RM
-        ? Math.round(((spotlight.newE1RM - spotlight.previousE1RM) / spotlight.previousE1RM) * 100)
-        : spotlight.prType === "reps" && spotlight.newReps && spotlight.previousReps
-        ? Math.round(((spotlight.newReps - spotlight.previousReps) / spotlight.previousReps) * 100)
+      pr.prType === "e1rm" && pr.newE1RM && pr.previousE1RM
+        ? Math.round(((pr.newE1RM - pr.previousE1RM) / pr.previousE1RM) * 100)
+        : pr.prType === "reps" && pr.newReps && pr.previousReps
+        ? Math.round(((pr.newReps - pr.previousReps) / pr.previousReps) * 100)
         : null;
 
-    // Stats since the spotlight PR's predecessor — i.e. the work it took to set
-    // this PR after the prior one. previousDate is the date of the previous
-    // all-time best; absence means this is the user's first recorded PR for
-    // the exercise, so "since last PR" == "all time".
-    const sinceDate = spotlight.previousDate ?? null;
-    const exerciseName = spotlight.exerciseName;
+    // Stats since this PR's predecessor — i.e. the work it took to set this PR
+    // after the prior one. previousDate is the date of the previous all-time
+    // best; absence means this is the user's first recorded PR for the
+    // exercise, so "since last PR" == "all time".
+    const sinceDate = pr.previousDate ?? null;
+    const exerciseName = pr.exerciseName;
     let sessionsAllTime = 0;
     let sessionsSincePR = 0;
-    if (spotlightHistory) {
-      for (const dp of spotlightHistory) {
+    if (history) {
+      for (const dp of history) {
         sessionsAllTime += 1;
         if (sinceDate == null || dp.date > sinceDate) {
           sessionsSincePR += 1;
@@ -1712,8 +1750,8 @@ export default function DashboardPage() {
     // Span from the user's first recorded attempt through this PR. History is
     // sorted ascending, so [0] is the earliest session.
     const daysSinceFirst =
-      spotlightHistory && spotlightHistory.length > 0
-        ? daysBetween(spotlightHistory[0].date, spotlight.date)
+      history && history.length > 0
+        ? daysBetween(history[0].date, pr.date)
         : null;
 
     // Each stat is a bolded value plus trailing text. Day spans are bucketed
@@ -1731,67 +1769,64 @@ export default function DashboardPage() {
     }
 
     return (
-      <section className="dashboard-section">
-        <h2 className="dashboard-section-title">Most recent PR</h2>
-        <div className="dashboard-pr-spotlight">
-          <p className="dashboard-pr-spotlight__exercise">{spotlight.exerciseName}</p>
-          <div className="dashboard-pr-spotlight__values">
-            {spotlight.prType === "e1rm" ? (
-              <>
-                {spotlight.previousE1RM != null && (
-                  <span className="dashboard-pr-spotlight__prev">
-                    {Math.round(spotlight.previousE1RM * 10) / 10}kg e1RM
-                  </span>
-                )}
-                {spotlight.previousE1RM != null && <span className="dashboard-pr-spotlight__arrow">→</span>}
-                <span className="dashboard-pr-spotlight__new">
-                  {spotlight.newE1RM != null ? `${Math.round(spotlight.newE1RM * 10) / 10}kg e1RM` : "—"}
+      <div className="dashboard-pr-spotlight" key={`${pr.exerciseName}-${pr.prType}`}>
+        <p className="dashboard-pr-spotlight__exercise">{pr.exerciseName}</p>
+        <div className="dashboard-pr-spotlight__values">
+          {pr.prType === "e1rm" ? (
+            <>
+              {pr.previousE1RM != null && (
+                <span className="dashboard-pr-spotlight__prev">
+                  {Math.round(pr.previousE1RM * 10) / 10}kg e1RM
                 </span>
-              </>
-            ) : (
-              <>
-                {spotlight.previousReps != null && (
-                  <span className="dashboard-pr-spotlight__prev">{spotlight.previousReps} reps</span>
-                )}
-                {spotlight.previousReps != null && <span className="dashboard-pr-spotlight__arrow">→</span>}
-                <span className="dashboard-pr-spotlight__new">{spotlight.newReps} reps</span>
-              </>
-            )}
-            {pctImprovement != null && (
-              <span className="dashboard-pr-spotlight__pct">+{pctImprovement}%</span>
-            )}
-          </div>
-          <div className="dashboard-pr-spotlight__meta">
-            <span>{shortDate(spotlight.date)}</span>
-          </div>
-          {renderSpotlightSparkline(spotlight, spotlightHistory, sinceDate)}
-          {sinceItems.length > 0 && (
-            <div className="dashboard-pr-spotlight__narrative">
-              <p className="dashboard-pr-spotlight__narrative-intro">
-                Since your last {exerciseName} PR…
-              </p>
-              <ul className="dashboard-pr-spotlight__narrative-list">
-                {sinceItems.map((item) => (
-                  <li
-                    key={item.label}
-                    className="dashboard-pr-spotlight__narrative-item"
-                  >
-                    <strong>{item.value}</strong> {item.label}
-                  </li>
-                ))}
-              </ul>
-            </div>
+              )}
+              {pr.previousE1RM != null && <span className="dashboard-pr-spotlight__arrow">→</span>}
+              <span className="dashboard-pr-spotlight__new">
+                {pr.newE1RM != null ? `${Math.round(pr.newE1RM * 10) / 10}kg e1RM` : "—"}
+              </span>
+            </>
+          ) : (
+            <>
+              {pr.previousReps != null && (
+                <span className="dashboard-pr-spotlight__prev">{pr.previousReps} reps</span>
+              )}
+              {pr.previousReps != null && <span className="dashboard-pr-spotlight__arrow">→</span>}
+              <span className="dashboard-pr-spotlight__new">{pr.newReps} reps</span>
+            </>
           )}
-          {daysSinceFirst != null && (
-            <p className="dashboard-pr-spotlight__narrative-summary">
-              It has been <strong>{formatDayCount(daysSinceFirst)}</strong> since
-              your first {exerciseName} attempt, over which time you have logged{" "}
-              <strong>{sessionsAllTime}</strong> {exerciseName}{" "}
-              {sessionsAllTime === 1 ? "session" : "sessions"}.
-            </p>
+          {pctImprovement != null && (
+            <span className="dashboard-pr-spotlight__pct">+{pctImprovement}%</span>
           )}
         </div>
-      </section>
+        <div className="dashboard-pr-spotlight__meta">
+          <span>{shortDate(pr.date)}</span>
+        </div>
+        {renderSpotlightSparkline(pr, history, sinceDate)}
+        {sinceItems.length > 0 && (
+          <div className="dashboard-pr-spotlight__narrative">
+            <p className="dashboard-pr-spotlight__narrative-intro">
+              Since your last {exerciseName} PR…
+            </p>
+            <ul className="dashboard-pr-spotlight__narrative-list">
+              {sinceItems.map((item) => (
+                <li
+                  key={item.label}
+                  className="dashboard-pr-spotlight__narrative-item"
+                >
+                  <strong>{item.value}</strong> {item.label}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {daysSinceFirst != null && (
+          <p className="dashboard-pr-spotlight__narrative-summary">
+            It has been <strong>{formatDayCount(daysSinceFirst)}</strong> since
+            your first {exerciseName} attempt, over which time you have logged{" "}
+            <strong>{sessionsAllTime}</strong> {exerciseName}{" "}
+            {sessionsAllTime === 1 ? "session" : "sessions"}.
+          </p>
+        )}
+      </div>
     );
   }
 
