@@ -881,6 +881,9 @@ interface ShelfBucket {
   icon: string;
   iconClass?: string;
   count: number;
+  // Period this aggregate covers: "Jun 2026" for an earlier-this-year month
+  // bucket, "2025" for a previous-year bucket.
+  label: string;
 }
 
 interface AchievementsShelfProps {
@@ -943,8 +946,9 @@ function AchievementsShelf({ individuals, buckets }: AchievementsShelfProps) {
               .join(" ")}
           >
             {bucket.icon}
+            <span className="dashboard-achievement__count">×{bucket.count}</span>
           </span>
-          <span className="dashboard-achievement__date">×{bucket.count}</span>
+          <span className="dashboard-achievement__date">{bucket.label}</span>
         </div>
       ))}
       {Array.from({ length: placeholderCount }, (_, i) => (
@@ -1612,7 +1616,10 @@ export default function DashboardPage() {
 
   // ─── Achievements ────────────────────────────────────────────────────────
 
-  const ACHIEVEMENT_LIST_LIMIT = 25;
+  const MONTH_ABBREVS = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
 
   function renderAchievements() {
     if (achievements === null) {
@@ -1628,41 +1635,74 @@ export default function DashboardPage() {
       return null;
     }
 
-    type Individual = { date: string; icon: string; iconClass?: string };
-    type Bucket = ShelfBucket;
+    // Each achievement type carries its glyph plus a stable ordering rank used
+    // to lay out the per-type buckets within a single period (session, then
+    // week, then season — matching the order they're declared here).
+    type Typed = { date: string; icon: string; iconClass?: string; typeRank: number };
+    const typed: Typed[] = [
+      ...goldSessions.map((date) => ({ date, icon: "🥇", typeRank: 0 } as Typed)),
+      ...perfectWeeks.map((date) => ({ date, icon: "🤩", typeRank: 1 } as Typed)),
+      ...aSeasons.map(
+        (date) =>
+          ({
+            date,
+            icon: "A",
+            iconClass: "dashboard-achievement__icon--grade",
+            typeRank: 2,
+          } as Typed)
+      ),
+    ];
 
-    function partition(
-      dates: string[],
-      icon: string,
-      iconClass?: string
-    ): { individual: Individual[]; buckets: Bucket[] } {
-      const individual = dates
-        .slice(0, ACHIEVEMENT_LIST_LIMIT)
-        .map((date) => ({ date, icon, iconClass }));
-      const overflowCount = dates.length - individual.length;
-      const buckets: Bucket[] = [];
-      for (let i = 0; i < overflowCount; i += ACHIEVEMENT_LIST_LIMIT) {
-        buckets.push({
-          count: Math.min(ACHIEVEMENT_LIST_LIMIT, overflowCount - i),
-          icon,
-          iconClass,
+    const today = toLocalMidnight(localDateIso());
+    const curYear = today.getFullYear();
+    const curMonth = today.getMonth();
+
+    // Three time tiers:
+    //   1. Earned this calendar month  → shown individually, no cap.
+    //   2. Earlier this calendar year  → bucketed by (month, type).
+    //   3. A previous calendar year    → bucketed by (year, type); a year's
+    //      month buckets dissolve and merge once that year is over.
+    type Agg = {
+      icon: string;
+      iconClass?: string;
+      count: number;
+      sortKey: number; // higher = more recent, so buckets pin newest-first
+      typeRank: number;
+      label: string;
+    };
+    const individualsRaw: Typed[] = [];
+    const aggregates = new Map<string, Agg>();
+
+    for (const t of typed) {
+      const d = toLocalMidnight(t.date);
+      const y = d.getFullYear();
+      const m = d.getMonth();
+      if (y === curYear && m === curMonth) {
+        individualsRaw.push(t);
+        continue;
+      }
+      const inThisYear = y === curYear;
+      const key = inThisYear
+        ? `m:${y}-${m}:${t.typeRank}`
+        : `y:${y}:${t.typeRank}`;
+      const existing = aggregates.get(key);
+      if (existing) {
+        existing.count++;
+      } else {
+        aggregates.set(key, {
+          icon: t.icon,
+          iconClass: t.iconClass,
+          count: 1,
+          // Month buckets (this year) sort above year buckets; within a tier,
+          // more recent periods come first.
+          sortKey: inThisYear ? y * 100 + m + 100000 : y,
+          typeRank: t.typeRank,
+          label: inThisYear ? `${MONTH_ABBREVS[m]} ${y}` : `${y}`,
         });
       }
-      return { individual, buckets };
     }
 
-    const session = partition(goldSessions, "🥇");
-    const week = partition(perfectWeeks, "🤩");
-    const season = partition(aSeasons, "A", "dashboard-achievement__icon--grade");
-
-    // Individuals from every category mix together on the shelf in date-desc
-    // order. Overflow buckets are aggregates of older items so they pin to the
-    // end, preserving category grouping among themselves.
-    const allIndividuals: ShelfIndividual[] = [
-      ...session.individual,
-      ...week.individual,
-      ...season.individual,
-    ]
+    const allIndividuals: ShelfIndividual[] = individualsRaw
       .sort((a, b) => b.date.localeCompare(a.date))
       .map(({ icon, iconClass, date }) => ({
         icon,
@@ -1670,11 +1710,14 @@ export default function DashboardPage() {
         displayDate: compactAchievementDate(date),
       }));
 
-    const allBuckets: ShelfBucket[] = [
-      ...session.buckets,
-      ...week.buckets,
-      ...season.buckets,
-    ];
+    const allBuckets: ShelfBucket[] = [...aggregates.values()]
+      .sort((a, b) => b.sortKey - a.sortKey || a.typeRank - b.typeRank)
+      .map(({ icon, iconClass, count, label }) => ({
+        icon,
+        iconClass,
+        count,
+        label,
+      }));
 
     return (
       <section className="dashboard-section">
@@ -2166,35 +2209,31 @@ export default function DashboardPage() {
   }
 
   function renderAchievementsMock() {
-    // Drives the real AchievementsShelf with fabricated entries spanning all
-    // three icon types and every compact-date band (weekday, ordinal day,
-    // month, bare year). The shelf's ResizeObserver fills any partial row
-    // with placeholder dots — same code path as the live render.
-    // Ordered date-desc to match the live shelf. Recent gold sessions cluster
-    // first (since they haven't been compressed into the bucket yet); week
-    // emojis are sprinkled in at week boundaries; A-grade seasons appear
-    // among the older entries. The 25-bucket at the end represents the older
-    // gold sessions that have rolled off the individual list.
+    // Drives the real AchievementsShelf with fabricated entries spanning the
+    // three time tiers: this month's achievements show individually (compact
+    // date band — Today/weekday/ordinal); earlier months of this year collapse
+    // into per-type "month" buckets ("Jun 2026"); previous years collapse into
+    // per-type "year" buckets ("2025"). The shelf's ResizeObserver fills any
+    // partial row with placeholder dots — same code path as the live render.
     const individuals: ShelfIndividual[] = [
       { icon: "🥇", displayDate: "Today" },
-      { icon: "🥇", displayDate: "Wed" },
+      { icon: "🤩", displayDate: "Wed" },
       { icon: "🥇", displayDate: "Tue" },
-      { icon: "🤩", displayDate: "Sun" },
-      { icon: "🥇", displayDate: "Sat" },
-      { icon: "🥇", displayDate: "14th" },
-      { icon: "🤩", displayDate: "11th" },
       { icon: "🥇", displayDate: "8th" },
       { icon: "🤩", displayDate: "4th" },
       { icon: "🥇", displayDate: "1st" },
-      { icon: "🤩", displayDate: "Apr" },
-      { icon: "A", iconClass: "dashboard-achievement__icon--grade", displayDate: "Apr" },
-      { icon: "🤩", displayDate: "Mar" },
-      { icon: "🤩", displayDate: "Feb" },
-      { icon: "🤩", displayDate: "Jan" },
-      { icon: "🤩", displayDate: "2025" },
-      { icon: "A", iconClass: "dashboard-achievement__icon--grade", displayDate: "2024" },
     ];
-    const buckets: ShelfBucket[] = [{ icon: "🥇", count: 25 }];
+    const buckets: ShelfBucket[] = [
+      // Earlier this year → bucketed by month + type, newest month first.
+      { icon: "🥇", count: 11, label: "May 2026" },
+      { icon: "🤩", count: 3, label: "May 2026" },
+      { icon: "🥇", count: 9, label: "Apr 2026" },
+      { icon: "A", iconClass: "dashboard-achievement__icon--grade", count: 1, label: "Apr 2026" },
+      // Previous year → the whole year merges into one bucket per type.
+      { icon: "🥇", count: 48, label: "2025" },
+      { icon: "🤩", count: 9, label: "2025" },
+      { icon: "A", iconClass: "dashboard-achievement__icon--grade", count: 1, label: "2025" },
+    ];
     return <AchievementsShelf individuals={individuals} buckets={buckets} />;
   }
 
