@@ -2525,11 +2525,11 @@ export default function DashboardPage() {
           </section>
         )}
 
-        {renderAchievements()}
-
         {renderBackupNudge()}
 
         {renderPRSpotlight()}
+
+        {renderAchievements()}
 
         <TutorialBlock
           id="schedule"
