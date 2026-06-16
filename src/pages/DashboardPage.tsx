@@ -1829,7 +1829,7 @@ export default function DashboardPage() {
 
     return (
       <div className="dashboard-pr-spotlight" key={`${pr.exerciseName}-${pr.prType}`}>
-        <p className="dashboard-pr-spotlight__exercise">{pr.exerciseName}</p>
+        <p className="dashboard-pr-spotlight__exercise">PR Spotlight: {pr.exerciseName}</p>
         <div className="dashboard-pr-spotlight__values">
           {pr.prType === "e1rm" ? (
             <>
