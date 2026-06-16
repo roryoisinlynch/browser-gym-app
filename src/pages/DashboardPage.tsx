@@ -1751,7 +1751,7 @@ export default function DashboardPage() {
     if (prEvents === null) {
       return (
         <section className="dashboard-section">
-          <h2 className="dashboard-section-title">Most recent PR</h2>
+          <h2 className="dashboard-section-title">Recent personal records</h2>
           <div className="dashboard-spinner" />
         </section>
       );
@@ -1759,19 +1759,19 @@ export default function DashboardPage() {
     if (!spotlight) return null;
 
     // Stack every PR set on the most recent PR date — different exercises can
-    // peak on the same day. Title goes plural when there's more than one.
+    // peak on the same day. These are the graphed records; the list nested
+    // below continues with the next PRs chronologically before this batch.
     const spotlightPRs = prEvents.filter((pr) => pr.date === spotlight.date);
 
     return (
       <section className="dashboard-section">
-        <h2 className="dashboard-section-title">
-          {spotlightPRs.length > 1 ? "Most recent PRs" : "Most recent PR"}
-        </h2>
+        <h2 className="dashboard-section-title">Recent personal records</h2>
         <div className="dashboard-pr-spotlight-stack">
           {spotlightPRs.map((pr) =>
             renderSpotlightCard(pr, spotlightHistories?.[pr.exerciseName] ?? null)
           )}
         </div>
+        {renderAllPRs()}
       </section>
     );
   }
@@ -1990,26 +1990,21 @@ export default function DashboardPage() {
   // ─── All PRs ──────────────────────────────────────────────────────────────
 
   function renderAllPRs() {
-    if (prEvents === null) {
-      return (
-        <section className="dashboard-section">
-          <h2 className="dashboard-section-title">Recent personal records</h2>
-          <div className="dashboard-spinner" />
-        </section>
-      );
-    }
-    if (prEvents.length === 0) return null;
-    const today = localDateIso();
-    const recentPRs = prEvents.filter((pr) => daysBetween(pr.date, today) <= 30);
-    const displayedPRs = recentPRs.length >= 5 ? recentPRs : prEvents.slice(0, 5);
+    // The spotlight section above owns the loading / empty states and the
+    // shared heading; this renders the continuation list nested inside it.
+    if (prEvents === null || !spotlight) return null;
+    // Drop the most-recent-date batch (shown as graphs above) and list the
+    // next 5 PRs chronologically before it so none appear twice.
+    const displayedPRs = prEvents
+      .filter((pr) => pr.date !== spotlight.date)
+      .slice(0, 5);
+    if (displayedPRs.length === 0) return null;
     return (
-      <section className="dashboard-section">
-        <h2 className="dashboard-section-title">Recent personal records</h2>
-        <ul className="dashboard-pr-list">
-          {displayedPRs.map((pr, i) => {
-            const daysAgo = daysBetween(pr.date, localDateIso());
-            const agoLabel = daysAgo === 0 ? "Today" : daysAgo === 1 ? "Yesterday" : `${daysAgo} days ago`;
-            return (
+      <ul className="dashboard-pr-list">
+        {displayedPRs.map((pr, i) => {
+          const daysAgo = daysBetween(pr.date, localDateIso());
+          const agoLabel = daysAgo === 0 ? "Today" : daysAgo === 1 ? "Yesterday" : `${daysAgo} days ago`;
+          return (
             <li key={i} className="dashboard-pr-item">
               <div className="dashboard-pr-item__top">
                 <span className="dashboard-pr-item__exercise">{pr.exerciseName}</span>
@@ -2038,10 +2033,9 @@ export default function DashboardPage() {
                 </span>
               )}
             </li>
-            );
-          })}
-        </ul>
-      </section>
+          );
+        })}
+      </ul>
     );
   }
 
@@ -2536,8 +2530,6 @@ export default function DashboardPage() {
         {renderBackupNudge()}
 
         {renderPRSpotlight()}
-
-        {renderAllPRs()}
 
         <TutorialBlock
           id="schedule"
