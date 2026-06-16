@@ -1823,7 +1823,7 @@ export default function DashboardPage() {
       sinceItems.push({ value: formatDayCount(daysSincePrev), label: "passed" });
       sinceItems.push({
         value: String(sessionsSincePR),
-        label: `${exerciseName} ${sessionsSincePR === 1 ? "session" : "sessions"}`,
+        label: `${exerciseName} ${sessionsSincePR === 1 ? "session logged" : "sessions logged"}`,
       });
     }
 
