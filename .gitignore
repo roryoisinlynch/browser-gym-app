@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 
 cloudflared.exe
+
+# Claude Code personal settings
+.claude/settings.local.json
