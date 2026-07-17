@@ -189,30 +189,6 @@ export interface BusiestMonth {
   unit: "sessions" | "training days";
 }
 
-export type StrengthMetric =
-  | "heaviest"
-  | "biggestPctGain"
-  | "biggestRawGain"
-  | "topDebut"
-  | "dryStreakBroken";
-
-/**
- * One Getting Stronger row: an exercise plus every metric it tops. An
- * exercise chosen by several metrics is shown once, carrying all their labels.
- */
-export interface StrengthHighlight {
-  name: string;
-  metrics: StrengthMetric[];
-  bestYearE1RM: number;
-  /** Best e1RM before this year; null for a debut with no prior history. */
-  bestPriorE1RM: number | null;
-  /** (year - prior) / prior; null when there is no prior e1RM. */
-  relativeDiff: number | null;
-  yearSetCount: number;
-  /** Days the broken dry streak spanned; set only for the dry-streak metric. */
-  gapDays: number | null;
-}
-
 export interface RepExtreme {
   name: string;
   avgReps: number;
@@ -244,8 +220,6 @@ export interface YearInReviewStats {
   distinctExerciseCount: number;
   /** Exercises trained both this year and before, this year's best vs all prior. */
   yearOnYearPrs: YearOnYearPr[];
-  /** Getting Stronger picks: one lift per metric, deduped with combined labels. */
-  strengthHighlights: StrengthHighlight[];
   prUpCount: number;
   prDownCount: number;
   /** Exercises first trained this year. */
@@ -744,130 +718,6 @@ export async function computeYearInReviewStats(
       .sort((a, b) => a.date.localeCompare(b.date));
   }
 
-  // ── Getting Stronger highlights: one lift per distinct metric, deduped ──
-  // Each metric nominates at most one exercise; an exercise topping several
-  // carries all their labels on one row. Metrics with no qualifier are
-  // omitted. This list order is also the display and label order.
-  const strengthHighlights: StrengthHighlight[] = [];
-  {
-    const yoyByName = new Map(
-      yearOnYearPrs.map((p) => [normalizeName(p.name), p] as const)
-    );
-    const debutByName = new Map(
-      debutExercises.map((d) => [normalizeName(d.name), d] as const)
-    );
-    const picks: { metric: StrengthMetric; key: string; name: string }[] = [];
-    const pushBest = <T>(
-      metric: StrengthMetric,
-      items: T[],
-      value: (t: T) => number,
-      name: (t: T) => string,
-      eligible: (t: T) => boolean = () => true
-    ) => {
-      let best: T | null = null;
-      for (const t of items) {
-        if (!eligible(t)) continue;
-        if (best == null || value(t) > value(best)) best = t;
-      }
-      if (best != null) {
-        picks.push({ metric, key: normalizeName(name(best)), name: name(best) });
-      }
-    };
-
-    // Heaviest lift: highest e1RM this year, across PR-eligible and debut lifts.
-    pushBest(
-      "heaviest",
-      [
-        ...yearOnYearPrs.map((p) => ({ e1rm: p.bestYearE1RM, name: p.name })),
-        ...debutExercises.map((d) => ({ e1rm: d.yearBestE1RM, name: d.name })),
-      ],
-      (x) => x.e1rm,
-      (x) => x.name
-    );
-    // Biggest percentage PR increase.
-    pushBest(
-      "biggestPctGain",
-      yearOnYearPrs,
-      (p) => p.relativeDiff,
-      (p) => p.name,
-      (p) => p.relativeDiff > 0
-    );
-    // Biggest raw e1RM PR increase.
-    pushBest(
-      "biggestRawGain",
-      yearOnYearPrs,
-      (p) => p.bestYearE1RM - p.bestPriorE1RM,
-      (p) => p.name,
-      (p) => p.bestYearE1RM - p.bestPriorE1RM > 0
-    );
-    // Highest-volume debut (debutExercises is already set-count descending).
-    if (debutExercises.length > 0) {
-      const d = debutExercises[0];
-      picks.push({ metric: "topDebut", key: normalizeName(d.name), name: d.name });
-    }
-    // Biggest broken dry streak: the same exercise The Big One spotlights.
-    if (drySpellPr) {
-      picks.push({
-        metric: "dryStreakBroken",
-        key: normalizeName(drySpellPr.exerciseName),
-        name: drySpellPr.exerciseName,
-      });
-    }
-
-    const byKey = new Map<string, StrengthHighlight>();
-    for (const pick of picks) {
-      let row = byKey.get(pick.key);
-      if (!row) {
-        const yoy = yoyByName.get(pick.key);
-        const debut = debutByName.get(pick.key);
-        if (yoy) {
-          row = {
-            name: yoy.name,
-            metrics: [],
-            bestYearE1RM: yoy.bestYearE1RM,
-            bestPriorE1RM: yoy.bestPriorE1RM,
-            relativeDiff: yoy.relativeDiff,
-            yearSetCount: yoy.yearSetCount,
-            gapDays: null,
-          };
-        } else if (debut) {
-          row = {
-            name: debut.name,
-            metrics: [],
-            bestYearE1RM: debut.yearBestE1RM,
-            bestPriorE1RM: null,
-            relativeDiff: null,
-            yearSetCount: debut.yearSetCount,
-            gapDays: null,
-          };
-        } else {
-          // Only the dry-streak metric can name an exercise outside both lists
-          // (bodyweight or too few sets), so drySpellPr is set here. Show the
-          // drought-breaking gain: previous best to the year's best.
-          const dry = drySpellPr!;
-          row = {
-            name: dry.exerciseName,
-            metrics: [],
-            bestYearE1RM: dry.yearBestE1RM,
-            bestPriorE1RM: dry.previousE1RM,
-            relativeDiff:
-              dry.previousE1RM > 0
-                ? (dry.yearBestE1RM - dry.previousE1RM) / dry.previousE1RM
-                : null,
-            yearSetCount: 0,
-            gapDays: null,
-          };
-        }
-        byKey.set(pick.key, row);
-        strengthHighlights.push(row);
-      }
-      if (!row.metrics.includes(pick.metric)) row.metrics.push(pick.metric);
-      if (pick.metric === "dryStreakBroken" && drySpellPr) {
-        row.gapDays = drySpellPr.gapDays;
-      }
-    }
-  }
-
   // ── Months. With imported data present, count distinct training days per
   // month so imported months aren't rendered empty (a date with both native
   // and imported work counts once); with native-only data, count sessions so
@@ -984,7 +834,6 @@ export async function computeYearInReviewStats(
     topExercises,
     distinctExerciseCount,
     yearOnYearPrs,
-    strengthHighlights,
     prUpCount,
     prDownCount,
     debutExercises,
