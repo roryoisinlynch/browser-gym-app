@@ -173,64 +173,29 @@ function SessionsSlide({ stats }: { stats: YearInReviewStats }) {
 }
 
 function SetsRepsSlide({ stats }: { stats: YearInReviewStats }) {
+  const target = stats.totalReps;
+  const shown = useCountUp(target);
   const avgReps =
     stats.totalSets > 0 ? Math.round(stats.totalReps / stats.totalSets) : 0;
-  return (
-    <div className="yir-slide-body">
-      <p className="yir-eyebrow yir-reveal">The grind</p>
-      <p className="yir-display yir-reveal yir-reveal--2">
-        {formatInt(stats.totalSets)}
-        <span className="yir-display__unit">{stats.totalSets === 1 ? "set" : "sets"}</span>
-      </p>
-      <p className="yir-second-line yir-reveal yir-reveal--3">
-        {formatInt(stats.totalReps)} {stats.totalReps === 1 ? "rep" : "reps"}
-      </p>
-      {avgReps > 0 && (
-        <p className="yir-sub yir-reveal yir-reveal--4">
-          That's an average of {avgReps} {avgReps === 1 ? "rep" : "reps"} per
-          set.
-        </p>
-      )}
-    </div>
-  );
-}
-
-function TonnageSlide({ stats }: { stats: YearInReviewStats }) {
-  const target = Math.round(stats.totalTonnageKg);
-  const shown = useCountUp(target);
-  const avgPerDay =
-    stats.trainingDayCount > 0
-      ? Math.round(stats.totalTonnageKg / stats.trainingDayCount)
-      : 0;
   // Size from the final value, not the animating one, so the count-up never
   // crosses a wrap threshold mid-animation.
   const long = formatInt(target).length >= 7;
   return (
     <div className="yir-slide-body">
-      <p className="yir-eyebrow yir-reveal">Total weight moved</p>
+      <p className="yir-eyebrow yir-reveal">The grind</p>
       <p
         className={`yir-display yir-reveal yir-reveal--2${long ? " yir-display--long" : ""}`}
       >
         {formatInt(shown)}
-        <span className="yir-display__unit">kg</span>
+        <span className="yir-display__unit">{target === 1 ? "rep" : "reps"}</span>
       </p>
-      <div className="yir-plates" aria-hidden="true">
-        {[44, 60, 72, 60, 44].map((h, i) => (
-          <span
-            key={i}
-            className="yir-plates__plate"
-            style={{ "--i": i, height: `${h}px` } as React.CSSProperties}
-          />
-        ))}
-      </div>
-      {avgPerDay > 0 && (
-        <p className="yir-sub yir-reveal yir-reveal--3">
-          An average of {formatInt(avgPerDay)} kg per training day.
-        </p>
-      )}
-      {stats.bodyweightReps > 0 && (
-        <p className="yir-footnote yir-reveal yir-reveal--4">
-          Plus {formatInt(stats.bodyweightReps)} bodyweight reps on top.
+      <p className="yir-second-line yir-reveal yir-reveal--3">
+        {formatInt(stats.totalSets)} {stats.totalSets === 1 ? "set" : "sets"}
+      </p>
+      {avgReps > 0 && (
+        <p className="yir-sub yir-reveal yir-reveal--4">
+          That's an average of {avgReps} {avgReps === 1 ? "rep" : "reps"} per
+          set.
         </p>
       )}
     </div>
@@ -677,9 +642,6 @@ function buildDeck(stats: YearInReviewStats, onDone: () => void): SlideDef[] {
   deck.push({ key: "cover", glow: "lime", node: <CoverSlide stats={stats} /> });
   deck.push({ key: "sessions", glow: "green", node: <SessionsSlide stats={stats} /> });
   deck.push({ key: "sets", glow: "lime", node: <SetsRepsSlide stats={stats} /> });
-  if (stats.totalTonnageKg > 0) {
-    deck.push({ key: "tonnage", glow: "lime", node: <TonnageSlide stats={stats} /> });
-  }
   if (stats.busiestMonth && stats.monthsWithActivity >= 3) {
     deck.push({
       key: "busiest-month",

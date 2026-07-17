@@ -185,7 +185,6 @@ export interface YearInReviewStats {
   totalReps: number;
   importedSetCount: number;
   totalTonnageKg: number;
-  bodyweightReps: number;
   trainingDayCount: number;
   topExercises: TopExerciseStat[];
   muscleGroups: MuscleGroupStat[];
@@ -284,7 +283,6 @@ export async function computeYearInReviewStats(
   let totalReps = 0;
   let importedSetCount = 0;
   let totalTonnageKg = 0;
-  let bodyweightReps = 0;
   const trainingDays = new Set<string>();
   for (const r of yearSets) {
     const reps = r.reps!;
@@ -292,9 +290,6 @@ export async function computeYearInReviewStats(
     if (r.source === "imported") importedSetCount++;
     if (r.weight != null && r.weight > 0) {
       totalTonnageKg += r.weight * reps;
-    } else {
-      // Native bodyweight sets store null weight; imported ones store 0.
-      bodyweightReps += reps;
     }
     trainingDays.add(r.date);
   }
@@ -644,7 +639,6 @@ export async function computeYearInReviewStats(
     totalReps,
     importedSetCount,
     totalTonnageKg,
-    bodyweightReps,
     trainingDayCount,
     topExercises,
     muscleGroups,
