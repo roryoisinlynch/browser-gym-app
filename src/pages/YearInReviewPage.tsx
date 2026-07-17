@@ -239,14 +239,14 @@ function TonnageSlide({ stats }: { stats: YearInReviewStats }) {
 
 function BusiestMonthSlide({ stats }: { stats: YearInReviewStats }) {
   const busiest = stats.busiestMonth!;
-  const max = Math.max(...stats.monthlySessionCounts, 1);
+  const max = Math.max(...stats.monthlyActivityCounts, 1);
   const monthLetters = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
   return (
     <div className="yir-slide-body">
       <p className="yir-eyebrow yir-reveal">Peak month</p>
       <p className="yir-display yir-reveal yir-reveal--2">{busiest.name}</p>
       <div className="yir-histogram" aria-hidden="true">
-        {stats.monthlySessionCounts.map((count, i) => (
+        {stats.monthlyActivityCounts.map((count, i) => (
           <div key={i} className="yir-histogram__col">
             <span
               className={
@@ -266,9 +266,15 @@ function BusiestMonthSlide({ stats }: { stats: YearInReviewStats }) {
         ))}
       </div>
       <p className="yir-sub yir-reveal yir-reveal--3">
-        {formatInt(busiest.sessionCount)}{" "}
-        {busiest.sessionCount === 1 ? "session" : "sessions"}. Your biggest month of
-        the year.
+        {formatInt(busiest.count)}{" "}
+        {busiest.unit === "sessions"
+          ? busiest.count === 1
+            ? "session"
+            : "sessions"
+          : busiest.count === 1
+            ? "training day"
+            : "training days"}
+        . Your biggest month of the year.
       </p>
     </div>
   );
@@ -612,7 +618,7 @@ function PosterSlide({
   if (stats.trainingDayCount > 0) {
     cells.push({ label: "Training days", value: formatInt(stats.trainingDayCount) });
   }
-  if (stats.busiestMonth && stats.monthsWithSessions >= 3) {
+  if (stats.busiestMonth && stats.monthsWithActivity >= 3) {
     cells.push({ label: "Peak month", value: stats.busiestMonth.name });
   }
   if (stats.longestWeeklyStreak >= 3) {
@@ -674,7 +680,7 @@ function buildDeck(stats: YearInReviewStats, onDone: () => void): SlideDef[] {
   if (stats.totalTonnageKg > 0) {
     deck.push({ key: "tonnage", glow: "lime", node: <TonnageSlide stats={stats} /> });
   }
-  if (stats.busiestMonth && stats.monthsWithSessions >= 3) {
+  if (stats.busiestMonth && stats.monthsWithActivity >= 3) {
     deck.push({
       key: "busiest-month",
       glow: "amber",

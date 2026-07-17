@@ -173,7 +173,8 @@ export interface E1rmProgressRow {
 export interface BusiestMonth {
   monthIndex: number;
   name: string;
-  sessionCount: number;
+  count: number;
+  unit: "sessions" | "training days";
 }
 
 export interface YearInReviewStats {
@@ -196,8 +197,8 @@ export interface YearInReviewStats {
   biggestRepPr: BiggestRepPr | null;
   /** e1RM history of the biggest-PR exercise through the end of the review year, date-ascending, for the sparkline. */
   biggestPrHistory: { date: string; value: number }[];
-  monthlySessionCounts: number[];
-  monthsWithSessions: number;
+  monthlyActivityCounts: number[];
+  monthsWithActivity: number;
   /** Months of the review year with at least one app-logged session or set. */
   nativeMonthCount: number;
   /** Months whose only data is imported history. */
@@ -518,20 +519,35 @@ export async function computeYearInReviewStats(
       .sort((a, b) => a.date.localeCompare(b.date));
   }
 
-  // ── Months ──
-  const monthlySessionCounts = new Array<number>(12).fill(0);
-  for (const s of yearSessions) {
-    const monthIndex = Number(sessionCompletedDate(s).slice(5, 7)) - 1;
-    monthlySessionCounts[monthIndex]++;
+  // ── Months. With imported data present, count distinct training days per
+  // month so imported months aren't rendered empty (a date with both native
+  // and imported work counts once); with native-only data, count sessions so
+  // double sessions still show as 2. ──
+  const monthlyActivityCounts = new Array<number>(12).fill(0);
+  const monthUnit: BusiestMonth["unit"] =
+    importedSetCount > 0 ? "training days" : "sessions";
+  if (monthUnit === "sessions") {
+    for (const s of yearSessions) {
+      const monthIndex = Number(sessionCompletedDate(s).slice(5, 7)) - 1;
+      monthlyActivityCounts[monthIndex]++;
+    }
+  } else {
+    // trainingDays misses a completed session with no logged sets; union them.
+    const activeDays = new Set(trainingDays);
+    for (const s of yearSessions) activeDays.add(sessionCompletedDate(s));
+    for (const d of activeDays) {
+      monthlyActivityCounts[Number(d.slice(5, 7)) - 1]++;
+    }
   }
-  const monthsWithSessions = monthlySessionCounts.filter((c) => c > 0).length;
+  const monthsWithActivity = monthlyActivityCounts.filter((c) => c > 0).length;
   let busiestMonth: BusiestMonth | null = null;
   for (let i = 0; i < 12; i++) {
-    if (monthlySessionCounts[i] > (busiestMonth?.sessionCount ?? 0)) {
+    if (monthlyActivityCounts[i] > (busiestMonth?.count ?? 0)) {
       busiestMonth = {
         monthIndex: i,
         name: MONTH_NAMES[i],
-        sessionCount: monthlySessionCounts[i],
+        count: monthlyActivityCounts[i],
+        unit: monthUnit,
       };
     }
   }
@@ -638,8 +654,8 @@ export async function computeYearInReviewStats(
     biggestPr,
     biggestRepPr,
     biggestPrHistory,
-    monthlySessionCounts,
-    monthsWithSessions,
+    monthlyActivityCounts,
+    monthsWithActivity,
     nativeMonthCount,
     importedMonthCount,
     emptyLeadInMonthCount,
