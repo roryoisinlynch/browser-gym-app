@@ -305,6 +305,13 @@
   color: var(--text-soft);
 }
 
+/* Reps distribution variant: 15 narrow columns, shorter than the month bars. */
+.yir-histogram--reps {
+  height: 84px;
+  max-width: 300px;
+  gap: 3px;
+}
+
 /* ── Streak chain ── */
 
 .yir-chain {

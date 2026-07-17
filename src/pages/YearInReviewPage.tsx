@@ -172,9 +172,15 @@ function SessionsSlide({ stats }: { stats: YearInReviewStats }) {
   );
 }
 
+// Sparse axis labels for the reps histogram: only 1, 5, 10 and 15+ are marked.
+// Unlabelled columns get a non-breaking space so every label row keeps height.
+const REP_BIN_LABELS: Record<number, string> = { 0: "1", 4: "5", 9: "10", 14: "15+" };
+
 function SetsRepsSlide({ stats }: { stats: YearInReviewStats }) {
   const target = stats.totalReps;
   const shown = useCountUp(target);
+  const maxBin = Math.max(...stats.repsHistogram, 1);
+  const modalBin = stats.repsHistogram.indexOf(maxBin);
   const avgReps =
     stats.totalSets > 0 ? Math.round(stats.totalReps / stats.totalSets) : 0;
   // Size from the final value, not the animating one, so the count-up never
@@ -192,6 +198,30 @@ function SetsRepsSlide({ stats }: { stats: YearInReviewStats }) {
       <p className="yir-second-line yir-reveal yir-reveal--3">
         {formatInt(stats.totalSets)} {stats.totalSets === 1 ? "set" : "sets"}
       </p>
+      {stats.totalSets >= 20 && (
+        <div className="yir-histogram yir-histogram--reps" aria-hidden="true">
+          {stats.repsHistogram.map((count, i) => (
+            <div key={i} className="yir-histogram__col">
+              <span
+                className={
+                  i === modalBin
+                    ? "yir-histogram__bar yir-histogram__bar--winner"
+                    : "yir-histogram__bar"
+                }
+                style={
+                  {
+                    "--i": i,
+                    height: `${Math.max((count / maxBin) * 100, count > 0 ? 6 : 2)}%`,
+                  } as React.CSSProperties
+                }
+              />
+              <span className="yir-histogram__label">
+                {REP_BIN_LABELS[i] ?? " "}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
       {avgReps > 0 && (
         <p className="yir-sub yir-reveal yir-reveal--4">
           That's an average of {avgReps} {avgReps === 1 ? "rep" : "reps"} per

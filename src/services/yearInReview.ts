@@ -185,6 +185,8 @@ export interface YearInReviewStats {
   totalReps: number;
   importedSetCount: number;
   totalTonnageKg: number;
+  /** Sets per rep count: index i = sets performed at i+1 reps, last bin = 15+. */
+  repsHistogram: number[];
   trainingDayCount: number;
   topExercises: TopExerciseStat[];
   muscleGroups: MuscleGroupStat[];
@@ -283,6 +285,7 @@ export async function computeYearInReviewStats(
   let totalReps = 0;
   let importedSetCount = 0;
   let totalTonnageKg = 0;
+  const repsHistogram = new Array<number>(15).fill(0);
   const trainingDays = new Set<string>();
   for (const r of yearSets) {
     const reps = r.reps!;
@@ -291,6 +294,7 @@ export async function computeYearInReviewStats(
     if (r.weight != null && r.weight > 0) {
       totalTonnageKg += r.weight * reps;
     }
+    repsHistogram[Math.min(reps, 15) - 1]++;
     trainingDays.add(r.date);
   }
   const trainingDayCount = trainingDays.size;
@@ -639,6 +643,7 @@ export async function computeYearInReviewStats(
     totalReps,
     importedSetCount,
     totalTonnageKg,
+    repsHistogram,
     trainingDayCount,
     topExercises,
     muscleGroups,
