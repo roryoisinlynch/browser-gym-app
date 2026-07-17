@@ -135,15 +135,22 @@ export interface TopExerciseStat {
   tonnageKg: number;
 }
 
-export interface BiggestPr {
+export interface DrySpellPr {
   exerciseName: string;
+  /** Date of the PR that ended the dry streak. */
   date: string;
+  /** Date of the previous PR, where the dry streak began. */
+  previousPrDate: string;
+  gapDays: number;
+  /** Sets of this exercise logged strictly between the two PR dates. */
+  setsBetween: number;
+  /** e1RM of the PR that broke the drought. */
   newE1RM: number;
+  /** Where the lift ended the year; >= newE1RM when a later PR went higher. */
+  yearBestE1RM: number;
   previousE1RM: number;
   newWeight: number | null;
   newReps: number;
-  /** (new - previous) / previous */
-  relativeGain: number;
 }
 
 export interface BiggestRepPr {
@@ -204,10 +211,11 @@ export interface YearInReviewStats {
   prDownCount: number;
   /** Exercises first trained this year. */
   debutExercises: DebutExercise[];
-  biggestPr: BiggestPr | null;
+  /** The longest dry streak broken this year, by days and sets combined. */
+  drySpellPr: DrySpellPr | null;
   biggestRepPr: BiggestRepPr | null;
-  /** e1RM history of the biggest-PR exercise through the end of the review year, date-ascending, for the sparkline. */
-  biggestPrHistory: { date: string; value: number }[];
+  /** e1RM history of the spotlight exercise through the end of the review year, date-ascending, for the sparkline. */
+  spotlightHistory: { date: string; value: number }[];
   monthlyActivityCounts: number[];
   monthsWithActivity: number;
   /** Months of the review year with at least one app-logged session or set. */
@@ -426,34 +434,6 @@ export async function computeYearInReviewStats(
   }
   const yearPrs = [...prByNameAndDate.values()];
 
-  let biggestPr: BiggestPr | null = null;
-  for (const e of yearPrs) {
-    if (e.prType !== "e1rm" || e.newE1RM == null) continue;
-    if (e.previousE1RM == null || e.previousE1RM <= 0) continue;
-    const relativeGain = (e.newE1RM - e.previousE1RM) / e.previousE1RM;
-    const candidate: BiggestPr = {
-      exerciseName: e.exerciseName,
-      date: e.date,
-      newE1RM: e.newE1RM,
-      previousE1RM: e.previousE1RM,
-      newWeight: e.newWeight,
-      newReps: e.newReps,
-      relativeGain,
-    };
-    if (
-      biggestPr == null ||
-      relativeGain > biggestPr.relativeGain ||
-      (relativeGain === biggestPr.relativeGain &&
-        (candidate.newE1RM - candidate.previousE1RM >
-          biggestPr.newE1RM - biggestPr.previousE1RM ||
-          (candidate.newE1RM - candidate.previousE1RM ===
-            biggestPr.newE1RM - biggestPr.previousE1RM &&
-            candidate.date < biggestPr.date)))
-    ) {
-      biggestPr = candidate;
-    }
-  }
-
   let biggestRepPr: BiggestRepPr | null = null;
   for (const e of yearPrs) {
     if (e.prType !== "reps" || e.previousReps == null) continue;
@@ -466,24 +446,6 @@ export async function computeYearInReviewStats(
         previousReps: e.previousReps,
       };
     }
-  }
-
-  let biggestPrHistory: { date: string; value: number }[] = [];
-  if (biggestPr) {
-    const history = await getExerciseSessionHistory(biggestPr.exerciseName);
-    // Clip at the end of the review year so a January viewing doesn't paint
-    // new-year sessions as part of the review-year run.
-    const yearEnd = `${reviewYear + 1}-01-01`;
-    biggestPrHistory = history
-      .map((dp) =>
-        dp.topEstimatedOneRepMax != null && dp.topEstimatedOneRepMax > 0
-          ? { date: dp.date, value: dp.topEstimatedOneRepMax }
-          : null
-      )
-      .filter(
-        (p): p is { date: string; value: number } => p != null && p.date < yearEnd
-      )
-      .sort((a, b) => a.date.localeCompare(b.date));
   }
 
   // Distinct in-year training dates from either source; trainingDays misses a
@@ -589,6 +551,74 @@ export async function computeYearInReviewStats(
   debutExercises.sort(bySetCountDesc);
   const prUpCount = yearOnYearPrs.filter((p) => p.relativeDiff > 0).length;
   const prDownCount = yearOnYearPrs.filter((p) => p.relativeDiff < 0).length;
+
+  // ── The Big One: the longest dry streak broken this year ──
+  // Every in-year e1RM PR event ends a dry streak that began at the previous
+  // PR. Size each streak by days elapsed and by sets logged between the two
+  // PRs, normalize both against the biggest candidate, and spotlight the
+  // largest combined score. Percentage uplift is deliberately not a factor:
+  // it over-rewards barely-trained exercises.
+  let drySpellPr: DrySpellPr | null = null;
+  {
+    const candidates: DrySpellPr[] = [];
+    for (const e of yearPrs) {
+      if (e.prType !== "e1rm" || e.newE1RM == null) continue;
+      if (e.previousE1RM == null || e.previousE1RM <= 0) continue;
+      if (e.previousDate == null) continue;
+      const agg = yoyByExercise.get(normalizeName(e.exerciseName));
+      const dates = agg?.allDates ?? [];
+      let setsBetween = 0;
+      for (const d of dates) {
+        if (d > e.previousDate && d < e.date) setsBetween++;
+      }
+      candidates.push({
+        exerciseName: e.exerciseName,
+        date: e.date,
+        previousPrDate: e.previousDate,
+        gapDays: utcDayNumber(e.date) - utcDayNumber(e.previousDate),
+        setsBetween,
+        newE1RM: e.newE1RM,
+        yearBestE1RM: Math.max(agg?.bestYearE1RM ?? 0, e.newE1RM),
+        previousE1RM: e.previousE1RM,
+        newWeight: e.newWeight,
+        newReps: e.newReps,
+      });
+    }
+    const maxGap = Math.max(...candidates.map((c) => c.gapDays), 0);
+    const maxSets = Math.max(...candidates.map((c) => c.setsBetween), 0);
+    const score = (c: DrySpellPr) =>
+      (maxGap > 0 ? c.gapDays / maxGap : 0) +
+      (maxSets > 0 ? c.setsBetween / maxSets : 0);
+    for (const c of candidates) {
+      if (
+        drySpellPr == null ||
+        score(c) > score(drySpellPr) ||
+        (score(c) === score(drySpellPr) &&
+          (c.gapDays > drySpellPr.gapDays ||
+            (c.gapDays === drySpellPr.gapDays && c.date < drySpellPr.date)))
+      ) {
+        drySpellPr = c;
+      }
+    }
+  }
+
+  let spotlightHistory: { date: string; value: number }[] = [];
+  if (drySpellPr) {
+    const history = await getExerciseSessionHistory(drySpellPr.exerciseName);
+    // Clip at the end of the review year so a January viewing doesn't paint
+    // new-year sessions as part of the review-year run.
+    spotlightHistory = history
+      .map((dp) =>
+        dp.topEstimatedOneRepMax != null && dp.topEstimatedOneRepMax > 0
+          ? { date: dp.date, value: dp.topEstimatedOneRepMax }
+          : null
+      )
+      .filter(
+        (p): p is { date: string; value: number } =>
+          p != null && p.date < reviewYearEnd
+      )
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
 
   // ── Months. With imported data present, count distinct training days per
   // month so imported months aren't rendered empty (a date with both native
@@ -699,9 +729,9 @@ export async function computeYearInReviewStats(
     prUpCount,
     prDownCount,
     debutExercises,
-    biggestPr,
+    drySpellPr,
     biggestRepPr,
-    biggestPrHistory,
+    spotlightHistory,
     monthlyActivityCounts,
     monthsWithActivity,
     nativeMonthCount,

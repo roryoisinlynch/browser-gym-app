@@ -28,6 +28,23 @@ function formatGainPct(relativeGain: number): string {
   return `${Math.round(pct)}`;
 }
 
+/** Caption for the dry-streak spotlight, tiered by how long the drought was. */
+function drySpellCaption(pr: NonNullable<YearInReviewStats["drySpellPr"]>): string {
+  const sets =
+    pr.setsBetween > 0 ? ` ${formatInt(pr.setsBetween)} sets in the making.` : "";
+  if (pr.gapDays >= 365) {
+    const years = Math.floor(pr.gapDays / 365);
+    return `${ordinalDate(pr.date)}. Your first ${pr.exerciseName} PR in over ${
+      years === 1 ? "a year" : `${years} years`
+    }.${sets}`;
+  }
+  if (pr.gapDays >= 60) {
+    const months = Math.round(pr.gapDays / 30.44);
+    return `${ordinalDate(pr.date)}. ${months} months between bests.${sets}`;
+  }
+  return `${ordinalDate(pr.date)}. The longest-standing best you broke this year.`;
+}
+
 /** "2026-10-14" -> "14th Oct" */
 function ordinalDate(date: string): string {
   const [, m, d] = date.split("-").map(Number);
@@ -627,10 +644,11 @@ function Confetti() {
 }
 
 function PeakSlide({ stats }: { stats: YearInReviewStats }) {
-  const pr = stats.biggestPr;
+  const pr = stats.drySpellPr;
   const repPr = stats.biggestRepPr;
 
   if (pr) {
+    const relativeGain = (pr.yearBestE1RM - pr.previousE1RM) / pr.previousE1RM;
     return (
       <div className="yir-slide-body">
         <Confetti />
@@ -640,15 +658,12 @@ function PeakSlide({ stats }: { stats: YearInReviewStats }) {
         </p>
         <p className="yir-second-line yir-reveal yir-reveal--3">
           {formatE1RM(pr.previousE1RM)} kg{" "}
-          <span className="yir-strength__arrow">→</span> {formatE1RM(pr.newE1RM)} kg
-          e1RM
-          <span className="yir-chip">+{formatGainPct(pr.relativeGain)}%</span>
+          <span className="yir-strength__arrow">→</span>{" "}
+          {formatE1RM(pr.yearBestE1RM)} kg e1RM
+          <span className="yir-chip">+{formatGainPct(relativeGain)}%</span>
         </p>
-        <PeakSparkline points={stats.biggestPrHistory} reviewYear={stats.reviewYear} />
-        <p className="yir-sub yir-reveal yir-reveal--4">
-          {ordinalDate(pr.date)}. Your best lift of the year, and a new all-time
-          record.
-        </p>
+        <PeakSparkline points={stats.spotlightHistory} reviewYear={stats.reviewYear} />
+        <p className="yir-sub yir-reveal yir-reveal--4">{drySpellCaption(pr)}</p>
       </div>
     );
   }
