@@ -15,6 +15,7 @@ import {
   sessionCompletedDate,
   type PREvent,
 } from "../repositories/programRepository";
+import { calculateEstimatedOneRepMax } from "./setAnalysis";
 import { loadAllImportedSets } from "./importedSetStore";
 import { clearYearInReviewPromptFlag } from "../repositories/yearInReviewRepository";
 
@@ -152,11 +153,26 @@ export interface BiggestRepPr {
   previousReps: number;
 }
 
-export interface E1rmProgressRow {
+export interface YearOnYearPr {
   name: string;
-  previousBestE1RM: number;
-  newBestE1RM: number;
-  relativeGain: number;
+  /** Best e1RM across all years before the review year. */
+  bestPriorE1RM: number;
+  bestYearE1RM: number;
+  /** (year - prior) / prior; negative when this year fell short. */
+  relativeDiff: number;
+  yearSetCount: number;
+}
+
+export interface DebutExercise {
+  name: string;
+  /** First date the exercise appears anywhere in the data. */
+  firstDate: string;
+  /** Best e1RM within 7 calendar days of the debut, inclusive. */
+  firstWeekBestE1RM: number;
+  yearBestE1RM: number;
+  /** (yearBest - firstWeekBest) / firstWeekBest, always >= 0. */
+  relativeGrowth: number;
+  yearSetCount: number;
 }
 
 export interface BusiestMonth {
@@ -182,8 +198,12 @@ export interface YearInReviewStats {
   topExercises: TopExerciseStat[];
   /** Number of distinct exercise names trained in the review year. */
   distinctExerciseCount: number;
-  prCount: number;
-  prExerciseCount: number;
+  /** Exercises trained both this year and before, this year's best vs all prior. */
+  yearOnYearPrs: YearOnYearPr[];
+  prUpCount: number;
+  prDownCount: number;
+  /** Exercises first trained this year. */
+  debutExercises: DebutExercise[];
   biggestPr: BiggestPr | null;
   biggestRepPr: BiggestRepPr | null;
   /** e1RM history of the biggest-PR exercise through the end of the review year, date-ascending, for the sparkline. */
@@ -206,7 +226,6 @@ export interface YearInReviewStats {
   perfectWeekCount: number;
   aSeasonCount: number;
   seasonsCompleted: number;
-  e1rmProgress: E1rmProgressRow[];
   hasMinimumData: boolean;
 }
 
@@ -220,15 +239,18 @@ function normalizeName(name: string): string {
   return name.trim().toLowerCase();
 }
 
+/** UTC day count for a local "YYYY-MM-DD" date, so DST shifts can't skew gaps. */
+function utcDayNumber(date: string): number {
+  const [y, m, d] = date.split("-").map(Number);
+  return Math.floor(Date.UTC(y, m - 1, d) / 86400000);
+}
+
 /**
- * Monday-aligned week index for a local "YYYY-MM-DD" date. Computed on the
- * UTC day count so DST shifts can't split a week. Day 0 (1970-01-01) was a
- * Thursday, so Mondays sit at day 4 + 7k.
+ * Monday-aligned week index for a local "YYYY-MM-DD" date. Day 0 (1970-01-01)
+ * was a Thursday, so Mondays sit at day 4 + 7k.
  */
 function mondayWeekIndex(date: string): number {
-  const [y, m, d] = date.split("-").map(Number);
-  const days = Math.floor(Date.UTC(y, m - 1, d) / 86400000);
-  return Math.floor((days - 4) / 7);
+  return Math.floor((utcDayNumber(date) - 4) / 7);
 }
 
 /** Longest run of consecutive integers in an ascending-sorted list. */
@@ -249,6 +271,8 @@ export async function computeYearInReviewStats(
 ): Promise<YearInReviewStats> {
   const prefix = `${reviewYear}-`;
   const inYear = (date: string) => date.startsWith(prefix);
+  const reviewYearStart = `${reviewYear}-01-01`;
+  const reviewYearEnd = `${reviewYear + 1}-01-01`;
 
   const [sessions, weeks, seasons, setRecords, prEvents] = await Promise.all([
     getAll<SessionInstance>(STORE_NAMES.sessionInstances),
@@ -346,10 +370,10 @@ export async function computeYearInReviewStats(
     const casing = r.exerciseName.trim();
     agg.casings.set(casing, (agg.casings.get(casing) ?? 0) + 1);
   }
-  const displayName = (agg: ExerciseAgg): string => {
+  const displayName = (casings: Map<string, number>): string => {
     let best = "";
     let bestCount = -1;
-    for (const [casing, count] of agg.casings) {
+    for (const [casing, count] of casings) {
       if (count > bestCount) {
         best = casing;
         bestCount = count;
@@ -361,10 +385,10 @@ export async function computeYearInReviewStats(
     (a, b) =>
       b.setCount - a.setCount ||
       b.tonnageKg - a.tonnageKg ||
-      displayName(a).localeCompare(displayName(b))
+      displayName(a.casings).localeCompare(displayName(b.casings))
   );
   const topExercises: TopExerciseStat[] = rankedExercises.slice(0, 5).map((agg) => ({
-    name: displayName(agg),
+    name: displayName(agg.casings),
     setCount: agg.setCount,
     repCount: agg.repCount,
     tonnageKg: agg.tonnageKg,
@@ -401,9 +425,6 @@ export async function computeYearInReviewStats(
     });
   }
   const yearPrs = [...prByNameAndDate.values()];
-  const prCount = yearPrs.length;
-  const prExerciseCount = new Set(yearPrs.map((e) => normalizeName(e.exerciseName)))
-    .size;
 
   let biggestPr: BiggestPr | null = null;
   for (const e of yearPrs) {
@@ -470,6 +491,105 @@ export async function computeYearInReviewStats(
   const activeDays = new Set(trainingDays);
   for (const s of yearSessions) activeDays.add(sessionCompletedDate(s));
 
+  // ── Year-on-year PRs and debuts ──
+  // A PR is this year's best e1RM against the best across all prior years, in
+  // either direction. An exercise first trained this year is a debut instead:
+  // its first-week best against its best of the year. Bodyweight-only
+  // exercises have no e1RM and appear in neither list.
+  interface YoYAgg {
+    casings: Map<string, number>;
+    bestPriorE1RM: number;
+    bestYearE1RM: number;
+    firstEverDate: string | null;
+    yearSetCount: number;
+    /** In-year e1RM points, for the debut first-week best. */
+    yearPoints: { date: string; e1rm: number }[];
+    /** Set dates across all years, for dry-streak measurement. */
+    allDates: string[];
+  }
+  const yoyByExercise = new Map<string, YoYAgg>();
+  for (const r of setRecords) {
+    if (r.reps == null || r.reps <= 0) continue;
+    if (r.source !== "imported" && r.sessionStatus !== "completed") continue;
+    // A January viewing must not leak new-year sets into the review.
+    if (r.date >= reviewYearEnd) continue;
+    const key = normalizeName(r.exerciseName);
+    let agg = yoyByExercise.get(key);
+    if (!agg) {
+      agg = {
+        casings: new Map(),
+        bestPriorE1RM: 0,
+        bestYearE1RM: 0,
+        firstEverDate: null,
+        yearSetCount: 0,
+        yearPoints: [],
+        allDates: [],
+      };
+      yoyByExercise.set(key, agg);
+    }
+    if (agg.firstEverDate == null || r.date < agg.firstEverDate) {
+      agg.firstEverDate = r.date;
+    }
+    agg.allDates.push(r.date);
+    const e1rm =
+      r.weight != null && r.weight > 0
+        ? calculateEstimatedOneRepMax(r.weight, r.reps)
+        : null;
+    if (inYear(r.date)) {
+      agg.yearSetCount++;
+      const casing = r.exerciseName.trim();
+      agg.casings.set(casing, (agg.casings.get(casing) ?? 0) + 1);
+      if (e1rm != null) {
+        agg.yearPoints.push({ date: r.date, e1rm });
+        if (e1rm > agg.bestYearE1RM) agg.bestYearE1RM = e1rm;
+      }
+    } else if (e1rm != null && e1rm > agg.bestPriorE1RM) {
+      agg.bestPriorE1RM = e1rm;
+    }
+  }
+
+  const yearOnYearPrs: YearOnYearPr[] = [];
+  const debutExercises: DebutExercise[] = [];
+  for (const agg of yoyByExercise.values()) {
+    // Mirrors the old strength-progress rule: one or two sets is noise.
+    if (agg.bestYearE1RM <= 0 || agg.yearSetCount < 3) continue;
+    const name = displayName(agg.casings);
+    if (agg.bestPriorE1RM > 0) {
+      yearOnYearPrs.push({
+        name,
+        bestPriorE1RM: agg.bestPriorE1RM,
+        bestYearE1RM: agg.bestYearE1RM,
+        relativeDiff: (agg.bestYearE1RM - agg.bestPriorE1RM) / agg.bestPriorE1RM,
+        yearSetCount: agg.yearSetCount,
+      });
+    } else if (agg.firstEverDate != null && inYear(agg.firstEverDate)) {
+      const debutDay = utcDayNumber(agg.firstEverDate);
+      let firstWeekBest = 0;
+      for (const p of agg.yearPoints) {
+        if (utcDayNumber(p.date) - debutDay <= 6 && p.e1rm > firstWeekBest) {
+          firstWeekBest = p.e1rm;
+        }
+      }
+      if (firstWeekBest <= 0) continue;
+      debutExercises.push({
+        name,
+        firstDate: agg.firstEverDate,
+        firstWeekBestE1RM: firstWeekBest,
+        yearBestE1RM: agg.bestYearE1RM,
+        relativeGrowth: (agg.bestYearE1RM - firstWeekBest) / firstWeekBest,
+        yearSetCount: agg.yearSetCount,
+      });
+    }
+  }
+  const bySetCountDesc = (
+    a: { yearSetCount: number; name: string },
+    b: { yearSetCount: number; name: string }
+  ) => b.yearSetCount - a.yearSetCount || a.name.localeCompare(b.name);
+  yearOnYearPrs.sort(bySetCountDesc);
+  debutExercises.sort(bySetCountDesc);
+  const prUpCount = yearOnYearPrs.filter((p) => p.relativeDiff > 0).length;
+  const prDownCount = yearOnYearPrs.filter((p) => p.relativeDiff < 0).length;
+
   // ── Months. With imported data present, count distinct training days per
   // month so imported months aren't rendered empty (a date with both native
   // and imported work counts once); with native-only data, count sessions so
@@ -508,8 +628,6 @@ export async function computeYearInReviewStats(
     [...new Set([...activeDays].map(mondayWeekIndex))].sort((a, b) => a - b)
   );
 
-  const reviewYearEnd = `${reviewYear + 1}-01-01`;
-  const reviewYearStart = `${reviewYear}-01-01`;
   const allActiveDates = new Set<string>();
   for (const s of sessions) {
     if (s.status !== "completed") continue;
@@ -564,38 +682,6 @@ export async function computeYearInReviewStats(
     totalTrainingSeconds += Math.min(Math.max(seconds, 0), DURATION_CAP_SECONDS);
   }
 
-  // ── Year-over-year e1RM progress for the most-trained weighted lifts ──
-  const previousPrefix = `${reviewYear - 1}-`;
-  const weightedCandidates = rankedExercises
-    .filter((agg) => agg.tonnageKg > 0)
-    .slice(0, 6)
-    .map(displayName);
-  const e1rmProgress: E1rmProgressRow[] = [];
-  for (const name of weightedCandidates) {
-    if (e1rmProgress.length >= 3) break;
-    const history = await getExerciseSessionHistory(name);
-    let previousBest = 0;
-    let newBest = 0;
-    let inYearPoints = 0;
-    for (const dp of history) {
-      const v = dp.topEstimatedOneRepMax;
-      if (v == null || v <= 0) continue;
-      if (dp.date.startsWith(previousPrefix) && v > previousBest) previousBest = v;
-      if (inYear(dp.date)) {
-        inYearPoints++;
-        if (v > newBest) newBest = v;
-      }
-    }
-    if (previousBest > 0 && newBest > 0 && inYearPoints >= 3) {
-      e1rmProgress.push({
-        name,
-        previousBestE1RM: previousBest,
-        newBestE1RM: newBest,
-        relativeGain: (newBest - previousBest) / previousBest,
-      });
-    }
-  }
-
   return {
     reviewYear,
     totalCompletedSessions,
@@ -609,8 +695,10 @@ export async function computeYearInReviewStats(
     trainingDayCount,
     topExercises,
     distinctExerciseCount,
-    prCount,
-    prExerciseCount,
+    yearOnYearPrs,
+    prUpCount,
+    prDownCount,
+    debutExercises,
     biggestPr,
     biggestRepPr,
     biggestPrHistory,
@@ -627,7 +715,6 @@ export async function computeYearInReviewStats(
     perfectWeekCount,
     aSeasonCount,
     seasonsCompleted,
-    e1rmProgress,
     hasMinimumData: totalCompletedSessions >= 1 || totalSets >= 1,
   };
 }

@@ -423,7 +423,7 @@ function ExerciseSplitSlide({ stats }: { stats: YearInReviewStats }) {
   );
 }
 
-function StrengthSlide({ rows }: { rows: YearInReviewStats["e1rmProgress"] }) {
+function StrengthSlide({ rows }: { rows: YearInReviewStats["yearOnYearPrs"] }) {
   return (
     <div className="yir-slide-body">
       <p className="yir-eyebrow yir-reveal">Getting stronger</p>
@@ -436,16 +436,49 @@ function StrengthSlide({ rows }: { rows: YearInReviewStats["e1rmProgress"] }) {
           >
             <p className="yir-strength__name">{row.name}</p>
             <p className="yir-strength__values">
-              {formatE1RM(row.previousBestE1RM)} kg{" "}
+              {formatE1RM(row.bestPriorE1RM)} kg{" "}
               <span className="yir-strength__arrow">→</span>{" "}
-              {formatE1RM(row.newBestE1RM)} kg e1RM
-              <span className="yir-chip">+{formatGainPct(row.relativeGain)}%</span>
+              {formatE1RM(row.bestYearE1RM)} kg e1RM
+              <span className="yir-chip">+{formatGainPct(row.relativeDiff)}%</span>
             </p>
           </div>
         ))}
       </div>
       <p className="yir-sub yir-reveal yir-reveal--4">
-        Your best lifts, this year against last.
+        Your best lifts, this year against everything before.
+      </p>
+    </div>
+  );
+}
+
+function DebutsSlide({ stats }: { stats: YearInReviewStats }) {
+  const rows = stats.debutExercises.slice(0, 3);
+  return (
+    <div className="yir-slide-body">
+      <p className="yir-eyebrow yir-reveal">New this year</p>
+      <div className="yir-strength">
+        {rows.map((row, i) => (
+          <div
+            key={row.name}
+            className="yir-strength__row yir-reveal"
+            style={{ "--i": i } as React.CSSProperties}
+          >
+            <p className="yir-strength__name">{row.name}</p>
+            <p className="yir-strength__values">
+              {formatE1RM(row.firstWeekBestE1RM)} kg{" "}
+              <span className="yir-strength__arrow">→</span>{" "}
+              {formatE1RM(row.yearBestE1RM)} kg e1RM
+              {row.relativeGrowth > 0 && (
+                <span className="yir-chip yir-chip--debut">
+                  +{formatGainPct(row.relativeGrowth)}%
+                </span>
+              )}
+            </p>
+          </div>
+        ))}
+      </div>
+      <p className="yir-sub yir-reveal yir-reveal--4">
+        Started this year. First-week best against best of the year.
       </p>
     </div>
   );
@@ -467,15 +500,31 @@ function PrCountSlide({ stats }: { stats: YearInReviewStats }) {
       </div>
       <p className="yir-eyebrow yir-reveal">Personal records</p>
       <p className="yir-display yir-reveal yir-reveal--2">
-        {formatInt(stats.prCount)}
+        {formatInt(stats.prUpCount)}
         <span className="yir-display__unit">
-          all-time {stats.prCount === 1 ? "PR" : "PRs"}
+          {stats.prUpCount === 1 ? "lift up" : "lifts up"}
         </span>
       </p>
-      <p className="yir-sub yir-reveal yir-reveal--3">
-        Across {formatInt(stats.prExerciseCount)} different{" "}
-        {stats.prExerciseCount === 1 ? "exercise" : "exercises"}.
+      {stats.prDownCount > 0 && (
+        <p className="yir-second-line yir-reveal yir-reveal--3">
+          {formatInt(stats.prDownCount)} down
+        </p>
+      )}
+      <p
+        className={`yir-sub yir-reveal ${
+          stats.prDownCount > 0 ? "yir-reveal--4" : "yir-reveal--3"
+        }`}
+      >
+        Your best this year against your best from every year before it.
       </p>
+      {stats.debutExercises.length > 0 && (
+        <p className="yir-footnote yir-reveal yir-reveal--4">
+          {formatInt(stats.debutExercises.length)}{" "}
+          {stats.debutExercises.length === 1
+            ? "exercise made its debut this year."
+            : "exercises made their debut this year."}
+        </p>
+      )}
     </div>
   );
 }
@@ -678,8 +727,11 @@ function PosterSlide({
   if (stats.topExercises.length > 0 && stats.topExercises[0].setCount >= 20) {
     cells.push({ label: "Top exercise", value: stats.topExercises[0].name });
   }
-  if (stats.prCount > 0) {
-    cells.push({ label: "All-time PRs", value: formatInt(stats.prCount) });
+  if (stats.prUpCount > 0) {
+    cells.push({ label: "Lifts up", value: formatInt(stats.prUpCount) });
+  }
+  if (stats.debutExercises.length > 0) {
+    cells.push({ label: "Debuts", value: formatInt(stats.debutExercises.length) });
   }
 
   const medalParts: string[] = [];
@@ -752,7 +804,9 @@ function buildDeck(stats: YearInReviewStats, onDone: () => void): SlideDef[] {
       node: <ExerciseSplitSlide stats={stats} />,
     });
   }
-  const strengthRows = stats.e1rmProgress.filter((r) => r.relativeGain > 0);
+  const strengthRows = stats.yearOnYearPrs
+    .filter((r) => r.relativeDiff > 0)
+    .slice(0, 3);
   if (strengthRows.length >= 1) {
     deck.push({
       key: "strength",
@@ -760,8 +814,11 @@ function buildDeck(stats: YearInReviewStats, onDone: () => void): SlideDef[] {
       node: <StrengthSlide rows={strengthRows} />,
     });
   }
-  if (stats.prCount >= 3) {
+  if (stats.prUpCount + stats.prDownCount >= 3) {
     deck.push({ key: "pr-count", glow: "lime", node: <PrCountSlide stats={stats} /> });
+  }
+  if (stats.debutExercises.length >= 1) {
+    deck.push({ key: "debuts", glow: "blue", node: <DebutsSlide stats={stats} /> });
   }
   deck.push({ key: "peak", glow: "peak", node: <PeakSlide stats={stats} /> });
   deck.push({

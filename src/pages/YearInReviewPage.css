@@ -243,6 +243,12 @@
   vertical-align: 2px;
 }
 
+/* Debuts are a different metric to PRs; blue keeps them visually distinct. */
+.yir-chip--debut {
+  background: rgba(127, 177, 255, 0.16);
+  color: #7fb1ff;
+}
+
 /* ── Cover ── */
 
 .yir-barbell {
