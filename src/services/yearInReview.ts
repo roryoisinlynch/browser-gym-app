@@ -228,7 +228,6 @@ export interface YearInReviewStats {
   totalSets: number;
   totalReps: number;
   importedSetCount: number;
-  totalTonnageKg: number;
   /** Sets per rep count: index i = sets performed at i+1 reps, last bin = 15+. */
   repsHistogram: number[];
   /**
@@ -393,7 +392,6 @@ export async function computeYearInReviewStats(
   const totalSets = yearSets.length;
   let totalReps = 0;
   let importedSetCount = 0;
-  let totalTonnageKg = 0;
   const repsHistogram = new Array<number>(15).fill(0);
   const jan1Ms = Date.UTC(reviewYear, 0, 1);
   const daysInYear = Math.round((Date.UTC(reviewYear + 1, 0, 1) - jan1Ms) / 86400000);
@@ -403,9 +401,6 @@ export async function computeYearInReviewStats(
     const reps = r.reps!;
     totalReps += reps;
     if (r.source === "imported") importedSetCount++;
-    if (r.weight != null && r.weight > 0) {
-      totalTonnageKg += r.weight * reps;
-    }
     repsHistogram[Math.min(reps, 15) - 1]++;
     const [y, m, d] = r.date.split("-").map(Number);
     dailySetCounts[(Date.UTC(y, m - 1, d) - jan1Ms) / 86400000]++;
@@ -982,7 +977,6 @@ export async function computeYearInReviewStats(
     totalSets,
     totalReps,
     importedSetCount,
-    totalTonnageKg,
     repsHistogram,
     repExtremes,
     dailySetCounts,

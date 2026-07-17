@@ -943,9 +943,6 @@ function PosterSlide({
   }
   cells.push({ label: "Sets", value: formatInt(stats.totalSets) });
   cells.push({ label: "Reps", value: formatInt(stats.totalReps) });
-  if (stats.totalTonnageKg > 0) {
-    cells.push({ label: "Weight moved", value: `${formatInt(stats.totalTonnageKg)} kg` });
-  }
   if (stats.trainingDayCount > 0) {
     cells.push({ label: "Training days", value: formatInt(stats.trainingDayCount) });
   }
