@@ -4,6 +4,7 @@ import {
   computeYearInReviewStats,
   getYearInReviewState,
   type YearInReviewStats,
+  type VolumeExercise,
 } from "../services/yearInReview";
 import { formatDuration } from "../services/sessionMetrics";
 import "./YearInReviewPage.css";
@@ -484,9 +485,32 @@ function StreakSlide({ stats }: { stats: YearInReviewStats }) {
   );
 }
 
+/** A compact year-on-year set-count delta chip for a volume exercise. */
+function volumeDeltaChip(ex: VolumeExercise): React.ReactNode {
+  if (ex.isDebut) return <span className="yir-chip yir-chip--debut">New</span>;
+  if (ex.deltaPct == null) return null;
+  if (ex.deltaPct >= 0) {
+    return <span className="yir-chip">+{formatGainPct(ex.deltaPct)}%</span>;
+  }
+  return (
+    <span className="yir-chip yir-chip--down">{formatGainPct(ex.deltaPct)}%</span>
+  );
+}
+
+/** A full sentence describing the #1 exercise's change versus last year. */
+function volumeDeltaText(ex: VolumeExercise): string | null {
+  if (ex.isDebut) return "New this year.";
+  if (ex.deltaPct == null) return null;
+  if (ex.deltaPct >= 0) return `Up ${formatGainPct(ex.deltaPct)}% on last year.`;
+  return `Down ${formatGainPct(Math.abs(ex.deltaPct))}% on last year.`;
+}
+
 function TopExerciseSlide({ stats }: { stats: YearInReviewStats }) {
-  const top = stats.topExercises[0];
-  const runnersUp = stats.topExercises.slice(1, 3);
+  const leaders = stats.volumeLeaders;
+  const top = leaders[0];
+  const runnersUp = leaders.slice(1, 5);
+  const topDelta = volumeDeltaText(top);
+  const decliners = stats.volumeDecliners;
   return (
     <div className="yir-slide-body">
       <p className="yir-eyebrow yir-reveal">Your number one</p>
@@ -494,7 +518,10 @@ function TopExerciseSlide({ stats }: { stats: YearInReviewStats }) {
       <p className="yir-sub yir-reveal yir-reveal--3">
         {formatInt(top.setCount)} sets this year, more than any other exercise.
       </p>
-      {runnersUp.length >= 2 && (
+      {topDelta && (
+        <p className="yir-sub yir-reveal yir-reveal--3">{topDelta}</p>
+      )}
+      {runnersUp.length > 0 && (
         <ul className="yir-runner-list yir-reveal yir-reveal--4">
           {runnersUp.map((ex, i) => (
             <li key={ex.name} className="yir-runner-list__item">
@@ -502,57 +529,27 @@ function TopExerciseSlide({ stats }: { stats: YearInReviewStats }) {
               <span className="yir-runner-list__count">
                 {formatInt(ex.setCount)} sets
               </span>
+              {volumeDeltaChip(ex)}
             </li>
           ))}
         </ul>
       )}
-    </div>
-  );
-}
-
-function ExerciseSplitSlide({ stats }: { stats: YearInReviewStats }) {
-  const topExercises = stats.topExercises.slice(0, 10);
-  const topSets = topExercises.reduce((sum, ex) => sum + ex.setCount, 0);
-  const rows = topExercises.map((ex) => ({
-    name: ex.name,
-    share: stats.totalSets > 0 ? ex.setCount / stats.totalSets : 0,
-  }));
-  const restSets = stats.totalSets - topSets;
-  if (restSets > 0) {
-    rows.push({ name: "Everything else", share: restSets / stats.totalSets });
-  }
-  const topShare = rows[0]?.share ?? 0;
-  const maxShare = Math.max(...rows.map((r) => r.share), 0.01);
-  return (
-    <div className="yir-slide-body">
-      <p className="yir-eyebrow yir-reveal">Where the work went</p>
-      <p className="yir-display yir-reveal yir-reveal--2">
-        {Math.round(topShare * 100)}%
-      </p>
-      <p className="yir-second-line yir-reveal yir-reveal--3">
-        of your year went to {rows[0]?.name}
-      </p>
-      <div className="yir-split yir-split--exercises">
-        {rows.map((g, i) => (
-          <div key={g.name} className="yir-split__row">
-            <span className="yir-split__name">{g.name}</span>
-            <span className="yir-split__track">
-              <span
-                className={
-                  i === 0 ? "yir-split__bar yir-split__bar--top" : "yir-split__bar"
-                }
-                style={
-                  {
-                    "--i": i,
-                    "--w": `${Math.max((g.share / maxShare) * 100, 4)}%`,
-                  } as React.CSSProperties
-                }
-              />
-            </span>
-            <span className="yir-split__pct">{Math.round(g.share * 100)}%</span>
-          </div>
-        ))}
-      </div>
+      {decliners.length > 0 && (
+        <div className="yir-decliners yir-reveal yir-reveal--4">
+          <p className="yir-decliners__heading">Biggest drop-offs versus last year</p>
+          <ul className="yir-runner-list">
+            {decliners.map((ex) => (
+              <li key={ex.name} className="yir-runner-list__item">
+                {ex.name}
+                <span className="yir-runner-list__count">
+                  {formatInt(ex.setCount)} sets
+                </span>
+                {volumeDeltaChip(ex)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <p className="yir-sub yir-reveal yir-reveal--4">
         Across {formatInt(stats.distinctExerciseCount)} different exercises.
       </p>
@@ -946,13 +943,6 @@ function buildDeck(stats: YearInReviewStats, onDone: () => void): SlideDef[] {
       key: "top-exercise",
       glow: "lime",
       node: <TopExerciseSlide stats={stats} />,
-    });
-  }
-  if (stats.topExercises.length >= 3 && stats.totalSets >= 50) {
-    deck.push({
-      key: "exercise-split",
-      glow: "blue",
-      node: <ExerciseSplitSlide stats={stats} />,
     });
   }
   if (stats.prUpCount + stats.prDownCount >= 3) {

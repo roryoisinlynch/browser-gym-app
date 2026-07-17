@@ -135,6 +135,22 @@ export interface TopExerciseStat {
   tonnageKg: number;
 }
 
+export interface VolumeExercise {
+  name: string;
+  /** Sets logged this year. */
+  setCount: number;
+  /** Sets logged in the previous calendar year. */
+  prevSetCount: number;
+  /**
+   * Change in set count versus last year: (year - prev) / prev. Null for a
+   * debut (no prior history at all); +1 (a full +100%) for a gap year where
+   * the exercise has earlier history but none last year.
+   */
+  deltaPct: number | null;
+  /** True when the exercise was first trained this year. */
+  isDebut: boolean;
+}
+
 export interface DrySpellPr {
   exerciseName: string;
   /** Date of the PR that ended the dry streak. */
@@ -216,6 +232,10 @@ export interface YearInReviewStats {
   dailySetCounts: number[];
   trainingDayCount: number;
   topExercises: TopExerciseStat[];
+  /** Top five exercises by set count, each with a year-on-year set-count delta. */
+  volumeLeaders: VolumeExercise[];
+  /** Exercises whose set count fell most versus the previous calendar year. */
+  volumeDecliners: VolumeExercise[];
   /** Number of distinct exercise names trained in the review year. */
   distinctExerciseCount: number;
   /** Exercises trained both this year and before, this year's best vs all prior. */
@@ -336,6 +356,8 @@ export async function computeYearInReviewStats(
 ): Promise<YearInReviewStats> {
   const prefix = `${reviewYear}-`;
   const inYear = (date: string) => date.startsWith(prefix);
+  const prevYearPrefix = `${reviewYear - 1}-`;
+  const inPrevYear = (date: string) => date.startsWith(prevYearPrefix);
   const reviewYearStart = `${reviewYear}-01-01`;
   const reviewYearEnd = `${reviewYear + 1}-01-01`;
 
@@ -562,6 +584,8 @@ export async function computeYearInReviewStats(
     bestYearE1RM: number;
     firstEverDate: string | null;
     yearSetCount: number;
+    /** Sets logged in the previous calendar year, for volume deltas. */
+    prevYearSetCount: number;
     /** In-year e1RM points, for the debut first-week best. */
     yearPoints: { date: string; e1rm: number }[];
     /** Set dates across all years, for dry-streak measurement. */
@@ -582,6 +606,7 @@ export async function computeYearInReviewStats(
         bestYearE1RM: 0,
         firstEverDate: null,
         yearSetCount: 0,
+        prevYearSetCount: 0,
         yearPoints: [],
         allDates: [],
       };
@@ -590,6 +615,7 @@ export async function computeYearInReviewStats(
     if (agg.firstEverDate == null || r.date < agg.firstEverDate) {
       agg.firstEverDate = r.date;
     }
+    if (inPrevYear(r.date)) agg.prevYearSetCount++;
     agg.allDates.push(r.date);
     const e1rm =
       r.weight != null && r.weight > 0
@@ -649,6 +675,46 @@ export async function computeYearInReviewStats(
   debutExercises.sort(bySetCountDesc);
   const prUpCount = yearOnYearPrs.filter((p) => p.relativeDiff > 0).length;
   const prDownCount = yearOnYearPrs.filter((p) => p.relativeDiff < 0).length;
+
+  // ── Volume year-on-year: set-count change per exercise vs last calendar year.
+  // A debut (first trained this year) has no baseline and shows no percentage.
+  // A gap year (earlier history but nothing last year) counts as +100%. ──
+  const volumeDeltaFor = (setCount: number, agg: YoYAgg | undefined): VolumeExercise | null => {
+    if (!agg) return null;
+    const isDebut = agg.firstEverDate != null && inYear(agg.firstEverDate);
+    let deltaPct: number | null;
+    if (isDebut) {
+      deltaPct = null;
+    } else if (agg.prevYearSetCount === 0) {
+      deltaPct = 1; // gap year: had earlier history, none last year
+    } else {
+      deltaPct = (setCount - agg.prevYearSetCount) / agg.prevYearSetCount;
+    }
+    return { name: "", setCount, prevSetCount: agg.prevYearSetCount, deltaPct, isDebut };
+  };
+  const volumeLeaders: VolumeExercise[] = topExercises.slice(0, 5).map((ex) => {
+    const delta = volumeDeltaFor(ex.setCount, yoyByExercise.get(normalizeName(ex.name)));
+    return { ...(delta ?? { setCount: ex.setCount, prevSetCount: 0, deltaPct: null, isDebut: false }), name: ex.name };
+  });
+  // Decliners: exercises still trained this year (>= 3 sets) that fell versus a
+  // real prior-year presence (>= 3 sets last year). Biggest drop first.
+  const volumeDecliners: VolumeExercise[] = [];
+  for (const agg of yoyByExercise.values()) {
+    if (agg.yearSetCount < 3 || agg.prevYearSetCount < 3) continue;
+    const deltaPct = (agg.yearSetCount - agg.prevYearSetCount) / agg.prevYearSetCount;
+    if (deltaPct >= 0) continue;
+    volumeDecliners.push({
+      name: displayName(agg.casings),
+      setCount: agg.yearSetCount,
+      prevSetCount: agg.prevYearSetCount,
+      deltaPct,
+      isDebut: false,
+    });
+  }
+  volumeDecliners.sort(
+    (a, b) => (a.deltaPct ?? 0) - (b.deltaPct ?? 0) || a.name.localeCompare(b.name)
+  );
+  volumeDecliners.splice(3);
 
   // ── The Big One: the longest dry streak broken this year ──
   // Every in-year e1RM PR event ends a dry streak that began at the previous
@@ -832,6 +898,8 @@ export async function computeYearInReviewStats(
     dailySetCounts,
     trainingDayCount,
     topExercises,
+    volumeLeaders,
+    volumeDecliners,
     distinctExerciseCount,
     yearOnYearPrs,
     prUpCount,
