@@ -638,7 +638,8 @@ function StrengthSlide({
 }
 
 function DebutsSlide({ stats }: { stats: YearInReviewStats }) {
-  const rows = stats.debutExercises.slice(0, 3);
+  const rows = stats.debutExercises.slice(0, 5);
+  const more = stats.debutExercises.length - rows.length;
   return (
     <div className="yir-slide-body">
       <p className="yir-eyebrow yir-reveal">New this year</p>
@@ -676,6 +677,11 @@ function DebutsSlide({ stats }: { stats: YearInReviewStats }) {
       <p className="yir-sub yir-reveal yir-reveal--4">
         Started this year. First-week best against best of the year.
       </p>
+      {more > 0 && (
+        <p className="yir-footnote yir-reveal yir-reveal--4">
+          + {formatInt(more)} more new {more === 1 ? "exercise" : "exercises"}.
+        </p>
+      )}
     </div>
   );
 }
