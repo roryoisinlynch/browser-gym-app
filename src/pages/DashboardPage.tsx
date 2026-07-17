@@ -2530,7 +2530,7 @@ export default function DashboardPage() {
                   Your {yearReviewYear} Year in Review
                 </p>
                 <p className="dashboard-up-next__sub">
-                  Your whole year in the gym, one minute, big numbers.
+                  View the key metrics from this past year of training.
                 </p>
               </div>
               <span className="dashboard-up-next__cta dashboard-up-next__cta--year-review">
