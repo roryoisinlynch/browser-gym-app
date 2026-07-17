@@ -107,7 +107,8 @@ const NUMBER_WORDS = [
 ];
 
 function monthsPhrase(n: number): string {
-  return `${n} ${n === 1 ? "month" : "months"}`;
+  const word = NUMBER_WORDS[n]?.toLowerCase() ?? String(n);
+  return `${word} ${n === 1 ? "month" : "months"}`;
 }
 
 /**
