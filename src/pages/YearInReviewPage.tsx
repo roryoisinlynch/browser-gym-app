@@ -122,6 +122,37 @@ function CoverSlide({ stats }: { stats: YearInReviewStats }) {
   );
 }
 
+/**
+ * GitHub-style contribution calendar: columns are Monday-aligned weeks, rows
+ * Mon to Sun, cells shaded by that day's set count (native + imported).
+ */
+function ContributionCalendar({ stats }: { stats: YearInReviewStats }) {
+  const counts = stats.dailySetCounts;
+  const max = Math.max(...counts, 1);
+  // Monday-based weekday of Jan 1: UTC day 0 was a Thursday, so offset 3.
+  const lead = (Math.floor(Date.UTC(stats.reviewYear, 0, 1) / 86400000) + 3) % 7;
+  const total = Math.ceil((lead + counts.length) / 7) * 7;
+  return (
+    <div className="yir-cal" aria-hidden="true">
+      {Array.from({ length: total }, (_, i) => {
+        const day = i - lead;
+        if (day < 0 || day >= counts.length) {
+          return <span key={i} className="yir-cal__cell yir-cal__cell--pad" />;
+        }
+        const count = counts[day];
+        const level = count === 0 ? 0 : Math.min(3, Math.ceil((count / max) * 3));
+        return (
+          <span
+            key={i}
+            className={`yir-cal__cell yir-cal__cell--l${level}`}
+            style={{ "--c": Math.floor(i / 7) } as React.CSSProperties}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 function SessionsSlide({ stats }: { stats: YearInReviewStats }) {
   const n = stats.totalCompletedSessions;
   if (n === 0) {
@@ -134,6 +165,7 @@ function SessionsSlide({ stats }: { stats: YearInReviewStats }) {
             training {stats.trainingDayCount === 1 ? "day" : "days"}
           </span>
         </p>
+        <ContributionCalendar stats={stats} />
         <p className="yir-sub yir-reveal yir-reveal--3">
           Rebuilt from your imported history.
         </p>
@@ -161,6 +193,7 @@ function SessionsSlide({ stats }: { stats: YearInReviewStats }) {
           />
         ))}
       </div>
+      <ContributionCalendar stats={stats} />
       {stats.totalTrainingSeconds > 0 && (
         <p className="yir-sub yir-reveal yir-reveal--4">
           That's an average of{" "}

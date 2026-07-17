@@ -187,6 +187,8 @@ export interface YearInReviewStats {
   totalTonnageKg: number;
   /** Sets per rep count: index i = sets performed at i+1 reps, last bin = 15+. */
   repsHistogram: number[];
+  /** Sets per day of the review year (native + imported), index = 0-based day-of-year. */
+  dailySetCounts: number[];
   trainingDayCount: number;
   topExercises: TopExerciseStat[];
   muscleGroups: MuscleGroupStat[];
@@ -286,6 +288,9 @@ export async function computeYearInReviewStats(
   let importedSetCount = 0;
   let totalTonnageKg = 0;
   const repsHistogram = new Array<number>(15).fill(0);
+  const jan1Ms = Date.UTC(reviewYear, 0, 1);
+  const daysInYear = Math.round((Date.UTC(reviewYear + 1, 0, 1) - jan1Ms) / 86400000);
+  const dailySetCounts = new Array<number>(daysInYear).fill(0);
   const trainingDays = new Set<string>();
   for (const r of yearSets) {
     const reps = r.reps!;
@@ -295,6 +300,8 @@ export async function computeYearInReviewStats(
       totalTonnageKg += r.weight * reps;
     }
     repsHistogram[Math.min(reps, 15) - 1]++;
+    const [y, m, d] = r.date.split("-").map(Number);
+    dailySetCounts[(Date.UTC(y, m - 1, d) - jan1Ms) / 86400000]++;
     trainingDays.add(r.date);
   }
   const trainingDayCount = trainingDays.size;
@@ -644,6 +651,7 @@ export async function computeYearInReviewStats(
     importedSetCount,
     totalTonnageKg,
     repsHistogram,
+    dailySetCounts,
     trainingDayCount,
     topExercises,
     muscleGroups,
