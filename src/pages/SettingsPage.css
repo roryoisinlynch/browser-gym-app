@@ -119,6 +119,19 @@
   transform: none;
 }
 
+/* Hidden preview year selector */
+.settings-year-select {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  background: #262c35;
+  color: var(--text-strong);
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 /* Toggle switch */
 .settings-toggle {
   position: relative;

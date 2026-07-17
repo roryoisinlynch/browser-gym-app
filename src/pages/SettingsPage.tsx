@@ -7,6 +7,7 @@ import {
   seedDefaultQuestions,
 } from "../repositories/heuristicsRepository";
 import { resetAllTutorials } from "../repositories/tutorialsRepository";
+import { getReviewableYears } from "../services/yearInReview";
 import BottomNav from "../components/BottomNav";
 import TopBar from "../components/TopBar";
 import "./SettingsPage.css";
@@ -15,6 +16,10 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   const [heuristicsOn, setHeuristicsOn] = useState(false);
   const [tutorialsResetMsg, setTutorialsResetMsg] = useState<string | null>(null);
+  // Null until the hidden gesture unlocks the preview; then the years worth
+  // previewing (most recent first).
+  const [previewYears, setPreviewYears] = useState<number[] | null>(null);
+  const [previewYear, setPreviewYear] = useState<number | null>(null);
 
   useEffect(() => {
     isHeuristicsEnabled().then(setHeuristicsOn);
@@ -34,18 +39,25 @@ export default function SettingsPage() {
   }
 
   // Hidden entry to the Year in Review preview deck, so the feature can be
-  // shown outside the real Dec 25 - Jan 31 window (there is no address bar in
-  // the installed PWA to reach ?preview directly): five quick taps on the
-  // "Settings" title opens it.
+  // shown for a chosen year outside the real Dec 25 - Jan 31 window (there is
+  // no address bar in the installed PWA to reach ?preview directly): five quick
+  // taps on the "Settings" title reveal the year selector below. The real
+  // gated flow never passes a year, so it always shows the year just past.
   const tapCountRef = useRef(0);
   const lastTapRef = useRef(0);
+  async function unlockPreview() {
+    const years = await getReviewableYears();
+    const list = years.length > 0 ? years : [new Date().getFullYear() - 1];
+    setPreviewYears(list);
+    setPreviewYear((prev) => prev ?? list[0]);
+  }
   function handleTitleTap() {
     const now = Date.now();
     tapCountRef.current = now - lastTapRef.current < 600 ? tapCountRef.current + 1 : 1;
     lastTapRef.current = now;
     if (tapCountRef.current >= 5) {
       tapCountRef.current = 0;
-      navigate("/year-in-review?preview");
+      void unlockPreview();
     }
   }
 
@@ -193,6 +205,47 @@ export default function SettingsPage() {
             </button>
           </div>
         </div>
+
+        {previewYears && previewYear != null && (
+          <div className="settings-section">
+            <p className="settings-section-label">Preview</p>
+            <div className="settings-card-list">
+              <div className="settings-nav-card settings-nav-card--toggle">
+                <div className="settings-nav-card__body">
+                  <span className="settings-nav-card__title">Year in Review</span>
+                  <span className="settings-nav-card__desc">
+                    Open the deck for a chosen year, outside the usual window
+                  </span>
+                </div>
+                <select
+                  className="settings-year-select"
+                  value={previewYear}
+                  onChange={(e) => setPreviewYear(Number(e.target.value))}
+                  aria-label="Preview year"
+                >
+                  {previewYears.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                className="settings-nav-card"
+                onClick={() => navigate(`/year-in-review?preview=${previewYear}`)}
+              >
+                <div className="settings-nav-card__body">
+                  <span className="settings-nav-card__title">Open preview</span>
+                  <span className="settings-nav-card__desc">
+                    Preview {previewYear} in Review
+                  </span>
+                </div>
+                <span className="settings-nav-card__chevron">›</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="settings-section">
           <p className="settings-section-label">Danger zone</p>

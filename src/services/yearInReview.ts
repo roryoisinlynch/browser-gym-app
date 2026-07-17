@@ -83,6 +83,24 @@ export async function hasAnyReviewData(reviewYear: number): Promise<boolean> {
   );
 }
 
+/**
+ * Distinct calendar years, most recent first, that hold at least one completed
+ * session or imported set. Backs the hidden Settings year selector so the
+ * preview deck can be opened for any year that actually has data.
+ */
+export async function getReviewableYears(): Promise<number[]> {
+  const [sessions, importedSets] = await Promise.all([
+    getAll<SessionInstance>(STORE_NAMES.sessionInstances),
+    loadAllImportedSets(),
+  ]);
+  const years = new Set<number>();
+  for (const s of sessions) {
+    if (s.status === "completed") years.add(Number(sessionCompletedDate(s).slice(0, 4)));
+  }
+  for (const s of importedSets) years.add(Number(s.date.slice(0, 4)));
+  return [...years].filter((y) => Number.isInteger(y) && y > 0).sort((a, b) => b - a);
+}
+
 // ─── Stats ────────────────────────────────────────────────────────────────────
 
 /** A session whose sets straddle an overnight gap carries a huge duration; cap each at 6 hours. */
