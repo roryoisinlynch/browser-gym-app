@@ -257,6 +257,12 @@
   color: #7fb1ff;
 }
 
+/* PR losers: amber for a drop, without the alarm of red. */
+.yir-chip--down {
+  background: rgba(244, 161, 97, 0.16);
+  color: #f4a161;
+}
+
 /* A centered line with a trailing chip: an invisible mirror chip on the left
    keeps the text itself on the slide's centerline. */
 .yir-valueline {
@@ -625,6 +631,60 @@
 .yir-strength__arrow {
   color: var(--accent);
   font-weight: 800;
+}
+
+/* ── PR winners / losers ── */
+
+.yir-prlist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 300px;
+}
+
+.yir-prlist__heading {
+  margin: 0 0 2px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  text-align: left;
+}
+
+.yir-prlist__row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.yir-prlist__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.yir-prlist__row .yir-chip {
+  margin-left: 0;
+  flex-shrink: 0;
+}
+
+.yir-prlist__extras {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-soft);
+  text-align: left;
 }
 
 /* ── PR count arrows ── */

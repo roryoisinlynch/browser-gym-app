@@ -680,7 +680,21 @@ function DebutsSlide({ stats }: { stats: YearInReviewStats }) {
   );
 }
 
+function extrasLabel(n: number): string {
+  return `+ ${formatInt(n)} ${n === 1 ? "extra" : "extras"}.`;
+}
+
 function PrCountSlide({ stats }: { stats: YearInReviewStats }) {
+  const winners = stats.yearOnYearPrs
+    .filter((p) => p.relativeDiff > 0)
+    .sort((a, b) => b.relativeDiff - a.relativeDiff)
+    .slice(0, 3);
+  const losers = stats.yearOnYearPrs
+    .filter((p) => p.relativeDiff < 0)
+    .sort((a, b) => a.relativeDiff - b.relativeDiff)
+    .slice(0, 3);
+  const winnerExtras = stats.prUpCount - winners.length;
+  const loserExtras = stats.prDownCount - losers.length;
   return (
     <div className="yir-slide-body">
       <div className="yir-arrows" aria-hidden="true">
@@ -695,31 +709,38 @@ function PrCountSlide({ stats }: { stats: YearInReviewStats }) {
         ))}
       </div>
       <p className="yir-eyebrow yir-reveal">Personal records</p>
-      <p className="yir-display yir-reveal yir-reveal--2">
-        {formatInt(stats.prUpCount)}
-        <span className="yir-display__unit">
-          {stats.prUpCount === 1 ? "lift up" : "lifts up"}
-        </span>
-      </p>
-      {stats.prDownCount > 0 && (
-        <p className="yir-second-line yir-reveal yir-reveal--3">
-          {formatInt(stats.prDownCount)} down
-        </p>
-      )}
-      <p
-        className={`yir-sub yir-reveal ${
-          stats.prDownCount > 0 ? "yir-reveal--4" : "yir-reveal--3"
-        }`}
-      >
+      <p className="yir-sub yir-reveal yir-reveal--2">
         Your best this year against your best from every year before it.
       </p>
-      {stats.debutExercises.length > 0 && (
-        <p className="yir-footnote yir-reveal yir-reveal--4">
-          {formatInt(stats.debutExercises.length)}{" "}
-          {stats.debutExercises.length === 1
-            ? "exercise made its debut this year."
-            : "exercises made their debut this year."}
-        </p>
+      {winners.length > 0 && (
+        <div className="yir-prlist yir-reveal yir-reveal--3">
+          <p className="yir-prlist__heading">Biggest winners</p>
+          {winners.map((p) => (
+            <div key={p.name} className="yir-prlist__row">
+              <span className="yir-prlist__name">{p.name}</span>
+              <span className="yir-chip">+{formatGainPct(p.relativeDiff)}%</span>
+            </div>
+          ))}
+          {winnerExtras > 0 && (
+            <p className="yir-prlist__extras">{extrasLabel(winnerExtras)}</p>
+          )}
+        </div>
+      )}
+      {losers.length > 0 && (
+        <div className="yir-prlist yir-reveal yir-reveal--4">
+          <p className="yir-prlist__heading">Biggest losers</p>
+          {losers.map((p) => (
+            <div key={p.name} className="yir-prlist__row">
+              <span className="yir-prlist__name">{p.name}</span>
+              <span className="yir-chip yir-chip--down">
+                {formatGainPct(p.relativeDiff)}%
+              </span>
+            </div>
+          ))}
+          {loserExtras > 0 && (
+            <p className="yir-prlist__extras">{extrasLabel(loserExtras)}</p>
+          )}
+        </div>
       )}
     </div>
   );
