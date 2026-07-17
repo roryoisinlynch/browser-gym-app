@@ -5,7 +5,7 @@ import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import "./BackupPage.css";
 
-const BACKUP_VERSION = 5;
+const BACKUP_VERSION = 6;
 const MIN_COMPATIBLE_VERSION = 2;
 
 type StoreData = Record<string, unknown[]>;
@@ -36,6 +36,26 @@ async function exportAllStores(): Promise<StoreData> {
     )
   );
   return result;
+}
+
+/**
+ * v<6 → v6: session duration became set-span based (sessionDuration, lazily
+ * recomputed from set timestamps when absent). The button-derived
+ * durationSeconds field was removed from SessionInstance and SessionMetrics —
+ * strip it so a restore doesn't write stale data back. sessionDuration is
+ * deliberately left absent so the app backfills it on first read.
+ */
+function migrateStores(stores: StoreData, version: number): StoreData {
+  if (version >= 6) return stores;
+  for (const record of stores[STORE_NAMES.sessionInstances] ?? []) {
+    const session = record as {
+      durationSeconds?: unknown;
+      frozenMetrics?: { durationSeconds?: unknown } | null;
+    };
+    delete session.durationSeconds;
+    if (session.frozenMetrics) delete session.frozenMetrics.durationSeconds;
+  }
+  return stores;
 }
 
 async function restoreAllStores(stores: StoreData): Promise<void> {
@@ -139,7 +159,7 @@ export default function BackupPage() {
     if (!confirmed) return;
     setImportState("busy");
     try {
-      await restoreAllStores(importFile.stores);
+      await restoreAllStores(migrateStores(importFile.stores, importFile.version));
       setImportState("done");
     } catch {
       setImportError("Something went wrong restoring the backup.");

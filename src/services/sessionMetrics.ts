@@ -96,7 +96,6 @@ export function computeSessionMetrics(view: SessionInstanceView): SessionMetrics
 
   return {
     totalSets,
-    durationSeconds: view.sessionInstance.durationSeconds ?? null,
     workingSetsCompleted,
     workingSetsTarget,
     volumeScore,

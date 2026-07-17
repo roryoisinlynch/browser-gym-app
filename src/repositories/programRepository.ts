@@ -559,7 +559,6 @@ async function populateWeekFromTemplate(
       status: "not_started",
       startedAt: null,
       completedAt: null,
-      durationSeconds: null,
     };
 
     await putItem(STORE_NAMES.sessionInstances, newSessionInstance);
@@ -986,6 +985,71 @@ export async function getExerciseSetsForExerciseInstance(
   );
 
   return sets.sort((a, b) => a.setIndex - b.setIndex);
+}
+
+/** When the set was first logged, from loggedAt or the Date.now() id suffix. */
+function setLoggedAtMs(set: ExerciseSet): number | null {
+  if (set.loggedAt) {
+    const t = new Date(set.loggedAt).getTime();
+    if (!Number.isNaN(t)) return t;
+  }
+  const match = /-(\d{12,})$/.exec(set.id);
+  return match ? Number(match[1]) : null;
+}
+
+/**
+ * Session duration in seconds: first-logged-set to last-logged-set span.
+ * Ghost rows (every performed field null) are excluded; sets without a
+ * recoverable timestamp are skipped. Null when no set has a usable timestamp.
+ */
+export function computeSessionDuration(sets: ExerciseSet[]): number | null {
+  let min = Infinity;
+  let max = -Infinity;
+  for (const set of sets) {
+    if (
+      set.performedWeight == null &&
+      set.performedReps == null &&
+      set.performedRir == null
+    ) {
+      continue;
+    }
+    const t = setLoggedAtMs(set);
+    if (t == null) continue;
+    if (t < min) min = t;
+    if (t > max) max = t;
+  }
+  return max >= min ? Math.round((max - min) / 1000) : null;
+}
+
+/**
+ * Session duration, lazily backfilled: an absent sessionDuration means "not
+ * yet computed", so it is derived from the session's sets and persisted
+ * (null when not derivable) so each record is only computed once. Only
+ * settled sessions are persisted — an in-progress span is still growing.
+ * The write refetches the record first so it can't clobber fields another
+ * lazy backfill (e.g. frozenMetrics) wrote after our copy was read.
+ */
+export async function getSessionDuration(
+  sessionInstance: SessionInstance
+): Promise<number | null> {
+  if (sessionInstance.sessionDuration !== undefined) {
+    return sessionInstance.sessionDuration;
+  }
+  const sets = await getExerciseSetsForSessionInstance(sessionInstance.id);
+  const duration = computeSessionDuration(sets);
+  if (
+    sessionInstance.status === "completed" ||
+    sessionInstance.status === "skipped"
+  ) {
+    const fresh = await getSessionInstanceById(sessionInstance.id);
+    if (fresh) {
+      await putItem(STORE_NAMES.sessionInstances, {
+        ...fresh,
+        sessionDuration: duration,
+      });
+    }
+  }
+  return duration;
 }
 
 /**
@@ -2526,6 +2590,7 @@ export async function createExerciseSet(
     id: `set-${exerciseInstanceId}-${Date.now()}`,
     exerciseInstanceId,
     setIndex: nextSetIndex,
+    loggedAt: new Date().toISOString(),
     performedWeight: null,
     performedReps: null,
     performedRir: null,
@@ -2693,24 +2758,13 @@ export async function stopSessionInstance(
   const startedAt = sessionInstance.startedAt ?? nowIso;
   const completedAt = sessionInstance.completedAt ?? nowIso;
 
-  let durationSeconds = sessionInstance.durationSeconds ?? null;
-
-  const startedMs = new Date(startedAt).getTime();
-  const completedMs = new Date(completedAt).getTime();
-
-  if (
-    !Number.isNaN(startedMs) &&
-    !Number.isNaN(completedMs) &&
-    completedMs >= startedMs
-  ) {
-    durationSeconds = Math.round((completedMs - startedMs) / 1000);
-  }
+  const sessionSets = await getExerciseSetsForSessionInstance(sessionInstanceId);
 
   const updatedSession: SessionInstance = {
     ...sessionInstance,
     startedAt,
     completedAt,
-    durationSeconds,
+    sessionDuration: computeSessionDuration(sessionSets),
     status: "completed",
   };
 
@@ -2818,7 +2872,7 @@ export async function skipSessionInstance(
     ...sessionInstance,
     startedAt: sessionInstance.startedAt ?? nowIso,
     completedAt: nowIso,
-    durationSeconds: 0,
+    sessionDuration: null,
     status: "skipped",
   };
 

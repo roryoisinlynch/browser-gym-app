@@ -12,6 +12,7 @@ import {
   getAllTimePREvents,
   getExerciseSessionHistory,
   getSessionMetrics,
+  getSessionDuration,
   getSeasonMetrics,
   getWeekMetrics,
   getAllExerciseTemplates,
@@ -122,7 +123,7 @@ export async function hasAnyReviewData(reviewYear: number): Promise<boolean> {
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
 
-/** Sessions abandoned overnight carry huge durations; cap each at 6 hours. */
+/** A session whose sets straddle an overnight gap carries a huge duration; cap each at 6 hours. */
 const DURATION_CAP_SECONDS = 6 * 3600;
 
 export const MONTH_NAMES = [
@@ -267,11 +268,6 @@ export async function computeYearInReviewStats(
     (s) => s.status === "completed" && inYear(sessionCompletedDate(s))
   );
   const totalCompletedSessions = yearSessions.length;
-  const totalTrainingSeconds = yearSessions.reduce(
-    (sum, s) =>
-      sum + Math.min(Math.max(s.durationSeconds ?? 0, 0), DURATION_CAP_SECONDS),
-    0
-  );
 
   // ── Sets (native + imported, ghost rows with no reps excluded). Native
   // sets only count from completed sessions so these stats agree with the
@@ -580,6 +576,16 @@ export async function computeYearInReviewStats(
     seasonsCompleted++;
     const sm = await getSeasonMetrics(season);
     if (sm.grade === "A") aSeasonCount++;
+  }
+
+  // ── Time in the gym: first-to-last-set span per session (lazily backfilled
+  // onto the record; sessions with no usable set timestamps count zero). Runs
+  // after the metrics loops above so the two lazy backfill writes to the same
+  // records can't clobber each other. ──
+  let totalTrainingSeconds = 0;
+  for (const s of yearSessions) {
+    const seconds = (await getSessionDuration(s)) ?? 0;
+    totalTrainingSeconds += Math.min(Math.max(seconds, 0), DURATION_CAP_SECONDS);
   }
 
   // ── Year-over-year e1RM progress for the most-trained weighted lifts ──

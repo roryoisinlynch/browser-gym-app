@@ -6,6 +6,7 @@ import {
   getSessionInstancesForWeekInstance,
   getSessionMetrics,
   getSessionPRs,
+  getSessionDuration,
 } from "../repositories/programRepository";
 import {
   computeSessionMetrics,
@@ -62,6 +63,7 @@ export default function SessionSummaryPage() {
   const navigate = useNavigate();
 
   const [sessionView, setSessionView] = useState<SessionInstanceView | null>(null);
+  const [sessionDuration, setSessionDuration] = useState<number | null>(null);
   const [breadcrumbSessions, setBreadcrumbSessions] = useState<BreadcrumbSession[]>([]);
   const [prs, setPrs] = useState<SessionPR[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -87,6 +89,7 @@ export default function SessionSummaryPage() {
         }
 
         setSessionView(view);
+        setSessionDuration(await getSessionDuration(view.sessionInstance));
 
         // Load all sessions in the same week for the breadcrumb.
         const weekSessions = await getSessionInstancesForWeekInstance(
@@ -182,7 +185,7 @@ export default function SessionSummaryPage() {
         ) : (() => {
           const sv = sessionView!;
           const m = metrics!;
-          const { ragStatus, sessionScore, volumeScore, intensityScore, durationSeconds, totalSets } = m;
+          const { ragStatus, sessionScore, volumeScore, intensityScore, totalSets } = m;
           const isSkipped = sv.sessionInstance.status === "skipped";
           const narrative = isSkipped
             ? "You skipped this session — it counts as zero volume and zero intensity."
@@ -197,8 +200,8 @@ export default function SessionSummaryPage() {
         <div className="summary-stats-row">
           <div className="summary-stat">
             <span className="summary-stat__value">
-              {durationSeconds != null
-                ? formatDuration(durationSeconds)
+              {sessionDuration != null
+                ? formatDuration(sessionDuration)
                 : "—"}
             </span>
             <span className="summary-stat__label">Duration</span>

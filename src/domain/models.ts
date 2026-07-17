@@ -163,7 +163,6 @@ export type RagStatus = "green" | "amber" | "red";
 
 export interface SessionMetrics {
   totalSets: number;
-  durationSeconds: number | null;
   workingSetsCompleted: number;
   workingSetsTarget: number;
   volumeScore: number;
@@ -284,7 +283,15 @@ export interface SessionInstance {
 
   startedAt?: string | null;
   completedAt?: string | null;
-  durationSeconds?: number | null;
+  /**
+   * Session duration in seconds: first-logged-set to last-logged-set span.
+   * undefined = not yet computed (absence is the migration marker that
+   * triggers the lazy backfill on read); null = computed but not derivable
+   * (no sets with usable timestamps). Replaces the removed button-derived
+   * durationSeconds field — reusing that name would have made stale button
+   * values indistinguishable from set-span values.
+   */
+  sessionDuration?: number | null;
 
   /** Frozen when the session settles (completed/skipped); backfilled if absent. */
   frozenMetrics?: SessionMetrics | null;
@@ -318,6 +325,14 @@ export interface ExerciseSet {
   id: ID;
   exerciseInstanceId: ID;
   setIndex: number;
+
+  /**
+   * When the set was first persisted, which is the moment it was first logged
+   * with real values (rows are only created on first meaningful blur). Older
+   * sets predate this field; their creation time is recovered from the
+   * Date.now() suffix embedded in `id`.
+   */
+  loggedAt?: string | null;
 
   performedWeight?: number | null;
   performedReps?: number | null;
