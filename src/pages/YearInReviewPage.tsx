@@ -86,29 +86,38 @@ const NUMBER_WORDS = [
   "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve",
 ];
 
-function monthNoun(n: number): string {
-  return n === 1 ? "month" : "months";
-}
-
 /**
- * Scope line for the cover: where the year's data came from, as chronological
- * fragments (quiet lead-in, imported history, app-logged months).
+ * Scope sentences for the cover: where the year's data came from. One
+ * independent sentence per data state, each only present when that state has
+ * months (pre-history, CSV-imported, app-logged).
  */
-function coverScopeLine(stats: YearInReviewStats): string {
-  const leadIn = stats.emptyLeadInMonthCount;
+function coverScopeSentences(stats: YearInReviewStats): string[] {
+  const preHistory = stats.preHistoryMonthCount;
   const imported = stats.importedMonthCount;
   const native = stats.nativeMonthCount;
-  const parts: string[] = [];
-  if (leadIn > 0) {
-    parts.push(`${NUMBER_WORDS[leadIn]} quiet ${monthNoun(leadIn)} before your first set.`);
+  const sentences: string[] = [];
+  if (preHistory > 0) {
+    sentences.push(
+      preHistory === 1
+        ? "One month predates training history."
+        : `${NUMBER_WORDS[preHistory]} months predate training history.`
+    );
   }
   if (imported > 0) {
-    parts.push(`${NUMBER_WORDS[imported]} ${monthNoun(imported)} of imported history.`);
+    sentences.push(
+      imported === 1
+        ? "One month was imported from CSVs."
+        : `${NUMBER_WORDS[imported]} months were imported from CSVs.`
+    );
   }
   if (native > 0) {
-    parts.push(`${NUMBER_WORDS[native]} ${monthNoun(native)} logged right here.`);
+    sentences.push(
+      native === 1
+        ? "One month came from data logged directly in the app."
+        : `${NUMBER_WORDS[native]} months came from data logged directly in the app.`
+    );
   }
-  return parts.join(" ");
+  return sentences;
 }
 
 function CoverSlide({ stats }: { stats: YearInReviewStats }) {
@@ -133,7 +142,13 @@ function CoverSlide({ stats }: { stats: YearInReviewStats }) {
           strokeLinecap="round"
         />
       </svg>
-      <p className="yir-sub yir-reveal yir-reveal--4">{coverScopeLine(stats)}</p>
+      <div className="yir-sub yir-cover-scope yir-reveal yir-reveal--4">
+        {coverScopeSentences(stats).map((sentence) => (
+          <p key={sentence} className="yir-cover-scope__line">
+            {sentence}
+          </p>
+        ))}
+      </div>
       <p className="yir-hint">Tap to continue</p>
     </div>
   );

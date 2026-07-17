@@ -283,6 +283,16 @@
   height: 40px;
 }
 
+.yir-cover-scope {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.yir-cover-scope__line {
+  margin: 0;
+}
+
 /* ── Sessions grid ── */
 
 .yir-session-grid {

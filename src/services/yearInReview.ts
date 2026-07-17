@@ -222,8 +222,12 @@ export interface YearInReviewStats {
   nativeMonthCount: number;
   /** Months whose only data is imported history. */
   importedMonthCount: number;
-  /** Empty months at the start of the year, before the first month with any data. */
-  emptyLeadInMonthCount: number;
+  /**
+   * Review-year months that predate all training history: empty months at the
+   * start of the year, and only when no activity exists in any earlier year.
+   * Interior gaps and post-history breaks are never counted.
+   */
+  preHistoryMonthCount: number;
   busiestMonth: BusiestMonth | null;
   longestWeeklyStreak: number;
   /** Longest weekly streak across all history up to the end of the review year. */
@@ -329,10 +333,11 @@ export async function computeYearInReviewStats(
   }
   const trainingDayCount = trainingDays.size;
 
-  // ── Month provenance (for the cover's scope line): a month is "native" if
+  // ── Month provenance (for the cover's scope lines): a month is "native" if
   // the app logged anything in it, "imported" if its only data is imported
-  // history. Empty months are only counted before the first data month, so a
-  // mid-review December or a late-year break is never called a lead-in. ──
+  // history. Empty months only count as pre-history when they sit before the
+  // first data month AND no activity exists in any earlier year, so neither a
+  // mid-year gap nor a break after a prior-year history is miscounted. ──
   const monthHasNative = new Array<boolean>(12).fill(false);
   const monthHasImported = new Array<boolean>(12).fill(false);
   const monthOf = (date: string) => Number(date.slice(5, 7)) - 1;
@@ -347,14 +352,26 @@ export async function computeYearInReviewStats(
     if (monthHasNative[i]) nativeMonthCount++;
     else if (monthHasImported[i]) importedMonthCount++;
   }
-  let emptyLeadInMonthCount = 0;
+  let preHistoryMonthCount = 0;
   while (
-    emptyLeadInMonthCount < 12 &&
-    !monthHasNative[emptyLeadInMonthCount] &&
-    !monthHasImported[emptyLeadInMonthCount]
+    preHistoryMonthCount < 12 &&
+    !monthHasNative[preHistoryMonthCount] &&
+    !monthHasImported[preHistoryMonthCount]
   ) {
-    emptyLeadInMonthCount++;
+    preHistoryMonthCount++;
   }
+  const hasPreYearActivity =
+    sessions.some(
+      (s) => s.status === "completed" && sessionCompletedDate(s) < reviewYearStart
+    ) ||
+    setRecords.some(
+      (r) =>
+        r.reps != null &&
+        r.reps > 0 &&
+        (r.source === "imported" || r.sessionStatus === "completed") &&
+        r.date < reviewYearStart
+    );
+  if (hasPreYearActivity) preHistoryMonthCount = 0;
 
   // ── Top exercises (all sets: warmup/working classification is impossible
   // for imported history, so the split is deliberately not attempted) ──
@@ -736,7 +753,7 @@ export async function computeYearInReviewStats(
     monthsWithActivity,
     nativeMonthCount,
     importedMonthCount,
-    emptyLeadInMonthCount,
+    preHistoryMonthCount,
     busiestMonth,
     longestWeeklyStreak,
     allTimeLongestWeeklyStreak,
