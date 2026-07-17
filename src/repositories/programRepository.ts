@@ -71,7 +71,7 @@ export interface SessionTemplateGroupWithExercises {
  * Returns the date the session was actually completed, as "YYYY-MM-DD".
  * Falls back to the scheduled date if completedAt is not set.
  */
-function sessionCompletedDate(session: SessionInstance): string {
+export function sessionCompletedDate(session: SessionInstance): string {
   const d = new Date(session.completedAt ?? session.date);
   // Use local calendar date so "today" matches the user's clock, not UTC.
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -207,6 +207,8 @@ export interface SetRecord {
   weight: number | null;
   reps: number | null;
   date: string;
+  /** Status of the owning session; undefined for imported records. */
+  sessionStatus?: SessionInstance["status"];
 }
 
 export async function getAllSetRecords(): Promise<SetRecord[]> {
@@ -234,6 +236,7 @@ export async function getAllSetRecords(): Promise<SetRecord[]> {
         weight: set.performedWeight ?? null,
         reps: set.performedReps ?? null,
         date: sessionCompletedDate(session),
+        sessionStatus: session.status,
       };
     })
     .filter((r): r is SetRecord => r !== null);

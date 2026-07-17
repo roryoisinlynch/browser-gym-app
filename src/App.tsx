@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
+import YearInReviewInterstitial from "./components/YearInReviewInterstitial";
 import DashboardPage from "./pages/DashboardPage";
 import ExercisePage from "./pages/ExercisePage";
 import WeekPage from "./pages/WeekPage";
@@ -20,11 +21,13 @@ import BackupPage from "./pages/BackupPage";
 import HeuristicsPage from "./pages/HeuristicsPage";
 import HeuristicsQuestionsPage from "./pages/HeuristicsQuestionsPage";
 import SharePage from "./pages/SharePage";
+import YearInReviewPage from "./pages/YearInReviewPage";
 
 export default function App() {
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <PWAInstallPrompt />
+      <YearInReviewInterstitial />
       <Routes>
         <Route path="/" element={<DashboardPage />} />
         <Route path="/season" element={<SeasonPage />} />
@@ -47,6 +50,7 @@ export default function App() {
         <Route path="/heuristics" element={<HeuristicsPage />} />
         <Route path="/heuristics/questions" element={<HeuristicsQuestionsPage />} />
         <Route path="/share" element={<SharePage />} />
+        <Route path="/year-in-review" element={<YearInReviewPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

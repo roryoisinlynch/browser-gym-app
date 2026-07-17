@@ -1,0 +1,821 @@
+/* ── Year in Review: full-screen story ── */
+
+.yir-page {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  color: var(--text-strong);
+  background:
+    radial-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px) 0 0 / 22px 22px,
+    linear-gradient(180deg, #0c0f14 0%, #14181f 100%);
+}
+
+/* One large radial glow per slide, tinted by the slide's mood. */
+.yir-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 90% 55% at 50% 28%,
+    var(--yir-glow, rgba(216, 240, 106, 0.09)),
+    transparent 70%
+  );
+}
+
+.yir-page--glow-lime  { --yir-glow: rgba(216, 240, 106, 0.09); }
+.yir-page--glow-green { --yir-glow: rgba(107, 203, 119, 0.10); }
+.yir-page--glow-amber { --yir-glow: rgba(244, 161, 97, 0.10); }
+.yir-page--glow-blue  { --yir-glow: rgba(127, 177, 255, 0.10); }
+.yir-page--glow-peak  { --yir-glow: rgba(216, 240, 106, 0.16); }
+
+/* ── Header: progress + close ── */
+
+.yir-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 12px 0;
+}
+
+.yir-progress {
+  flex: 1;
+  display: flex;
+  gap: 4px;
+}
+
+.yir-progress__segment {
+  flex: 1;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.yir-progress__segment--completed {
+  background: var(--accent-strong);
+}
+
+.yir-progress__segment--current {
+  background: var(--accent);
+}
+
+.yir-close {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  margin: -10px -8px -10px 0;
+  border: none;
+  background: none;
+  color: var(--text-soft);
+  font-size: 1.7rem;
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* ── Tap zones ── */
+
+.yir-tapzone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.yir-tapzone:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -6px;
+  border-radius: 16px;
+}
+
+.yir-tapzone--prev { left: 0; width: 30%; }
+.yir-tapzone--next { right: 0; width: 70%; }
+
+/* ── Slide ── */
+
+/* Stable aria-live wrapper. z-index 3 keeps the slide subtree above the tap
+   zones (2) so pointer-events:auto descendants (the done button) are tappable,
+   while pointer-events:none lets every other tap fall through to the zones. */
+.yir-slide-live {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.yir-slide {
+  height: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 56px 28px 40px;
+  pointer-events: none;
+}
+
+.yir-slide-body {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+  /* Safe centering: centers when the body fits, top-aligns (clipping only at
+     the bottom) when a tall slide overflows a short viewport. */
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+.yir-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ── Typography ── */
+
+.yir-eyebrow {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-strong);
+}
+
+.yir-display {
+  margin: 0;
+  font-size: 4.6rem;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}
+
+.yir-display--medium {
+  font-size: 2.3rem;
+  line-height: 1.1;
+}
+
+/* 7+ digit numbers (big tonnage years) at 4.6rem overflow narrow phones. */
+.yir-display--long {
+  font-size: 3rem;
+  line-height: 1.05;
+}
+
+.yir-display--year {
+  font-size: 6rem;
+  background: linear-gradient(160deg, var(--accent) 20%, var(--accent-strong) 55%, #7a8d2e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.yir-display__unit {
+  display: block;
+  margin-top: 8px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-muted);
+}
+
+.yir-second-line {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-strong);
+}
+
+.yir-sub {
+  margin: 0;
+  max-width: 320px;
+  font-size: 1rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.yir-footnote {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--text-soft);
+}
+
+.yir-hint {
+  position: absolute;
+  bottom: -64px;
+  left: 0;
+  right: 0;
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--text-soft);
+}
+
+.yir-chip {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  background: rgba(107, 203, 119, 0.16);
+  color: #6bcb77;
+  vertical-align: 2px;
+}
+
+/* ── Cover ── */
+
+.yir-barbell {
+  width: 220px;
+  height: 40px;
+}
+
+/* ── Sessions grid ── */
+
+.yir-session-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+  max-width: 300px;
+}
+
+.yir-session-grid__square {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: #6bcb77;
+}
+
+/* ── Tonnage plates ── */
+
+.yir-plates {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 72px;
+}
+
+.yir-plates__plate {
+  width: 14px;
+  border-radius: 5px;
+  background: rgba(216, 240, 106, 0.55);
+  transform-origin: bottom;
+}
+
+/* ── Histogram ── */
+
+.yir-histogram {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  width: 100%;
+  max-width: 320px;
+  height: 110px;
+}
+
+.yir-histogram__col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  height: 100%;
+}
+
+.yir-histogram__bar {
+  width: 100%;
+  border-radius: 4px 4px 2px 2px;
+  background: rgba(255, 255, 255, 0.18);
+  transform-origin: bottom;
+}
+
+.yir-histogram__bar--winner {
+  background: var(--accent);
+}
+
+.yir-histogram__label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--text-soft);
+}
+
+/* ── Streak chain ── */
+
+.yir-chain {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+  max-width: 320px;
+}
+
+.yir-chain__link {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: #6bcb77;
+}
+
+.yir-chain__more {
+  margin-left: 4px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+/* ── Top exercise runner-ups ── */
+
+.yir-runner-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 300px;
+}
+
+.yir-runner-list__item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  text-align: left;
+}
+
+.yir-runner-list__rank {
+  color: var(--text-soft);
+  font-weight: 800;
+}
+
+.yir-runner-list__count {
+  margin-left: auto;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* ── Muscle split ── */
+
+.yir-split {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.yir-split__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.yir-split__name {
+  flex: 0 0 84px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.yir-split__track {
+  flex: 1;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.yir-split__bar {
+  display: block;
+  height: 100%;
+  width: var(--w);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
+  transform-origin: left;
+}
+
+.yir-split__bar--top {
+  background: var(--accent);
+}
+
+.yir-split__pct {
+  flex: 0 0 38px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-soft);
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Strength rows ── */
+
+.yir-strength {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.yir-strength__row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.yir-strength__name {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.yir-strength__values {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.yir-strength__arrow {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+/* ── PR count arrows ── */
+
+.yir-arrows {
+  position: absolute;
+  inset: -40px 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.yir-arrows__arrow {
+  position: absolute;
+  bottom: 0;
+  left: calc(8% + var(--i) * 20%);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: rgba(216, 240, 106, 0.22);
+  opacity: 0;
+}
+
+/* ── Sparkline ── */
+
+.yir-sparkline {
+  width: 100%;
+  max-width: 320px;
+}
+
+.yir-sparkline svg {
+  width: 100%;
+  height: 60px;
+  display: block;
+}
+
+/* ── Confetti ── */
+
+.yir-confetti {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  pointer-events: none;
+}
+
+.yir-confetti__piece {
+  display: none;
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.yir-confetti__piece:nth-child(3n) { background: #6bcb77; border-radius: 999px; }
+.yir-confetti__piece:nth-child(4n) { background: #f4a161; }
+.yir-confetti__piece:nth-child(5n) { background: #7fb1ff; }
+
+/* ── Poster ── */
+
+.yir-slide-body--poster {
+  gap: 16px;
+}
+
+.yir-poster-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
+
+.yir-poster-grid__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 10px;
+  border-radius: 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+}
+
+.yir-poster-grid__value {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.yir-poster-grid__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.yir-medal-line {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.yir-done-button {
+  pointer-events: auto;
+  position: relative;
+  margin-top: 6px;
+  padding: 12px 22px;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #0f1113;
+  font-size: 0.98rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.35);
+}
+
+/* ── Loading / empty / desktop QR ── */
+
+.yir-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.yir-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 0 32px;
+  text-align: center;
+}
+
+.yir-empty__text {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.yir-page--desktop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.yir-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.yir-qr__img {
+  width: min(60vmin, 400px);
+  height: min(60vmin, 400px);
+  border-radius: 12px;
+}
+
+.yir-qr__url {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text-soft);
+  letter-spacing: 0.02em;
+}
+
+/* Short viewports: the 10-cell poster would clip inside the fixed page
+   (scrolling is not an option under the full-viewport tap zones), so trim
+   spacing and anchor to the top edge instead of centering. */
+@media (max-height: 620px) {
+  .yir-slide {
+    padding: 44px 24px 16px;
+  }
+
+  .yir-slide-body--poster {
+    gap: 10px;
+  }
+
+  .yir-poster-grid {
+    gap: 6px;
+  }
+
+  .yir-poster-grid__cell {
+    padding: 8px 10px;
+  }
+
+  .yir-poster-grid__value {
+    font-size: 1rem;
+  }
+}
+
+/* ── Animations ──
+   Every animation lives inside the no-preference block; base styles above
+   are the final resting state, so reduced-motion users see static slides. */
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes yir-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  @keyframes yir-rise {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes yir-pop {
+    from { opacity: 0; transform: scale(0.4); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes yir-stamp {
+    from { opacity: 0; transform: scale(1.45); }
+    60%  { opacity: 1; transform: scale(0.97); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes yir-draw {
+    from { stroke-dashoffset: 1; }
+    to   { stroke-dashoffset: 0; }
+  }
+
+  @keyframes yir-grow-y {
+    from { transform: scaleY(0); }
+    to   { transform: scaleY(1); }
+  }
+
+  @keyframes yir-grow-x {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+  }
+
+  @keyframes yir-hint-pulse {
+    0%, 100% { opacity: 0.55; }
+    50%      { opacity: 1; }
+  }
+
+  @keyframes yir-float-up {
+    0%   { opacity: 0; transform: translateY(30px); }
+    20%  { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-190px); }
+  }
+
+  @keyframes yir-confetti-burst {
+    0%   { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+    100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(240deg); }
+  }
+
+  @keyframes yir-winner-glow {
+    0%, 100% { box-shadow: none; }
+    50%      { box-shadow: 0 0 18px rgba(216, 240, 106, 0.55); }
+  }
+
+  .yir-slide {
+    animation: yir-fade 240ms ease-out;
+  }
+
+  .yir-reveal {
+    animation: yir-rise 460ms cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+  }
+
+  .yir-reveal--2 { animation-delay: 140ms; }
+  .yir-reveal--3 { animation-delay: 300ms; }
+  .yir-reveal--4 { animation-delay: 460ms; }
+
+  .yir-strength__row.yir-reveal,
+  .yir-poster-grid__cell.yir-reveal {
+    animation-delay: calc(160ms + var(--i) * 120ms);
+  }
+
+  .yir-display--stamp {
+    animation: yir-stamp 520ms cubic-bezier(0.2, 0.8, 0.3, 1) 180ms backwards;
+  }
+
+  .yir-hint {
+    animation: yir-hint-pulse 2.2s ease-in-out 1.2s infinite;
+    opacity: 0.55;
+  }
+
+  .yir-barbell__path {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: yir-draw 900ms ease-out 250ms forwards;
+  }
+
+  .yir-session-grid__square {
+    animation: yir-pop 340ms cubic-bezier(0.2, 0.8, 0.3, 1.3) calc(300ms + var(--i) * 12ms) backwards;
+  }
+
+  .yir-plates__plate {
+    animation: yir-grow-y 420ms cubic-bezier(0.2, 0.8, 0.3, 1) calc(250ms + var(--i) * 70ms) backwards;
+  }
+
+  .yir-histogram__bar {
+    animation: yir-grow-y 460ms cubic-bezier(0.2, 0.8, 0.3, 1) calc(250ms + var(--i) * 40ms) backwards;
+  }
+
+  .yir-histogram__bar--winner {
+    animation:
+      yir-grow-y 460ms cubic-bezier(0.2, 0.8, 0.3, 1) calc(250ms + var(--i) * 40ms) backwards,
+      yir-winner-glow 900ms ease-in-out calc(760ms + var(--i) * 40ms);
+  }
+
+  .yir-chain__link {
+    animation: yir-pop 300ms cubic-bezier(0.2, 0.8, 0.3, 1.3) calc(300ms + var(--i) * 60ms) backwards;
+  }
+
+  .yir-split__bar {
+    animation: yir-grow-x 560ms cubic-bezier(0.2, 0.8, 0.3, 1) calc(280ms + var(--i) * 90ms) backwards;
+  }
+
+  .yir-arrows__arrow {
+    animation: yir-float-up 3.4s ease-in calc(var(--i) * 620ms) infinite;
+  }
+
+  .yir-sparkline__base,
+  .yir-sparkline__highlight {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: yir-draw 800ms ease-out 350ms forwards;
+  }
+
+  .yir-sparkline__highlight {
+    animation-delay: 950ms;
+  }
+
+  .yir-confetti__piece {
+    display: block;
+    animation: yir-confetti-burst 950ms ease-out calc(500ms + var(--i) * 18ms) backwards;
+    animation-fill-mode: both;
+  }
+}

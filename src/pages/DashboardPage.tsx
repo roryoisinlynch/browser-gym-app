@@ -37,6 +37,7 @@ import ExerciseSummaryCard from "../components/ExerciseSummaryCard";
 import { computeSessionMetrics } from "../services/sessionMetrics";
 import { emojiForRating } from "../services/weekMetrics";
 import { gradeColor } from "../services/seasonMetrics";
+import { getYearInReviewState, hasAnyReviewData } from "../services/yearInReview";
 import "./DashboardPage.css";
 
 // ─── Tutorial: exercise graph mock ─────────────────────────────────────────
@@ -1011,6 +1012,7 @@ export default function DashboardPage() {
   const [exerciseNeedingWeight, setExerciseNeedingWeight] = useState<
     { exerciseTemplateId: string; exerciseName: string; sessionName: string } | null
   >(null);
+  const [yearReviewYear, setYearReviewYear] = useState<number | null>(null);
   const recentTooltipRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -1021,6 +1023,21 @@ export default function DashboardPage() {
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  // Year in Review CTA: visible for the whole review window whenever the
+  // review year has data. Deliberately not gated by the one-time interstitial
+  // flag, which only suppresses the app-open prompt.
+  useEffect(() => {
+    const { inWindow, reviewYear } = getYearInReviewState();
+    if (!inWindow) return;
+    let cancel = false;
+    hasAnyReviewData(reviewYear).then((hasData) => {
+      if (!cancel && hasData) setYearReviewYear(reviewYear);
+    });
+    return () => {
+      cancel = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -2496,6 +2513,33 @@ export default function DashboardPage() {
     <main className="dashboard-page">
       <TopBar title="Dashboard" />
       <section className="dashboard-shell">
+        {yearReviewYear != null && (
+          <section className="dashboard-section">
+            <div
+              className="dashboard-up-next dashboard-up-next--year-review dashboard-up-next--with-cta"
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate("/year-in-review")}
+              onKeyDown={(e) => e.key === "Enter" && navigate("/year-in-review")}
+            >
+              <div className="dashboard-up-next__content">
+                <span className="dashboard-up-next__pill dashboard-up-next__pill--year-review">
+                  Limited time
+                </span>
+                <p className="dashboard-up-next__heading">
+                  Your {yearReviewYear} Year in Review
+                </p>
+                <p className="dashboard-up-next__sub">
+                  Your whole year in the gym, one minute, big numbers.
+                </p>
+              </div>
+              <span className="dashboard-up-next__cta dashboard-up-next__cta--year-review">
+                Open →
+              </span>
+            </div>
+          </section>
+        )}
+
         <section className="dashboard-section">
           {renderUpNext()}
         </section>
