@@ -564,45 +564,40 @@ function DebutsSlide({ stats }: { stats: YearInReviewStats }) {
   return (
     <div className="yir-slide-body">
       <p className="yir-eyebrow yir-reveal">New this year</p>
-      <div className="yir-strength">
-        {rows.map((row, i) => (
-          <div
-            key={row.name}
-            className="yir-strength__row yir-reveal"
-            style={{ "--i": i } as React.CSSProperties}
-          >
-            <p className="yir-strength__name">{row.name}</p>
-            <p className="yir-strength__values yir-valueline">
-              {row.relativeGrowth > 0 && (
-                <span
-                  className="yir-chip yir-chip--debut yir-chip--ghost"
-                  aria-hidden="true"
-                >
-                  +{formatGainPct(row.relativeGrowth)}%
-                </span>
-              )}
-              <span>
-                {formatE1RM(row.firstWeekBestE1RM)} kg{" "}
-                <span className="yir-strength__arrow">→</span>{" "}
-                {formatE1RM(row.yearBestE1RM)} kg e1RM
-              </span>
-              {row.relativeGrowth > 0 && (
-                <span className="yir-chip yir-chip--debut">
-                  +{formatGainPct(row.relativeGrowth)}%
-                </span>
-              )}
-            </p>
-          </div>
-        ))}
-      </div>
-      <p className="yir-sub yir-reveal yir-reveal--4">
-        Started this year. First-week best against best of the year.
+      <p className="yir-sub yir-reveal yir-reveal--2">
+        Some exercises don't have historical data to compare against because
+        they debuted this year.
       </p>
-      {more > 0 && (
-        <p className="yir-footnote yir-reveal yir-reveal--4">
-          + {formatInt(more)} more new {more === 1 ? "exercise" : "exercises"}.
-        </p>
-      )}
+      <table className="yir-debut-table yir-reveal yir-reveal--3">
+        <thead>
+          <tr>
+            <th scope="col">Exercise</th>
+            <th scope="col">First week</th>
+            <th scope="col">Year best</th>
+            <th scope="col">Growth</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.name}>
+              <td className="yir-debut-table__name">{row.name}</td>
+              <td className="yir-debut-table__num">{formatE1RM(row.firstWeekBestE1RM)}</td>
+              <td className="yir-debut-table__num">{formatE1RM(row.yearBestE1RM)}</td>
+              <td className="yir-debut-table__num yir-debut-table__growth">
+                {row.relativeGrowth > 0
+                  ? `+${formatGainPct(row.relativeGrowth)}%`
+                  : "0%"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="yir-footnote yir-reveal yir-reveal--4">
+        Best-set estimated 1RM, in kg.
+        {more > 0
+          ? ` + ${formatInt(more)} more new ${more === 1 ? "exercise" : "exercises"}.`
+          : ""}
+      </p>
     </div>
   );
 }

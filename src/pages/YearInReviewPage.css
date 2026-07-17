@@ -707,11 +707,61 @@
   flex-shrink: 0;
 }
 
-.yir-prlist__extras {
-  margin: 0;
-  font-size: 0.8rem;
+/* ── New This Year table ── */
+
+.yir-debut-table {
+  width: 100%;
+  max-width: 340px;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.yir-debut-table th {
+  padding: 0 0 8px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
   color: var(--text-soft);
+  text-align: right;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.yir-debut-table td {
+  padding: 9px 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: right;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.yir-debut-table tr:last-child td {
+  border-bottom: none;
+}
+
+.yir-debut-table th:first-child,
+.yir-debut-table__name {
   text-align: left;
+}
+
+.yir-debut-table th + th,
+.yir-debut-table td + td {
+  padding-left: 14px;
+}
+
+.yir-debut-table__name {
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-strong);
+  font-weight: 700;
+}
+
+.yir-debut-table__growth {
+  color: #6bcb77;
+  font-weight: 800;
 }
 
 /* ── PR count arrows ── */
