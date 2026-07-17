@@ -74,17 +74,13 @@ function monthNoun(n: number): string {
 }
 
 /**
- * Scope line for the cover: where the year's data came from. Chronological
- * fragments (quiet lead-in, imported history, app-logged months); a fully
- * app-logged year keeps the original copy.
+ * Scope line for the cover: where the year's data came from, as chronological
+ * fragments (quiet lead-in, imported history, app-logged months).
  */
 function coverScopeLine(stats: YearInReviewStats): string {
   const leadIn = stats.emptyLeadInMonthCount;
   const imported = stats.importedMonthCount;
   const native = stats.nativeMonthCount;
-  if (leadIn === 0 && imported === 0) {
-    return "Twelve months. One barbell. Let's see what you did with it.";
-  }
   const parts: string[] = [];
   if (leadIn > 0) {
     parts.push(`${NUMBER_WORDS[leadIn]} quiet ${monthNoun(leadIn)} before your first set.`);
@@ -301,8 +297,7 @@ function TopExerciseSlide({ stats }: { stats: YearInReviewStats }) {
       <p className="yir-eyebrow yir-reveal">Your number one</p>
       <p className="yir-display yir-display--stamp yir-display--medium">{top.name}</p>
       <p className="yir-sub yir-reveal yir-reveal--3">
-        {formatInt(top.setCount)} sets together this year. It's basically a
-        relationship.
+        {formatInt(top.setCount)} sets this year, more than any other exercise.
       </p>
       {runnersUp.length >= 2 && (
         <ul className="yir-runner-list yir-reveal yir-reveal--4">
