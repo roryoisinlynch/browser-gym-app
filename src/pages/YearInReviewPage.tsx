@@ -657,7 +657,7 @@ function PrCountSlide({ stats }: { stats: YearInReviewStats }) {
       </div>
       <p className="yir-eyebrow yir-reveal">Personal records</p>
       <p className="yir-sub yir-reveal yir-reveal--2">
-        Your best this year against your best from every year before it.
+        Your most significant changes since last year.
       </p>
       {winners.length > 0 && (
         <div className="yir-prlist yir-reveal yir-reveal--3">
