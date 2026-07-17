@@ -19,6 +19,7 @@ import {
   type PREvent,
 } from "../repositories/programRepository";
 import { loadAllImportedSets } from "./importedSetStore";
+import { clearYearInReviewPromptFlag } from "../repositories/yearInReviewRepository";
 
 // ─── Review window / review year ─────────────────────────────────────────────
 
@@ -26,21 +27,60 @@ import { loadAllImportedSets } from "./importedSetStore";
 export const REVIEW_WINDOW_OPEN = { month: 12, day: 25 };
 export const REVIEW_WINDOW_CLOSE = { month: 1, day: 31 };
 
+const YEAR_REVIEW_NOW_KEY = "yearReviewNow";
+
 /**
- * "Now" for every year-in-review gate. In dev builds it honors a
- * localStorage override ("yearReviewNow", any Date-parsable string) so the
- * window and year logic can be exercised without changing the system clock.
- * Dead-code-eliminated in production.
+ * "Now" for every year-in-review gate. Honors a localStorage override
+ * ("yearReviewNow", any Date-parsable string) so the window and year logic
+ * can be exercised without changing the system clock. The override backs
+ * both dev-time testing and the TEMPORARY Settings preview; once the
+ * preview card is removed, this can be re-gated behind import.meta.env.DEV.
  */
 export function getReviewNow(): Date {
-  if (import.meta.env.DEV) {
-    const override = localStorage.getItem("yearReviewNow");
-    if (override) {
-      const d = new Date(override);
-      if (!Number.isNaN(d.getTime())) return d;
-    }
+  const override = localStorage.getItem(YEAR_REVIEW_NOW_KEY);
+  if (override) {
+    const d = new Date(override);
+    if (!Number.isNaN(d.getTime())) return d;
   }
   return new Date();
+}
+
+// ─── TEMPORARY: Settings preview ──────────────────────────────────────────────
+// Lets the feature be tried outside the real Dec 25 - Jan 31 window by
+// simulating Dec 26 of the current year. Remove together with the Settings
+// card once testing is done.
+
+export function isYearInReviewPreviewActive(): boolean {
+  return localStorage.getItem(YEAR_REVIEW_NOW_KEY) != null;
+}
+
+/**
+ * Simulates Dec 26 of the current year and clears the prompt-seen flag for
+ * the simulated review year so the app-open interstitial fires on the next
+ * full load.
+ */
+export async function startYearInReviewPreview(): Promise<void> {
+  const real = new Date();
+  const previewNow = new Date(real.getFullYear(), 11, 26, 10, 0, 0);
+  const { reviewYear } = getYearInReviewState(previewNow);
+  await clearYearInReviewPromptFlag(reviewYear);
+  localStorage.setItem(YEAR_REVIEW_NOW_KEY, previewNow.toISOString());
+}
+
+/**
+ * Clears the simulated date and the prompt-seen flag the preview may have
+ * burned, so the real review window still prompts exactly once.
+ */
+export async function endYearInReviewPreview(): Promise<void> {
+  const override = localStorage.getItem(YEAR_REVIEW_NOW_KEY);
+  localStorage.removeItem(YEAR_REVIEW_NOW_KEY);
+  if (override) {
+    const d = new Date(override);
+    if (!Number.isNaN(d.getTime())) {
+      const { reviewYear } = getYearInReviewState(d);
+      await clearYearInReviewPromptFlag(reviewYear);
+    }
+  }
 }
 
 export interface YearInReviewState {

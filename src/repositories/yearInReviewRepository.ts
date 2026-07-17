@@ -1,4 +1,4 @@
-import { STORE_NAMES, getById, putItem } from "../db/db";
+import { STORE_NAMES, deleteItem, getById, putItem } from "../db/db";
 
 type MetaRecord = { key: string; value: string };
 
@@ -17,4 +17,8 @@ export async function hasSeenYearInReviewPrompt(reviewYear: number): Promise<boo
 
 export async function markYearInReviewPromptSeen(reviewYear: number): Promise<void> {
   await putItem(STORE_NAMES.meta, { key: metaKey(reviewYear), value: "true" });
+}
+
+export async function clearYearInReviewPromptFlag(reviewYear: number): Promise<void> {
+  await deleteItem(STORE_NAMES.meta, metaKey(reviewYear));
 }

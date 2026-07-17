@@ -7,6 +7,11 @@ import {
   seedDefaultQuestions,
 } from "../repositories/heuristicsRepository";
 import { resetAllTutorials } from "../repositories/tutorialsRepository";
+import {
+  endYearInReviewPreview,
+  isYearInReviewPreviewActive,
+  startYearInReviewPreview,
+} from "../services/yearInReview";
 import BottomNav from "../components/BottomNav";
 import TopBar from "../components/TopBar";
 import "./SettingsPage.css";
@@ -15,6 +20,7 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   const [heuristicsOn, setHeuristicsOn] = useState(false);
   const [tutorialsResetMsg, setTutorialsResetMsg] = useState<string | null>(null);
+  const [yirPreviewOn, setYirPreviewOn] = useState(() => isYearInReviewPreviewActive());
 
   useEffect(() => {
     isHeuristicsEnabled().then(setHeuristicsOn);
@@ -31,6 +37,20 @@ export default function SettingsPage() {
     await resetAllTutorials();
     setTutorialsResetMsg("Tutorials re-enabled");
     setTimeout(() => setTutorialsResetMsg(null), 2000);
+  }
+
+  // TEMPORARY: Year in Review preview; remove this handler and its settings
+  // card (plus the preview helpers in services/yearInReview.ts) after testing.
+  async function handleYirPreview() {
+    if (yirPreviewOn) {
+      await endYearInReviewPreview();
+      setYirPreviewOn(false);
+    } else {
+      await startYearInReviewPreview();
+      // Full reload to the dashboard so the app-open interstitial fires,
+      // exactly as it would on a real late-December open.
+      window.location.assign(import.meta.env.BASE_URL);
+    }
   }
 
   return (
@@ -174,6 +194,32 @@ export default function SettingsPage() {
                   {tutorialsResetMsg ?? "Reset all dismissed tutorial blocks on the dashboard"}
                 </span>
               </div>
+            </button>
+          </div>
+        </div>
+
+        {/* TEMPORARY: remove after Year in Review has been tested live. */}
+        <div className="settings-section">
+          <p className="settings-section-label">Preview</p>
+          <div className="settings-card-list">
+            <button
+              type="button"
+              className="settings-nav-card"
+              onClick={handleYirPreview}
+            >
+              <div className="settings-nav-card__body">
+                <span className="settings-nav-card__title">
+                  {yirPreviewOn
+                    ? "End Year in Review preview"
+                    : "Preview Year in Review"}
+                </span>
+                <span className="settings-nav-card__desc">
+                  {yirPreviewOn
+                    ? "Back to the real date, and the December prompt is restored"
+                    : "Temporary: simulates late December so you can try the feature with this year's data"}
+                </span>
+              </div>
+              {!yirPreviewOn && <span className="settings-nav-card__chevron">›</span>}
             </button>
           </div>
         </div>
