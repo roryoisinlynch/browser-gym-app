@@ -341,6 +341,7 @@ function BusiestMonthSlide({ stats }: { stats: YearInReviewStats }) {
   const busiest = stats.busiestMonth!;
   const max = Math.max(...stats.monthlyActivityCounts, 1);
   const monthLetters = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+  const monthCal = monthRangeSlice(stats, busiest.monthIndex, busiest.monthIndex + 1);
   return (
     <div className="yir-slide-body">
       <p className="yir-eyebrow yir-reveal">Peak month</p>
@@ -376,6 +377,12 @@ function BusiestMonthSlide({ stats }: { stats: YearInReviewStats }) {
             : "training days"}
         . Your biggest month of the year.
       </p>
+      <ContributionCalendar
+        counts={monthCal.counts}
+        firstDayMs={monthCal.firstDayMs}
+        max={Math.max(...stats.dailySetCounts, 1)}
+        variant="month"
+      />
     </div>
   );
 }
