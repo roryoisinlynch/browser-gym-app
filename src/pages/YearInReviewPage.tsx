@@ -452,10 +452,15 @@ function StrengthSlide({ rows }: { rows: YearInReviewStats["yearOnYearPrs"] }) {
             style={{ "--i": i } as React.CSSProperties}
           >
             <p className="yir-strength__name">{row.name}</p>
-            <p className="yir-strength__values">
-              {formatE1RM(row.bestPriorE1RM)} kg{" "}
-              <span className="yir-strength__arrow">→</span>{" "}
-              {formatE1RM(row.bestYearE1RM)} kg e1RM
+            <p className="yir-strength__values yir-valueline">
+              <span className="yir-chip yir-chip--ghost" aria-hidden="true">
+                +{formatGainPct(row.relativeDiff)}%
+              </span>
+              <span>
+                {formatE1RM(row.bestPriorE1RM)} kg{" "}
+                <span className="yir-strength__arrow">→</span>{" "}
+                {formatE1RM(row.bestYearE1RM)} kg e1RM
+              </span>
               <span className="yir-chip">+{formatGainPct(row.relativeDiff)}%</span>
             </p>
           </div>
@@ -481,10 +486,20 @@ function DebutsSlide({ stats }: { stats: YearInReviewStats }) {
             style={{ "--i": i } as React.CSSProperties}
           >
             <p className="yir-strength__name">{row.name}</p>
-            <p className="yir-strength__values">
-              {formatE1RM(row.firstWeekBestE1RM)} kg{" "}
-              <span className="yir-strength__arrow">→</span>{" "}
-              {formatE1RM(row.yearBestE1RM)} kg e1RM
+            <p className="yir-strength__values yir-valueline">
+              {row.relativeGrowth > 0 && (
+                <span
+                  className="yir-chip yir-chip--debut yir-chip--ghost"
+                  aria-hidden="true"
+                >
+                  +{formatGainPct(row.relativeGrowth)}%
+                </span>
+              )}
+              <span>
+                {formatE1RM(row.firstWeekBestE1RM)} kg{" "}
+                <span className="yir-strength__arrow">→</span>{" "}
+                {formatE1RM(row.yearBestE1RM)} kg e1RM
+              </span>
               {row.relativeGrowth > 0 && (
                 <span className="yir-chip yir-chip--debut">
                   +{formatGainPct(row.relativeGrowth)}%
@@ -656,10 +671,15 @@ function PeakSlide({ stats }: { stats: YearInReviewStats }) {
         <p className="yir-display yir-display--stamp yir-display--medium">
           {pr.exerciseName}
         </p>
-        <p className="yir-second-line yir-reveal yir-reveal--3">
-          {formatE1RM(pr.previousE1RM)} kg{" "}
-          <span className="yir-strength__arrow">→</span>{" "}
-          {formatE1RM(pr.yearBestE1RM)} kg e1RM
+        <p className="yir-second-line yir-valueline yir-reveal yir-reveal--3">
+          <span className="yir-chip yir-chip--ghost" aria-hidden="true">
+            +{formatGainPct(relativeGain)}%
+          </span>
+          <span>
+            {formatE1RM(pr.previousE1RM)} kg{" "}
+            <span className="yir-strength__arrow">→</span>{" "}
+            {formatE1RM(pr.yearBestE1RM)} kg e1RM
+          </span>
           <span className="yir-chip">+{formatGainPct(relativeGain)}%</span>
         </p>
         <PeakSparkline points={stats.spotlightHistory} reviewYear={stats.reviewYear} />
@@ -676,9 +696,14 @@ function PeakSlide({ stats }: { stats: YearInReviewStats }) {
         <p className="yir-display yir-display--stamp yir-display--medium">
           {repPr.exerciseName}
         </p>
-        <p className="yir-second-line yir-reveal yir-reveal--3">
-          {repPr.previousReps} <span className="yir-strength__arrow">→</span>{" "}
-          {repPr.newReps} reps
+        <p className="yir-second-line yir-valueline yir-reveal yir-reveal--3">
+          <span className="yir-chip yir-chip--ghost" aria-hidden="true">
+            +{repPr.newReps - repPr.previousReps}
+          </span>
+          <span>
+            {repPr.previousReps} <span className="yir-strength__arrow">→</span>{" "}
+            {repPr.newReps} reps
+          </span>
           <span className="yir-chip">+{repPr.newReps - repPr.previousReps}</span>
         </p>
         <p className="yir-sub yir-reveal yir-reveal--4">

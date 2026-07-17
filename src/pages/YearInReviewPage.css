@@ -151,11 +151,15 @@
 
 /* ── Typography ── */
 
+/* Centered lines carry text-indent equal to their letter-spacing: the browser
+   adds one tracking unit after the final glyph, so without the compensation a
+   centered line sits half a unit off the true centerline. */
 .yir-eyebrow {
   margin: 0;
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.14em;
+  text-indent: 0.14em;
   text-transform: uppercase;
   color: var(--accent-strong);
 }
@@ -166,6 +170,7 @@
   line-height: 1;
   font-weight: 800;
   letter-spacing: -0.03em;
+  text-indent: -0.03em;
   font-variant-numeric: tabular-nums;
   color: var(--text-strong);
   overflow-wrap: anywhere;
@@ -196,6 +201,8 @@
   font-size: 1.3rem;
   font-weight: 700;
   letter-spacing: -0.01em;
+  /* text-indent inherits; override the display's -0.03em with this line's own. */
+  text-indent: -0.01em;
   color: var(--text-muted);
 }
 
@@ -204,6 +211,7 @@
   font-size: 1.35rem;
   font-weight: 700;
   letter-spacing: -0.01em;
+  text-indent: -0.01em;
   color: var(--text-strong);
 }
 
@@ -247,6 +255,25 @@
 .yir-chip--debut {
   background: rgba(127, 177, 255, 0.16);
   color: #7fb1ff;
+}
+
+/* A centered line with a trailing chip: an invisible mirror chip on the left
+   keeps the text itself on the slide's centerline. */
+.yir-valueline {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.yir-valueline .yir-chip {
+  margin-left: 0;
+  vertical-align: baseline;
+}
+
+.yir-chip--ghost {
+  visibility: hidden;
 }
 
 /* ── Cover ── */
@@ -687,6 +714,7 @@
   font-size: 1rem;
   color: var(--text-soft);
   letter-spacing: 0.02em;
+  text-indent: 0.02em;
 }
 
 /* Short viewports: the 10-cell poster would clip inside the fixed page
