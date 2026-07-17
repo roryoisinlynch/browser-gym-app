@@ -507,9 +507,9 @@ function TopExerciseSlide({ stats }: { stats: YearInReviewStats }) {
 }
 
 function ExerciseSplitSlide({ stats }: { stats: YearInReviewStats }) {
-  const top4 = stats.topExercises.slice(0, 4);
-  const topSets = top4.reduce((sum, ex) => sum + ex.setCount, 0);
-  const rows = top4.map((ex) => ({
+  const topExercises = stats.topExercises.slice(0, 10);
+  const topSets = topExercises.reduce((sum, ex) => sum + ex.setCount, 0);
+  const rows = topExercises.map((ex) => ({
     name: ex.name,
     share: stats.totalSets > 0 ? ex.setCount / stats.totalSets : 0,
   }));

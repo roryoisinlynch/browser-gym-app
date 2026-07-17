@@ -474,7 +474,7 @@ export async function computeYearInReviewStats(
       b.tonnageKg - a.tonnageKg ||
       displayName(a.casings).localeCompare(displayName(b.casings))
   );
-  const topExercises: TopExerciseStat[] = rankedExercises.slice(0, 5).map((agg) => ({
+  const topExercises: TopExerciseStat[] = rankedExercises.slice(0, 10).map((agg) => ({
     name: displayName(agg.casings),
     setCount: agg.setCount,
     repCount: agg.repCount,

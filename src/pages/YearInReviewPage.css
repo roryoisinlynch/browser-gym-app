@@ -537,6 +537,16 @@
   flex-basis: 110px;
 }
 
+/* Up to eleven rows (top ten plus "Everything else"): tighten the stack and
+   slim the bars so the slide fits without scrolling. */
+.yir-split--exercises {
+  gap: 7px;
+}
+
+.yir-split--exercises .yir-split__track {
+  height: 10px;
+}
+
 .yir-split__track {
   flex: 1;
   height: 12px;
