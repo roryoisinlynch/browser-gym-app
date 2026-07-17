@@ -293,38 +293,52 @@
   margin: 0;
 }
 
-/* ── Sessions grid ── */
-
-.yir-session-grid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 5px;
-  max-width: 300px;
-}
-
-.yir-session-grid__square {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  background: #6bcb77;
-}
-
-/* ── Contribution calendar ── */
+/* ── Contribution calendars ── */
 
 .yir-cal {
   display: grid;
   grid-auto-flow: column;
-  grid-template-rows: repeat(7, 1fr);
-  grid-auto-columns: 1fr;
   gap: 2px;
-  width: 100%;
-  max-width: 332px;
-  height: 44px;
+}
+
+/* A quarter is at most 14 week columns; 8px cells keep two quarters side by
+   side inside a 360px viewport. */
+.yir-cal--quarter {
+  grid-template-rows: repeat(7, 8px);
+  grid-auto-columns: 8px;
+}
+
+/* A single month is at most 6 columns, so its cells can afford the detail. */
+.yir-cal--month {
+  grid-template-rows: repeat(7, 13px);
+  grid-auto-columns: 13px;
+  gap: 3px;
+}
+
+.yir-cal-quarters {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 14px 18px;
+  justify-content: center;
+}
+
+.yir-cal-quarters__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.yir-cal-quarters__label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-soft);
 }
 
 .yir-cal__cell {
-  border-radius: 1px;
+  border-radius: 2px;
   background: rgba(255, 255, 255, 0.06);
 }
 
@@ -846,12 +860,8 @@
     animation: yir-draw 900ms ease-out 250ms forwards;
   }
 
-  .yir-session-grid__square {
-    animation: yir-pop 340ms cubic-bezier(0.2, 0.8, 0.3, 1.3) calc(300ms + var(--i) * 12ms) backwards;
-  }
-
   /* Left-to-right sweep, staggered per week column; a per-cell pop would be
-     invisible at this cell size and take seconds across 53 columns. */
+     invisible at this cell size and take seconds across a quarter's columns. */
   .yir-cal__cell {
     animation: yir-fade 240ms ease-out calc(300ms + var(--c, 0) * 8ms) backwards;
   }

@@ -155,17 +155,29 @@ function CoverSlide({ stats }: { stats: YearInReviewStats }) {
 }
 
 /**
- * GitHub-style contribution calendar: columns are Monday-aligned weeks, rows
- * Mon to Sun, cells shaded by that day's set count (native + imported).
+ * GitHub-style contribution calendar for an arbitrary day range: columns are
+ * Monday-aligned weeks, rows Mon to Sun, cells shaded by that day's set count
+ * (native + imported). `max` is always passed in, never derived, so every
+ * calendar on screen shares one intensity scale.
  */
-function ContributionCalendar({ stats }: { stats: YearInReviewStats }) {
-  const counts = stats.dailySetCounts;
-  const max = Math.max(...counts, 1);
-  // Monday-based weekday of Jan 1: UTC day 0 was a Thursday, so offset 3.
-  const lead = (Math.floor(Date.UTC(stats.reviewYear, 0, 1) / 86400000) + 3) % 7;
+function ContributionCalendar({
+  counts,
+  firstDayMs,
+  max,
+  variant,
+}: {
+  counts: number[];
+  /** UTC ms of the range's first day, for weekday alignment. */
+  firstDayMs: number;
+  /** Shared shading ceiling: the full year's busiest day. */
+  max: number;
+  variant: "quarter" | "month";
+}) {
+  // Monday-based weekday of the first day: UTC day 0 was a Thursday, offset 3.
+  const lead = (Math.floor(firstDayMs / 86400000) + 3) % 7;
   const total = Math.ceil((lead + counts.length) / 7) * 7;
   return (
-    <div className="yir-cal" aria-hidden="true">
+    <div className={`yir-cal yir-cal--${variant}`} aria-hidden="true">
       {Array.from({ length: total }, (_, i) => {
         const day = i - lead;
         if (day < 0 || day >= counts.length) {
@@ -185,6 +197,43 @@ function ContributionCalendar({ stats }: { stats: YearInReviewStats }) {
   );
 }
 
+/** Slice of dailySetCounts covering months [startMonth, endMonthExcl). */
+function monthRangeSlice(
+  stats: YearInReviewStats,
+  startMonth: number,
+  endMonthExcl: number
+): { counts: number[]; firstDayMs: number } {
+  const jan1Ms = Date.UTC(stats.reviewYear, 0, 1);
+  const firstDayMs = Date.UTC(stats.reviewYear, startMonth, 1);
+  const from = (firstDayMs - jan1Ms) / 86400000;
+  const to = (Date.UTC(stats.reviewYear, endMonthExcl, 1) - jan1Ms) / 86400000;
+  return { counts: stats.dailySetCounts.slice(from, to), firstDayMs };
+}
+
+const QUARTER_LABELS = ["Jan-Mar", "Apr-Jun", "Jul-Sep", "Oct-Dec"];
+
+function QuarterCalendars({ stats }: { stats: YearInReviewStats }) {
+  const max = Math.max(...stats.dailySetCounts, 1);
+  return (
+    <div className="yir-cal-quarters" aria-hidden="true">
+      {QUARTER_LABELS.map((label, q) => {
+        const { counts, firstDayMs } = monthRangeSlice(stats, q * 3, q * 3 + 3);
+        return (
+          <div key={label} className="yir-cal-quarters__item">
+            <ContributionCalendar
+              counts={counts}
+              firstDayMs={firstDayMs}
+              max={max}
+              variant="quarter"
+            />
+            <span className="yir-cal-quarters__label">{label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function SessionsSlide({ stats }: { stats: YearInReviewStats }) {
   const n = stats.totalCompletedSessions;
   if (n === 0) {
@@ -197,7 +246,7 @@ function SessionsSlide({ stats }: { stats: YearInReviewStats }) {
             training {stats.trainingDayCount === 1 ? "day" : "days"}
           </span>
         </p>
-        <ContributionCalendar stats={stats} />
+        <QuarterCalendars stats={stats} />
         <p className="yir-sub yir-reveal yir-reveal--3">
           Rebuilt from your imported history.
         </p>
@@ -216,16 +265,7 @@ function SessionsSlide({ stats }: { stats: YearInReviewStats }) {
           {formatDuration(stats.totalTrainingSeconds)} in the gym
         </p>
       )}
-      <div className="yir-session-grid" aria-hidden="true">
-        {Array.from({ length: Math.min(n, 60) }, (_, i) => (
-          <span
-            key={i}
-            className="yir-session-grid__square"
-            style={{ "--i": i } as React.CSSProperties}
-          />
-        ))}
-      </div>
-      <ContributionCalendar stats={stats} />
+      <QuarterCalendars stats={stats} />
       {stats.totalTrainingSeconds > 0 && (
         <p className="yir-sub yir-reveal yir-reveal--4">
           That's an average of{" "}
