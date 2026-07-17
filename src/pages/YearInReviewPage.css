@@ -263,6 +263,12 @@
   color: #f4a161;
 }
 
+/* Secondary kilogram chip: neutral, so the coloured percentage leads. */
+.yir-chip--kg {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+}
+
 /* A centered line with a trailing chip: an invisible mirror chip on the left
    keeps the text itself on the slide's centerline. */
 .yir-valueline {

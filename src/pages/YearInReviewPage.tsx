@@ -5,6 +5,7 @@ import {
   getYearInReviewState,
   type YearInReviewStats,
   type VolumeExercise,
+  type YearOnYearPr,
 } from "../services/yearInReview";
 import { formatDuration } from "../services/sessionMetrics";
 import "./YearInReviewPage.css";
@@ -606,21 +607,35 @@ function DebutsSlide({ stats }: { stats: YearInReviewStats }) {
   );
 }
 
-function extrasLabel(n: number): string {
-  return `+ ${formatInt(n)} ${n === 1 ? "extra" : "extras"}.`;
+/** Union of the top three by percentage and the top three by kilograms. */
+function unionTopThree(
+  prs: YearOnYearPr[],
+  kgGain: (p: YearOnYearPr) => number,
+  wanted: "up" | "down"
+): YearOnYearPr[] {
+  const sign = wanted === "up" ? 1 : -1;
+  const byPct = prs
+    .filter((p) => sign * p.relativeDiff > 0)
+    .sort((a, b) => sign * (b.relativeDiff - a.relativeDiff))
+    .slice(0, 3);
+  const byKg = prs
+    .filter((p) => sign * kgGain(p) > 0)
+    .sort((a, b) => sign * (kgGain(b) - kgGain(a)))
+    .slice(0, 3);
+  const seen = new Set<string>();
+  const union: YearOnYearPr[] = [];
+  for (const p of [...byPct, ...byKg]) {
+    if (seen.has(p.name)) continue;
+    seen.add(p.name);
+    union.push(p);
+  }
+  return union.sort((a, b) => sign * (b.relativeDiff - a.relativeDiff));
 }
 
 function PrCountSlide({ stats }: { stats: YearInReviewStats }) {
-  const winners = stats.yearOnYearPrs
-    .filter((p) => p.relativeDiff > 0)
-    .sort((a, b) => b.relativeDiff - a.relativeDiff)
-    .slice(0, 3);
-  const losers = stats.yearOnYearPrs
-    .filter((p) => p.relativeDiff < 0)
-    .sort((a, b) => a.relativeDiff - b.relativeDiff)
-    .slice(0, 3);
-  const winnerExtras = stats.prUpCount - winners.length;
-  const loserExtras = stats.prDownCount - losers.length;
+  const kgGain = (p: YearOnYearPr) => p.bestYearE1RM - p.bestPriorE1RM;
+  const winners = unionTopThree(stats.yearOnYearPrs, kgGain, "up");
+  const losers = unionTopThree(stats.yearOnYearPrs, kgGain, "down");
   return (
     <div className="yir-slide-body">
       <div className="yir-arrows" aria-hidden="true">
@@ -645,11 +660,11 @@ function PrCountSlide({ stats }: { stats: YearInReviewStats }) {
             <div key={p.name} className="yir-prlist__row">
               <span className="yir-prlist__name">{p.name}</span>
               <span className="yir-chip">+{formatGainPct(p.relativeDiff)}%</span>
+              <span className="yir-chip yir-chip--kg">
+                +{formatE1RM(kgGain(p))} kg
+              </span>
             </div>
           ))}
-          {winnerExtras > 0 && (
-            <p className="yir-prlist__extras">{extrasLabel(winnerExtras)}</p>
-          )}
         </div>
       )}
       {losers.length > 0 && (
@@ -661,11 +676,11 @@ function PrCountSlide({ stats }: { stats: YearInReviewStats }) {
               <span className="yir-chip yir-chip--down">
                 {formatGainPct(p.relativeDiff)}%
               </span>
+              <span className="yir-chip yir-chip--kg">
+                {formatE1RM(kgGain(p))} kg
+              </span>
             </div>
           ))}
-          {loserExtras > 0 && (
-            <p className="yir-prlist__extras">{extrasLabel(loserExtras)}</p>
-          )}
         </div>
       )}
     </div>
@@ -945,7 +960,7 @@ function buildDeck(stats: YearInReviewStats, onDone: () => void): SlideDef[] {
       node: <TopExerciseSlide stats={stats} />,
     });
   }
-  if (stats.prUpCount + stats.prDownCount >= 3) {
+  if (stats.yearOnYearPrs.length >= 1) {
     deck.push({ key: "pr-count", glow: "lime", node: <PrCountSlide stats={stats} /> });
   }
   if (stats.debutExercises.length >= 1) {
