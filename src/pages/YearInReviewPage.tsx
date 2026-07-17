@@ -45,6 +45,11 @@ function drySpellCaption(pr: NonNullable<YearInReviewStats["drySpellPr"]>): stri
   return `${ordinalDate(pr.date)}. The longest-standing best you broke this year.`;
 }
 
+/** "2024-10-14" -> "14th Oct 2024", for ranges that can leave the review year. */
+function ordinalDateWithYear(date: string): string {
+  return `${ordinalDate(date)} ${date.slice(0, 4)}`;
+}
+
 /** "2026-10-14" -> "14th Oct" */
 function ordinalDate(date: string): string {
   const [, m, d] = date.split("-").map(Number);
@@ -422,10 +427,18 @@ function BusiestMonthSlide({ stats }: { stats: YearInReviewStats }) {
 function StreakSlide({ stats }: { stats: YearInReviewStats }) {
   const streak = stats.longestWeeklyStreak;
   const allTime = stats.allTimeLongestWeeklyStreak;
+  const prevBest = stats.previousBestWeeklyStreak;
   const drawn = Math.min(streak, 16);
-  const showAllTime = stats.hasPriorYearData && allTime > streak;
-  const pctLonger =
-    streak > 0 ? Math.round(((allTime - streak) / streak) * 100) : 0;
+  const yearRange = stats.longestWeeklyStreakRange;
+  const allTimeRange = stats.allTimeLongestWeeklyStreakRange;
+  const yearDates = yearRange
+    ? `${ordinalDate(yearRange.start)} to ${ordinalDate(yearRange.end)}`
+    : null;
+  // The all-time run can only exceed the in-year one when older data exists,
+  // so with prior-year data these are the doc's conditions 1 and 2; without
+  // it, condition 3 (no comparison at all).
+  const beatenByAllTime = stats.hasPriorYearData && allTime > streak;
+  const beatAllTime = stats.hasPriorYearData && allTime <= streak;
   return (
     <div className="yir-slide-body">
       <p className="yir-eyebrow yir-reveal">Consistency</p>
@@ -442,18 +455,27 @@ function StreakSlide({ stats }: { stats: YearInReviewStats }) {
         ))}
         {streak > drawn && <span className="yir-chain__more">+{streak - drawn}</span>}
       </div>
-      {showAllTime && (
-        <p className="yir-second-line yir-reveal yir-reveal--3">
-          All-time best: {allTime} weeks
-        </p>
-      )}
-      <p className={`yir-sub yir-reveal ${showAllTime ? "yir-reveal--4" : "yir-reveal--3"}`}>
-        {showAllTime
-          ? `Your longest run this year. Your all-time best was ${pctLonger}% longer.`
-          : stats.hasPriorYearData
-            ? "Your longest run of consecutive weeks with at least one session. That's your all-time best."
-            : "Your longest run of consecutive weeks with at least one session."}
+      <p className="yir-sub yir-reveal yir-reveal--3">
+        {yearDates
+          ? `Your longest run this year: ${yearDates}.`
+          : "Your longest run this year."}
       </p>
+      {(beatenByAllTime || beatAllTime) && (
+        <>
+          <p className="yir-second-line yir-reveal yir-reveal--4">
+            All-time best: {allTime} weeks
+          </p>
+          <p className="yir-sub yir-reveal yir-reveal--4">
+            {beatenByAllTime
+              ? allTimeRange
+                ? `${ordinalDateWithYear(allTimeRange.start)} to ${ordinalDateWithYear(allTimeRange.end)}.`
+                : ""
+              : prevBest > 0
+                ? `You beat your all-time streak this year with a run of ${streak} weeks; your best streak before then was ${prevBest} ${prevBest === 1 ? "week" : "weeks"}.`
+                : `You set your all-time streak this year with a run of ${streak} weeks.`}
+          </p>
+        </>
+      )}
     </div>
   );
 }

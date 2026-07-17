@@ -244,8 +244,17 @@ export interface YearInReviewStats {
   preHistoryMonthCount: number;
   busiestMonth: BusiestMonth | null;
   longestWeeklyStreak: number;
+  /** Monday-to-Sunday dates of the in-year streak; null when no streak. */
+  longestWeeklyStreakRange: { start: string; end: string } | null;
   /** Longest weekly streak across all history up to the end of the review year. */
   allTimeLongestWeeklyStreak: number;
+  /** Monday-to-Sunday dates of the all-time streak; null when no streak. */
+  allTimeLongestWeeklyStreakRange: { start: string; end: string } | null;
+  /**
+   * Longest weekly streak that ended before the in-year streak began, for the
+   * "you beat your all-time best" comparison. 0 when there is none.
+   */
+  previousBestWeeklyStreak: number;
   /** True when any completed session or imported set predates the review year. */
   hasPriorYearData: boolean;
   goldSessionCount: number;
@@ -279,17 +288,48 @@ function mondayWeekIndex(date: string): number {
   return Math.floor((utcDayNumber(date) - 4) / 7);
 }
 
-/** Longest run of consecutive integers in an ascending-sorted list. */
-function longestConsecutiveRun(sortedWeekIndexes: number[]): number {
-  let longest = 0;
+interface WeekRun {
+  length: number;
+  startWeekIndex: number;
+  endWeekIndex: number;
+}
+
+/**
+ * Longest run of consecutive integers in an ascending-sorted list, with its
+ * boundaries; the first maximal run wins ties. Null on empty input.
+ */
+function longestConsecutiveRun(sortedWeekIndexes: number[]): WeekRun | null {
+  let best: WeekRun | null = null;
+  let runStart = 0;
   let run = 0;
   let prev: number | null = null;
   for (const w of sortedWeekIndexes) {
-    run = prev != null && w === prev + 1 ? run + 1 : 1;
+    if (prev != null && w === prev + 1) {
+      run++;
+    } else {
+      run = 1;
+      runStart = w;
+    }
     prev = w;
-    if (run > longest) longest = run;
+    if (best == null || run > best.length) {
+      best = { length: run, startWeekIndex: runStart, endWeekIndex: w };
+    }
   }
-  return longest;
+  return best;
+}
+
+/** "YYYY-MM-DD" for a UTC day number (inverse of utcDayNumber). */
+function isoFromDayNumber(dayNumber: number): string {
+  const d = new Date(dayNumber * 86400000);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
+/** Monday-to-Sunday calendar range of a run of Monday-aligned week indexes. */
+function weekRunRange(run: WeekRun): { start: string; end: string } {
+  return {
+    start: isoFromDayNumber(run.startWeekIndex * 7 + 4),
+    end: isoFromDayNumber(run.endWeekIndex * 7 + 10),
+  };
 }
 
 export async function computeYearInReviewStats(
@@ -717,9 +757,11 @@ export async function computeYearInReviewStats(
   // review year; a run alive at Jan 1 restarts, so one year's review is
   // reproducible from that year's data. All-time: full history clipped at the
   // end of the review year, so a prior run can span a Jan 1 boundary. ──
-  const longestWeeklyStreak = longestConsecutiveRun(
+  const inYearRun = longestConsecutiveRun(
     [...new Set([...activeDays].map(mondayWeekIndex))].sort((a, b) => a - b)
   );
+  const longestWeeklyStreak = inYearRun?.length ?? 0;
+  const longestWeeklyStreakRange = inYearRun ? weekRunRange(inYearRun) : null;
 
   const allActiveDates = new Set<string>();
   for (const s of sessions) {
@@ -733,9 +775,17 @@ export async function computeYearInReviewStats(
     if (r.date < reviewYearEnd) allActiveDates.add(r.date);
   }
   const hasPriorYearData = [...allActiveDates].some((d) => d < reviewYearStart);
-  const allTimeLongestWeeklyStreak = longestConsecutiveRun(
-    [...new Set([...allActiveDates].map(mondayWeekIndex))].sort((a, b) => a - b)
+  const allWeekIndexes = [...new Set([...allActiveDates].map(mondayWeekIndex))].sort(
+    (a, b) => a - b
   );
+  const allTimeRun = longestConsecutiveRun(allWeekIndexes);
+  const allTimeLongestWeeklyStreak = allTimeRun?.length ?? 0;
+  const allTimeLongestWeeklyStreakRange = allTimeRun ? weekRunRange(allTimeRun) : null;
+  const previousBestWeeklyStreak = inYearRun
+    ? longestConsecutiveRun(
+        allWeekIndexes.filter((w) => w < inYearRun.startWeekIndex)
+      )?.length ?? 0
+    : 0;
 
   // ── Achievements (mirrors the dashboard's loadAchievements rules; the
   // metrics getters backfill frozenMetrics on first read, which is the same
@@ -803,7 +853,10 @@ export async function computeYearInReviewStats(
     preHistoryMonthCount,
     busiestMonth,
     longestWeeklyStreak,
+    longestWeeklyStreakRange,
     allTimeLongestWeeklyStreak,
+    allTimeLongestWeeklyStreakRange,
+    previousBestWeeklyStreak,
     hasPriorYearData,
     goldSessionCount,
     perfectWeekCount,
