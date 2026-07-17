@@ -16,6 +16,7 @@ import {
   type PREvent,
 } from "../repositories/programRepository";
 import { calculateEstimatedOneRepMax } from "./setAnalysis";
+import { percentileOrNull } from "./heuristicsScale";
 import { loadAllImportedSets } from "./importedSetStore";
 import { clearYearInReviewPromptFlag } from "../repositories/yearInReviewRepository";
 
@@ -205,12 +206,20 @@ export interface BusiestMonth {
   unit: "sessions" | "training days";
 }
 
-export interface RepExtreme {
+/**
+ * A five-number summary of one exercise's reps-per-set, for a box plot. All
+ * figures are in reps and share the review's repsAxisMax scale. Whiskers are
+ * clamped to the 5th and 95th percentiles so a lone outlier can't stretch them.
+ */
+export interface RepBox {
   name: string;
   avgReps: number;
-  /** Same 15-bin structure as the overall repsHistogram. */
-  histogram: number[];
   setCount: number;
+  q1: number;
+  median: number;
+  q3: number;
+  whiskerLow: number;
+  whiskerHigh: number;
 }
 
 export interface YearInReviewStats {
@@ -220,14 +229,16 @@ export interface YearInReviewStats {
   totalSets: number;
   totalReps: number;
   importedSetCount: number;
-  /** Sets per rep count: index i = sets performed at i+1 reps, last bin = 15+. */
+  /** Sets per rep count: index i = sets at i+1 reps, last bin = repsAxisMax+. */
   repsHistogram: number[];
+  /** Shared x-axis cap (in reps) for the histogram and the box plots. */
+  repsAxisMax: number;
   /**
-   * Rep-distribution outliers among the top 15 highest-volume exercises: the
-   * lowest and highest average reps per set. Null with fewer than two
-   * candidates.
+   * Reps-per-set box plots for a low, medium and high average-rep exercise,
+   * chosen from the top 15 by set count. Null unless three distinct exercises
+   * qualify and the low and high averages sit at least five reps apart.
    */
-  repExtremes: { low: RepExtreme; high: RepExtreme } | null;
+  repProfile: { boxes: RepBox[] } | null;
   /** Sets per day of the review year (native + imported), index = 0-based day-of-year. */
   dailySetCounts: number[];
   trainingDayCount: number;
@@ -388,7 +399,10 @@ export async function computeYearInReviewStats(
   const totalSets = yearSets.length;
   let totalReps = 0;
   let importedSetCount = 0;
-  const repsHistogram = new Array<number>(15).fill(0);
+  // Every in-year rep, uncapped, so the box plots and the shared axis cap can
+  // reach past the old fixed "15+" bucket. The histogram is binned later, once
+  // repsAxisMax is known.
+  const allReps: number[] = [];
   const jan1Ms = Date.UTC(reviewYear, 0, 1);
   const daysInYear = Math.round((Date.UTC(reviewYear + 1, 0, 1) - jan1Ms) / 86400000);
   const dailySetCounts = new Array<number>(daysInYear).fill(0);
@@ -397,7 +411,7 @@ export async function computeYearInReviewStats(
     const reps = r.reps!;
     totalReps += reps;
     if (r.source === "imported") importedSetCount++;
-    repsHistogram[Math.min(reps, 15) - 1]++;
+    allReps.push(reps);
     const [y, m, d] = r.date.split("-").map(Number);
     dailySetCounts[(Date.UTC(y, m - 1, d) - jan1Ms) / 86400000]++;
     trainingDays.add(r.date);
@@ -450,7 +464,8 @@ export async function computeYearInReviewStats(
     setCount: number;
     repCount: number;
     tonnageKg: number;
-    repsHistogram: number[];
+    /** Every rep this exercise was performed for, for the box plots. */
+    reps: number[];
     casings: Map<string, number>;
   }
   const byExercise = new Map<string, ExerciseAgg>();
@@ -462,14 +477,14 @@ export async function computeYearInReviewStats(
         setCount: 0,
         repCount: 0,
         tonnageKg: 0,
-        repsHistogram: new Array<number>(15).fill(0),
+        reps: [],
         casings: new Map(),
       };
       byExercise.set(key, agg);
     }
     agg.setCount++;
     agg.repCount += r.reps!;
-    agg.repsHistogram[Math.min(r.reps!, 15) - 1]++;
+    agg.reps.push(r.reps!);
     if (r.weight != null && r.weight > 0) agg.tonnageKg += r.weight * r.reps!;
     const casing = r.exerciseName.trim();
     agg.casings.set(casing, (agg.casings.get(casing) ?? 0) + 1);
@@ -499,28 +514,68 @@ export async function computeYearInReviewStats(
   }));
   const distinctExerciseCount = byExercise.size;
 
-  // ── Rep extremes: among the top 15 highest-volume exercises, the lowest and
-  // highest average reps per set. The Grind slide only shows the pair when
-  // their averages sit at least 5 reps apart. ──
-  let repExtremes: YearInReviewStats["repExtremes"] = null;
+  // ── Reps box plots: among the top 15 highest-volume exercises, pick the
+  // lowest, median and highest average reps per set. The Grind slide only
+  // shows them when three distinct exercises qualify and the low and high
+  // averages sit at least five reps apart; otherwise just the histogram
+  // renders and the axis stays at 15. ──
+  let repProfile: YearInReviewStats["repProfile"] = null;
+  let repsAxisMax = 15;
   {
     const pool = rankedExercises.slice(0, 15);
     const avg = (agg: ExerciseAgg) => agg.repCount / agg.setCount;
-    let low = pool[0];
-    let high = pool[0];
-    for (const agg of pool) {
-      if (avg(agg) < avg(low)) low = agg;
-      if (avg(agg) > avg(high)) high = agg;
+    const byAvg = [...pool].sort((a, b) => avg(a) - avg(b));
+    if (byAvg.length >= 3) {
+      const low = byAvg[0];
+      const high = byAvg[byAvg.length - 1];
+      // Medium: the interior exercise whose average is closest to the median
+      // of the pool's averages (never the low or high extreme).
+      const medianAvg = percentileOrNull(byAvg.map(avg), 0.5) ?? avg(low);
+      let medium = byAvg[1];
+      for (const agg of byAvg.slice(1, -1)) {
+        if (Math.abs(avg(agg) - medianAvg) < Math.abs(avg(medium) - medianAvg)) {
+          medium = agg;
+        }
+      }
+      const chosen = [low, medium, high];
+      if (new Set(chosen).size === 3 && avg(high) - avg(low) >= 5) {
+        const sortedRepsOf = (agg: ExerciseAgg) => [...agg.reps].sort((a, b) => a - b);
+        const p95Of = (agg: ExerciseAgg) => {
+          const s = sortedRepsOf(agg);
+          return percentileOrNull(s, 0.95) ?? s[s.length - 1] ?? 1;
+        };
+        const overallP95 =
+          percentileOrNull([...allReps].sort((a, b) => a - b), 0.95) ?? 15;
+        repsAxisMax = Math.max(
+          15,
+          Math.ceil(Math.max(overallP95, ...chosen.map(p95Of)))
+        );
+        const toBox = (agg: ExerciseAgg): RepBox => {
+          const s = sortedRepsOf(agg);
+          return {
+            name: displayName(agg.casings),
+            avgReps: avg(agg),
+            setCount: agg.setCount,
+            q1: percentileOrNull(s, 0.25) ?? s[0],
+            median: percentileOrNull(s, 0.5) ?? s[0],
+            q3: percentileOrNull(s, 0.75) ?? s[0],
+            whiskerLow: Math.max(1, percentileOrNull(s, 0.05) ?? s[0]),
+            whiskerHigh: Math.min(
+              repsAxisMax,
+              percentileOrNull(s, 0.95) ?? s[s.length - 1]
+            ),
+          };
+        };
+        repProfile = { boxes: chosen.map(toBox) };
+      }
     }
-    if (pool.length >= 2 && low !== high) {
-      const toExtreme = (agg: ExerciseAgg): RepExtreme => ({
-        name: displayName(agg.casings),
-        avgReps: avg(agg),
-        histogram: agg.repsHistogram,
-        setCount: agg.setCount,
-      });
-      repExtremes = { low: toExtreme(low), high: toExtreme(high) };
-    }
+  }
+
+  // Overall reps histogram on the shared axis: index i = i+1 reps, the last
+  // bin collecting everything at repsAxisMax reps or above.
+  const repsHistogram = new Array<number>(repsAxisMax).fill(0);
+  for (const reps of allReps) {
+    repsHistogram[Math.min(reps, repsAxisMax) - 1]++;
   }
 
   // ── PRs ──
@@ -894,7 +949,8 @@ export async function computeYearInReviewStats(
     totalReps,
     importedSetCount,
     repsHistogram,
-    repExtremes,
+    repsAxisMax,
+    repProfile,
     dailySetCounts,
     trainingDayCount,
     topExercises,

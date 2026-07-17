@@ -6,6 +6,7 @@ import {
   type YearInReviewStats,
   type VolumeExercise,
   type YearOnYearPr,
+  type RepBox,
 } from "../services/yearInReview";
 import { formatDuration } from "../services/sessionMetrics";
 import "./YearInReviewPage.css";
@@ -295,24 +296,27 @@ function SessionsSlide({ stats }: { stats: YearInReviewStats }) {
   );
 }
 
-// Sparse axis labels for the reps histogram: only 1, 5, 10 and 15+ are marked.
-// Unlabelled columns get a non-breaking space so every label row keeps height.
-const REP_BIN_LABELS: Record<number, string> = { 0: "1", 4: "5", 9: "10", 14: "15+" };
+// Sparse axis labels for the reps scale: 1, every fifth rep, and the final
+// "N+" collapse bin. Unlabelled columns get a non-breaking space so the row
+// keeps its height.
+function repBinLabel(i: number, axisMax: number): string {
+  const rep = i + 1;
+  if (rep === axisMax) return `${axisMax}+`;
+  if (rep === 1 || rep % 5 === 0) return `${rep}`;
+  return " ";
+}
 
 /**
- * The fixed 15-bin reps distribution. Every instance spans the same 1 to 15+
- * x-axis by construction, so side-by-side histograms compare directly.
+ * The reps distribution histogram. Bins run 1..bins.length reps, the last bin
+ * collecting everything at that many reps or above. Its label row is the shared
+ * x-axis for the box plots stacked below it.
  */
-function RepsHistogram({ bins, compact }: { bins: number[]; compact?: boolean }) {
+function RepsHistogram({ bins }: { bins: number[] }) {
+  const axisMax = bins.length;
   const maxBin = Math.max(...bins, 1);
   const modalBin = bins.indexOf(maxBin);
   return (
-    <div
-      className={`yir-histogram yir-histogram--reps${
-        compact ? " yir-histogram--compact" : ""
-      }`}
-      aria-hidden="true"
-    >
+    <div className="yir-histogram yir-histogram--reps" aria-hidden="true">
       {bins.map((count, i) => (
         <div key={i} className="yir-histogram__col">
           <span
@@ -329,10 +333,39 @@ function RepsHistogram({ bins, compact }: { bins: number[]; compact?: boolean })
             }
           />
           <span className="yir-histogram__label">
-            {REP_BIN_LABELS[i] ?? " "}
+            {repBinLabel(i, axisMax)}
           </span>
         </div>
       ))}
+    </div>
+  );
+}
+
+/** A horizontal reps box plot on the shared 1..axisMax reps scale. */
+function RepBoxPlot({ box, axisMax }: { box: RepBox; axisMax: number }) {
+  // Map a rep value to its histogram-column centre so the box lines up with the
+  // bars above it.
+  const pos = (v: number) => ((v - 0.5) / axisMax) * 100;
+  const whiskerLeft = pos(box.whiskerLow);
+  const whiskerRight = pos(box.whiskerHigh);
+  const boxLeft = pos(box.q1);
+  const boxRight = pos(box.q3);
+  return (
+    <div className="yir-box">
+      <span className="yir-box__name">{box.name}</span>
+      <span className="yir-box__track" aria-hidden="true">
+        <span
+          className="yir-box__whisker"
+          style={{ left: `${whiskerLeft}%`, width: `${whiskerRight - whiskerLeft}%` }}
+        />
+        <span className="yir-box__cap" style={{ left: `${whiskerLeft}%` }} />
+        <span className="yir-box__cap" style={{ left: `${whiskerRight}%` }} />
+        <span
+          className="yir-box__box"
+          style={{ left: `${boxLeft}%`, width: `${Math.max(boxRight - boxLeft, 1)}%` }}
+        />
+        <span className="yir-box__median" style={{ left: `${pos(box.median)}%` }} />
+      </span>
     </div>
   );
 }
@@ -342,8 +375,7 @@ function SetsRepsSlide({ stats }: { stats: YearInReviewStats }) {
   const shown = useCountUp(target);
   const avgReps =
     stats.totalSets > 0 ? Math.round(stats.totalReps / stats.totalSets) : 0;
-  const cmp = stats.repExtremes;
-  const compare = cmp != null && cmp.high.avgReps - cmp.low.avgReps >= 5 ? cmp : null;
+  const profile = stats.repProfile;
   // Size from the final value, not the animating one, so the count-up never
   // crosses a wrap threshold mid-animation.
   const long = formatInt(target).length >= 7;
@@ -366,20 +398,19 @@ function SetsRepsSlide({ stats }: { stats: YearInReviewStats }) {
           set.
         </p>
       )}
-      {stats.totalSets >= 20 && compare && (
+      {stats.totalSets >= 20 && profile && (
         <>
-          <div className="yir-hist-compare yir-reveal yir-reveal--4">
-            {[compare.low, compare.high].map((ex) => (
-              <div key={ex.name} className="yir-hist-compare__item">
-                <span className="yir-hist-compare__caption">{ex.name}</span>
-                <RepsHistogram bins={ex.histogram} compact />
-              </div>
+          <div className="yir-boxplots yir-reveal yir-reveal--4">
+            {profile.boxes.map((box) => (
+              <RepBoxPlot key={box.name} box={box} axisMax={stats.repsAxisMax} />
             ))}
           </div>
           <p className="yir-footnote yir-reveal yir-reveal--4">
-            Some exercises, like {compare.low.name}, had a lower average rep
-            count, whereas some exercises, like {compare.high.name}, had a
-            higher average rep count.
+            Average rep counts varied across exercises. For example,{" "}
+            {profile.boxes[0].name} averaged {Math.round(profile.boxes[0].avgReps)}{" "}
+            reps per set, {profile.boxes[1].name} averaged{" "}
+            {Math.round(profile.boxes[1].avgReps)}, and {profile.boxes[2].name}{" "}
+            averaged {Math.round(profile.boxes[2].avgReps)}.
           </p>
         </>
       )}

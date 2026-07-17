@@ -408,49 +408,80 @@
   color: var(--text-soft);
 }
 
-/* Reps distribution variant: 15 narrow columns, shorter than the month bars. */
+/* Reps distribution variant: narrow columns, shorter than the month bars. */
 .yir-histogram--reps {
   height: 84px;
   max-width: 300px;
   gap: 3px;
 }
 
-/* ── Rep-distribution comparison (lowest vs highest average reps) ── */
+/* ── Reps box plots (low / medium / high average-rep exercise) ── */
 
-.yir-hist-compare {
-  display: flex;
-  justify-content: center;
-  gap: 18px;
-  width: 100%;
-  max-width: 320px;
-}
-
-.yir-hist-compare__item {
-  flex: 1;
-  min-width: 0;
+.yir-boxplots {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 6px;
+  gap: 12px;
+  width: 100%;
+  max-width: 300px;
 }
 
-.yir-hist-compare__caption {
-  max-width: 100%;
+.yir-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.yir-box__name {
   font-size: 0.72rem;
   font-weight: 700;
   color: var(--text-muted);
+  text-align: left;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.yir-histogram--compact {
-  height: 56px;
-  gap: 2px;
+.yir-box__track {
+  position: relative;
+  height: 20px;
+  width: 100%;
 }
 
-.yir-histogram--compact .yir-histogram__label {
-  font-size: 0.55rem;
+.yir-box__whisker {
+  position: absolute;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.yir-box__cap {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 11px;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.yir-box__box {
+  position: absolute;
+  top: 50%;
+  height: 16px;
+  transform: translateY(-50%);
+  border-radius: 4px;
+  background: rgba(157, 232, 122, 0.18);
+  border: 1px solid var(--accent);
+}
+
+.yir-box__median {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+  background: var(--accent);
 }
 
 /* ── Streak chain ── */
