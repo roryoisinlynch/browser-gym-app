@@ -64,6 +64,41 @@ function useCountUp(target: number, durationMs = 600): number {
 
 // ─── Slides ───────────────────────────────────────────────────────────────────
 
+const NUMBER_WORDS = [
+  "Zero", "One", "Two", "Three", "Four", "Five", "Six",
+  "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve",
+];
+
+function monthNoun(n: number): string {
+  return n === 1 ? "month" : "months";
+}
+
+/**
+ * Scope line for the cover: where the year's data came from. Chronological
+ * fragments (quiet lead-in, imported history, app-logged months); a fully
+ * app-logged year keeps the original copy.
+ */
+function coverScopeLine(stats: YearInReviewStats): string {
+  const leadIn = stats.emptyLeadInMonthCount;
+  const imported = stats.importedMonthCount;
+  const native = stats.nativeMonthCount;
+  if (leadIn === 0 && imported === 0) {
+    return "Twelve months. One barbell. Let's see what you did with it.";
+  }
+  const parts: string[] = [];
+  if (leadIn > 0) {
+    parts.push(`${NUMBER_WORDS[leadIn]} quiet ${monthNoun(leadIn)} before your first set.`);
+  }
+  if (imported > 0) {
+    parts.push(`${NUMBER_WORDS[imported]} ${monthNoun(imported)} of imported history.`);
+  }
+  if (native > 0) {
+    parts.push(`${NUMBER_WORDS[native]} ${monthNoun(native)} logged right here.`);
+  }
+  parts.push("One barbell through all of it.");
+  return parts.join(" ");
+}
+
 function CoverSlide({ stats }: { stats: YearInReviewStats }) {
   return (
     <div className="yir-slide-body yir-slide-body--cover">
@@ -86,9 +121,7 @@ function CoverSlide({ stats }: { stats: YearInReviewStats }) {
           strokeLinecap="round"
         />
       </svg>
-      <p className="yir-sub yir-reveal yir-reveal--4">
-        Twelve months. One barbell. Let's see what you did with it.
-      </p>
+      <p className="yir-sub yir-reveal yir-reveal--4">{coverScopeLine(stats)}</p>
       <p className="yir-hint">Tap to continue</p>
     </div>
   );

@@ -197,6 +197,12 @@ export interface YearInReviewStats {
   biggestPrHistory: { date: string; value: number }[];
   monthlySessionCounts: number[];
   monthsWithSessions: number;
+  /** Months of the review year with at least one app-logged session or set. */
+  nativeMonthCount: number;
+  /** Months whose only data is imported history. */
+  importedMonthCount: number;
+  /** Empty months at the start of the year, before the first month with any data. */
+  emptyLeadInMonthCount: number;
   busiestMonth: BusiestMonth | null;
   longestWeeklyStreak: number;
   goldSessionCount: number;
@@ -296,6 +302,33 @@ export async function computeYearInReviewStats(
     trainingDays.add(r.date);
   }
   const trainingDayCount = trainingDays.size;
+
+  // ── Month provenance (for the cover's scope line): a month is "native" if
+  // the app logged anything in it, "imported" if its only data is imported
+  // history. Empty months are only counted before the first data month, so a
+  // mid-review December or a late-year break is never called a lead-in. ──
+  const monthHasNative = new Array<boolean>(12).fill(false);
+  const monthHasImported = new Array<boolean>(12).fill(false);
+  const monthOf = (date: string) => Number(date.slice(5, 7)) - 1;
+  for (const s of yearSessions) monthHasNative[monthOf(sessionCompletedDate(s))] = true;
+  for (const r of yearSets) {
+    if (r.source === "imported") monthHasImported[monthOf(r.date)] = true;
+    else monthHasNative[monthOf(r.date)] = true;
+  }
+  let nativeMonthCount = 0;
+  let importedMonthCount = 0;
+  for (let i = 0; i < 12; i++) {
+    if (monthHasNative[i]) nativeMonthCount++;
+    else if (monthHasImported[i]) importedMonthCount++;
+  }
+  let emptyLeadInMonthCount = 0;
+  while (
+    emptyLeadInMonthCount < 12 &&
+    !monthHasNative[emptyLeadInMonthCount] &&
+    !monthHasImported[emptyLeadInMonthCount]
+  ) {
+    emptyLeadInMonthCount++;
+  }
 
   // ── Top exercises (all sets: warmup/working classification is impossible
   // for imported history, so the split is deliberately not attempted) ──
@@ -601,6 +634,9 @@ export async function computeYearInReviewStats(
     biggestPrHistory,
     monthlySessionCounts,
     monthsWithSessions,
+    nativeMonthCount,
+    importedMonthCount,
+    emptyLeadInMonthCount,
     busiestMonth,
     longestWeeklyStreak,
     goldSessionCount,
