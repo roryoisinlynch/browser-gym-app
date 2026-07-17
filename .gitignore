@@ -25,5 +25,9 @@ dist-ssr
 
 cloudflared.exe
 
+# Local working notes
+docs/remove-year-in-review-preview.md
+docs/year-in-review-tasks.md
+
 # Claude Code personal settings
 .claude/settings.local.json
