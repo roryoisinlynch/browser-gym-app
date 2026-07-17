@@ -1,9 +1,6 @@
 import type {
-  MovementType,
-  MuscleGroup,
   SeasonInstance,
   SessionInstance,
-  SessionInstanceExercise,
   WeekInstance,
 } from "../domain/models";
 import { STORE_NAMES, getAll } from "../db/db";
@@ -15,7 +12,6 @@ import {
   getSessionDuration,
   getSeasonMetrics,
   getWeekMetrics,
-  getAllExerciseTemplates,
   sessionCompletedDate,
   type PREvent,
 } from "../repositories/programRepository";
@@ -138,13 +134,6 @@ export interface TopExerciseStat {
   tonnageKg: number;
 }
 
-export interface MuscleGroupStat {
-  name: string;
-  setCount: number;
-  /** Share of attributed sets, 0..1. */
-  share: number;
-}
-
 export interface BiggestPr {
   exerciseName: string;
   date: string;
@@ -191,9 +180,8 @@ export interface YearInReviewStats {
   dailySetCounts: number[];
   trainingDayCount: number;
   topExercises: TopExerciseStat[];
-  muscleGroups: MuscleGroupStat[];
-  /** Attributed in-year sets / all in-year sets, 0..1. */
-  muscleAttributionShare: number;
+  /** Number of distinct exercise names trained in the review year. */
+  distinctExerciseCount: number;
   prCount: number;
   prExerciseCount: number;
   biggestPr: BiggestPr | null;
@@ -262,26 +250,12 @@ export async function computeYearInReviewStats(
   const prefix = `${reviewYear}-`;
   const inYear = (date: string) => date.startsWith(prefix);
 
-  const [
-    sessions,
-    weeks,
-    seasons,
-    setRecords,
-    prEvents,
-    sessionInstanceExercises,
-    exerciseTemplates,
-    movementTypes,
-    muscleGroupRecords,
-  ] = await Promise.all([
+  const [sessions, weeks, seasons, setRecords, prEvents] = await Promise.all([
     getAll<SessionInstance>(STORE_NAMES.sessionInstances),
     getAll<WeekInstance>(STORE_NAMES.weekInstances),
     getAll<SeasonInstance>(STORE_NAMES.seasonInstances),
     getAllSetRecords(),
     getAllTimePREvents(),
-    getAll<SessionInstanceExercise>(STORE_NAMES.sessionInstanceExercises),
-    getAllExerciseTemplates(),
-    getAll<MovementType>(STORE_NAMES.movementTypes),
-    getAll<MuscleGroup>(STORE_NAMES.muscleGroups),
   ]);
 
   // ── Sessions ──
@@ -395,58 +369,7 @@ export async function computeYearInReviewStats(
     repCount: agg.repCount,
     tonnageKg: agg.tonnageKg,
   }));
-
-  // ── Muscle-group split ──
-  // Sets are attributed by exercise name: SessionInstanceExercise snapshots
-  // (and exercise templates as fallback) carry movementTypeId, whose parent is
-  // the muscle group. Name-based matching covers imported sets too; unmatched
-  // names count as unattributed.
-  const movementToMuscleGroup = new Map(
-    movementTypes.map((mt) => [mt.id, mt.muscleGroupId])
-  );
-  const muscleGroupName = new Map(muscleGroupRecords.map((g) => [g.id, g.name]));
-  const nameToMuscleGroupVotes = new Map<string, Map<string, number>>();
-  const vote = (exerciseName: string, movementTypeId: string) => {
-    const groupId = movementToMuscleGroup.get(movementTypeId);
-    if (!groupId) return;
-    const key = normalizeName(exerciseName);
-    let votes = nameToMuscleGroupVotes.get(key);
-    if (!votes) {
-      votes = new Map();
-      nameToMuscleGroupVotes.set(key, votes);
-    }
-    votes.set(groupId, (votes.get(groupId) ?? 0) + 1);
-  };
-  for (const sie of sessionInstanceExercises) vote(sie.exerciseName, sie.movementTypeId);
-  for (const t of exerciseTemplates) vote(t.exerciseName, t.movementTypeId);
-  const nameToMuscleGroup = new Map<string, string>();
-  for (const [name, votes] of nameToMuscleGroupVotes) {
-    let bestGroup = "";
-    let bestCount = -1;
-    for (const [groupId, count] of votes) {
-      if (count > bestCount) {
-        bestGroup = groupId;
-        bestCount = count;
-      }
-    }
-    nameToMuscleGroup.set(name, bestGroup);
-  }
-  const setsByMuscleGroup = new Map<string, number>();
-  let attributedSets = 0;
-  for (const r of yearSets) {
-    const groupId = nameToMuscleGroup.get(normalizeName(r.exerciseName));
-    if (!groupId) continue;
-    attributedSets++;
-    setsByMuscleGroup.set(groupId, (setsByMuscleGroup.get(groupId) ?? 0) + 1);
-  }
-  const muscleGroups: MuscleGroupStat[] = [...setsByMuscleGroup.entries()]
-    .map(([groupId, setCount]) => ({
-      name: muscleGroupName.get(groupId) ?? "Other",
-      setCount,
-      share: attributedSets > 0 ? setCount / attributedSets : 0,
-    }))
-    .sort((a, b) => b.setCount - a.setCount);
-  const muscleAttributionShare = totalSets > 0 ? attributedSets / totalSets : 0;
+  const distinctExerciseCount = byExercise.size;
 
   // ── PRs ──
   // Native per-instance history can emit two same-day events for one exercise
@@ -685,8 +608,7 @@ export async function computeYearInReviewStats(
     dailySetCounts,
     trainingDayCount,
     topExercises,
-    muscleGroups,
-    muscleAttributionShare,
+    distinctExerciseCount,
     prCount,
     prExerciseCount,
     biggestPr,

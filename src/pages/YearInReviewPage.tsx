@@ -373,18 +373,30 @@ function TopExerciseSlide({ stats }: { stats: YearInReviewStats }) {
   );
 }
 
-function MuscleSplitSlide({ stats }: { stats: YearInReviewStats }) {
-  const groups = stats.muscleGroups.slice(0, 4);
-  const top = groups[0];
-  const maxShare = top.share || 1;
+function ExerciseSplitSlide({ stats }: { stats: YearInReviewStats }) {
+  const top4 = stats.topExercises.slice(0, 4);
+  const topSets = top4.reduce((sum, ex) => sum + ex.setCount, 0);
+  const rows = top4.map((ex) => ({
+    name: ex.name,
+    share: stats.totalSets > 0 ? ex.setCount / stats.totalSets : 0,
+  }));
+  const restSets = stats.totalSets - topSets;
+  if (restSets > 0) {
+    rows.push({ name: "Everything else", share: restSets / stats.totalSets });
+  }
+  const topShare = rows[0]?.share ?? 0;
+  const maxShare = Math.max(...rows.map((r) => r.share), 0.01);
   return (
     <div className="yir-slide-body">
       <p className="yir-eyebrow yir-reveal">Where the work went</p>
-      <p className="yir-display yir-display--medium yir-reveal yir-reveal--2">
-        {top.name}
+      <p className="yir-display yir-reveal yir-reveal--2">
+        {Math.round(topShare * 100)}%
       </p>
-      <div className="yir-split">
-        {groups.map((g, i) => (
+      <p className="yir-second-line yir-reveal yir-reveal--3">
+        of your year went to {rows[0]?.name}
+      </p>
+      <div className="yir-split yir-split--exercises">
+        {rows.map((g, i) => (
           <div key={g.name} className="yir-split__row">
             <span className="yir-split__name">{g.name}</span>
             <span className="yir-split__track">
@@ -404,10 +416,8 @@ function MuscleSplitSlide({ stats }: { stats: YearInReviewStats }) {
           </div>
         ))}
       </div>
-      <p className="yir-sub yir-reveal yir-reveal--3">
-        {stats.muscleAttributionShare >= 0.95
-          ? `${Math.round(top.share * 100)}% of everything you did this year.`
-          : `${Math.round(top.share * 100)}% of the sets we could match to a muscle group.`}
+      <p className="yir-sub yir-reveal yir-reveal--4">
+        Across {formatInt(stats.distinctExerciseCount)} different exercises.
       </p>
     </div>
   );
@@ -735,11 +745,11 @@ function buildDeck(stats: YearInReviewStats, onDone: () => void): SlideDef[] {
       node: <TopExerciseSlide stats={stats} />,
     });
   }
-  if (stats.muscleGroups.length >= 2 && stats.muscleAttributionShare >= 0.5) {
+  if (stats.topExercises.length >= 3 && stats.totalSets >= 50) {
     deck.push({
-      key: "muscle-split",
+      key: "exercise-split",
       glow: "blue",
-      node: <MuscleSplitSlide stats={stats} />,
+      node: <ExerciseSplitSlide stats={stats} />,
     });
   }
   const strengthRows = stats.e1rmProgress.filter((r) => r.relativeGain > 0);

@@ -437,6 +437,11 @@
   text-overflow: ellipsis;
 }
 
+/* Exercise names run longer than muscle-group names; give them more room. */
+.yir-split--exercises .yir-split__name {
+  flex-basis: 110px;
+}
+
 .yir-split__track {
   flex: 1;
   height: 12px;
