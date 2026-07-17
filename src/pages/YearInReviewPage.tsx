@@ -987,7 +987,22 @@ export default function YearInReviewPage() {
   const navigate = useNavigate();
   const cancelled = useRef(false);
   const [isDesktop] = useState(() => window.innerWidth >= 1024);
-  const [{ inWindow, reviewYear }] = useState(() => getYearInReviewState());
+  // Hidden preview: /year-in-review?preview renders the deck outside the real
+  // Dec 25 - Jan 31 window (e.g. to show someone in person). Bare ?preview shows
+  // last year, the year the most recent real window covered; ?preview=YYYY picks
+  // a specific review year. It bypasses the date gate on this page only; the
+  // dashboard CTA and the app-open interstitial stay date-gated.
+  const [previewYear] = useState<number | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has("preview")) return null;
+    const asked = Number(params.get("preview"));
+    return Number.isInteger(asked) && asked > 2000
+      ? asked
+      : new Date().getFullYear() - 1;
+  });
+  const [windowState] = useState(() => getYearInReviewState());
+  const inWindow = previewYear != null || windowState.inWindow;
+  const reviewYear = previewYear ?? windowState.reviewYear;
   const [stats, setStats] = useState<YearInReviewStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [slideIndex, setSlideIndex] = useState(0);
@@ -1015,7 +1030,9 @@ export default function YearInReviewPage() {
   }
 
   if (isDesktop) {
-    const appUrl = `${window.location.origin}${import.meta.env.BASE_URL}`;
+    const previewSuffix =
+      previewYear != null ? `year-in-review?preview=${previewYear}` : "";
+    const appUrl = `${window.location.origin}${import.meta.env.BASE_URL}${previewSuffix}`;
     return (
       <main className="yir-page yir-page--desktop">
         <div className="yir-qr">

@@ -1,9 +1,5 @@
 # Claude Code Instructions
 
-## Temporary code pending removal
-
-The Settings "Preview Year in Review" card is testing scaffolding. Once the user confirms the feature works (or the first real Dec 25 - Jan 31 window has passed), remove it per [docs/remove-year-in-review-preview.md](docs/remove-year-in-review-preview.md), deleting that doc and this section in the same commit.
-
 ## Workflow
 
 After completing any code changes, run the entire build → commit → push sequence as a **single chained bash command** so it only requires one approval. Use `&&` throughout so the chain aborts on any failure (a broken build will never commit, a failed commit will never push).

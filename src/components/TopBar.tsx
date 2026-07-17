@@ -6,6 +6,8 @@ interface TopBarProps {
   backTo?: string;
   backLabel?: string;
   onBack?: () => void;
+  /** Hidden gesture hook: fires on each tap of the title (see SettingsPage). */
+  onTitleTap?: () => void;
 }
 
 export default function TopBar({
@@ -13,6 +15,7 @@ export default function TopBar({
   backTo,
   backLabel = "Back",
   onBack,
+  onTitleTap,
 }: TopBarProps) {
   const backIcon = (
     <svg viewBox="0 0 24 24" className="top-bar__back-icon" aria-hidden="true">
@@ -44,7 +47,15 @@ export default function TopBar({
           )}
         </div>
 
-        <h1 className="top-bar__title">{title}</h1>
+        <h1 className="top-bar__title">
+          {onTitleTap ? (
+            <button type="button" className="top-bar__title-btn" onClick={onTitleTap}>
+              {title}
+            </button>
+          ) : (
+            title
+          )}
+        </h1>
 
         <div className="top-bar__side">
           <span className="top-bar__spacer" aria-hidden="true" />
