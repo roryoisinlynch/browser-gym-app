@@ -5,7 +5,6 @@ import {
   getYearInReviewState,
   MONTH_NAMES,
   type YearInReviewStats,
-  type VolumeExercise,
   type YearOnYearPr,
   type RepBox,
 } from "../services/yearInReview";
@@ -522,31 +521,10 @@ function StreakSlide({ stats }: { stats: YearInReviewStats }) {
   );
 }
 
-/** A compact year-on-year set-count delta chip for a volume exercise. */
-function volumeDeltaChip(ex: VolumeExercise): React.ReactNode {
-  if (ex.isDebut) return <span className="yir-chip yir-chip--debut">New</span>;
-  if (ex.deltaPct == null) return null;
-  if (ex.deltaPct >= 0) {
-    return <span className="yir-chip">+{formatGainPct(ex.deltaPct)}%</span>;
-  }
-  return (
-    <span className="yir-chip yir-chip--down">{formatGainPct(ex.deltaPct)}%</span>
-  );
-}
-
-/** A full sentence describing the #1 exercise's change versus last year. */
-function volumeDeltaText(ex: VolumeExercise): string | null {
-  if (ex.isDebut) return "New this year.";
-  if (ex.deltaPct == null) return null;
-  if (ex.deltaPct >= 0) return `Up ${formatGainPct(ex.deltaPct)}% on last year.`;
-  return `Down ${formatGainPct(Math.abs(ex.deltaPct))}% on last year.`;
-}
-
 function TopExerciseSlide({ stats }: { stats: YearInReviewStats }) {
   const leaders = stats.volumeLeaders;
   const top = leaders[0];
   const runnersUp = leaders.slice(1, 5);
-  const topDelta = volumeDeltaText(top);
   const decliners = stats.volumeDecliners;
   return (
     <div className="yir-slide-body">
@@ -555,18 +533,15 @@ function TopExerciseSlide({ stats }: { stats: YearInReviewStats }) {
       <p className="yir-sub yir-reveal yir-reveal--3">
         {formatInt(top.setCount)} sets this year, more than any other exercise.
       </p>
-      {topDelta && (
-        <p className="yir-sub yir-reveal yir-reveal--3">{topDelta}</p>
-      )}
       {runnersUp.length > 0 && (
         <ul className="yir-runner-list yir-reveal yir-reveal--4">
           {runnersUp.map((ex, i) => (
             <li key={ex.name} className="yir-runner-list__item">
-              <span className="yir-runner-list__rank">{i + 2}.</span> {ex.name}
+              <span className="yir-runner-list__rank">{i + 2}.</span>
+              <span className="yir-runner-list__name">{ex.name}</span>
               <span className="yir-runner-list__count">
                 {formatInt(ex.setCount)} sets
               </span>
-              {volumeDeltaChip(ex)}
             </li>
           ))}
         </ul>
@@ -574,14 +549,15 @@ function TopExerciseSlide({ stats }: { stats: YearInReviewStats }) {
       {decliners.length > 0 && (
         <div className="yir-decliners yir-reveal yir-reveal--4">
           <p className="yir-decliners__heading">Biggest drop-offs versus last year</p>
-          <ul className="yir-runner-list">
+          <ul className="yir-dropoff-list">
             {decliners.map((ex) => (
-              <li key={ex.name} className="yir-runner-list__item">
-                {ex.name}
-                <span className="yir-runner-list__count">
-                  {formatInt(ex.setCount)} sets
+              <li key={ex.name} className="yir-dropoff-row">
+                <span className="yir-dropoff-row__name">{ex.name}</span>
+                <span className="yir-dropoff-row__from">
+                  {formatInt(ex.prevSetCount)}
                 </span>
-                {volumeDeltaChip(ex)}
+                <span className="yir-dropoff-row__arrow">→</span>
+                <span className="yir-dropoff-row__to">{formatInt(ex.setCount)}</span>
               </li>
             ))}
           </ul>
@@ -689,11 +665,11 @@ function PrCountSlide({ stats }: { stats: YearInReviewStats }) {
           <p className="yir-prlist__heading">Biggest winners</p>
           {winners.map((p) => (
             <div key={p.name} className="yir-prlist__row">
-              <span className="yir-prlist__name">{p.name}</span>
-              <span className="yir-chip">+{formatGainPct(p.relativeDiff)}%</span>
-              <span className="yir-chip yir-chip--kg">
-                +{formatE1RM(kgGain(p))} kg
+              <span className="yir-prlist__name">
+                <span className="yir-prlist__ex">{p.name}</span>
+                <span className="yir-prlist__kg">+{formatE1RM(kgGain(p))} kg</span>
               </span>
+              <span className="yir-chip">+{formatGainPct(p.relativeDiff)}%</span>
             </div>
           ))}
         </div>
@@ -703,12 +679,12 @@ function PrCountSlide({ stats }: { stats: YearInReviewStats }) {
           <p className="yir-prlist__heading">Biggest losers</p>
           {losers.map((p) => (
             <div key={p.name} className="yir-prlist__row">
-              <span className="yir-prlist__name">{p.name}</span>
+              <span className="yir-prlist__name">
+                <span className="yir-prlist__ex">{p.name}</span>
+                <span className="yir-prlist__kg">{formatE1RM(kgGain(p))} kg</span>
+              </span>
               <span className="yir-chip yir-chip--down">
                 {formatGainPct(p.relativeDiff)}%
-              </span>
-              <span className="yir-chip yir-chip--kg">
-                {formatE1RM(kgGain(p))} kg
               </span>
             </div>
           ))}
