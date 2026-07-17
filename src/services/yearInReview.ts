@@ -189,6 +189,14 @@ export interface BusiestMonth {
   unit: "sessions" | "training days";
 }
 
+export interface RepExtreme {
+  name: string;
+  avgReps: number;
+  /** Same 15-bin structure as the overall repsHistogram. */
+  histogram: number[];
+  setCount: number;
+}
+
 export interface YearInReviewStats {
   reviewYear: number;
   totalCompletedSessions: number;
@@ -199,6 +207,12 @@ export interface YearInReviewStats {
   totalTonnageKg: number;
   /** Sets per rep count: index i = sets performed at i+1 reps, last bin = 15+. */
   repsHistogram: number[];
+  /**
+   * Rep-distribution outliers among the top 15 highest-volume exercises: the
+   * lowest and highest average reps per set. Null with fewer than two
+   * candidates.
+   */
+  repExtremes: { low: RepExtreme; high: RepExtreme } | null;
   /** Sets per day of the review year (native + imported), index = 0-based day-of-year. */
   dailySetCounts: number[];
   trainingDayCount: number;
@@ -379,6 +393,7 @@ export async function computeYearInReviewStats(
     setCount: number;
     repCount: number;
     tonnageKg: number;
+    repsHistogram: number[];
     casings: Map<string, number>;
   }
   const byExercise = new Map<string, ExerciseAgg>();
@@ -386,11 +401,18 @@ export async function computeYearInReviewStats(
     const key = normalizeName(r.exerciseName);
     let agg = byExercise.get(key);
     if (!agg) {
-      agg = { setCount: 0, repCount: 0, tonnageKg: 0, casings: new Map() };
+      agg = {
+        setCount: 0,
+        repCount: 0,
+        tonnageKg: 0,
+        repsHistogram: new Array<number>(15).fill(0),
+        casings: new Map(),
+      };
       byExercise.set(key, agg);
     }
     agg.setCount++;
     agg.repCount += r.reps!;
+    agg.repsHistogram[Math.min(r.reps!, 15) - 1]++;
     if (r.weight != null && r.weight > 0) agg.tonnageKg += r.weight * r.reps!;
     const casing = r.exerciseName.trim();
     agg.casings.set(casing, (agg.casings.get(casing) ?? 0) + 1);
@@ -419,6 +441,30 @@ export async function computeYearInReviewStats(
     tonnageKg: agg.tonnageKg,
   }));
   const distinctExerciseCount = byExercise.size;
+
+  // ── Rep extremes: among the top 15 highest-volume exercises, the lowest and
+  // highest average reps per set. The Grind slide only shows the pair when
+  // their averages sit at least 5 reps apart. ──
+  let repExtremes: YearInReviewStats["repExtremes"] = null;
+  {
+    const pool = rankedExercises.slice(0, 15);
+    const avg = (agg: ExerciseAgg) => agg.repCount / agg.setCount;
+    let low = pool[0];
+    let high = pool[0];
+    for (const agg of pool) {
+      if (avg(agg) < avg(low)) low = agg;
+      if (avg(agg) > avg(high)) high = agg;
+    }
+    if (pool.length >= 2 && low !== high) {
+      const toExtreme = (agg: ExerciseAgg): RepExtreme => ({
+        name: displayName(agg.casings),
+        avgReps: avg(agg),
+        histogram: agg.repsHistogram,
+        setCount: agg.setCount,
+      });
+      repExtremes = { low: toExtreme(low), high: toExtreme(high) };
+    }
+  }
 
   // ── PRs ──
   // Native per-instance history can emit two same-day events for one exercise
@@ -738,6 +784,7 @@ export async function computeYearInReviewStats(
     importedSetCount,
     totalTonnageKg,
     repsHistogram,
+    repExtremes,
     dailySetCounts,
     trainingDayCount,
     topExercises,

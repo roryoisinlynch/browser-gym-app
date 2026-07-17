@@ -281,13 +281,51 @@ function SessionsSlide({ stats }: { stats: YearInReviewStats }) {
 // Unlabelled columns get a non-breaking space so every label row keeps height.
 const REP_BIN_LABELS: Record<number, string> = { 0: "1", 4: "5", 9: "10", 14: "15+" };
 
+/**
+ * The fixed 15-bin reps distribution. Every instance spans the same 1 to 15+
+ * x-axis by construction, so side-by-side histograms compare directly.
+ */
+function RepsHistogram({ bins, compact }: { bins: number[]; compact?: boolean }) {
+  const maxBin = Math.max(...bins, 1);
+  const modalBin = bins.indexOf(maxBin);
+  return (
+    <div
+      className={`yir-histogram yir-histogram--reps${
+        compact ? " yir-histogram--compact" : ""
+      }`}
+      aria-hidden="true"
+    >
+      {bins.map((count, i) => (
+        <div key={i} className="yir-histogram__col">
+          <span
+            className={
+              i === modalBin
+                ? "yir-histogram__bar yir-histogram__bar--winner"
+                : "yir-histogram__bar"
+            }
+            style={
+              {
+                "--i": i,
+                height: `${Math.max((count / maxBin) * 100, count > 0 ? 6 : 2)}%`,
+              } as React.CSSProperties
+            }
+          />
+          <span className="yir-histogram__label">
+            {REP_BIN_LABELS[i] ?? " "}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function SetsRepsSlide({ stats }: { stats: YearInReviewStats }) {
   const target = stats.totalReps;
   const shown = useCountUp(target);
-  const maxBin = Math.max(...stats.repsHistogram, 1);
-  const modalBin = stats.repsHistogram.indexOf(maxBin);
   const avgReps =
     stats.totalSets > 0 ? Math.round(stats.totalReps / stats.totalSets) : 0;
+  const cmp = stats.repExtremes;
+  const compare = cmp != null && cmp.high.avgReps - cmp.low.avgReps >= 5 ? cmp : null;
   // Size from the final value, not the animating one, so the count-up never
   // crosses a wrap threshold mid-animation.
   const long = formatInt(target).length >= 7;
@@ -303,35 +341,29 @@ function SetsRepsSlide({ stats }: { stats: YearInReviewStats }) {
       <p className="yir-second-line yir-reveal yir-reveal--3">
         {formatInt(stats.totalSets)} {stats.totalSets === 1 ? "set" : "sets"}
       </p>
-      {stats.totalSets >= 20 && (
-        <div className="yir-histogram yir-histogram--reps" aria-hidden="true">
-          {stats.repsHistogram.map((count, i) => (
-            <div key={i} className="yir-histogram__col">
-              <span
-                className={
-                  i === modalBin
-                    ? "yir-histogram__bar yir-histogram__bar--winner"
-                    : "yir-histogram__bar"
-                }
-                style={
-                  {
-                    "--i": i,
-                    height: `${Math.max((count / maxBin) * 100, count > 0 ? 6 : 2)}%`,
-                  } as React.CSSProperties
-                }
-              />
-              <span className="yir-histogram__label">
-                {REP_BIN_LABELS[i] ?? " "}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
+      {stats.totalSets >= 20 && <RepsHistogram bins={stats.repsHistogram} />}
       {avgReps > 0 && (
         <p className="yir-sub yir-reveal yir-reveal--4">
           That's an average of {avgReps} {avgReps === 1 ? "rep" : "reps"} per
           set.
         </p>
+      )}
+      {stats.totalSets >= 20 && compare && (
+        <>
+          <div className="yir-hist-compare yir-reveal yir-reveal--4">
+            {[compare.low, compare.high].map((ex) => (
+              <div key={ex.name} className="yir-hist-compare__item">
+                <span className="yir-hist-compare__caption">{ex.name}</span>
+                <RepsHistogram bins={ex.histogram} compact />
+              </div>
+            ))}
+          </div>
+          <p className="yir-footnote yir-reveal yir-reveal--4">
+            Some exercises, like {compare.low.name}, had a lower average rep
+            count, whereas some exercises, like {compare.high.name}, had a
+            higher average rep count.
+          </p>
+        </>
       )}
     </div>
   );

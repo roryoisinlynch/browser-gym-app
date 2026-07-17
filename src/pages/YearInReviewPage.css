@@ -403,6 +403,44 @@
   gap: 3px;
 }
 
+/* ── Rep-distribution comparison (lowest vs highest average reps) ── */
+
+.yir-hist-compare {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.yir-hist-compare__item {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.yir-hist-compare__caption {
+  max-width: 100%;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.yir-histogram--compact {
+  height: 56px;
+  gap: 2px;
+}
+
+.yir-histogram--compact .yir-histogram__label {
+  font-size: 0.55rem;
+}
+
 /* ── Streak chain ── */
 
 .yir-chain {
