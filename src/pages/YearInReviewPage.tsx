@@ -135,7 +135,7 @@ function SessionsSlide({ stats }: { stats: YearInReviewStats }) {
           </span>
         </p>
         <p className="yir-sub yir-reveal yir-reveal--3">
-          Rebuilt from your imported history. The work still counts.
+          Rebuilt from your imported history.
         </p>
       </div>
     );
@@ -173,6 +173,8 @@ function SessionsSlide({ stats }: { stats: YearInReviewStats }) {
 }
 
 function SetsRepsSlide({ stats }: { stats: YearInReviewStats }) {
+  const avgReps =
+    stats.totalSets > 0 ? Math.round(stats.totalReps / stats.totalSets) : 0;
   return (
     <div className="yir-slide-body">
       <p className="yir-eyebrow yir-reveal">The grind</p>
@@ -183,9 +185,12 @@ function SetsRepsSlide({ stats }: { stats: YearInReviewStats }) {
       <p className="yir-second-line yir-reveal yir-reveal--3">
         {formatInt(stats.totalReps)} {stats.totalReps === 1 ? "rep" : "reps"}
       </p>
-      <p className="yir-sub yir-reveal yir-reveal--4">
-        Logged one at a time. No shortcuts in here.
-      </p>
+      {avgReps > 0 && (
+        <p className="yir-sub yir-reveal yir-reveal--4">
+          That's an average of {avgReps} {avgReps === 1 ? "rep" : "reps"} per
+          set.
+        </p>
+      )}
     </div>
   );
 }
@@ -193,6 +198,10 @@ function SetsRepsSlide({ stats }: { stats: YearInReviewStats }) {
 function TonnageSlide({ stats }: { stats: YearInReviewStats }) {
   const target = Math.round(stats.totalTonnageKg);
   const shown = useCountUp(target);
+  const avgPerDay =
+    stats.trainingDayCount > 0
+      ? Math.round(stats.totalTonnageKg / stats.trainingDayCount)
+      : 0;
   // Size from the final value, not the animating one, so the count-up never
   // crosses a wrap threshold mid-animation.
   const long = formatInt(target).length >= 7;
@@ -214,9 +223,11 @@ function TonnageSlide({ stats }: { stats: YearInReviewStats }) {
           />
         ))}
       </div>
-      <p className="yir-sub yir-reveal yir-reveal--3">
-        Lifted it up. Put it down. Repeat.
-      </p>
+      {avgPerDay > 0 && (
+        <p className="yir-sub yir-reveal yir-reveal--3">
+          An average of {formatInt(avgPerDay)} kg per training day.
+        </p>
+      )}
       {stats.bodyweightReps > 0 && (
         <p className="yir-footnote yir-reveal yir-reveal--4">
           Plus {formatInt(stats.bodyweightReps)} bodyweight reps on top.
@@ -283,7 +294,7 @@ function StreakSlide({ stats }: { stats: YearInReviewStats }) {
         {streak > drawn && <span className="yir-chain__more">+{streak - drawn}</span>}
       </div>
       <p className="yir-sub yir-reveal yir-reveal--3">
-        Your longest unbroken run. Rain, deadlines, birthdays. You still trained.
+        Your longest run of consecutive weeks with at least one session.
       </p>
     </div>
   );
@@ -406,8 +417,7 @@ function PrCountSlide({ stats }: { stats: YearInReviewStats }) {
       </p>
       <p className="yir-sub yir-reveal yir-reveal--3">
         Across {formatInt(stats.prExerciseCount)} different{" "}
-        {stats.prExerciseCount === 1 ? "exercise" : "exercises"}. The bar kept
-        moving. So did you.
+        {stats.prExerciseCount === 1 ? "exercise" : "exercises"}.
       </p>
     </div>
   );
@@ -561,12 +571,12 @@ function PeakSlide({ stats }: { stats: YearInReviewStats }) {
   const n = stats.totalCompletedSessions;
   return (
     <div className="yir-slide-body">
-      <p className="yir-eyebrow yir-reveal">The real win</p>
+      <p className="yir-eyebrow yir-reveal">Personal records</p>
       <p className="yir-display yir-display--medium yir-reveal yir-reveal--2">
-        Showing up
+        No new records
       </p>
       <p className="yir-sub yir-reveal yir-reveal--3">
-        No new records this year. {formatInt(Math.max(n, stats.trainingDayCount))}{" "}
+        {formatInt(Math.max(n, stats.trainingDayCount))}{" "}
         {n > 0
           ? n === 1
             ? "session"
@@ -574,7 +584,7 @@ function PeakSlide({ stats }: { stats: YearInReviewStats }) {
           : stats.trainingDayCount === 1
             ? "training day"
             : "training days"}{" "}
-        of showing up anyway, and that's the harder thing.
+        logged this year. Your all-time bests stayed where they were.
       </p>
     </div>
   );
@@ -640,9 +650,7 @@ function PosterSlide({
           {medalParts.join(" · ")}
         </p>
       )}
-      <p className="yir-sub yir-reveal yir-reveal--4">
-        See you under the bar in {stats.reviewYear + 1}.
-      </p>
+      <p className="yir-sub yir-reveal yir-reveal--4">That was {stats.reviewYear}.</p>
       <button type="button" className="yir-done-button" onClick={onDone}>
         Back to dashboard
       </button>
