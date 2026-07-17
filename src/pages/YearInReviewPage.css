@@ -832,7 +832,7 @@
 }
 
 .yir-debut-table th:first-child,
-.yir-debut-table__name {
+.yir-debut-table td:first-child {
   text-align: left;
 }
 
@@ -842,17 +842,12 @@
 }
 
 .yir-debut-table__name {
-  max-width: 130px;
+  max-width: 150px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--text-strong);
   font-weight: 700;
-}
-
-.yir-debut-table__growth {
-  color: #6bcb77;
-  font-weight: 800;
 }
 
 /* ── PR count arrows ── */

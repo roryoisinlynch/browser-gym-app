@@ -571,41 +571,40 @@ function TopExerciseSlide({ stats }: { stats: YearInReviewStats }) {
 }
 
 function DebutsSlide({ stats }: { stats: YearInReviewStats }) {
-  const rows = stats.debutExercises.slice(0, 5);
+  const rows = stats.debutExercises.slice(0, 8);
   const more = stats.debutExercises.length - rows.length;
   return (
     <div className="yir-slide-body">
       <p className="yir-eyebrow yir-reveal">New this year</p>
       <p className="yir-sub yir-reveal yir-reveal--2">
         Some exercises don't have historical data to compare against because
-        they debuted this year.
+        they debuted this year. Here's a breakdown of how you got on with these
+        lifts.
       </p>
       <table className="yir-debut-table yir-reveal yir-reveal--3">
         <thead>
           <tr>
             <th scope="col">Exercise</th>
-            <th scope="col">First week</th>
-            <th scope="col">Year best</th>
-            <th scope="col">Growth</th>
+            <th scope="col">Started at</th>
+            <th scope="col">Best lift</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
             <tr key={row.name}>
               <td className="yir-debut-table__name">{row.name}</td>
-              <td className="yir-debut-table__num">{formatE1RM(row.firstWeekBestE1RM)}</td>
-              <td className="yir-debut-table__num">{formatE1RM(row.yearBestE1RM)}</td>
-              <td className="yir-debut-table__num yir-debut-table__growth">
-                {row.relativeGrowth > 0
-                  ? `+${formatGainPct(row.relativeGrowth)}%`
-                  : "0%"}
+              <td className="yir-debut-table__num">
+                {formatE1RM(row.firstWeekBestE1RM)} kg
+              </td>
+              <td className="yir-debut-table__num">
+                {formatE1RM(row.yearBestE1RM)} kg
               </td>
             </tr>
           ))}
         </tbody>
       </table>
       <p className="yir-footnote yir-reveal yir-reveal--4">
-        Best-set estimated 1RM, in kg.
+        Best-set estimated 1RM.
         {more > 0
           ? ` + ${formatInt(more)} more new ${more === 1 ? "exercise" : "exercises"}.`
           : ""}
@@ -911,7 +910,7 @@ function PosterSlide({
 
   return (
     <div className="yir-slide-body yir-slide-body--poster">
-      <p className="yir-eyebrow yir-reveal">{stats.reviewYear}, wrapped up</p>
+      <p className="yir-eyebrow yir-reveal">{stats.reviewYear}, in review</p>
       <div className="yir-poster-grid">
         {cells.map((cell, i) => (
           <div
