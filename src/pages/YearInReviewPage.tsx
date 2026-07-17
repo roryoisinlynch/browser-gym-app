@@ -95,7 +95,6 @@ function coverScopeLine(stats: YearInReviewStats): string {
   if (native > 0) {
     parts.push(`${NUMBER_WORDS[native]} ${monthNoun(native)} logged right here.`);
   }
-  parts.push("One barbell through all of it.");
   return parts.join(" ");
 }
 
@@ -166,10 +165,13 @@ function SessionsSlide({ stats }: { stats: YearInReviewStats }) {
           />
         ))}
       </div>
-      <p className="yir-sub yir-reveal yir-reveal--4">
-        That's {formatInt(n)} {n === 1 ? "time" : "times"} you picked the gym over
-        the sofa.
-      </p>
+      {stats.totalTrainingSeconds > 0 && (
+        <p className="yir-sub yir-reveal yir-reveal--4">
+          That's an average of{" "}
+          {formatDuration(Math.round(stats.totalTrainingSeconds / n))} per
+          session.
+        </p>
+      )}
     </div>
   );
 }
