@@ -51,6 +51,17 @@ function ordinalDateWithYear(date: string): string {
   return `${ordinalDate(date)} ${date.slice(0, 4)}`;
 }
 
+/**
+ * "3rd Mar to 12th May", adding years only when the range spans two calendar
+ * years (a streak's final week can end in early January).
+ */
+function formatDateRange(start: string, end: string): string {
+  if (start.slice(0, 4) === end.slice(0, 4)) {
+    return `${ordinalDate(start)} to ${ordinalDate(end)}`;
+  }
+  return `${ordinalDateWithYear(start)} to ${ordinalDateWithYear(end)}`;
+}
+
 /** "2026-10-14" -> "14th Oct" */
 function ordinalDate(date: string): string {
   const [, m, d] = date.split("-").map(Number);
@@ -433,7 +444,7 @@ function StreakSlide({ stats }: { stats: YearInReviewStats }) {
   const yearRange = stats.longestWeeklyStreakRange;
   const allTimeRange = stats.allTimeLongestWeeklyStreakRange;
   const yearDates = yearRange
-    ? `${ordinalDate(yearRange.start)} to ${ordinalDate(yearRange.end)}`
+    ? formatDateRange(yearRange.start, yearRange.end)
     : null;
   // The all-time run can only exceed the in-year one when older data exists,
   // so with prior-year data these are the doc's conditions 1 and 2; without
@@ -469,7 +480,7 @@ function StreakSlide({ stats }: { stats: YearInReviewStats }) {
           <p className="yir-sub yir-reveal yir-reveal--4">
             {beatenByAllTime
               ? allTimeRange
-                ? `${ordinalDateWithYear(allTimeRange.start)} to ${ordinalDateWithYear(allTimeRange.end)}.`
+                ? `${formatDateRange(allTimeRange.start, allTimeRange.end)}.`
                 : ""
               : prevBest > 0
                 ? `You beat your all-time streak this year with a run of ${streak} weeks; your best streak before then was ${prevBest} ${prevBest === 1 ? "week" : "weeks"}.`
