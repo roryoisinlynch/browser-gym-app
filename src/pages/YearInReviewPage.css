@@ -377,6 +377,11 @@
 
 .yir-histogram__col {
   flex: 1;
+  /* Without this, flex items default to min-width: auto and refuse to shrink
+     below their label's min-content width, so columns whose label reads "10",
+     "15" or "20+" end up wider than the blank-labelled ones. Letting them
+     shrink to 0 keeps every column equal; the centred label just overflows. */
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -400,6 +405,8 @@
   font-size: 0.62rem;
   font-weight: 700;
   color: var(--text-soft);
+  /* Labels overflow their (now-narrow) column and stay centred over the bar. */
+  white-space: nowrap;
 }
 
 /* Reps distribution variant: narrow columns, shorter than the month bars. */
