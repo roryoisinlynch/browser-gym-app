@@ -310,7 +310,11 @@ function BusiestMonthSlide({ stats }: { stats: YearInReviewStats }) {
 
 function StreakSlide({ stats }: { stats: YearInReviewStats }) {
   const streak = stats.longestWeeklyStreak;
+  const allTime = stats.allTimeLongestWeeklyStreak;
   const drawn = Math.min(streak, 16);
+  const showAllTime = stats.hasPriorYearData && allTime > streak;
+  const pctLonger =
+    streak > 0 ? Math.round(((allTime - streak) / streak) * 100) : 0;
   return (
     <div className="yir-slide-body">
       <p className="yir-eyebrow yir-reveal">Consistency</p>
@@ -327,8 +331,17 @@ function StreakSlide({ stats }: { stats: YearInReviewStats }) {
         ))}
         {streak > drawn && <span className="yir-chain__more">+{streak - drawn}</span>}
       </div>
-      <p className="yir-sub yir-reveal yir-reveal--3">
-        Your longest run of consecutive weeks with at least one session.
+      {showAllTime && (
+        <p className="yir-second-line yir-reveal yir-reveal--3">
+          All-time best: {allTime} weeks
+        </p>
+      )}
+      <p className={`yir-sub yir-reveal ${showAllTime ? "yir-reveal--4" : "yir-reveal--3"}`}>
+        {showAllTime
+          ? `Your longest run this year. Your all-time best was ${pctLonger}% longer.`
+          : stats.hasPriorYearData
+            ? "Your longest run of consecutive weeks with at least one session. That's your all-time best."
+            : "Your longest run of consecutive weeks with at least one session."}
       </p>
     </div>
   );

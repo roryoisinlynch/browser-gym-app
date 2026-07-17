@@ -210,6 +210,10 @@ export interface YearInReviewStats {
   emptyLeadInMonthCount: number;
   busiestMonth: BusiestMonth | null;
   longestWeeklyStreak: number;
+  /** Longest weekly streak across all history up to the end of the review year. */
+  allTimeLongestWeeklyStreak: number;
+  /** True when any completed session or imported set predates the review year. */
+  hasPriorYearData: boolean;
   goldSessionCount: number;
   perfectWeekCount: number;
   aSeasonCount: number;
@@ -237,6 +241,19 @@ function mondayWeekIndex(date: string): number {
   const [y, m, d] = date.split("-").map(Number);
   const days = Math.floor(Date.UTC(y, m - 1, d) / 86400000);
   return Math.floor((days - 4) / 7);
+}
+
+/** Longest run of consecutive integers in an ascending-sorted list. */
+function longestConsecutiveRun(sortedWeekIndexes: number[]): number {
+  let longest = 0;
+  let run = 0;
+  let prev: number | null = null;
+  for (const w of sortedWeekIndexes) {
+    run = prev != null && w === prev + 1 ? run + 1 : 1;
+    prev = w;
+    if (run > longest) longest = run;
+  }
+  return longest;
 }
 
 export async function computeYearInReviewStats(
@@ -525,6 +542,11 @@ export async function computeYearInReviewStats(
       .sort((a, b) => a.date.localeCompare(b.date));
   }
 
+  // Distinct in-year training dates from either source; trainingDays misses a
+  // completed session with no logged sets, so union session dates in.
+  const activeDays = new Set(trainingDays);
+  for (const s of yearSessions) activeDays.add(sessionCompletedDate(s));
+
   // ── Months. With imported data present, count distinct training days per
   // month so imported months aren't rendered empty (a date with both native
   // and imported work counts once); with native-only data, count sessions so
@@ -538,9 +560,6 @@ export async function computeYearInReviewStats(
       monthlyActivityCounts[monthIndex]++;
     }
   } else {
-    // trainingDays misses a completed session with no logged sets; union them.
-    const activeDays = new Set(trainingDays);
-    for (const s of yearSessions) activeDays.add(sessionCompletedDate(s));
     for (const d of activeDays) {
       monthlyActivityCounts[Number(d.slice(5, 7)) - 1]++;
     }
@@ -558,19 +577,31 @@ export async function computeYearInReviewStats(
     }
   }
 
-  // ── Longest weekly streak (in-year sessions only; a run alive at Jan 1
-  // restarts, so one year's review is reproducible from that year's data) ──
-  const weekIndexes = [
-    ...new Set(yearSessions.map((s) => mondayWeekIndex(sessionCompletedDate(s)))),
-  ].sort((a, b) => a - b);
-  let longestWeeklyStreak = 0;
-  let run = 0;
-  let prev: number | null = null;
-  for (const w of weekIndexes) {
-    run = prev != null && w === prev + 1 ? run + 1 : 1;
-    prev = w;
-    if (run > longestWeeklyStreak) longestWeeklyStreak = run;
+  // ── Weekly streaks. In-year: training days (either source) within the
+  // review year; a run alive at Jan 1 restarts, so one year's review is
+  // reproducible from that year's data. All-time: full history clipped at the
+  // end of the review year, so a prior run can span a Jan 1 boundary. ──
+  const longestWeeklyStreak = longestConsecutiveRun(
+    [...new Set([...activeDays].map(mondayWeekIndex))].sort((a, b) => a - b)
+  );
+
+  const reviewYearEnd = `${reviewYear + 1}-01-01`;
+  const reviewYearStart = `${reviewYear}-01-01`;
+  const allActiveDates = new Set<string>();
+  for (const s of sessions) {
+    if (s.status !== "completed") continue;
+    const d = sessionCompletedDate(s);
+    if (d < reviewYearEnd) allActiveDates.add(d);
   }
+  for (const r of setRecords) {
+    if (r.source !== "imported") continue;
+    if (r.reps == null || r.reps <= 0) continue;
+    if (r.date < reviewYearEnd) allActiveDates.add(r.date);
+  }
+  const hasPriorYearData = [...allActiveDates].some((d) => d < reviewYearStart);
+  const allTimeLongestWeeklyStreak = longestConsecutiveRun(
+    [...new Set([...allActiveDates].map(mondayWeekIndex))].sort((a, b) => a - b)
+  );
 
   // ── Achievements (mirrors the dashboard's loadAchievements rules; the
   // metrics getters backfill frozenMetrics on first read, which is the same
@@ -668,6 +699,8 @@ export async function computeYearInReviewStats(
     emptyLeadInMonthCount,
     busiestMonth,
     longestWeeklyStreak,
+    allTimeLongestWeeklyStreak,
+    hasPriorYearData,
     goldSessionCount,
     perfectWeekCount,
     aSeasonCount,
