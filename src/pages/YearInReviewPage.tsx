@@ -4,6 +4,7 @@ import {
   computeYearInReviewStats,
   getYearInReviewState,
   type YearInReviewStats,
+  type StrengthMetric,
 } from "../services/yearInReview";
 import { formatDuration } from "../services/sessionMetrics";
 import "./YearInReviewPage.css";
@@ -556,34 +557,81 @@ function ExerciseSplitSlide({ stats }: { stats: YearInReviewStats }) {
   );
 }
 
-function StrengthSlide({ rows }: { rows: YearInReviewStats["yearOnYearPrs"] }) {
+const STRENGTH_METRIC_LABELS: Record<StrengthMetric, string> = {
+  heaviest: "Heaviest lift",
+  biggestPctGain: "Biggest percentage gain",
+  biggestRawGain: "Biggest raw gain",
+  topDebut: "Highest-volume debut",
+  dryStreakBroken: "Longest dry streak broken",
+};
+
+/** Short, factual duration for the dry-streak detail line. */
+function formatGapDuration(gapDays: number): string {
+  if (gapDays >= 365) {
+    const years = Math.floor(gapDays / 365);
+    return years === 1 ? "a year" : `${years} years`;
+  }
+  if (gapDays >= 60) {
+    return `${Math.round(gapDays / 30.44)} months`;
+  }
+  return `${gapDays} ${gapDays === 1 ? "day" : "days"}`;
+}
+
+function StrengthSlide({
+  highlights,
+}: {
+  highlights: YearInReviewStats["strengthHighlights"];
+}) {
   return (
     <div className="yir-slide-body">
       <p className="yir-eyebrow yir-reveal">Getting stronger</p>
       <div className="yir-strength">
-        {rows.map((row, i) => (
-          <div
-            key={row.name}
-            className="yir-strength__row yir-reveal"
-            style={{ "--i": i } as React.CSSProperties}
-          >
-            <p className="yir-strength__name">{row.name}</p>
-            <p className="yir-strength__values yir-valueline">
-              <span className="yir-chip yir-chip--ghost" aria-hidden="true">
-                +{formatGainPct(row.relativeDiff)}%
-              </span>
-              <span>
-                {formatE1RM(row.bestPriorE1RM)} kg{" "}
-                <span className="yir-strength__arrow">→</span>{" "}
-                {formatE1RM(row.bestYearE1RM)} kg e1RM
-              </span>
-              <span className="yir-chip">+{formatGainPct(row.relativeDiff)}%</span>
-            </p>
-          </div>
-        ))}
+        {highlights.map((row, i) => {
+          const showChip = row.relativeDiff != null && row.relativeDiff > 0;
+          const detail =
+            row.gapDays != null
+              ? `${formatGapDuration(row.gapDays)} between bests`
+              : row.metrics.includes("topDebut")
+                ? `${formatInt(row.yearSetCount)} sets this year`
+                : null;
+          return (
+            <div
+              key={row.name}
+              className="yir-strength__row yir-reveal"
+              style={{ "--i": i } as React.CSSProperties}
+            >
+              <p className="yir-strength__metric">
+                {row.metrics.map((m) => STRENGTH_METRIC_LABELS[m]).join(" · ")}
+              </p>
+              <p className="yir-strength__name">{row.name}</p>
+              <p className="yir-strength__values yir-valueline">
+                {showChip && (
+                  <span className="yir-chip yir-chip--ghost" aria-hidden="true">
+                    +{formatGainPct(row.relativeDiff!)}%
+                  </span>
+                )}
+                <span>
+                  {row.bestPriorE1RM != null ? (
+                    <>
+                      {formatE1RM(row.bestPriorE1RM)} kg{" "}
+                      <span className="yir-strength__arrow">→</span>{" "}
+                      {formatE1RM(row.bestYearE1RM)} kg e1RM
+                    </>
+                  ) : (
+                    <>{formatE1RM(row.bestYearE1RM)} kg e1RM</>
+                  )}
+                </span>
+                {showChip && (
+                  <span className="yir-chip">+{formatGainPct(row.relativeDiff!)}%</span>
+                )}
+              </p>
+              {detail && <p className="yir-strength__detail">{detail}</p>}
+            </div>
+          );
+        })}
       </div>
       <p className="yir-sub yir-reveal yir-reveal--4">
-        Your best lifts, this year against everything before.
+        Your best lifts this year, each by a different measure.
       </p>
     </div>
   );
@@ -960,14 +1008,11 @@ function buildDeck(stats: YearInReviewStats, onDone: () => void): SlideDef[] {
       node: <ExerciseSplitSlide stats={stats} />,
     });
   }
-  const strengthRows = stats.yearOnYearPrs
-    .filter((r) => r.relativeDiff > 0)
-    .slice(0, 3);
-  if (strengthRows.length >= 1) {
+  if (stats.strengthHighlights.length >= 1) {
     deck.push({
       key: "strength",
       glow: "green",
-      node: <StrengthSlide rows={strengthRows} />,
+      node: <StrengthSlide highlights={stats.strengthHighlights} />,
     });
   }
   if (stats.prUpCount + stats.prDownCount >= 3) {

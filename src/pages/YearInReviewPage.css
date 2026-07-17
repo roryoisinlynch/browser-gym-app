@@ -582,7 +582,7 @@
 .yir-strength {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 13px;
   width: 100%;
 }
 
@@ -590,6 +590,21 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.yir-strength__metric {
+  margin: 0;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-strong);
+}
+
+.yir-strength__detail {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-soft);
 }
 
 .yir-strength__name {
@@ -811,6 +826,15 @@
 
   .yir-poster-grid__value {
     font-size: 1rem;
+  }
+
+  /* Up to five multi-line rows: tighten so the metric-labeled list fits. */
+  .yir-strength {
+    gap: 9px;
+  }
+
+  .yir-strength__name {
+    font-size: 0.98rem;
   }
 }
 
