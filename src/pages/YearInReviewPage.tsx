@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import {
   computeYearInReviewStats,
   getYearInReviewState,
+  MONTH_NAMES,
   type YearInReviewStats,
   type VolumeExercise,
   type YearOnYearPr,
@@ -105,38 +106,41 @@ const NUMBER_WORDS = [
   "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve",
 ];
 
+function monthsPhrase(n: number): string {
+  return `${n} ${n === 1 ? "month" : "months"}`;
+}
+
 /**
- * Scope sentences for the cover: where the year's data came from. One
- * independent sentence per data state, each only present when that state has
- * months (pre-history, CSV-imported, app-logged).
+ * Scope copy for the cover: a fixed intro paragraph, then a detail paragraph
+ * describing anything unusual about the data (a gap before training began, or
+ * a mix of import sources). A full twelve months logged in the app has nothing
+ * to add, so only the intro shows.
  */
-function coverScopeSentences(stats: YearInReviewStats): string[] {
+function coverScopeParagraphs(stats: YearInReviewStats): string[] {
   const preHistory = stats.preHistoryMonthCount;
   const imported = stats.importedMonthCount;
   const native = stats.nativeMonthCount;
-  const sentences: string[] = [];
+  const intro =
+    "The following pages were derived from your last twelve months of training data.";
+  const clauses: string[] = [];
   if (preHistory > 0) {
-    sentences.push(
+    const begins = MONTH_NAMES[preHistory];
+    clauses.push(
       preHistory === 1
-        ? "One month predates training history."
-        : `${NUMBER_WORDS[preHistory]} months predate training history.`
+        ? `The first month is missing, because your data begins in ${begins}.`
+        : `The first ${NUMBER_WORDS[preHistory].toLowerCase()} months are missing, because your data begins in ${begins}.`
     );
   }
-  if (imported > 0) {
-    sentences.push(
-      imported === 1
-        ? "One month was imported from CSVs."
-        : `${NUMBER_WORDS[imported]} months were imported from CSVs.`
+  if (imported > 0 && native > 0) {
+    clauses.push(
+      `Your data contains a mix of sources, with ${monthsPhrase(imported)} of historical CSV imports and ${monthsPhrase(native)} captured via the app.`
+    );
+  } else if (imported > 0) {
+    clauses.push(
+      `Your data came from ${monthsPhrase(imported)} of historical CSV imports.`
     );
   }
-  if (native > 0) {
-    sentences.push(
-      native === 1
-        ? "One month came from data logged directly in the app."
-        : `${NUMBER_WORDS[native]} months came from data logged directly in the app.`
-    );
-  }
-  return sentences;
+  return clauses.length > 0 ? [intro, clauses.join(" ")] : [intro];
 }
 
 function CoverSlide({ stats }: { stats: YearInReviewStats }) {
@@ -162,9 +166,9 @@ function CoverSlide({ stats }: { stats: YearInReviewStats }) {
         />
       </svg>
       <div className="yir-sub yir-cover-scope yir-reveal yir-reveal--4">
-        {coverScopeSentences(stats).map((sentence) => (
-          <p key={sentence} className="yir-cover-scope__line">
-            {sentence}
+        {coverScopeParagraphs(stats).map((paragraph) => (
+          <p key={paragraph} className="yir-cover-scope__line">
+            {paragraph}
           </p>
         ))}
       </div>
