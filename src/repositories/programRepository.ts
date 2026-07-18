@@ -1389,13 +1389,18 @@ function effectiveE1RMFromHistory(
     return best == null || dp.topRepCount > best ? dp.topRepCount : best;
   }, null);
 
-  // For mid-session views, use rawHistory so that sets just logged in the
-  // current session still count as a recent attempt — we don't want the AMRAP
-  // override to fire mid-session. For as-of-date views (completed past
-  // sessions), use the date-scoped list so dormancy reflects the world at
-  // session-completion time, not today.
-  const lastAttemptedSource = asOfDate != null ? dateScopedHistory : rawHistory;
-  const lastAttemptedDate = lastAttemptedSource.reduce<string | null>(
+  // Dormancy means "no PRIOR attempt within the recent window", so judge it on
+  // filteredHistory (the current session removed) — not dateScopedHistory /
+  // rawHistory, which include the session being evaluated. Those would let the
+  // exercise's own just-logged sets count as a recent attempt, so a resurrected
+  // exercise could never look dormant here. That was the bug: an exercise last
+  // done years ago showed as AMRAP on the exercise page (which excludes the
+  // current session from dormancy) but was judged against its stale baseline in
+  // the session view, demoting genuine working sets to warmups. Excluding the
+  // current session makes dormancy agree across both views. Using filteredHistory
+  // (not the rawHistory fallback `history`) is deliberate: a first-ever attempt
+  // has no prior data → null → not dormant, which is correct.
+  const lastAttemptedDate = filteredHistory.reduce<string | null>(
     (latest, dp) => (latest == null || dp.date > latest ? dp.date : latest),
     null
   );
