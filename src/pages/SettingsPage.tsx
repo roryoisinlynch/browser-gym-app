@@ -39,7 +39,7 @@ export default function SettingsPage() {
   }
 
   // Hidden entry to the Year in Review preview deck, so the feature can be
-  // shown for a chosen year outside the real Dec 25 - Jan 31 window (there is
+  // shown for a chosen year outside the real Dec 1 - Jan 31 window (there is
   // no address bar in the installed PWA to reach ?preview directly): five quick
   // taps on the "Settings" title reveal the year selector below. The real
   // gated flow never passes a year, so it always shows the year just past.

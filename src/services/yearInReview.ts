@@ -22,7 +22,7 @@ import { loadAllImportedSets } from "./importedSetStore";
 // ─── Review window / review year ─────────────────────────────────────────────
 
 /** Inclusive open/close of the yearly review window, local time, 1-indexed months. */
-export const REVIEW_WINDOW_OPEN = { month: 12, day: 25 };
+export const REVIEW_WINDOW_OPEN = { month: 12, day: 1 };
 export const REVIEW_WINDOW_CLOSE = { month: 1, day: 31 };
 
 const YEAR_REVIEW_NOW_KEY = "yearReviewNow";

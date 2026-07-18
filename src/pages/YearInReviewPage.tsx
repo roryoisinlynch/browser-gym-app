@@ -988,7 +988,7 @@ export default function YearInReviewPage() {
   const cancelled = useRef(false);
   const [isDesktop] = useState(() => window.innerWidth >= 1024);
   // Hidden preview: /year-in-review?preview renders the deck outside the real
-  // Dec 25 - Jan 31 window (e.g. to show someone in person). Bare ?preview shows
+  // Dec 1 - Jan 31 window (e.g. to show someone in person). Bare ?preview shows
   // last year, the year the most recent real window covered; ?preview=YYYY picks
   // a specific review year. It bypasses the date gate on this page only; the
   // dashboard CTA and the app-open interstitial stay date-gated.
