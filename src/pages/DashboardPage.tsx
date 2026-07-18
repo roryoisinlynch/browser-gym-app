@@ -34,7 +34,6 @@ import TutorialBlock from "../components/TutorialBlock";
 import WeeksBreadcrumb from "../components/WeeksBreadcrumb";
 import type { BreadcrumbWeek } from "../components/WeeksBreadcrumb";
 import ExerciseSummaryCard from "../components/ExerciseSummaryCard";
-import { computeSessionMetrics } from "../services/sessionMetrics";
 import { emojiForRating } from "../services/weekMetrics";
 import { gradeColor } from "../services/seasonMetrics";
 import { getYearInReviewState, hasAnyReviewData } from "../services/yearInReview";
@@ -772,7 +771,12 @@ async function buildSessionCard(session: SessionInstance): Promise<RecentCard | 
         link: `/session/${session.id}/summary`,
       };
     }
-    const m = computeSessionMetrics(view);
+    // Read the frozen-or-backfilled score (the same source the session report
+    // uses) rather than recomputing live. A live recompute drifts from the
+    // frozen report whenever the scoring logic changes, so the card and the
+    // report it links to could disagree (e.g. gold here, silver on click-in).
+    const m = await getSessionMetrics(session);
+    if (!m) return null;
     const color = m.ragStatus;
     return {
       id: session.id,
