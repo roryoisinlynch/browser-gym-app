@@ -124,8 +124,7 @@ function RevealSection({
 
 export default function WeekSummaryPage() {
   const { weekInstanceId } = useParams<{ weekInstanceId: string }>();
-  const [weekTitle, setWeekTitle] = useState<string | null>(null);
-  const [weekRirLabel, setWeekRirLabel] = useState<string | null>(null);
+  const [weekEyebrow, setWeekEyebrow] = useState<string | null>(null);
   const [weekEndedEarly, setWeekEndedEarly] = useState(false);
   const [metrics, setMetrics] = useState<WeekMetrics | null>(null);
   const [sessionBreadcrumb, setSessionBreadcrumb] = useState<BreadcrumbSession[]>([]);
@@ -207,18 +206,21 @@ export default function WeekSummaryPage() {
         const totalWeeks = seasonTemplateForRir?.rirSequence?.length ?? allWeeks.length;
         const weekByOrder = new Map(allWeeks.map((w) => [w.order, w]));
 
-        // Title needs the season's position and the week count, so it can only
-        // be built once the season's weeks are known.
-        const weekOfTotal = `week ${weekInstance.order} of ${totalWeeks}`;
-        setWeekTitle(
-          seasonInstanceForRir
-            ? `Season ${seasonInstanceForRir.order}, ${weekOfTotal}`
-            : weekOfTotal.charAt(0).toUpperCase() + weekOfTotal.slice(1)
-        );
+        // Needs the season's position and the week count, so it can only be
+        // built once the season's weeks are known. Any part that can't be
+        // resolved drops out rather than showing a placeholder.
         const weekRir =
           seasonTemplateForRir?.rirSequence?.[weekInstance.order - 1] ??
           weekTemplate?.targetRir;
-        setWeekRirLabel(weekRir != null ? `${weekRir} RIR` : null);
+        setWeekEyebrow(
+          [
+            seasonInstanceForRir ? `Season ${seasonInstanceForRir.order}` : null,
+            `Week ${weekInstance.order} of ${totalWeeks}`,
+            weekRir != null ? `${weekRir} RIR` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")
+        );
 
         // The heuristics window spans this week's real calendar days. Boundary
         // rule: a week runs from the prior week's end to the next week's start
@@ -375,11 +377,8 @@ export default function WeekSummaryPage() {
         ) : (() => {
           const { volumeScore, intensityScore, consistencyScore, emojiRating } = metrics!;
           return (<>
-            {/* ── Header ── */}
-            <header className="sum-header">
-              <h1 className="sum-title">{weekTitle}</h1>
-              {weekRirLabel && <p className="sum-subtitle">{weekRirLabel}</p>}
-            </header>
+            {/* ── Eyebrow ── */}
+            {weekEyebrow && <p className="sum-eyebrow">{weekEyebrow}</p>}
 
             <WeekGradeHero
               emojiRating={emojiRating}

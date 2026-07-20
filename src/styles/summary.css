@@ -39,26 +39,12 @@
   color: var(--text-muted);
 }
 
-/* ── Header ──
-   Identifies the report where the top bar's generic title can't. Left-aligned
-   to sit flush with the section headings and the hero below it. */
+/* ── Eyebrow ──
+   Identifies the report where the top bar's generic title can't. One line, one
+   size: this is context for the hero below it, not a heading competing with it,
+   so it takes the same quiet treatment as a section title. */
 
-.sum-header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.sum-title {
-  margin: 0;
-  font-size: var(--sum-fs-figure, 1.5rem);
-  line-height: 1.1;
-  letter-spacing: -0.025em;
-  font-weight: 800;
-  color: var(--text-strong);
-}
-
-.sum-subtitle {
+.sum-eyebrow {
   margin: 0;
   font-size: var(--sum-fs-label, 0.7rem);
   font-weight: 800;
@@ -75,15 +61,16 @@
   gap: 14px;
 }
 
-/* One heading treatment everywhere, so no section shouts over another. The
-   text-indent cancels the trailing tracking unit the browser adds after the
-   final glyph, which would otherwise push the line off its true left edge. */
+/* One heading treatment everywhere, so no section shouts over another.
+   No text-indent: the deck uses one to re-centre tracked lines, because
+   letter-spacing adds a trailing unit that throws a centred block off. These
+   headings are left-aligned, where the trailing unit costs nothing and an
+   indent only pushes them out of line with the rows beneath. */
 .sum-section__title {
   margin: 0;
   font-size: var(--sum-fs-label, 0.7rem);
   font-weight: 800;
   letter-spacing: 0.12em;
-  text-indent: 0.12em;
   text-transform: uppercase;
   color: var(--text-soft);
 }
