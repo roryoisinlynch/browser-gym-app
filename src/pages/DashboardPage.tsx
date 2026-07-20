@@ -30,6 +30,7 @@ import {
 import Medal from "../components/Medal";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
+import PageLoader from "../components/PageLoader";
 import TutorialBlock from "../components/TutorialBlock";
 import WeeksBreadcrumb from "../components/WeeksBreadcrumb";
 import type { BreadcrumbWeek } from "../components/WeeksBreadcrumb";
@@ -1012,6 +1013,7 @@ export default function DashboardPage() {
   const cancelled = useRef(false);
 
   const [isDesktop] = useState(() => window.innerWidth >= 1024);
+  const [loaderDone, setLoaderDone] = useState(false);
   const [upNext, setUpNext] = useState<UpNextState>({ type: "loading" });
   const [seasonTimeline, setSeasonTimeline] = useState<SeasonTimelineData | null>(null);
   const [isPreviousSeason, setIsPreviousSeason] = useState(false);
@@ -2531,10 +2533,32 @@ export default function DashboardPage() {
     );
   }
 
+  // The intro loader holds until every data-driven section has resolved, so the
+  // dashboard reveals fully built rather than with sections spinning in place.
+  // All of these settle on every path (including the no-program first run).
+  const dashboardReady =
+    upNext.type !== "loading" &&
+    !timelineLoading &&
+    recentSession !== LOADING_CARD &&
+    recentWeek !== LOADING_CARD &&
+    recentSeason !== LOADING_CARD &&
+    prEvents !== null &&
+    spotlightHistories !== null &&
+    achievements !== null;
+
   return (
     <main className="dashboard-page">
       <TopBar title="Dashboard" />
       <section className="dashboard-shell">
+        {!loaderDone ? (
+          <PageLoader
+            label="Building your dashboard…"
+            durationMs={3000}
+            ready={dashboardReady}
+            onDone={() => setLoaderDone(true)}
+          />
+        ) : (
+          <>
         {yearReviewYear != null && (
           <section className="dashboard-section">
             <div
@@ -2693,6 +2717,8 @@ export default function DashboardPage() {
         >
           {renderProgramMock()}
         </TutorialBlock>
+          </>
+        )}
       </section>
 
       <BottomNav activeTab="home" />
