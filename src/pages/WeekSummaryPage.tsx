@@ -30,6 +30,7 @@ import WeeksBreadcrumb from "../components/WeeksBreadcrumb";
 import type { BreadcrumbWeek } from "../components/WeeksBreadcrumb";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
+import PageLoader from "../components/PageLoader";
 import "./WeekSummaryPage.css";
 
 function buildWeekNarrative(metrics: WeekMetrics): string {
@@ -429,12 +430,7 @@ export default function WeekSummaryPage() {
 
       <section className="week-summary-shell">
         {isLoading ? (
-          <>
-            <div className="page-spinner" />
-            <div className="page-load-bar">
-              <div className="page-load-bar__fill" style={{ width: `${loadProgress}%` }} />
-            </div>
-          </>
+          <PageLoader label="Building your week summary…" progress={loadProgress} />
         ) : (() => {
           const { totalSets, totalSessions, durationLabel, volumeScore, intensityScore, consistencyScore, weekScore, emojiRating } = metrics!;
           return (<>

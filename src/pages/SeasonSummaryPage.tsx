@@ -27,6 +27,7 @@ import WeeksBreadcrumb from "../components/WeeksBreadcrumb";
 import type { BreadcrumbWeek } from "../components/WeeksBreadcrumb";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
+import PageLoader from "../components/PageLoader";
 import "./SeasonSummaryPage.css";
 
 type DaySquareStatus = "green" | "overdue" | "skipped" | "grey" | "rest-past" | "rest-future";
@@ -422,12 +423,7 @@ export default function SeasonSummaryPage() {
 
       <section className="season-summary-shell">
         {isLoading ? (
-          <>
-            <div className="page-spinner" />
-            <div className="page-load-bar">
-              <div className="page-load-bar__fill" style={{ width: `${loadProgress}%` }} />
-            </div>
-          </>
+          <PageLoader label="Building your season summary…" progress={loadProgress} />
         ) : (() => {
           const { totalSets, totalSessions, totalWeeks, durationLabel, volumeScore, intensityScore, consistencyScore, seasonScore, grade, endedEarly } = metrics!;
           const color = gradeColor(grade);

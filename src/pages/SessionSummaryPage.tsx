@@ -17,6 +17,7 @@ import WeeklyBreadcrumb from "../components/WeeklyBreadcrumb";
 import type { BreadcrumbSession } from "../components/WeeklyBreadcrumb";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
+import PageLoader from "../components/PageLoader";
 import "./SessionSummaryPage.css";
 
 
@@ -176,12 +177,7 @@ export default function SessionSummaryPage() {
 
       <section className="summary-shell">
         {isLoading ? (
-          <>
-            <div className="page-spinner" />
-            <div className="page-load-bar">
-              <div className="page-load-bar__fill" style={{ width: `${loadProgress}%` }} />
-            </div>
-          </>
+          <PageLoader label="Building your session summary…" progress={loadProgress} />
         ) : (() => {
           const sv = sessionView!;
           const m = metrics!;

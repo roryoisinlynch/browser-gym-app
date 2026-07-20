@@ -13,37 +13,6 @@ body,
     sans-serif;
 }
 
-/* ── Shared spinner ── */
-@keyframes page-spin {
-  to { transform: rotate(360deg); }
-}
-
-.page-spinner {
-  width: 24px;
-  height: 24px;
-  border: 2px solid rgba(255, 255, 255, 0.12);
-  border-top-color: rgba(255, 255, 255, 0.45);
-  border-radius: 50%;
-  animation: page-spin 0.7s linear infinite;
-}
-
-.page-load-bar {
-  width: 200px;
-  max-width: 60vw;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.10);
-  border-radius: 2px;
-  overflow: hidden;
-  margin-top: 14px;
-}
-
-.page-load-bar__fill {
-  height: 100%;
-  background: var(--accent);
-  border-radius: 2px;
-  transition: width 0.35s ease;
-}
-
 .text-link {
   color: var(--link);
   font-size: 0.98rem;
