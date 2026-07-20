@@ -24,7 +24,7 @@ import WeeksBreadcrumb from "../components/WeeksBreadcrumb";
 import type { BreadcrumbWeek } from "../components/WeeksBreadcrumb";
 import SeasonGradeHero from "../components/SeasonGradeHero";
 import SeasonCalendar from "../components/SeasonCalendar";
-import type { SeasonDayStatus, SeasonMonth } from "../components/SeasonCalendar";
+import type { SeasonMonth } from "../components/SeasonCalendar";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import PageLoader from "../components/PageLoader";
@@ -109,7 +109,7 @@ interface HeuristicSummaryRow {
 
 interface CalendarData {
   months: SeasonMonth[];
-  dayStatus: Map<string, SeasonDayStatus>;
+  trainedDays: Set<string>;
   startIso: string;
   endIso: string;
   todayIso: string | null;
@@ -222,25 +222,22 @@ export default function SeasonSummaryPage() {
           // Squares land on the day a session actually settled, not the day the
           // template planned it for, so drift shows up honestly. Weeks that
           // aren't completed still contribute — their sessions happened too.
+          // Only completed sessions mark a day: the calendar answers "when did
+          // I train", and the grade already accounts for what was skipped.
           const sessionsPerWeek = await Promise.all(
             weeks.map((w) => getSessionInstancesForWeekInstance(w.id))
           );
-          const dayStatus = new Map<string, SeasonDayStatus>();
+          const trainedDays = new Set<string>();
           for (const sessions of sessionsPerWeek) {
             for (const s of sessions) {
-              if (s.status !== "completed" && s.status !== "skipped") continue;
-              const iso = localDateIso(toLocalMidnight(s.completedAt ?? s.date));
-              const incoming: SeasonDayStatus =
-                s.status === "completed" ? "done" : "skipped";
-              const existing = dayStatus.get(iso);
-              if (!existing) dayStatus.set(iso, incoming);
-              else if (existing !== incoming) dayStatus.set(iso, "both");
+              if (s.status !== "completed") continue;
+              trainedDays.add(localDateIso(toLocalMidnight(s.completedAt ?? s.date)));
             }
           }
 
           setCalendar({
             months: monthsBetween(startIso, endIso),
-            dayStatus,
+            trainedDays,
             startIso,
             endIso,
             todayIso: seasonEnded ? null : localDateIso(),
@@ -427,7 +424,7 @@ export default function SeasonSummaryPage() {
               <RevealSection title="The season, day by day">
                 <SeasonCalendar
                   months={calendar.months}
-                  dayStatus={calendar.dayStatus}
+                  trainedDays={calendar.trainedDays}
                   seasonStartIso={calendar.startIso}
                   seasonEndIso={calendar.endIso}
                   todayIso={calendar.todayIso}
@@ -486,13 +483,18 @@ export default function SeasonSummaryPage() {
               <RevealSection title="Heuristics">
                 <ul className="ss-list ss-list--flush">
                   {heuristicSummary.map((row, i) => {
-                    const avgPct = row.avg != null ? ((row.avg - 1) / 4) * 100 : null;
+                    // Colour and bar both read the rounded mean, not the raw
+                    // one. The ramp is continuous, so three rows all labelled
+                    // "3.7" were being tinted three imperceptibly different
+                    // greens — variation the number itself can't explain.
+                    const avg = row.avg != null ? Math.round(row.avg * 10) / 10 : null;
+                    const avgPct = avg != null ? ((avg - 1) / 4) * 100 : null;
                     const coveragePct =
                       row.totalDays > 0
                         ? Math.round((row.givenCount / row.totalDays) * 100)
                         : 0;
                     const valueColor =
-                      row.avg != null ? colorForHeuristicScore(row.avg) : undefined;
+                      avg != null ? colorForHeuristicScore(avg) : undefined;
                     return (
                       <li
                         key={row.questionId}
@@ -502,7 +504,7 @@ export default function SeasonSummaryPage() {
                         <div className="ss-hs-row__head">
                           <span className="ss-hs-row__label">{row.label}</span>
                           <span className="ss-hs-row__value" style={valueColor ? { color: valueColor } : undefined}>
-                            {row.avg != null ? row.avg.toFixed(1) : "—"}
+                            {avg != null ? avg.toFixed(1) : "—"}
                           </span>
                         </div>
                         <div className="ss-hs-bar">
@@ -524,7 +526,7 @@ export default function SeasonSummaryPage() {
             {/* ── All seasons ── */}
             {seasonRows.length > 0 && (
               <RevealSection title="All seasons">
-                <ul className="ss-list">
+                <ul className="ss-list ss-list--plain">
                   {seasonRows.map((row, i) => {
                     const isCurrent = row.season.id === seasonInstanceId;
                     const rowColor = row.grade ? gradeColor(row.grade) : null;
@@ -536,7 +538,7 @@ export default function SeasonSummaryPage() {
                     return (
                       <li
                         key={row.season.id}
-                        className={`ss-row ss-reveal${isCurrent ? " ss-row--current" : ""}`}
+                        className={`ss-row ss-row--plain ss-reveal${isCurrent ? " ss-row--current" : ""}`}
                         style={{ "--i": i } as React.CSSProperties}
                       >
                         <div className="ss-row__head">

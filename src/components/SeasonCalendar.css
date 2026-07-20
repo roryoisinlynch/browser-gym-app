@@ -6,10 +6,9 @@
 
 /* Two months per row, so a four-month season reads as a 2x2 block. Both the
    month columns and the day cells inside them are fluid, so the block spans the
-   same left and right margins as every other section instead of hugging one
-   side. The generous column gap is what holds the cells near the year in
-   review's size: the wider the channel, the smaller the cells that fill what's
-   left. */
+   same left and right margins as every other section. The generous column gap
+   is what holds the cells near the year in review's size: the wider the
+   channel, the smaller the cells that fill what's left. */
 .ss-cal__months {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -24,7 +23,7 @@
 }
 
 .ss-cal__month-label {
-  font-size: 0.66rem;
+  font-size: var(--ss-fs-label, 0.7rem);
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -57,40 +56,14 @@
   background: rgba(255, 255, 255, 0.02);
 }
 
-/* Same colours as the dashboard timeline, so the two views agree at a glance. */
-.ss-cal__cell--done    { background: #6bcb77; }
-.ss-cal__cell--skipped { background: #e63946; }
-.ss-cal__cell--both {
-  background: linear-gradient(135deg, #6bcb77 50%, #e63946 50%);
+/* The one filled state. Same green as the dashboard timeline. */
+.ss-cal__cell--done {
+  background: #6bcb77;
 }
 
 .ss-cal__cell--today {
   box-shadow: inset 0 0 0 1.5px var(--accent);
 }
-
-/* ── Legend ── */
-
-.ss-cal__legend {
-  display: flex;
-  gap: 16px;
-  font-size: 0.74rem;
-  color: var(--text-soft);
-}
-
-.ss-cal__legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.ss-cal__legend-swatch {
-  width: 9px;
-  height: 9px;
-  border-radius: 2px;
-}
-
-.ss-cal__legend-swatch--done    { background: #6bcb77; }
-.ss-cal__legend-swatch--skipped { background: #e63946; }
 
 /* ── Motion ──
    Cells are final-state by default; only the no-preference block animates. */

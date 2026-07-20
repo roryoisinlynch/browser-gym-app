@@ -1,8 +1,6 @@
 import useInView from "../hooks/useInView";
 import "./SeasonCalendar.css";
 
-export type SeasonDayStatus = "done" | "skipped" | "both";
-
 export interface SeasonMonth {
   year: number;
   /** 0-indexed, as per Date. */
@@ -11,8 +9,8 @@ export interface SeasonMonth {
 
 interface SeasonCalendarProps {
   months: SeasonMonth[];
-  /** Local "YYYY-MM-DD" -> what happened, by the date it actually happened. */
-  dayStatus: Map<string, SeasonDayStatus>;
+  /** Local "YYYY-MM-DD" of every day a session was actually completed. */
+  trainedDays: Set<string>;
   seasonStartIso: string;
   seasonEndIso: string;
   /** Null for ended seasons, so no ring is drawn outside the season window. */
@@ -31,7 +29,7 @@ function isoFor(year: number, month: number, day: number): string {
 function MonthGrid({
   year,
   month,
-  dayStatus,
+  trainedDays,
   seasonStartIso,
   seasonEndIso,
   todayIso,
@@ -51,10 +49,9 @@ function MonthGrid({
           const day = i + 1;
           const iso = isoFor(year, month, day);
           const outside = iso < seasonStartIso || iso > seasonEndIso;
-          const status = dayStatus.get(iso);
           const classes = ["ss-cal__cell"];
           if (outside) classes.push("ss-cal__cell--outside");
-          if (status) classes.push(`ss-cal__cell--${status}`);
+          if (trainedDays.has(iso)) classes.push("ss-cal__cell--done");
           if (todayIso && iso === todayIso) classes.push("ss-cal__cell--today");
           return (
             <span
@@ -75,20 +72,20 @@ function MonthGrid({
  * Every calendar month the season touched, two per row, with a square filled on
  * each day a session actually landed — not the day it was scheduled for. A
  * season that drifts off its template shows that drift here.
+ *
+ * Trained days only. Marking skips too meant a second colour and a legend to
+ * explain both, for a distinction the grade and the consistency score already
+ * carry; one colour needs no key.
  */
 export default function SeasonCalendar({
   months,
-  dayStatus,
+  trainedDays,
   seasonStartIso,
   seasonEndIso,
   todayIso,
 }: SeasonCalendarProps) {
   const [ref, inView] = useInView<HTMLDivElement>();
   if (months.length === 0) return null;
-
-  const statuses = new Set(dayStatus.values());
-  const hasDone = statuses.has("done") || statuses.has("both");
-  const hasSkipped = statuses.has("skipped") || statuses.has("both");
 
   return (
     <div className={`ss-cal${inView ? " is-in" : ""}`} ref={ref}>
@@ -98,29 +95,13 @@ export default function SeasonCalendar({
             key={`${m.year}-${m.month}`}
             year={m.year}
             month={m.month}
-            dayStatus={dayStatus}
+            trainedDays={trainedDays}
             seasonStartIso={seasonStartIso}
             seasonEndIso={seasonEndIso}
             todayIso={todayIso}
           />
         ))}
       </div>
-      {(hasDone || hasSkipped) && (
-        <div className="ss-cal__legend">
-          {hasDone && (
-            <span className="ss-cal__legend-item">
-              <span className="ss-cal__legend-swatch ss-cal__legend-swatch--done" />
-              Trained
-            </span>
-          )}
-          {hasSkipped && (
-            <span className="ss-cal__legend-item">
-              <span className="ss-cal__legend-swatch ss-cal__legend-swatch--skipped" />
-              Skipped
-            </span>
-          )}
-        </div>
-      )}
     </div>
   );
 }

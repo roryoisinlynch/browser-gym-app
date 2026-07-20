@@ -3,6 +3,17 @@
   padding: 64px 0 100px;
   background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
   color: var(--text-strong);
+
+  /* Five type sizes, and only five. This page previously used fourteen, ten of
+     them between 9.9px and 16px — a range too narrow to read as distinct
+     levels, so it produced texture instead of hierarchy. Every rule below and
+     in SeasonGradeHero.css / SeasonCalendar.css picks from this scale; weight
+     and colour do the rest of the work. */
+  --ss-fs-label: 0.7rem;     /* 11.2px — uppercase micro-labels */
+  --ss-fs-support: 0.875rem; /* 14px   — secondary and supporting text */
+  --ss-fs-body: 1rem;        /* 16px   — primary text */
+  --ss-fs-figure: 1.5rem;    /* 24px   — numbers that carry the section */
+  --ss-fs-hero: 11rem;       /* 176px  — the grade, once */
 }
 
 /* 400px wide on a 28px inset, matching the deck's slide body. The old 460/14
@@ -19,7 +30,7 @@
 
 .ss-error {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--ss-fs-body, 1rem);
   color: var(--text-muted);
 }
 
@@ -35,7 +46,7 @@
 
 .ss-title {
   margin: 0;
-  font-size: 1.28rem;
+  font-size: var(--ss-fs-figure, 1.5rem);
   line-height: 1.08;
   letter-spacing: -0.025em;
   font-weight: 800;
@@ -44,7 +55,7 @@
 
 .ss-dates {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: var(--ss-fs-support, 0.875rem);
   color: var(--text-soft);
 }
 
@@ -61,7 +72,7 @@
    final glyph, which would otherwise push the line off its true left edge. */
 .ss-section__title {
   margin: 0;
-  font-size: 0.7rem;
+  font-size: var(--ss-fs-label, 0.7rem);
   font-weight: 800;
   letter-spacing: 0.12em;
   text-indent: 0.12em;
@@ -73,13 +84,16 @@
    can't sit narrower than the scores it's explaining. */
 .ss-narrative {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--ss-fs-body, 1rem);
   line-height: 1.5;
   color: var(--text-muted);
   text-align: center;
 }
 
-/* ── Glass rows (personal records, all seasons) ── */
+/* ── Rows ──
+   Only the personal records keep card chrome. Stacking two bordered lists on
+   one page meant fifteen filled surfaces competing at once, so the all-seasons
+   list is bare type on hairlines: it's a reference table, not a highlight. */
 
 .ss-list {
   list-style: none;
@@ -94,6 +108,10 @@
   gap: 16px;
 }
 
+.ss-list--plain {
+  gap: 0;
+}
+
 .ss-row {
   display: flex;
   flex-direction: column;
@@ -104,10 +122,21 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.ss-row--current {
-  background: var(--card-bg);
-  border-color: var(--card-border);
-  border-left: 2px solid var(--accent);
+.ss-row--plain {
+  padding: 11px 0;
+  border: none;
+  border-bottom: 1px solid var(--panel-border);
+  border-radius: 0;
+  background: none;
+}
+
+.ss-row--plain:last-child {
+  border-bottom: none;
+}
+
+/* With no fill to tint, the current season is marked on the name itself. */
+.ss-row--plain.ss-row--current .ss-row__name {
+  color: var(--accent);
 }
 
 .ss-row__head {
@@ -118,13 +147,13 @@
 }
 
 .ss-row__name {
-  font-size: 0.9rem;
+  font-size: var(--ss-fs-body, 1rem);
   font-weight: 600;
   color: var(--text-strong);
 }
 
 .ss-row__detail {
-  font-size: 0.8rem;
+  font-size: var(--ss-fs-support, 0.875rem);
   font-weight: 500;
   line-height: 1.4;
   color: var(--text-muted);
@@ -144,7 +173,7 @@
   flex-shrink: 0;
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 0.76rem;
+  font-size: var(--ss-fs-support, 0.875rem);
   font-weight: 800;
   background: rgba(107, 203, 119, 0.16);
   color: #6bcb77;
@@ -158,14 +187,14 @@
 }
 
 .ss-row__score {
-  font-size: 0.86rem;
+  font-size: var(--ss-fs-support, 0.875rem);
   font-weight: 700;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
 
 .ss-row__grade {
-  font-size: 1rem;
+  font-size: var(--ss-fs-body, 1rem);
   font-weight: 800;
   letter-spacing: -0.02em;
 }
@@ -179,7 +208,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.76rem;
+  font-size: var(--ss-fs-support, 0.875rem);
   color: var(--text-soft);
 }
 
@@ -232,13 +261,13 @@
 }
 
 .ss-hs-row__label {
-  font-size: 0.9rem;
+  font-size: var(--ss-fs-body, 1rem);
   font-weight: 600;
   color: var(--text-strong);
 }
 
 .ss-hs-row__value {
-  font-size: 0.95rem;
+  font-size: var(--ss-fs-body, 1rem);
   font-weight: 800;
   color: var(--text-strong);
   font-variant-numeric: tabular-nums;
@@ -258,7 +287,7 @@
 }
 
 .ss-hs-row__coverage {
-  font-size: 0.72rem;
+  font-size: var(--ss-fs-label, 0.7rem);
   color: var(--text-soft);
 }
 
