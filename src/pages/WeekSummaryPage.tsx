@@ -392,7 +392,7 @@ export default function WeekSummaryPage() {
             {sessionBreadcrumb.length > 0 && (
               <RevealSection className="sum-breadcrumb">
                 <div className="sum-reveal">
-                  <WeeklyBreadcrumb sessions={sessionBreadcrumb} />
+                  <WeeklyBreadcrumb sessions={sessionBreadcrumb} medalSize="md" />
                 </div>
               </RevealSection>
             )}
@@ -401,15 +401,6 @@ export default function WeekSummaryPage() {
             <RevealSection>
               <p className="sum-narrative sum-reveal">{buildWeekNarrative(metrics!)}</p>
             </RevealSection>
-
-            {/* ── Weeks this season ── */}
-            {weeksBreadcrumbWithCurrent.length > 1 && (
-              <RevealSection title="Weeks this season" className="sum-breadcrumb">
-                <div className="sum-reveal">
-                  <WeeksBreadcrumb weeks={weeksBreadcrumbWithCurrent} showLabel={false} />
-                </div>
-              </RevealSection>
-            )}
 
             {/* ── Personal records ── */}
             {prs.length > 0 && (
@@ -454,6 +445,15 @@ export default function WeekSummaryPage() {
                     );
                   })}
                 </ul>
+              </RevealSection>
+            )}
+
+            {/* ── Weeks this season ── */}
+            {weeksBreadcrumbWithCurrent.length > 1 && (
+              <RevealSection title="Weeks this season" className="sum-breadcrumb">
+                <div className="sum-reveal">
+                  <WeeksBreadcrumb weeks={weeksBreadcrumbWithCurrent} showLabel={false} />
+                </div>
               </RevealSection>
             )}
 

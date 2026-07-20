@@ -10,9 +10,14 @@ export interface BreadcrumbSession {
 
 interface WeeklyBreadcrumbProps {
   sessions: BreadcrumbSession[];
+  /** Bumped on the summary reports, where the trail is a section of its own. */
+  medalSize?: "sm" | "md" | "lg";
 }
 
-export default function WeeklyBreadcrumb({ sessions }: WeeklyBreadcrumbProps) {
+export default function WeeklyBreadcrumb({
+  sessions,
+  medalSize = "sm",
+}: WeeklyBreadcrumbProps) {
   if (sessions.length === 0) {
     return null;
   }
@@ -29,7 +34,7 @@ export default function WeeklyBreadcrumb({ sessions }: WeeklyBreadcrumbProps) {
             <div className="weekly-breadcrumb__dot">
               <Medal
                 status={session.ragStatus ?? "grey"}
-                size="sm"
+                size={medalSize}
                 isCurrent={session.isCurrent}
               />
             </div>
