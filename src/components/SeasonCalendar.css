@@ -31,20 +31,13 @@
   color: var(--text-soft);
 }
 
-.ss-cal__weekdays,
+/* Columns are Mon-first. There's no weekday header row: the deck's calendars
+   have no axis labels either, and seven repeated glyphs per month was the
+   noisiest thing on the page for something the leading blanks already imply. */
 .ss-cal__grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 3px;
-}
-
-.ss-cal__weekday {
-  font-size: 0.52rem;
-  font-weight: 700;
-  color: var(--text-soft);
-  opacity: 0.6;
-  text-align: center;
-  line-height: 1;
 }
 
 .ss-cal__cell {

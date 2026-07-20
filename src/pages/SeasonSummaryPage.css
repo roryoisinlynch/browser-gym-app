@@ -5,13 +5,16 @@
   color: var(--text-strong);
 }
 
+/* 400px wide on a 28px inset, matching the deck's slide body. The old 460/14
+   put every block within 14px of the screen edge, which is what made this page
+   feel like it was spilling out of the phone next to the deck. */
 .ss-shell {
-  max-width: 460px;
+  max-width: 400px;
   margin: 0 auto;
-  padding: 20px 14px 32px;
+  padding: 20px 28px 40px;
   display: flex;
   flex-direction: column;
-  gap: 34px;
+  gap: 44px;
 }
 
 .ss-error {

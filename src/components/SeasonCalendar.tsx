@@ -24,9 +24,6 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-/** Mon-first, matching how the week templates and the dashboard grid read. */
-const WEEKDAY_LETTERS = ["M", "T", "W", "T", "F", "S", "S"];
-
 function isoFor(year: number, month: number, day: number): string {
   return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
@@ -46,11 +43,6 @@ function MonthGrid({
   return (
     <div className="ss-cal__month">
       <span className="ss-cal__month-label">{MONTH_NAMES[month]}</span>
-      <div className="ss-cal__weekdays" aria-hidden="true">
-        {WEEKDAY_LETTERS.map((letter, i) => (
-          <span key={i} className="ss-cal__weekday">{letter}</span>
-        ))}
-      </div>
       <div className="ss-cal__grid" aria-hidden="true">
         {Array.from({ length: lead }, (_, i) => (
           <span key={`pad-${i}`} className="ss-cal__cell ss-cal__cell--pad" />
