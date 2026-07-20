@@ -39,6 +39,34 @@
   color: var(--text-muted);
 }
 
+/* ── Header ──
+   Identifies the report where the top bar's generic title can't. Left-aligned
+   to sit flush with the section headings and the hero below it. */
+
+.sum-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sum-title {
+  margin: 0;
+  font-size: var(--sum-fs-figure, 1.5rem);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  font-weight: 800;
+  color: var(--text-strong);
+}
+
+.sum-subtitle {
+  margin: 0;
+  font-size: var(--sum-fs-label, 0.7rem);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
 /* ── Sections ── */
 
 .sum-section {

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import type { SessionPR } from "../repositories/programRepository";
 import {
   getWeekInstanceById,
+  getWeekTemplateById,
   getSessionInstancesForWeekInstance,
   getSessionMetrics,
   getWeekInstancesForSeasonInstance,
@@ -123,6 +124,8 @@ function RevealSection({
 
 export default function WeekSummaryPage() {
   const { weekInstanceId } = useParams<{ weekInstanceId: string }>();
+  const [weekTitle, setWeekTitle] = useState<string | null>(null);
+  const [weekRirLabel, setWeekRirLabel] = useState<string | null>(null);
   const [weekEndedEarly, setWeekEndedEarly] = useState(false);
   const [metrics, setMetrics] = useState<WeekMetrics | null>(null);
   const [sessionBreadcrumb, setSessionBreadcrumb] = useState<BreadcrumbSession[]>([]);
@@ -156,7 +159,8 @@ export default function WeekSummaryPage() {
         }
 
         const seasonInstanceForRir = await getSeasonInstanceById(weekInstance.seasonInstanceId);
-        const [sessions, seasonTemplateForRir] = await Promise.all([
+        const [weekTemplate, sessions, seasonTemplateForRir] = await Promise.all([
+          getWeekTemplateById(weekInstance.weekTemplateId),
           getSessionInstancesForWeekInstance(weekInstanceId),
           seasonInstanceForRir
             ? getSeasonTemplateById(seasonInstanceForRir.seasonTemplateId)
@@ -202,6 +206,19 @@ export default function WeekSummaryPage() {
         );
         const totalWeeks = seasonTemplateForRir?.rirSequence?.length ?? allWeeks.length;
         const weekByOrder = new Map(allWeeks.map((w) => [w.order, w]));
+
+        // Title needs the season's position and the week count, so it can only
+        // be built once the season's weeks are known.
+        const weekOfTotal = `week ${weekInstance.order} of ${totalWeeks}`;
+        setWeekTitle(
+          seasonInstanceForRir
+            ? `Season ${seasonInstanceForRir.order}, ${weekOfTotal}`
+            : weekOfTotal.charAt(0).toUpperCase() + weekOfTotal.slice(1)
+        );
+        const weekRir =
+          seasonTemplateForRir?.rirSequence?.[weekInstance.order - 1] ??
+          weekTemplate?.targetRir;
+        setWeekRirLabel(weekRir != null ? `${weekRir} RIR` : null);
 
         // The heuristics window spans this week's real calendar days. Boundary
         // rule: a week runs from the prior week's end to the next week's start
@@ -358,8 +375,12 @@ export default function WeekSummaryPage() {
         ) : (() => {
           const { volumeScore, intensityScore, consistencyScore, emojiRating } = metrics!;
           return (<>
-            {/* The rating opens the page. The week's identity rides on the
-                hero's caption rather than a separate title above it. */}
+            {/* ── Header ── */}
+            <header className="sum-header">
+              <h1 className="sum-title">{weekTitle}</h1>
+              {weekRirLabel && <p className="sum-subtitle">{weekRirLabel}</p>}
+            </header>
+
             <WeekGradeHero
               emojiRating={emojiRating}
               volumeScore={volumeScore}
@@ -377,19 +398,19 @@ export default function WeekSummaryPage() {
               </RevealSection>
             )}
 
+            {/* ── Narrative ── */}
+            <RevealSection>
+              <p className="sum-narrative sum-reveal">{buildWeekNarrative(metrics!)}</p>
+            </RevealSection>
+
             {/* ── Weeks this season ── */}
             {weeksBreadcrumbWithCurrent.length > 1 && (
-              <RevealSection className="sum-breadcrumb">
+              <RevealSection title="Weeks this season" className="sum-breadcrumb">
                 <div className="sum-reveal">
                   <WeeksBreadcrumb weeks={weeksBreadcrumbWithCurrent} showLabel={false} />
                 </div>
               </RevealSection>
             )}
-
-            {/* ── Narrative ── */}
-            <RevealSection>
-              <p className="sum-narrative sum-reveal">{buildWeekNarrative(metrics!)}</p>
-            </RevealSection>
 
             {/* ── Personal records ── */}
             {prs.length > 0 && (
