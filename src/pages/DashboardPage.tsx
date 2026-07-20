@@ -1534,10 +1534,10 @@ export default function DashboardPage() {
             <div className="dashboard-timeline-recent__grid">
               {recentDays.rows.map((row, ri) => {
                 const deltaLabel = row.delta > 0
-                  ? `Total: +${row.delta}`
+                  ? `${row.delta} day${row.delta === 1 ? "" : "s"} ahead`
                   : row.delta < 0
-                    ? `Total: ${row.delta}`
-                    : "Total: 0";
+                    ? `${-row.delta} day${row.delta === -1 ? "" : "s"} behind`
+                    : "On track";
                 const deltaModifier = row.delta > 0 ? "ahead" : row.delta < 0 ? "behind" : "ok";
                 return (
                   <div key={ri} className="dashboard-timeline-recent__row-block">
