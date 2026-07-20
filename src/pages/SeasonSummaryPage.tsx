@@ -162,8 +162,6 @@ function RevealSection({
 
 export default function SeasonSummaryPage() {
   const { seasonInstanceId } = useParams<{ seasonInstanceId: string }>();
-  const [seasonName, setSeasonName] = useState<string | null>(null);
-  const [seasonDates, setSeasonDates] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<SeasonMetrics | null>(null);
   const [prs, setPrs] = useState<SessionPR[]>([]);
   const [seasonRows, setSeasonRows] = useState<SeasonRow[]>([]);
@@ -194,14 +192,10 @@ export default function SeasonSummaryPage() {
           return;
         }
 
-        const [seasonTemplate, weeks] = await Promise.all([
-          getSeasonTemplateById(seasonInstance.seasonTemplateId),
-          getWeekInstancesForSeasonInstance(seasonInstanceId),
-        ]);
+        const weeks = await getWeekInstancesForSeasonInstance(seasonInstanceId);
 
         const computed = await getSeasonMetrics(seasonInstance);
         setMetrics(computed);
-        setSeasonName(seasonTemplate?.name ?? "Season summary");
         setPrs(seasonPRs);
 
         const seasonEnded = seasonInstance.status !== "in_progress";
@@ -212,11 +206,6 @@ export default function SeasonSummaryPage() {
             seasonEnded && seasonInstance.completedAt
               ? localDateIso(toLocalMidnight(seasonInstance.completedAt))
               : localDateIso();
-          setSeasonDates(
-            startIso === endIso
-              ? fmtDate(seasonInstance.startedAt)
-              : `${fmtDate(startIso)} – ${fmtDate(endIso)}`
-          );
 
           // ── Calendar ──────────────────────────────────────────────────────
           // Squares land on the day a session actually settled, not the day the
@@ -390,13 +379,9 @@ export default function SeasonSummaryPage() {
         ) : (() => {
           const { volumeScore, intensityScore, consistencyScore, grade, endedEarly } = metrics!;
           return (<>
-            {/* ── Header ── */}
-            <header className="ss-header">
-              <h1 className="ss-title">{seasonName}</h1>
-              {seasonDates && <p className="ss-dates">{seasonDates}</p>}
-            </header>
-
-            {/* ── Grade, then the three scores behind it ── */}
+            {/* The grade opens the page. The season's name and dates aren't
+                repeated here: the top bar already says what this is, and the
+                current season's row in All Seasons carries both. */}
             <SeasonGradeHero
               grade={grade}
               volumeScore={volumeScore}
@@ -428,6 +413,7 @@ export default function SeasonSummaryPage() {
                   seasonStartIso={calendar.startIso}
                   seasonEndIso={calendar.endIso}
                   todayIso={calendar.todayIso}
+                  tone={gradeColor(grade)}
                 />
               </RevealSection>
             )}

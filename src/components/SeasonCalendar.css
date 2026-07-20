@@ -56,9 +56,16 @@
   background: rgba(255, 255, 255, 0.02);
 }
 
-/* The one filled state. Same green as the dashboard timeline. */
+/* The one filled state, tinted by the season's grade so the calendar, the
+   letter and the score bars all read in one colour. Same four hues the grade
+   uses, so a rough season's record comes back red and a strong one green. */
+.ss-cal--green { --ss-cal-ink: #6bcb77; }
+.ss-cal--amber { --ss-cal-ink: #f4a261; }
+.ss-cal--red   { --ss-cal-ink: #e76f51; }
+.ss-cal--grey  { --ss-cal-ink: #8a8d92; }
+
 .ss-cal__cell--done {
-  background: #6bcb77;
+  background: var(--ss-cal-ink, #6bcb77);
 }
 
 .ss-cal__cell--today {

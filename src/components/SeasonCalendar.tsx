@@ -15,6 +15,12 @@ interface SeasonCalendarProps {
   seasonEndIso: string;
   /** Null for ended seasons, so no ring is drawn outside the season window. */
   todayIso: string | null;
+  /**
+   * The season's grade colour. With one fill state and no legend the squares
+   * carry no meaning of their own, so they take the grade's hue and the page
+   * reads in a single colour rather than three.
+   */
+  tone: "green" | "amber" | "red" | "grey";
 }
 
 const MONTH_NAMES = [
@@ -33,7 +39,8 @@ function MonthGrid({
   seasonStartIso,
   seasonEndIso,
   todayIso,
-}: SeasonMonth & Omit<SeasonCalendarProps, "months">) {
+  // `tone` is applied once on the root, not per month.
+}: SeasonMonth & Omit<SeasonCalendarProps, "months" | "tone">) {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   // Monday-based weekday of the 1st: getDay() is Sunday-based, so rotate by 6.
   const lead = (new Date(year, month, 1).getDay() + 6) % 7;
@@ -83,12 +90,16 @@ export default function SeasonCalendar({
   seasonStartIso,
   seasonEndIso,
   todayIso,
+  tone,
 }: SeasonCalendarProps) {
   const [ref, inView] = useInView<HTMLDivElement>();
   if (months.length === 0) return null;
 
   return (
-    <div className={`ss-cal${inView ? " is-in" : ""}`} ref={ref}>
+    <div
+      className={`ss-cal ss-cal--${tone}${inView ? " is-in" : ""}`}
+      ref={ref}
+    >
       <div className="ss-cal__months">
         {months.map((m) => (
           <MonthGrid
