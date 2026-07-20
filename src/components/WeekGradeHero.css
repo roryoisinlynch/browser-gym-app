@@ -1,96 +1,73 @@
-/* Emoji left, scores stacked beside it. Unlike the season's grade letter, which
-   owns a row of its own, a week is a smaller unit and reads better as one
-   compact block. */
+/* Emoji left, the three score blocks stacked beside it. Same blocks the season
+   report lays out in a row, just turned into a column. */
 .wk-hero {
   display: grid;
   grid-template-columns: auto 1fr;
   align-items: center;
-  gap: 20px;
+  gap: 22px;
   padding: 8px 0;
 }
 
 .wk-hero__face {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-start;
+  /* Wide enough to clear the emoji's glow, which blurs past the glyph box and
+     would otherwise wash over the caption. */
+  gap: 18px;
 }
 
+/* Sized to match what the season's grade letter actually draws, not its
+   font-size. An emoji fills its full em box; a capital letter only fills its
+   cap height, roughly 0.72em. So 8rem of emoji and 11rem of letter put about
+   the same amount of ink on the page. */
 .wk-hero__emoji {
-  font-size: 4.4rem;
+  font-size: 8rem;
   line-height: 1;
-  /* Emoji are colour glyphs, so text-shadow does nothing useful on them;
-     drop-shadow works on the rendered bitmap instead. Muted until settled, so a
-     cycling face never looks like a result the user has earned. */
-  filter: none;
-  opacity: 0.45;
 }
 
-.wk-hero__emoji.is-settled {
-  opacity: 1;
+/* Emoji are colour glyphs, so text-shadow does nothing useful on them;
+   drop-shadow works on the rendered bitmap instead. */
+.wk-hero__face--green .wk-hero__emoji {
+  filter: drop-shadow(0 0 16px rgba(107, 203, 119, 0.45));
 }
 
-.wk-hero__face--green .wk-hero__emoji.is-settled {
-  filter: drop-shadow(0 0 14px rgba(107, 203, 119, 0.5));
+.wk-hero__face--amber .wk-hero__emoji {
+  filter: drop-shadow(0 0 16px rgba(244, 162, 97, 0.45));
 }
 
-.wk-hero__face--amber .wk-hero__emoji.is-settled {
-  filter: drop-shadow(0 0 14px rgba(244, 162, 97, 0.5));
-}
-
-.wk-hero__face--red .wk-hero__emoji.is-settled {
-  filter: drop-shadow(0 0 14px rgba(231, 111, 81, 0.45));
+.wk-hero__face--red .wk-hero__emoji {
+  filter: drop-shadow(0 0 16px rgba(231, 111, 81, 0.4));
 }
 
 .wk-hero__caption {
   font-size: var(--sum-fs-label, 0.7rem);
   font-weight: 800;
   letter-spacing: 0.1em;
-  text-indent: 0.1em;
   text-transform: uppercase;
   color: var(--text-soft);
-  white-space: nowrap;
-  opacity: 0;
 }
 
-.wk-hero__caption.is-settled {
-  opacity: 1;
-}
-
-/* ── Score rows ── */
+/* ── Score blocks ── */
 
 .wk-hero__scores {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   min-width: 0;
 }
 
 .wk-score {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-}
-
-.wk-score__head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.wk-score__label {
-  font-size: var(--sum-fs-label, 0.7rem);
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--text-soft);
+  align-items: flex-start;
+  gap: 6px;
 }
 
 .wk-score__pct {
-  font-size: var(--sum-fs-body, 1rem);
+  font-size: var(--sum-fs-figure, 1.5rem);
   font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
   color: var(--text-strong);
@@ -115,35 +92,26 @@
 .wk-score--amber .wk-score__fill { background: #f4a261; }
 .wk-score--red   .wk-score__fill { background: #e76f51; }
 
+.wk-score__label {
+  font-size: var(--sum-fs-label, 0.7rem);
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
 /* ── Motion ──
-   Base styles above are the final resting state, so reduced-motion users see a
-   fully settled hero with no cycling, counting or popping. */
+   Only the score bars move. The face has no reveal of its own: the cycling
+   slot-machine belongs to the season report, so each report up the chain earns
+   a little more ceremony than the one below it. Base styles above are the final
+   resting state, so reduced-motion users see everything settled. */
 @media (prefers-reduced-motion: no-preference) {
-  @keyframes wk-hero-pop {
-    from { opacity: 0; transform: scale(1.35); }
-    60%  { opacity: 1; transform: scale(0.97); }
-    to   { opacity: 1; transform: scale(1); }
-  }
-
-  @keyframes wk-hero-fade {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-  }
-
   @keyframes wk-hero-grow-x {
     from { transform: scaleX(0); }
     to   { transform: scaleX(1); }
   }
 
-  .wk-hero__emoji.is-settled {
-    animation: wk-hero-pop 520ms cubic-bezier(0.2, 0.8, 0.3, 1);
-  }
-
-  .wk-hero__caption.is-settled {
-    animation: wk-hero-fade 320ms ease-out 120ms backwards;
-  }
-
-  /* Tracks grow alongside their own row's count-up, not on a shared clock. */
+  /* Tracks grow alongside their own block's count-up, not on a shared clock. */
   .wk-score__fill {
     animation: wk-hero-grow-x 650ms cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
   }

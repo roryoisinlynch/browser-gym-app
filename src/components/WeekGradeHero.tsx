@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { emojiForRating } from "../services/weekMetrics";
 import type { EmojiRating } from "../services/weekMetrics";
 import useCountUp from "../hooks/useCountUp";
@@ -15,11 +14,6 @@ interface WeekGradeHeroProps {
   endedEarly: boolean;
 }
 
-const RATINGS: EmojiRating[] = [1, 2, 3, 4, 5];
-
-const CYCLE_INTERVAL_MS = 45;
-/** ~100ms after the last sub-score settles (750ms start + 650ms duration). */
-const SETTLE_AT_MS = 1500;
 const SCORE_START_MS = [250, 500, 750];
 const SCORE_DURATION_MS = 650;
 
@@ -37,7 +31,7 @@ function ratingTone(rating: EmojiRating): "green" | "amber" | "red" {
   return "red";
 }
 
-function ScoreRow({
+function ScoreBlock({
   score,
   label,
   index,
@@ -54,27 +48,27 @@ function ScoreRow({
   });
   return (
     <div className={`wk-score wk-score--${scoreTone(score)}`}>
-      <div className="wk-score__head">
-        <span className="wk-score__label">{label}</span>
-        <span className="wk-score__pct">{shown}%</span>
-      </div>
+      <span className="wk-score__pct">{shown}%</span>
       <span className="wk-score__track">
         <span
           className="wk-score__fill"
           style={{ width: `${Math.min(score, 100)}%` }}
         />
       </span>
+      <span className="wk-score__label">{label}</span>
     </div>
   );
 }
 
 /**
  * The week's headline: its emoji rating on the left, with volume, intensity and
- * consistency stacked beside it.
+ * consistency stacked beside it as the same blocks the season report lays out
+ * in a row.
  *
- * The face resolves last, cycling the five ratings while the scores count up —
- * the rating is derived from their average, so it settles only once they have.
- * Under reduced motion nothing cycles and nothing counts.
+ * Deliberately quieter than the season's grade: the scores count up, but the
+ * face is simply there from the start. The cycling slot-machine reveal belongs
+ * to the season report, so each report up the chain earns a little more
+ * ceremony than the one below it.
  */
 export default function WeekGradeHero({
   emojiRating,
@@ -85,51 +79,25 @@ export default function WeekGradeHero({
   endedEarly,
 }: WeekGradeHeroProps) {
   const [ref, inView] = useInView<HTMLDivElement>();
-  const reduced =
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  const [settled, setSettled] = useState(reduced);
-  const [cycleIndex, setCycleIndex] = useState(0);
-
-  useEffect(() => {
-    if (!inView || reduced) return;
-    const interval = window.setInterval(
-      () => setCycleIndex((i) => i + 1),
-      CYCLE_INTERVAL_MS
-    );
-    const timer = window.setTimeout(() => {
-      window.clearInterval(interval);
-      setSettled(true);
-    }, SETTLE_AT_MS);
-    return () => {
-      window.clearInterval(interval);
-      window.clearTimeout(timer);
-    };
-  }, [inView, reduced]);
-
-  const shownRating = settled
-    ? emojiRating
-    : RATINGS[cycleIndex % RATINGS.length];
 
   return (
     <div className="wk-hero" ref={ref}>
       <div className={`wk-hero__face wk-hero__face--${ratingTone(emojiRating)}`}>
         <span
-          className={`wk-hero__emoji${settled ? " is-settled" : ""}`}
+          className="wk-hero__emoji"
           aria-label={endedEarly ? "Week ended early" : `Week rating ${emojiRating}`}
         >
-          {emojiForRating(shownRating)}
+          {emojiForRating(emojiRating)}
         </span>
-        <span className={`wk-hero__caption${settled ? " is-settled" : ""}`}>
+        <span className="wk-hero__caption">
           {endedEarly ? `${caption} · ended early` : caption}
         </span>
       </div>
 
       <div className="wk-hero__scores">
-        <ScoreRow score={volumeScore} label="Volume" index={0} started={inView} />
-        <ScoreRow score={intensityScore} label="Intensity" index={1} started={inView} />
-        <ScoreRow score={consistencyScore} label="Consistency" index={2} started={inView} />
+        <ScoreBlock score={volumeScore} label="Volume" index={0} started={inView} />
+        <ScoreBlock score={intensityScore} label="Intensity" index={1} started={inView} />
+        <ScoreBlock score={consistencyScore} label="Consistency" index={2} started={inView} />
       </div>
     </div>
   );
