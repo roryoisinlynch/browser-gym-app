@@ -66,13 +66,10 @@
   color: var(--text-soft);
 }
 
-.ss-section--narrative {
-  align-items: center;
-}
-
+/* No max-width: every block on the page spans the same column, so the narrative
+   can't sit narrower than the scores it's explaining. */
 .ss-narrative {
   margin: 0;
-  max-width: 34ch;
   font-size: 1rem;
   line-height: 1.5;
   color: var(--text-muted);

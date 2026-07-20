@@ -413,6 +413,15 @@ export default function SeasonSummaryPage() {
               <p className="ss-narrative ss-reveal">{buildSeasonNarrative(metrics!)}</p>
             </RevealSection>
 
+            {/* ── Weeks breadcrumb ── */}
+            {weeksBreadcrumb.length > 0 && (
+              <RevealSection title="Week by week" className="ss-breadcrumb">
+                <div className="ss-reveal">
+                  <WeeksBreadcrumb weeks={weeksBreadcrumb} showLabel={false} />
+                </div>
+              </RevealSection>
+            )}
+
             {/* ── Calendar ── */}
             {calendar && calendar.months.length > 0 && (
               <RevealSection title="The season, day by day">
@@ -423,15 +432,6 @@ export default function SeasonSummaryPage() {
                   seasonEndIso={calendar.endIso}
                   todayIso={calendar.todayIso}
                 />
-              </RevealSection>
-            )}
-
-            {/* ── Weeks breadcrumb ── */}
-            {weeksBreadcrumb.length > 0 && (
-              <RevealSection title="Week by week" className="ss-breadcrumb">
-                <div className="ss-reveal">
-                  <WeeksBreadcrumb weeks={weeksBreadcrumb} showLabel={false} />
-                </div>
               </RevealSection>
             )}
 

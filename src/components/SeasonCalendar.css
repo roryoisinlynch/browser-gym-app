@@ -4,21 +4,23 @@
   gap: 16px;
 }
 
-/* Two months per row, so a four-month season reads as a 2x2 block. The cell
-   grid inside each month is a fixed size, so the halves are even columns rather
-   than shrink-to-fit ones — that keeps every month's left edge on either the
-   section heading's margin or the midpoint, instead of the whole block floating
-   free of the heading above it. */
+/* Two months per row, so a four-month season reads as a 2x2 block. Both the
+   month columns and the day cells inside them are fluid, so the block spans the
+   same left and right margins as every other section instead of hugging one
+   side. The generous column gap is what holds the cells near the year in
+   review's size: the wider the channel, the smaller the cells that fill what's
+   left. */
 .ss-cal__months {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px 12px;
+  gap: 18px 56px;
 }
 
 .ss-cal__month {
   display: flex;
   flex-direction: column;
   gap: 5px;
+  min-width: 0;
 }
 
 .ss-cal__month-label {
@@ -29,12 +31,10 @@
   color: var(--text-soft);
 }
 
-/* 13px cells on a 3px gap: the same profile as the deck's month calendar, so
-   the two features read as the same object at the same scale. */
 .ss-cal__weekdays,
 .ss-cal__grid {
   display: grid;
-  grid-template-columns: repeat(7, 13px);
+  grid-template-columns: repeat(7, 1fr);
   gap: 3px;
 }
 
@@ -48,9 +48,8 @@
 }
 
 .ss-cal__cell {
-  width: 13px;
-  height: 13px;
-  border-radius: 2px;
+  aspect-ratio: 1;
+  border-radius: 3px;
   /* A day inside the season with nothing logged. */
   background: rgba(255, 255, 255, 0.06);
 }
