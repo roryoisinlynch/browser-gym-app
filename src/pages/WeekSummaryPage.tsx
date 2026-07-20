@@ -392,7 +392,7 @@ export default function WeekSummaryPage() {
             {sessionBreadcrumb.length > 0 && (
               <RevealSection className="sum-breadcrumb">
                 <div className="sum-reveal">
-                  <WeeklyBreadcrumb sessions={sessionBreadcrumb} medalSize="md" />
+                  <WeeklyBreadcrumb sessions={sessionBreadcrumb} />
                 </div>
               </RevealSection>
             )}

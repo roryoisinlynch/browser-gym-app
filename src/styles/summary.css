@@ -256,6 +256,19 @@
   min-width: 0;
 }
 
+/* Medal size has to be set here, not through Medal's size prop:
+   WeeklyBreadcrumb.css pins .weekly-breadcrumb__dot .medal__icon at the same
+   specificity as .medal--md .medal__icon and loads after it, so the prop never
+   reaches the icon. Three classes clears both. */
+.sum-breadcrumb .weekly-breadcrumb__dot .medal__icon {
+  font-size: 34px;
+}
+
+.sum-breadcrumb .weekly-breadcrumb__dot .medal__placeholder {
+  width: 26px;
+  height: 26px;
+}
+
 /* ── Heuristics ──
    Deliberately its own ss-hs-* namespace: the week summary still draws the
    older IQR-band version from its own stylesheet, and both are global. */
