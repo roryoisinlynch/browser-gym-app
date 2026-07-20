@@ -1115,3 +1115,15 @@
   flex-shrink: 0;
   opacity: 0.7;
 }
+
+/* Report tutorial mock — wraps the real WeekGradeHero so the example matches
+   what the week summary actually renders. */
+.dashboard-report-mock {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dashboard-report-mock .sum-narrative {
+  text-align: left;
+}

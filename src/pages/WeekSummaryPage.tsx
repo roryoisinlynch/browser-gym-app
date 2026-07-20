@@ -4,33 +4,32 @@ import type { SessionPR } from "../repositories/programRepository";
 import {
   getWeekInstanceById,
   getWeekTemplateById,
-  getWeekTemplateItemsForWeekTemplate,
   getSessionInstancesForWeekInstance,
   getSessionMetrics,
   getWeekInstancesForSeasonInstance,
   getWeekMetrics,
   getWeekPRs,
-  getWeekInstanceItemsForWeekInstance,
   getSeasonInstanceById,
   getSeasonTemplateById,
 } from "../repositories/programRepository";
 import type { SeasonInstance } from "../domain/models";
-import type { WeekTemplateItem, WeekInstanceItem } from "../domain/models";
 import {
   isHeuristicsEnabled,
   getQuestions,
   getEntriesForDateRange,
 } from "../repositories/heuristicsRepository";
-import { colorForHeuristicScore, percentileOrNull } from "../services/heuristicsScale";
-import { emojiForRating } from "../services/weekMetrics";
+import { colorForHeuristicScore } from "../services/heuristicsScale";
 import type { WeekMetrics } from "../services/weekMetrics";
 import WeeklyBreadcrumb from "../components/WeeklyBreadcrumb";
 import type { BreadcrumbSession } from "../components/WeeklyBreadcrumb";
 import WeeksBreadcrumb from "../components/WeeksBreadcrumb";
 import type { BreadcrumbWeek } from "../components/WeeksBreadcrumb";
+import WeekGradeHero from "../components/WeekGradeHero";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import PageLoader from "../components/PageLoader";
+import useInView from "../hooks/useInView";
+import "../styles/summary.css";
 import "./WeekSummaryPage.css";
 
 function buildWeekNarrative(metrics: WeekMetrics): string {
@@ -75,9 +74,6 @@ function buildWeekNarrative(metrics: WeekMetrics): string {
   return `You ${join(positives)}, but you ${join(negatives)}.`;
 }
 
-type DaySquareStatus = "green" | "overdue" | "skipped" | "grey" | "rest-past" | "rest-future";
-interface DaySquare { type: "session" | "rest"; scheduledDate: string; status: DaySquareStatus; }
-
 function localDateIso(d: Date = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
@@ -90,7 +86,10 @@ function toLocalMidnight(iso: string): Date {
 function dayDiffInclusive(startIso: string, endIso: string): number {
   const s = new Date(startIso + "T00:00:00").getTime();
   const e = new Date(endIso + "T00:00:00").getTime();
-  return Math.floor((e - s) / 86_400_000) + 1;
+  // Round, not floor: a span crossing a DST boundary is 23 or 25 hours short of
+  // a whole number of days, and flooring that lost an entire day — which showed
+  // up as heuristic coverage above 100%.
+  return Math.round((e - s) / 86_400_000) + 1;
 }
 
 interface HeuristicSummaryRow {
@@ -98,11 +97,29 @@ interface HeuristicSummaryRow {
   label: string;
   avg: number | null;
   givenCount: number;
-  missingDays: number;
   totalDays: number;
-  /** Q1/Q3 of the user's actual answers in this window; null when n < 2. */
-  q1: number | null;
-  q3: number | null;
+}
+
+/** A page section that staggers its children in as it scrolls into view. */
+function RevealSection({
+  title,
+  className,
+  children,
+}: {
+  title?: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const [ref, inView] = useInView<HTMLElement>();
+  return (
+    <section
+      ref={ref}
+      className={`sum-section${inView ? " is-in" : ""}${className ? ` ${className}` : ""}`}
+    >
+      {title && <h2 className="sum-section__title sum-reveal">{title}</h2>}
+      {children}
+    </section>
+  );
 }
 
 export default function WeekSummaryPage() {
@@ -113,13 +130,7 @@ export default function WeekSummaryPage() {
   const [sessionBreadcrumb, setSessionBreadcrumb] = useState<BreadcrumbSession[]>([]);
   const [weeksBreadcrumb, setWeeksBreadcrumb] = useState<BreadcrumbWeek[]>([]);
   const [prs, setPrs] = useState<SessionPR[]>([]);
-  const [weekTemplateDays, setWeekTemplateDays] = useState<WeekTemplateItem[]>([]);
-  const [weekInstanceItems, setWeekInstanceItems] = useState<WeekInstanceItem[]>([]);
-  const [, setCompletedSessionIds] = useState<Set<string>>(new Set());
   const [seasonInstance, setSeasonInstance] = useState<SeasonInstance | null>(null);
-  const [weekStartIso, setWeekStartIso] = useState<string | null>(null);
-  const [extraRestDays, setExtraRestDays] = useState<number>(0);
-  const [sessionInfoMap, setSessionInfoMap] = useState<Map<string, { date: string; status: string; completedAt: string | null }>>(new Map());
   const [heuristicSummary, setHeuristicSummary] = useState<HeuristicSummaryRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loaderDone, setLoaderDone] = useState(false);
@@ -147,19 +158,13 @@ export default function WeekSummaryPage() {
         }
 
         const seasonInstanceForRir = await getSeasonInstanceById(weekInstance.seasonInstanceId);
-        const [weekTemplate, sessions, wii, seasonTemplateForRir] = await Promise.all([
+        const [weekTemplate, sessions, seasonTemplateForRir] = await Promise.all([
           getWeekTemplateById(weekInstance.weekTemplateId),
           getSessionInstancesForWeekInstance(weekInstanceId),
-          getWeekInstanceItemsForWeekInstance(weekInstanceId),
           seasonInstanceForRir
             ? getSeasonTemplateById(seasonInstanceForRir.seasonTemplateId)
             : Promise.resolve(undefined),
         ]);
-
-        const templateItems = await getWeekTemplateItemsForWeekTemplate(
-          weekInstance.weekTemplateId
-        );
-
 
         // Frozen for completed weeks; recomputed from frozen session metrics
         // for the live week.
@@ -175,24 +180,6 @@ export default function WeekSummaryPage() {
         );
         setWeekEndedEarly(weekInstance.endedEarly === true);
         setPrs(weekPRs);
-        setWeekTemplateDays(templateItems);
-        setWeekInstanceItems(wii);
-        setCompletedSessionIds(new Set(sessions.filter(s => s.status === "completed").map(s => s.id)));
-
-        // Build session info map for day-square timeline
-        setSessionInfoMap(new Map(sessions.map(s => [s.id, { date: s.date, status: s.status, completedAt: s.completedAt ?? null }])));
-
-        // Derive week start date from any session's scheduled date minus its wii order offset
-        for (const item of wii) {
-          if (item.sessionInstanceId) {
-            const session = sessions.find(s => s.id === item.sessionInstanceId);
-            if (session) {
-              const startMs = toLocalMidnight(session.date).getTime() - (item.order - 1) * 86400000;
-              setWeekStartIso(localDateIso(new Date(startMs)));
-              break;
-            }
-          }
-        }
 
         if (weekInstance.status === "completed") {
           const si = await getSeasonInstanceById(weekInstance.seasonInstanceId);
@@ -228,12 +215,11 @@ export default function WeekSummaryPage() {
         const totalWeeks = seasonTemplateForRir?.rirSequence?.length ?? allWeeks.length;
         const weekByOrder = new Map(allWeeks.map((w) => [w.order, w]));
 
-        // Extra rest = calendar days this week owns minus its template length.
-        // Boundary rule: a week spans from the prior week's end-boundary to the
-        // next week's start of activity. The "earliest completed session of
-        // week N+1" defines the boundary so a gap before week N+1's first
-        // session belongs to week N. Falls back to startedAt / season end /
-        // today when nothing has been logged yet.
+        // The heuristics window spans this week's real calendar days. Boundary
+        // rule: a week runs from the prior week's end to the next week's start
+        // of activity, so a gap before week N+1's first session belongs to
+        // week N. Falls back to startedAt / season end / today when nothing has
+        // been logged yet.
         const nextWeek = weekByOrder.get(weekInstance.order + 1);
         let endBoundaryIso: string | null = null;
         if (nextWeek) {
@@ -261,19 +247,11 @@ export default function WeekSummaryPage() {
             .sort((a, b) => a.localeCompare(b))[0];
           actualStartIso = earliestCompletedHere ?? weekInstance.startedAt ?? null;
         }
-        if (actualStartIso) {
-          const startMs = toLocalMidnight(actualStartIso).getTime();
-          const endMs = toLocalMidnight(endBoundaryIso).getTime();
-          const dayDiff = Math.max(0, Math.round((endMs - startMs) / 86_400_000));
-          setExtraRestDays(Math.max(0, dayDiff - templateItems.length));
-        }
 
         // ── Heuristics summary ───────────────────────────────────────────
         // Mirrors the SeasonSummaryPage logic, just scoped to this week's
-        // [actualStart, endBoundary] range. End is capped at today so the
-        // pin/bar don't extend into days the user couldn't have logged yet
-        // (in-progress weeks whose endBoundary defaults to today already
-        // respect this; the cap is defensive for any future boundary case).
+        // [actualStart, endBoundary] range. End is capped at today so the bar
+        // doesn't extend into days the user couldn't have logged yet.
         if (actualStartIso && (await isHeuristicsEnabled())) {
           const questions = await getQuestions();
           if (questions.length > 0) {
@@ -295,32 +273,23 @@ export default function WeekSummaryPage() {
               const summary: HeuristicSummaryRow[] = questions.map((q) => {
                 const qEntries = byQuestion.get(q.id) ?? [];
                 const datesAnswered = new Set<string>();
-                const values: number[] = [];
                 let sum = 0;
                 for (const e of qEntries) {
                   if (e.value != null && !datesAnswered.has(e.date)) {
                     datesAnswered.add(e.date);
                     sum += e.value;
-                    values.push(e.value);
                   }
                 }
                 const givenCount = datesAnswered.size;
-                const missingDays = Math.max(0, totalDays - givenCount);
-                // Simple mean of answered values only — matches the season
-                // page and keeps the pin in the same distribution as Q1/Q3.
-                const avg = givenCount > 0 ? sum / givenCount : null;
-                const sortedValues = [...values].sort((a, b) => a - b);
-                const q1 = percentileOrNull(sortedValues, 0.25);
-                const q3 = percentileOrNull(sortedValues, 0.75);
+                // Mean of answered values only; coverage is reported alongside
+                // it so a mean over a third of the days can't pass for a mean
+                // over nearly all of them.
                 return {
                   questionId: q.id,
                   label: q.label,
-                  avg,
+                  avg: givenCount > 0 ? sum / givenCount : null,
                   givenCount,
-                  missingDays,
                   totalDays,
-                  q1,
-                  q3,
                 };
               });
               // Drop questions the user never answered in this window — an
@@ -341,7 +310,7 @@ export default function WeekSummaryPage() {
             const endedEarly = w.endedEarly === true;
             const isCurrent = w.id === weekInstanceId;
             if (isCurrent) {
-              return { weekInstanceId: w.id, emojiRating: metrics ? metrics.emojiRating : null, isCurrent: true, endedEarly };
+              return { weekInstanceId: w.id, emojiRating: null, isCurrent: true, endedEarly };
             }
             if (w.status !== "completed") {
               return { weekInstanceId: w.id, emojiRating: null, isCurrent: false, endedEarly };
@@ -364,7 +333,6 @@ export default function WeekSummaryPage() {
     }
 
     load();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekInstanceId]);
 
   // Patch the current week into weeksBreadcrumb once metrics are ready.
@@ -375,38 +343,12 @@ export default function WeekSummaryPage() {
     );
   }, [weeksBreadcrumb, metrics]);
 
-  const weekDaySquares = useMemo<DaySquare[] | null>(() => {
-    if (!weekStartIso || weekTemplateDays.length === 0) return null;
-    const today = localDateIso();
-    const weekStartMs = toLocalMidnight(weekStartIso).getTime();
-    const sorted = [...weekTemplateDays].sort((a, b) => a.order - b.order);
-    return sorted.map((templateItem, index): DaySquare => {
-      const scheduledDate = localDateIso(new Date(weekStartMs + index * 86400000));
-      if (templateItem.type === "rest") {
-        return { type: "rest", scheduledDate, status: scheduledDate < today ? "rest-past" : "rest-future" };
-      }
-      const wiiItem = weekInstanceItems.find(i => i.weekTemplateItemId === templateItem.id);
-      if (!wiiItem?.sessionInstanceId) {
-        return { type: "session", scheduledDate, status: scheduledDate < today ? "overdue" : "grey" };
-      }
-      const session = sessionInfoMap.get(wiiItem.sessionInstanceId);
-      if (!session) return { type: "session", scheduledDate, status: "grey" };
-      if (session.status === "skipped") {
-        return { type: "session", scheduledDate, status: "skipped" };
-      }
-      if (session.status !== "completed") {
-        return { type: "session", scheduledDate, status: scheduledDate < today ? "overdue" : "grey" };
-      }
-      return { type: "session", scheduledDate, status: "green" };
-    });
-  }, [weekStartIso, weekTemplateDays, weekInstanceItems, sessionInfoMap]);
-
   if (!isLoading && (errorMessage || !metrics)) {
     return (
-      <main className="week-summary-page">
+      <main className="summary-page">
         <TopBar title="Week summary" backTo="/" backLabel="Dashboard" />
-        <section className="week-summary-shell">
-          <p className="week-summary-error">{errorMessage ?? "Something went wrong."}</p>
+        <section className="sum-shell">
+          <p className="sum-error">{errorMessage ?? "Something went wrong."}</p>
         </section>
         <BottomNav activeTab="session" />
       </main>
@@ -414,14 +356,10 @@ export default function WeekSummaryPage() {
   }
 
   return (
-    <main className="week-summary-page">
-      <TopBar
-        title="Week summary"
-        backTo="/"
-        backLabel="Dashboard"
-      />
+    <main className="summary-page">
+      <TopBar title="Week summary" backTo="/" backLabel="Dashboard" />
 
-      <section className="week-summary-shell">
+      <section className="sum-shell">
         {!loaderDone ? (
           <PageLoader
             label="Building your week summary…"
@@ -430,255 +368,143 @@ export default function WeekSummaryPage() {
             onDone={() => setLoaderDone(true)}
           />
         ) : (() => {
-          const { totalSets, totalSessions, durationLabel, volumeScore, intensityScore, consistencyScore, weekScore, emojiRating } = metrics!;
+          const { volumeScore, intensityScore, consistencyScore, emojiRating } = metrics!;
           return (<>
-        {/* ── Week name ── */}
-        <header className="week-summary-header">
-          <h1 className="week-summary-title">{weekName}</h1>
-          {weekEndedEarly && (
-            <p className="week-summary-eyebrow week-summary-eyebrow--ended-early">
-              Ended early
-            </p>
-          )}
-        </header>
+            {/* The rating opens the page. The week's identity rides on the
+                hero's caption rather than a separate title above it. */}
+            <WeekGradeHero
+              emojiRating={emojiRating}
+              volumeScore={volumeScore}
+              intensityScore={intensityScore}
+              consistencyScore={consistencyScore}
+              caption={weekName ?? "Week rating"}
+              endedEarly={weekEndedEarly}
+            />
 
-        {/* ── Descriptive stats ── */}
-        <div className="week-summary-stats-row">
-          {durationLabel && (
-            <>
-              <div className="week-summary-stat">
-                <span className="week-summary-stat__value">{durationLabel}</span>
-                <span className="week-summary-stat__label">Duration</span>
-              </div>
-              <div className="week-summary-stat-divider" />
-            </>
-          )}
-          <div className="week-summary-stat">
-            <span className="week-summary-stat__value">{totalSessions}</span>
-            <span className="week-summary-stat__label">Sessions</span>
-          </div>
-          <div className="week-summary-stat-divider" />
-          <div className="week-summary-stat">
-            <span className="week-summary-stat__value">{totalSets}</span>
-            <span className="week-summary-stat__label">Total sets</span>
-          </div>
-        </div>
-
-        {/* ── Results ── */}
-        <section className="week-summary-section">
-          <h2 className="week-summary-section-title">Results</h2>
-
-          <p className="week-summary-narrative">{buildWeekNarrative(metrics!)}</p>
-
-          <div className="week-summary-score-block">
-            {/* Left: big emoji + week score */}
-            <div className="week-summary-score-primary">
-              <span className="week-summary-emoji" aria-label={`Week score ${weekScore}`}>
-                {emojiForRating(emojiRating)}
-              </span>
-              <div className="week-summary-score-center">
-                <span className="week-summary-score-total">{weekScore}</span>
-                <span className="week-summary-score-label">Week score</span>
-              </div>
-            </div>
-
-            <div className="week-summary-score-divider" />
-
-            {/* Right: volume, intensity, consistency */}
-            <div className="week-summary-score-secondary">
-              <div className="week-summary-score-item">
-                <span className="week-summary-score-item__pct">{volumeScore}%</span>
-                <span className="week-summary-score-item__label">Volume</span>
-              </div>
-              <div className="week-summary-score-item">
-                <span className="week-summary-score-item__pct">{intensityScore}%</span>
-                <span className="week-summary-score-item__label">Intensity</span>
-              </div>
-              <div className="week-summary-score-item">
-                <span className="week-summary-score-item__pct">{consistencyScore}%</span>
-                <span className="week-summary-score-item__label">Consistency</span>
-              </div>
-            </div>
-          </div>
-
-          <p className="week-summary-score-footnote">
-            Score = average of volume, intensity and consistency (each out of 100)
-          </p>
-        </section>
-
-        {/* ── Schedule counts ── */}
-        {weekDaySquares && weekDaySquares.length > 0 && (() => {
-          const countItems = [
-            { label: "Done",      color: "#6bcb77", n: weekDaySquares.filter(d => d.status === "green").length },
-            { label: "Skipped",   color: "#e63946", n: weekDaySquares.filter(d => d.status === "skipped").length },
-            { label: "Missed",    color: "#f4a261", n: weekDaySquares.filter(d => d.status === "overdue").length },
-            { label: "Upcoming",  color: null,      n: weekDaySquares.filter(d => d.status === "grey").length },
-            { label: "Rest",      color: null,      n: weekDaySquares.filter(d => d.type === "rest").length },
-            { label: "Extra rest", color: null,     n: extraRestDays },
-          ].filter(i => i.n > 0);
-
-          if (countItems.length === 0) return null;
-
-          // Split into 1 or 2 rows: ≤3 items → one row; 4–6 → two balanced rows
-          const rows: typeof countItems[] = countItems.length <= 3
-            ? [countItems]
-            : [countItems.slice(0, Math.ceil(countItems.length / 2)), countItems.slice(Math.ceil(countItems.length / 2))];
-
-          return (
-            <div className="week-summary-stats-rows">
-              {rows.map((row, ri) => (
-                <div key={ri} className="week-summary-stats-row">
-                  {row.map((item, i) => (
-                    <div key={item.label} style={{ display: "contents" }}>
-                      {i > 0 && <div className="week-summary-stat-divider" />}
-                      <div className="week-summary-stat">
-                        <span
-                          className="week-summary-stat__value"
-                          style={item.color ? { color: item.color } : undefined}
-                        >{item.n}</span>
-                        <span className="week-summary-stat__label">{item.label}</span>
-                      </div>
-                    </div>
-                  ))}
+            {/* ── Sessions this week ── */}
+            {sessionBreadcrumb.length > 0 && (
+              <RevealSection className="sum-breadcrumb">
+                <div className="sum-reveal">
+                  <WeeklyBreadcrumb sessions={sessionBreadcrumb} />
                 </div>
-              ))}
-            </div>
-          );
-        })()}
+              </RevealSection>
+            )}
 
-        {/* ── Sessions this week ── */}
-        {sessionBreadcrumb.length > 0 && (
-          <section className="week-summary-section week-summary-section--breadcrumb">
-            <WeeklyBreadcrumb sessions={sessionBreadcrumb} />
-          </section>
-        )}
+            {/* ── Weeks this season ── */}
+            {weeksBreadcrumbWithCurrent.length > 1 && (
+              <RevealSection className="sum-breadcrumb">
+                <div className="sum-reveal">
+                  <WeeksBreadcrumb weeks={weeksBreadcrumbWithCurrent} showLabel={false} />
+                </div>
+              </RevealSection>
+            )}
 
-        {/* ── Weeks this season ── */}
-        {weeksBreadcrumbWithCurrent.length > 1 && (
-          <section className="week-summary-section week-summary-section--breadcrumb">
-            <WeeksBreadcrumb weeks={weeksBreadcrumbWithCurrent} />
-          </section>
-        )}
+            {/* ── Narrative ── */}
+            <RevealSection>
+              <p className="sum-narrative sum-reveal">{buildWeekNarrative(metrics!)}</p>
+            </RevealSection>
 
-        {/* ── Heuristics ── */}
-        {heuristicSummary.length > 0 && (
-          <section className="week-summary-section">
-            <h2 className="week-summary-section-title">Heuristics</h2>
-            <ul className="hs-list">
-              {heuristicSummary.map((row) => {
-                const avgPct = row.avg != null ? ((row.avg - 1) / 4) * 100 : null;
-                const coveragePct =
-                  row.totalDays > 0
-                    ? Math.round((row.givenCount / row.totalDays) * 100)
-                    : 0;
-                const valueColor =
-                  row.avg != null ? colorForHeuristicScore(row.avg) : undefined;
-                const barStyle =
-                  row.q1 != null && row.q3 != null
-                    ? (() => {
-                        // Band starts as the IQR but stretches outward to
-                        // include the mean if it falls outside — keeps the
-                        // pin inside the vivid zone on skewed distributions.
-                        const bandLow = row.avg != null ? Math.min(row.q1, row.avg) : row.q1;
-                        const bandHigh = row.avg != null ? Math.max(row.q3, row.avg) : row.q3;
-                        const lowPct = ((bandLow - 1) / 4) * 100;
-                        const highPct = ((bandHigh - 1) / 4) * 100;
-                        // Fade radius scales with the band width: wider bands
-                        // get softer transitions, narrow ones stay tight.
-                        const fadePct = (highPct - lowPct) * 0.2;
-                        return {
-                          "--iqr-low": `${lowPct}%`,
-                          "--iqr-high": `${highPct}%`,
-                          "--iqr-fade": `${fadePct}%`,
-                        } as React.CSSProperties;
-                      })()
-                    : undefined;
-                return (
-                  <li key={row.questionId} className="hs-row">
-                    <div className="hs-row__head">
-                      <span className="hs-row__label">{row.label}</span>
-                      <span className="hs-row__value" style={valueColor ? { color: valueColor } : undefined}>
-                        {row.avg != null ? row.avg.toFixed(1) : "—"}
-                      </span>
-                    </div>
-                    <div className="hs-bar" style={barStyle}>
-                      {avgPct != null && (
-                        <div
-                          className="hs-bar__pin"
-                          style={{ left: `${avgPct}%` }}
-                        />
-                      )}
-                    </div>
-                    <div className="hs-row__coverage">
-                      {coveragePct}% coverage, {row.missingDays} missed
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        )}
+            {/* ── Personal records ── */}
+            {prs.length > 0 && (
+              <RevealSection title={`Personal records · ${prs.length}`}>
+                <ul className="sum-list">
+                  {prs.map((pr, i) => {
+                    const gainPct =
+                      pr.prType !== "reps" && pr.previousE1RM != null && pr.newE1RM != null
+                        ? Math.round((pr.newE1RM / pr.previousE1RM - 1) * 100)
+                        : null;
+                    return (
+                      <li
+                        key={pr.exerciseName}
+                        className="sum-row sum-reveal"
+                        style={{ "--i": i } as React.CSSProperties}
+                      >
+                        <div className="sum-row__head">
+                          <span className="sum-row__name">{pr.exerciseName}</span>
+                          {gainPct != null && (
+                            <span className="sum-chip">+{gainPct}%</span>
+                          )}
+                        </div>
+                        {pr.prType === "reps" ? (
+                          <span className="sum-row__detail">
+                            {pr.previousReps != null && <>{pr.previousReps} reps <span className="sum-arrow">→</span> </>}
+                            <span className="sum-row__value">{pr.newReps} reps</span>
+                          </span>
+                        ) : pr.previousE1RM != null && pr.newE1RM != null ? (
+                          <span className="sum-row__detail">
+                            {Math.round(pr.previousE1RM * 100) / 100}kg{" "}
+                            <span className="sum-arrow">→</span>{" "}
+                            <span className="sum-row__value">{Math.round(pr.newE1RM * 100) / 100}kg</span>{" "}
+                            e1RM, up {Math.round((pr.newE1RM - pr.previousE1RM) * 100) / 100}kg
+                          </span>
+                        ) : pr.newE1RM != null ? (
+                          <span className="sum-row__detail">
+                            <span className="sum-row__value">{Math.round(pr.newE1RM * 100) / 100}kg</span>{" "}
+                            e1RM
+                          </span>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </RevealSection>
+            )}
 
-        {/* ── Personal records ── */}
-        {prs.length > 0 && (
-          <section className="week-summary-section week-summary-section--pr">
-            <h2 className="week-summary-section-title week-summary-section-title--accent">
-              Personal records
-            </h2>
-            <ul className="week-summary-pr-list">
-              {prs.map((pr) => {
-                const daysSince = pr.previousDate
-                  ? (() => {
-                      const [y, m, d] = pr.previousDate.split("-").map(Number);
-                      const prevLocal = new Date(y, m - 1, d).getTime();
-                      const today = new Date();
-                      const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-                      return Math.round((todayLocal - prevLocal) / 86400000);
-                    })()
-                  : null;
-                return (
-                  <li key={pr.exerciseName} className="week-summary-pr-item">
-                    <span className="week-summary-pr-name">{pr.exerciseName}</span>
-                    {pr.prType === "reps" ? (
-                      <span className="week-summary-pr-detail">
-                        {pr.previousReps != null && <>{pr.previousReps} reps <span className="week-summary-pr-arrow">→</span> </>}
-                        <span className="week-summary-pr-new-value">{pr.newReps} reps</span>
-                        {daysSince != null && <> from {daysSince}d ago</>}
-                      </span>
-                    ) : pr.previousE1RM != null && pr.newE1RM != null ? (
-                      <span className="week-summary-pr-detail">
-                        {Math.round(pr.previousE1RM * 100) / 100}kg{" "}
-                        <span className="week-summary-pr-arrow">→</span>{" "}
-                        <span className="week-summary-pr-new-value">{Math.round(pr.newE1RM * 100) / 100}kg</span>{" "}
-                        e1RM
-                        {<> (+{Math.round((pr.newE1RM / pr.previousE1RM - 1) * 100)}%)</>}
-                        <>, up {Math.round((pr.newE1RM - pr.previousE1RM) * 100) / 100}kg
-                        {daysSince != null && <> from {daysSince}d ago</>}
-                        </>
-                      </span>
-                    ) : pr.newE1RM != null ? (
-                      <span className="week-summary-pr-detail">
-                        <span className="week-summary-pr-new-value">{Math.round(pr.newE1RM * 100) / 100}kg</span>{" "}
-                        e1RM
-                      </span>
-                    ) : null}
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        )}
+            {/* ── Heuristics ── */}
+            {heuristicSummary.length > 0 && (
+              <RevealSection title="Heuristics">
+                <ul className="sum-list sum-list--flush">
+                  {heuristicSummary.map((row, i) => {
+                    // Colour and bar both read the rounded mean, not the raw
+                    // one, so two rows labelled the same are tinted the same.
+                    const avg = row.avg != null ? Math.round(row.avg * 10) / 10 : null;
+                    const avgPct = avg != null ? ((avg - 1) / 4) * 100 : null;
+                    const coveragePct =
+                      row.totalDays > 0
+                        ? Math.round((row.givenCount / row.totalDays) * 100)
+                        : 0;
+                    const valueColor =
+                      avg != null ? colorForHeuristicScore(avg) : undefined;
+                    return (
+                      <li
+                        key={row.questionId}
+                        className="sum-hs-row sum-reveal"
+                        style={{ "--i": i } as React.CSSProperties}
+                      >
+                        <div className="sum-hs-row__head">
+                          <span className="sum-hs-row__label">{row.label}</span>
+                          <span className="sum-hs-row__value" style={valueColor ? { color: valueColor } : undefined}>
+                            {avg != null ? avg.toFixed(1) : "—"}
+                          </span>
+                        </div>
+                        <div className="sum-hs-bar">
+                          {avgPct != null && (
+                            <div
+                              className="sum-hs-bar__fill"
+                              style={{ width: `${avgPct}%`, background: valueColor }}
+                            />
+                          )}
+                        </div>
+                        <div className="sum-hs-row__coverage">{coveragePct}% coverage</div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </RevealSection>
+            )}
 
-        {/* ── Season summary CTA ── */}
-        {seasonInstance && (
-          <button
-            className="week-summary-season-cta"
-            onClick={() => navigate(`/season/${seasonInstance.id}/summary`)}
-          >
-            View season summary →
-          </button>
-        )}
-        </>);
+            {/* ── Season summary CTA ── */}
+            {seasonInstance && (
+              <RevealSection>
+                <button
+                  className="week-summary-season-cta sum-reveal"
+                  onClick={() => navigate(`/season/${seasonInstance.id}/summary`)}
+                >
+                  View season summary →
+                </button>
+              </RevealSection>
+            )}
+          </>);
         })()}
       </section>
 

@@ -23,7 +23,7 @@
 }
 
 .ss-cal__month-label {
-  font-size: var(--ss-fs-label, 0.7rem);
+  font-size: var(--sum-fs-label, 0.7rem);
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -77,7 +77,7 @@
 .ss-cal__legend {
   display: flex;
   gap: 16px;
-  font-size: var(--ss-fs-label, 0.7rem);
+  font-size: var(--sum-fs-label, 0.7rem);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-weight: 700;

@@ -33,6 +33,10 @@ import BottomNav from "../components/BottomNav";
 import PageLoader from "../components/PageLoader";
 import TutorialBlock from "../components/TutorialBlock";
 import Reveal from "../components/Reveal";
+import WeekGradeHero from "../components/WeekGradeHero";
+// The report mock below borrows the summary reports' shared type scale and
+// narrative styling; importing it here makes that dependency explicit.
+import "../styles/summary.css";
 import WeeksBreadcrumb from "../components/WeeksBreadcrumb";
 import type { BreadcrumbWeek } from "../components/WeeksBreadcrumb";
 import ExerciseSummaryCard from "../components/ExerciseSummaryCard";
@@ -2182,42 +2186,22 @@ export default function DashboardPage() {
     // identical to what the user sees when tapping any completed week. The
     // narrative sits inside the same card as the score breakdown so the whole
     // block reads as one self-contained example rather than as commentary.
+    // Reuses the real WeekGradeHero with fabricated scores, so the tutorial
+    // can't drift out of date the way a hand-built copy of the layout did.
     return (
-      <section className="week-summary-section">
-        <h2 className="week-summary-section-title">Week 3 results</h2>
-        <div
-          className="week-summary-score-block"
-          style={{ flexDirection: "column", alignItems: "stretch", gap: 12 }}
-        >
-          <p className="week-summary-narrative" style={{ margin: 0 }}>
-            You logged enough sets to meet your volume target, lifted enough weight
-            to hit your intensity target and stayed consistent with your schedule.
-          </p>
-          <div style={{ display: "flex", flexDirection: "row", alignItems: "stretch" }}>
-            <div className="week-summary-score-primary">
-              <span className="week-summary-emoji" aria-label="Week score 94">🤩</span>
-              <div className="week-summary-score-center">
-                <span className="week-summary-score-total">94</span>
-                <span className="week-summary-score-label">Week score</span>
-              </div>
-            </div>
-            <div className="week-summary-score-divider" />
-            <div className="week-summary-score-secondary">
-              <div className="week-summary-score-item">
-                <span className="week-summary-score-item__pct">92%</span>
-                <span className="week-summary-score-item__label">Volume</span>
-              </div>
-              <div className="week-summary-score-item">
-                <span className="week-summary-score-item__pct">90%</span>
-                <span className="week-summary-score-item__label">Intensity</span>
-              </div>
-              <div className="week-summary-score-item">
-                <span className="week-summary-score-item__pct">100%</span>
-                <span className="week-summary-score-item__label">Consistency</span>
-              </div>
-            </div>
-          </div>
-        </div>
+      <section className="dashboard-report-mock">
+        <WeekGradeHero
+          emojiRating={1}
+          volumeScore={92}
+          intensityScore={90}
+          consistencyScore={100}
+          caption="Week 3, 2 RIR"
+          endedEarly={false}
+        />
+        <p className="sum-narrative">
+          You logged enough sets to meet your volume target, lifted enough weight
+          to hit your intensity target and stayed consistent with your schedule.
+        </p>
       </section>
     );
   }

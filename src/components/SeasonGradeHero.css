@@ -15,7 +15,7 @@
 }
 
 .ss-hero__grade {
-  font-size: var(--ss-fs-hero, 11rem);
+  font-size: var(--sum-fs-hero, 11rem);
   line-height: 1;
   font-weight: 900;
   letter-spacing: -0.04em;
@@ -58,7 +58,7 @@
 }
 
 .ss-hero__caption {
-  font-size: var(--ss-fs-label, 0.7rem);
+  font-size: var(--sum-fs-label, 0.7rem);
   font-weight: 800;
   letter-spacing: 0.12em;
   text-indent: 0.12em;
@@ -88,7 +88,7 @@
 }
 
 .ss-score__pct {
-  font-size: var(--ss-fs-figure, 1.5rem);
+  font-size: var(--sum-fs-figure, 1.5rem);
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1;
@@ -116,7 +116,7 @@
 .ss-score--red   .ss-score__fill { background: #e76f51; }
 
 .ss-score__label {
-  font-size: var(--ss-fs-label, 0.7rem);
+  font-size: var(--sum-fs-label, 0.7rem);
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;

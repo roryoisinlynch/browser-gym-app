@@ -30,7 +30,7 @@ import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import PageLoader from "../components/PageLoader";
 import useInView from "../hooks/useInView";
-import "./SeasonSummaryPage.css";
+import "../styles/summary.css";
 
 function localDateIso(d: Date = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -153,9 +153,9 @@ function RevealSection({
   return (
     <section
       ref={ref}
-      className={`ss-section${inView ? " is-in" : ""}${className ? ` ${className}` : ""}`}
+      className={`sum-section${inView ? " is-in" : ""}${className ? ` ${className}` : ""}`}
     >
-      {title && <h2 className="ss-section__title ss-reveal">{title}</h2>}
+      {title && <h2 className="sum-section__title sum-reveal">{title}</h2>}
       {children}
     </section>
   );
@@ -368,10 +368,10 @@ export default function SeasonSummaryPage() {
 
   if (!isLoading && (errorMessage || !metrics)) {
     return (
-      <main className="season-summary-page">
+      <main className="summary-page">
         <TopBar title="Season summary" backTo="/" backLabel="Dashboard" />
-        <section className="ss-shell">
-          <p className="ss-error">{errorMessage ?? "Something went wrong."}</p>
+        <section className="sum-shell">
+          <p className="sum-error">{errorMessage ?? "Something went wrong."}</p>
         </section>
         <BottomNav activeTab="session" />
       </main>
@@ -379,10 +379,10 @@ export default function SeasonSummaryPage() {
   }
 
   return (
-    <main className="season-summary-page">
+    <main className="summary-page">
       <TopBar title="Season summary" backTo="/" backLabel="Dashboard" />
 
-      <section className="ss-shell">
+      <section className="sum-shell">
         {!loaderDone ? (
           <PageLoader
             label="Building your season summary…"
@@ -406,20 +406,20 @@ export default function SeasonSummaryPage() {
 
             {/* ── Weeks breadcrumb ── */}
             {weeksBreadcrumb.length > 0 && (
-              <RevealSection className="ss-breadcrumb">
-                <div className="ss-reveal">
+              <RevealSection className="sum-breadcrumb">
+                <div className="sum-reveal">
                   <WeeksBreadcrumb weeks={weeksBreadcrumb} showLabel={false} />
                 </div>
               </RevealSection>
             )}
 
             {/* ── Narrative ── */}
-            <RevealSection className="ss-section--narrative">
+            <RevealSection className="sum-section--narrative">
               {seasonIntro && (
-                <p className="ss-narrative ss-reveal">{seasonIntro}</p>
+                <p className="sum-narrative sum-reveal">{seasonIntro}</p>
               )}
               <p
-                className="ss-narrative ss-reveal"
+                className="sum-narrative sum-reveal"
                 style={{ "--i": 1 } as React.CSSProperties}
               >
                 {buildSeasonNarrative(metrics!)}
@@ -443,7 +443,7 @@ export default function SeasonSummaryPage() {
             {/* ── Personal records ── */}
             {prs.length > 0 && (
               <RevealSection title={`Personal records · ${prs.length}`}>
-                <ul className="ss-list">
+                <ul className="sum-list">
                   {prs.map((pr, i) => {
                     const gainPct =
                       pr.prType !== "reps" && pr.previousE1RM != null && pr.newE1RM != null
@@ -452,30 +452,30 @@ export default function SeasonSummaryPage() {
                     return (
                       <li
                         key={pr.exerciseName}
-                        className="ss-row ss-reveal"
+                        className="sum-row sum-reveal"
                         style={{ "--i": i } as React.CSSProperties}
                       >
-                        <div className="ss-row__head">
-                          <span className="ss-row__name">{pr.exerciseName}</span>
+                        <div className="sum-row__head">
+                          <span className="sum-row__name">{pr.exerciseName}</span>
                           {gainPct != null && (
-                            <span className="ss-chip">+{gainPct}%</span>
+                            <span className="sum-chip">+{gainPct}%</span>
                           )}
                         </div>
                         {pr.prType === "reps" ? (
-                          <span className="ss-row__detail">
-                            {pr.previousReps != null && <>{pr.previousReps} reps <span className="ss-arrow">→</span> </>}
-                            <span className="ss-row__value">{pr.newReps} reps</span>
+                          <span className="sum-row__detail">
+                            {pr.previousReps != null && <>{pr.previousReps} reps <span className="sum-arrow">→</span> </>}
+                            <span className="sum-row__value">{pr.newReps} reps</span>
                           </span>
                         ) : pr.previousE1RM != null && pr.newE1RM != null ? (
-                          <span className="ss-row__detail">
+                          <span className="sum-row__detail">
                             {Math.round(pr.previousE1RM * 100) / 100}kg{" "}
-                            <span className="ss-arrow">→</span>{" "}
-                            <span className="ss-row__value">{Math.round(pr.newE1RM * 100) / 100}kg</span>{" "}
+                            <span className="sum-arrow">→</span>{" "}
+                            <span className="sum-row__value">{Math.round(pr.newE1RM * 100) / 100}kg</span>{" "}
                             e1RM, up {Math.round((pr.newE1RM - pr.previousE1RM) * 100) / 100}kg
                           </span>
                         ) : pr.newE1RM != null ? (
-                          <span className="ss-row__detail">
-                            <span className="ss-row__value">{Math.round(pr.newE1RM * 100) / 100}kg</span>{" "}
+                          <span className="sum-row__detail">
+                            <span className="sum-row__value">{Math.round(pr.newE1RM * 100) / 100}kg</span>{" "}
                             e1RM
                           </span>
                         ) : null}
@@ -489,7 +489,7 @@ export default function SeasonSummaryPage() {
             {/* ── Heuristics ── */}
             {heuristicSummary.length > 0 && (
               <RevealSection title="Heuristics">
-                <ul className="ss-list ss-list--flush">
+                <ul className="sum-list sum-list--flush">
                   {heuristicSummary.map((row, i) => {
                     // Colour and bar both read the rounded mean, not the raw
                     // one. The ramp is continuous, so three rows all labelled
@@ -506,24 +506,24 @@ export default function SeasonSummaryPage() {
                     return (
                       <li
                         key={row.questionId}
-                        className="ss-hs-row ss-reveal"
+                        className="sum-hs-row sum-reveal"
                         style={{ "--i": i } as React.CSSProperties}
                       >
-                        <div className="ss-hs-row__head">
-                          <span className="ss-hs-row__label">{row.label}</span>
-                          <span className="ss-hs-row__value" style={valueColor ? { color: valueColor } : undefined}>
+                        <div className="sum-hs-row__head">
+                          <span className="sum-hs-row__label">{row.label}</span>
+                          <span className="sum-hs-row__value" style={valueColor ? { color: valueColor } : undefined}>
                             {avg != null ? avg.toFixed(1) : "—"}
                           </span>
                         </div>
-                        <div className="ss-hs-bar">
+                        <div className="sum-hs-bar">
                           {avgPct != null && (
                             <div
-                              className="ss-hs-bar__fill"
+                              className="sum-hs-bar__fill"
                               style={{ width: `${avgPct}%`, background: valueColor }}
                             />
                           )}
                         </div>
-                        <div className="ss-hs-row__coverage">{coveragePct}% coverage</div>
+                        <div className="sum-hs-row__coverage">{coveragePct}% coverage</div>
                       </li>
                     );
                   })}
@@ -534,7 +534,7 @@ export default function SeasonSummaryPage() {
             {/* ── All seasons ── */}
             {seasonRows.length > 0 && (
               <RevealSection title="All seasons">
-                <ul className="ss-list ss-list--plain">
+                <ul className="sum-list sum-list--plain">
                   {seasonRows.map((row, i) => {
                     const isCurrent = row.season.id === seasonInstanceId;
                     const rowColor = row.grade ? gradeColor(row.grade) : null;
@@ -546,27 +546,27 @@ export default function SeasonSummaryPage() {
                     return (
                       <li
                         key={row.season.id}
-                        className={`ss-row ss-row--plain ss-reveal${isCurrent ? " ss-row--current" : ""}`}
+                        className={`sum-row sum-row--plain sum-reveal${isCurrent ? " sum-row--current" : ""}`}
                         style={{ "--i": i } as React.CSSProperties}
                       >
-                        <div className="ss-row__head">
-                          <span className="ss-row__name">
+                        <div className="sum-row__head">
+                          <span className="sum-row__name">
                             {row.programName
                               ? `${row.programName} · ${row.season.name}`
                               : row.season.name}
                           </span>
-                          <span className="ss-row__meta">
+                          <span className="sum-row__meta">
                             {row.seasonScore != null && (
-                              <span className="ss-row__score">{row.seasonScore}</span>
+                              <span className="sum-row__score">{row.seasonScore}</span>
                             )}
                             {row.grade && rowColor && (
-                              <span className={`ss-row__grade ss-row__grade--${rowColor}`}>
+                              <span className={`sum-row__grade sum-row__grade--${rowColor}`}>
                                 {row.grade}
                               </span>
                             )}
                           </span>
                         </div>
-                        <div className="ss-row__sub">
+                        <div className="sum-row__sub">
                           {row.durationLabel && <span>{row.durationLabel}</span>}
                           <span>{row.prCount} PR{row.prCount !== 1 ? "s" : ""}</span>
                           {dateRange && <span>{dateRange}</span>}
