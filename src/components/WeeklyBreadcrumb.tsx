@@ -22,7 +22,13 @@ export default function WeeklyBreadcrumb({ sessions }: WeeklyBreadcrumbProps) {
       <p className="weekly-breadcrumb__label">Sessions this week</p>
       <div className="weekly-breadcrumb__trail">
         {sessions.map((session, index) => (
-          <div key={session.sessionInstanceId} className="weekly-breadcrumb__item">
+          <div
+            key={session.sessionInstanceId}
+            className="weekly-breadcrumb__item"
+            // Position in the trail, so the summary reports can spread the
+            // pop-in across a fixed window whatever the session count.
+            style={{ "--i": index, "--n": sessions.length } as React.CSSProperties}
+          >
             {index > 0 && (
               <span className="weekly-breadcrumb__separator" aria-hidden="true" />
             )}
