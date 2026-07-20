@@ -20,6 +20,7 @@ import {
   getEntriesForDateRange,
 } from "../repositories/heuristicsRepository";
 import { colorForHeuristicScore } from "../services/heuristicsScale";
+import { formatDayCount } from "../services/relativeTime";
 import WeeksBreadcrumb from "../components/WeeksBreadcrumb";
 import type { BreadcrumbWeek } from "../components/WeeksBreadcrumb";
 import SeasonGradeHero from "../components/SeasonGradeHero";
@@ -163,6 +164,7 @@ function RevealSection({
 export default function SeasonSummaryPage() {
   const { seasonInstanceId } = useParams<{ seasonInstanceId: string }>();
   const [metrics, setMetrics] = useState<SeasonMetrics | null>(null);
+  const [seasonIntro, setSeasonIntro] = useState<string | null>(null);
   const [prs, setPrs] = useState<SessionPR[]>([]);
   const [seasonRows, setSeasonRows] = useState<SeasonRow[]>([]);
   const [weeksBreadcrumb, setWeeksBreadcrumb] = useState<BreadcrumbWeek[]>([]);
@@ -206,6 +208,18 @@ export default function SeasonSummaryPage() {
             seasonEnded && seasonInstance.completedAt
               ? localDateIso(toLocalMidnight(seasonInstance.completedAt))
               : localDateIso();
+
+          // Duration wording comes from formatDayCount, the app's single source
+          // of truth for the days/weeks/months bucketing, so this line reads the
+          // same way as every other elapsed span in the app.
+          const spanText = formatDayCount(dayDiffInclusive(startIso, endIso));
+          setSeasonIntro(
+            seasonInstance.status === "completed"
+              ? `Season complete! It took you ${spanText}, from ${fmtDate(startIso)} to ${fmtDate(endIso)}.`
+              : seasonInstance.status === "cancelled"
+              ? `Season ended early after ${spanText}, from ${fmtDate(startIso)} to ${fmtDate(endIso)}.`
+              : `Season in progress. ${spanText} so far, starting ${fmtDate(startIso)}.`
+          );
 
           // ── Calendar ──────────────────────────────────────────────────────
           // Squares land on the day a session actually settled, not the day the
@@ -390,23 +404,31 @@ export default function SeasonSummaryPage() {
               endedEarly={endedEarly}
             />
 
-            {/* ── Narrative ── */}
-            <RevealSection className="ss-section--narrative">
-              <p className="ss-narrative ss-reveal">{buildSeasonNarrative(metrics!)}</p>
-            </RevealSection>
-
             {/* ── Weeks breadcrumb ── */}
             {weeksBreadcrumb.length > 0 && (
-              <RevealSection title="Week by week" className="ss-breadcrumb">
+              <RevealSection className="ss-breadcrumb">
                 <div className="ss-reveal">
                   <WeeksBreadcrumb weeks={weeksBreadcrumb} showLabel={false} />
                 </div>
               </RevealSection>
             )}
 
+            {/* ── Narrative ── */}
+            <RevealSection className="ss-section--narrative">
+              {seasonIntro && (
+                <p className="ss-narrative ss-reveal">{seasonIntro}</p>
+              )}
+              <p
+                className="ss-narrative ss-reveal"
+                style={{ "--i": 1 } as React.CSSProperties}
+              >
+                {buildSeasonNarrative(metrics!)}
+              </p>
+            </RevealSection>
+
             {/* ── Calendar ── */}
             {calendar && calendar.months.length > 0 && (
-              <RevealSection title="The season, day by day">
+              <RevealSection>
                 <SeasonCalendar
                   months={calendar.months}
                   trainedDays={calendar.trainedDays}

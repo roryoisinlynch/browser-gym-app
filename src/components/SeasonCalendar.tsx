@@ -113,6 +113,16 @@ export default function SeasonCalendar({
           />
         ))}
       </div>
+      <div className="ss-cal__legend">
+        <span className="ss-cal__legend-item">
+          <span className="ss-cal__legend-swatch ss-cal__legend-swatch--done" />
+          Trained
+        </span>
+        <span className="ss-cal__legend-item">
+          <span className="ss-cal__legend-swatch ss-cal__legend-swatch--rest" />
+          Rest
+        </span>
+      </div>
     </div>
   );
 }

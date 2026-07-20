@@ -72,6 +72,33 @@
   box-shadow: inset 0 0 0 1.5px var(--accent);
 }
 
+/* ── Legend ── */
+
+.ss-cal__legend {
+  display: flex;
+  gap: 16px;
+  font-size: var(--ss-fs-label, 0.7rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--text-soft);
+}
+
+.ss-cal__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ss-cal__legend-swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+}
+
+.ss-cal__legend-swatch--done { background: var(--ss-cal-ink, #6bcb77); }
+.ss-cal__legend-swatch--rest { background: rgba(255, 255, 255, 0.06); }
+
 /* ── Motion ──
    Cells are final-state by default; only the no-preference block animates. */
 @media (prefers-reduced-motion: no-preference) {
