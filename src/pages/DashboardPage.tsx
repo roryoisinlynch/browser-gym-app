@@ -521,16 +521,20 @@ async function loadTimeline(
   const endDate = lastWeekSquares[lastWeekSquares.length - 1]?.scheduledDate ?? seasonStartIso;
 
   // Schedule status compares actual session completions to template-expected
-  // sessions through today, so intra-week lag is reflected. A session done early
-  // counts as completed even if its scheduled date is still in the future.
+  // sessions. Fully-elapsed days (before today) always count as expected;
+  // today's session counts only once it's done, so a still-pending session due
+  // today reads as on-schedule rather than behind — matching the squares, which
+  // show today as upcoming, not overdue. A session done early counts as
+  // completed even if its scheduled date is still in the future.
   let sessionsCompleted = 0;
   let sessionsExpected = 0;
   for (const weekSquares of weeks) {
     for (const sq of weekSquares) {
       if (sq.type !== "session") continue;
-      if (sq.scheduledDate <= today) sessionsExpected++;
-      if (sq.status === "green" || sq.status === "skipped") {
-        sessionsCompleted++;
+      const done = sq.status === "green" || sq.status === "skipped";
+      if (done) sessionsCompleted++;
+      if (sq.scheduledDate < today || (sq.scheduledDate === today && done)) {
+        sessionsExpected++;
       }
     }
   }
@@ -722,6 +726,17 @@ async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | 
   // session → "3/7"). With non-7 weeks the weekday alignment shifts each row,
   // so headers are computed per-row from the actual calendar dates.
   const allLetters = ["S", "M", "T", "W", "T", "F", "S"];
+  // Today's session is still in progress, so it shouldn't be charged against the
+  // ahead/behind tally until the day is actually missed — mirroring the cells,
+  // which render today as grey/upcoming rather than rest-behind. Drop any session
+  // originally scheduled for today that hasn't settled from the "expected" count.
+  const todayUnsettledExpected = slots.filter(
+    (s) =>
+      s.type === "session"
+      && s.originalDateIso === todayIsoStr
+      && s.sessionInstance?.status !== "completed"
+      && s.sessionInstance?.status !== "skipped"
+  ).length;
   const rows: RecentDayRow[] = [];
   let prevDoneCum = 0;
   let prevExpectedCum = 0;
@@ -745,7 +760,10 @@ async function loadRecentDays(season: SeasonInstance): Promise<RecentDaysData | 
     const lastDayIndex = Math.min(start + length - 1, daysSinceStart);
     const lastDayIso = localDateIso(new Date(seasonStartMs + lastDayIndex * 86400000));
     const doneCum = countLessOrEqual(completedDates, lastDayIso);
-    const expectedCum = countLessOrEqual(sessionOriginalDates, lastDayIso);
+    // Only the in-progress week ends on today; past weeks end before it, so this
+    // adjustment leaves their expected counts untouched.
+    const expectedCum = countLessOrEqual(sessionOriginalDates, lastDayIso)
+      - (lastDayIso === todayIsoStr ? todayUnsettledExpected : 0);
     const done = doneCum - prevDoneCum;
     const expected = expectedCum - prevExpectedCum;
     const delta = doneCum - expectedCum;
