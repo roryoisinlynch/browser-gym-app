@@ -8,52 +8,46 @@
   padding: 8px 0;
 }
 
-.wk-hero__face {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  /* Wide enough to clear the emoji's glow, which blurs past the glyph box and
-     would otherwise wash over the caption. */
-  gap: 18px;
-}
-
-/* Sized to match what the season's grade letter actually draws, not its
-   font-size. An emoji fills its full em box; a capital letter only fills its
-   cap height, roughly 0.72em. So 8rem of emoji and 11rem of letter put about
-   the same amount of ink on the page. */
+/* The emoji stands as tall as the three blocks beside it: its glyph fills the
+   full em box, so font-size is the rendered height.
+   The explicit box is doing real work. This font gives an emoji an advance of
+   about 1.375em while the glyph itself only inks 1em, so the natural layout box
+   would hand a third of the row to empty space. Pinning the box to the ink and
+   centring the glyph inside it reclaims that width for the scores, and keeps
+   the circle clear of them — a circle is widest across its middle, which is
+   exactly where the bars sit. */
 .wk-hero__emoji {
-  font-size: 8rem;
+  font-size: 10.5rem;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.04em;
+  height: 1em;
 }
 
 /* Emoji are colour glyphs, so text-shadow does nothing useful on them;
    drop-shadow works on the rendered bitmap instead. */
-.wk-hero__face--green .wk-hero__emoji {
+.wk-hero__emoji--green {
   filter: drop-shadow(0 0 16px rgba(107, 203, 119, 0.45));
 }
 
-.wk-hero__face--amber .wk-hero__emoji {
+.wk-hero__emoji--amber {
   filter: drop-shadow(0 0 16px rgba(244, 162, 97, 0.45));
 }
 
-.wk-hero__face--red .wk-hero__emoji {
+.wk-hero__emoji--red {
   filter: drop-shadow(0 0 16px rgba(231, 111, 81, 0.4));
-}
-
-.wk-hero__caption {
-  font-size: var(--sum-fs-label, 0.7rem);
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-soft);
 }
 
 /* ── Score blocks ── */
 
+/* Gap tuned so three blocks stack to the emoji's height, leaving the two sides
+   of the row the same depth. */
 .wk-hero__scores {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 5px;
   min-width: 0;
 }
 

@@ -3,7 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import type { SessionPR } from "../repositories/programRepository";
 import {
   getWeekInstanceById,
-  getWeekTemplateById,
   getSessionInstancesForWeekInstance,
   getSessionMetrics,
   getWeekInstancesForSeasonInstance,
@@ -124,7 +123,6 @@ function RevealSection({
 
 export default function WeekSummaryPage() {
   const { weekInstanceId } = useParams<{ weekInstanceId: string }>();
-  const [weekName, setWeekName] = useState<string | null>(null);
   const [weekEndedEarly, setWeekEndedEarly] = useState(false);
   const [metrics, setMetrics] = useState<WeekMetrics | null>(null);
   const [sessionBreadcrumb, setSessionBreadcrumb] = useState<BreadcrumbSession[]>([]);
@@ -158,8 +156,7 @@ export default function WeekSummaryPage() {
         }
 
         const seasonInstanceForRir = await getSeasonInstanceById(weekInstance.seasonInstanceId);
-        const [weekTemplate, sessions, seasonTemplateForRir] = await Promise.all([
-          getWeekTemplateById(weekInstance.weekTemplateId),
+        const [sessions, seasonTemplateForRir] = await Promise.all([
           getSessionInstancesForWeekInstance(weekInstanceId),
           seasonInstanceForRir
             ? getSeasonTemplateById(seasonInstanceForRir.seasonTemplateId)
@@ -169,15 +166,6 @@ export default function WeekSummaryPage() {
         // Frozen for completed weeks; recomputed from frozen session metrics
         // for the live week.
         setMetrics(await getWeekMetrics(weekInstance));
-
-        const weekRir =
-          seasonTemplateForRir?.rirSequence?.[weekInstance.order - 1] ??
-          weekTemplate?.targetRir;
-        setWeekName(
-          weekRir != null
-            ? `Week ${weekInstance.order}, ${weekRir} RIR`
-            : `Week ${weekInstance.order}`
-        );
         setWeekEndedEarly(weekInstance.endedEarly === true);
         setPrs(weekPRs);
 
@@ -377,7 +365,6 @@ export default function WeekSummaryPage() {
               volumeScore={volumeScore}
               intensityScore={intensityScore}
               consistencyScore={consistencyScore}
-              caption={weekName ?? "Week rating"}
               endedEarly={weekEndedEarly}
             />
 

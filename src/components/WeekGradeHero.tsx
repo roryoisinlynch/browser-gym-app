@@ -9,8 +9,6 @@ interface WeekGradeHeroProps {
   volumeScore: number;
   intensityScore: number;
   consistencyScore: number;
-  /** The week's identity ("Week 3, 2 RIR"), which has no title bar to live in. */
-  caption: string;
   endedEarly: boolean;
 }
 
@@ -75,24 +73,18 @@ export default function WeekGradeHero({
   volumeScore,
   intensityScore,
   consistencyScore,
-  caption,
   endedEarly,
 }: WeekGradeHeroProps) {
   const [ref, inView] = useInView<HTMLDivElement>();
 
   return (
     <div className="wk-hero" ref={ref}>
-      <div className={`wk-hero__face wk-hero__face--${ratingTone(emojiRating)}`}>
-        <span
-          className="wk-hero__emoji"
-          aria-label={endedEarly ? "Week ended early" : `Week rating ${emojiRating}`}
-        >
-          {emojiForRating(emojiRating)}
-        </span>
-        <span className="wk-hero__caption">
-          {endedEarly ? `${caption} · ended early` : caption}
-        </span>
-      </div>
+      <span
+        className={`wk-hero__emoji wk-hero__emoji--${ratingTone(emojiRating)}`}
+        aria-label={endedEarly ? "Week ended early" : `Week rating ${emojiRating}`}
+      >
+        {emojiForRating(emojiRating)}
+      </span>
 
       <div className="wk-hero__scores">
         <ScoreBlock score={volumeScore} label="Volume" index={0} started={inView} />

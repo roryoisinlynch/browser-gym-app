@@ -2195,7 +2195,6 @@ export default function DashboardPage() {
           volumeScore={92}
           intensityScore={90}
           consistencyScore={100}
-          caption="Week 3, 2 RIR"
           endedEarly={false}
         />
         <p className="sum-narrative">
