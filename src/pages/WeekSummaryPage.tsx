@@ -122,7 +122,7 @@ export default function WeekSummaryPage() {
   const [sessionInfoMap, setSessionInfoMap] = useState<Map<string, { date: string; status: string; completedAt: string | null }>>(new Map());
   const [heuristicSummary, setHeuristicSummary] = useState<HeuristicSummaryRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [loadProgress, setLoadProgress] = useState(0);
+  const [loaderDone, setLoaderDone] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -139,7 +139,6 @@ export default function WeekSummaryPage() {
           getWeekInstanceById(weekInstanceId),
           getWeekPRs(weekInstanceId),
         ]);
-        setLoadProgress(15);
 
         if (!weekInstance) {
           setErrorMessage("Week not found.");
@@ -156,14 +155,11 @@ export default function WeekSummaryPage() {
             ? getSeasonTemplateById(seasonInstanceForRir.seasonTemplateId)
             : Promise.resolve(undefined),
         ]);
-        setLoadProgress(30);
 
         const templateItems = await getWeekTemplateItemsForWeekTemplate(
           weekInstance.weekTemplateId
         );
-        setLoadProgress(40);
 
-        setLoadProgress(55);
 
         // Frozen for completed weeks; recomputed from frozen session metrics
         // for the live week.
@@ -202,7 +198,6 @@ export default function WeekSummaryPage() {
           const si = await getSeasonInstanceById(weekInstance.seasonInstanceId);
           if (si?.status === "completed") setSeasonInstance(si);
         }
-        setLoadProgress(65);
 
         // Sessions this week breadcrumb — show all sessions with their RAG status.
         const breadcrumbSessions: BreadcrumbSession[] = await Promise.all(
@@ -223,7 +218,6 @@ export default function WeekSummaryPage() {
           })
         );
         setSessionBreadcrumb(breadcrumbSessions);
-        setLoadProgress(80);
 
         // Weeks this season breadcrumb — show all expected weeks, not just generated ones.
         // Uses rirSequence.length as the authoritative total so future weeks appear as
@@ -361,7 +355,6 @@ export default function WeekSummaryPage() {
           })
         );
         setWeeksBreadcrumb(weekBreadcrumbItems);
-        setLoadProgress(100);
       } catch (err) {
         console.error("Failed to load week summary:", err);
         setErrorMessage("Could not load week summary.");
@@ -429,8 +422,13 @@ export default function WeekSummaryPage() {
       />
 
       <section className="week-summary-shell">
-        {isLoading ? (
-          <PageLoader label="Building your week summary…" progress={loadProgress} />
+        {!loaderDone ? (
+          <PageLoader
+            label="Building your week summary…"
+            durationMs={3000}
+            ready={!isLoading}
+            onDone={() => setLoaderDone(true)}
+          />
         ) : (() => {
           const { totalSets, totalSessions, durationLabel, volumeScore, intensityScore, consistencyScore, weekScore, emojiRating } = metrics!;
           return (<>

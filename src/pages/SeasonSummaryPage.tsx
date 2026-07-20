@@ -122,7 +122,7 @@ export default function SeasonSummaryPage() {
   const [seasonExtraRestDays, setSeasonExtraRestDays] = useState<number>(0);
   const [heuristicSummary, setHeuristicSummary] = useState<HeuristicSummaryRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [loadProgress, setLoadProgress] = useState(0);
+  const [loaderDone, setLoaderDone] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -138,7 +138,6 @@ export default function SeasonSummaryPage() {
           getSeasonInstanceById(seasonInstanceId),
           getSeasonPRs(seasonInstanceId),
         ]);
-        setLoadProgress(10);
 
         if (!seasonInstance) {
           setErrorMessage("Season not found.");
@@ -150,7 +149,6 @@ export default function SeasonSummaryPage() {
           getSeasonTemplateById(seasonInstance.seasonTemplateId),
           getWeekInstancesForSeasonInstance(seasonInstanceId),
         ]);
-        setLoadProgress(20);
 
         const completedWeeks = weeks.filter(w => w.status === "completed");
 
@@ -170,7 +168,6 @@ export default function SeasonSummaryPage() {
             if (weekLength === 0) weekLength = templateItems.length;
           })
         );
-        setLoadProgress(50);
 
         const computed = await getSeasonMetrics(seasonInstance);
         setMetrics(computed);
@@ -268,7 +265,6 @@ export default function SeasonSummaryPage() {
           }
           setSeasonExtraRestDays(totalExtraRest);
         }
-        setLoadProgress(65);
 
         // ── Heuristics summary ───────────────────────────────────────────
         if (await isHeuristicsEnabled() && seasonInstance.startedAt) {
@@ -332,7 +328,6 @@ export default function SeasonSummaryPage() {
             }
           }
         }
-        setLoadProgress(75);
 
         // All ended seasons across all programs (completed or stopped early),
         // ordered for display. Not filtered by template ID — seasons from
@@ -381,7 +376,6 @@ export default function SeasonSummaryPage() {
           .sort((a, b) => (b.completedAt ?? "").localeCompare(a.completedAt ?? ""));
 
         setSeasonRows(rows);
-        setLoadProgress(85);
 
         // Weeks this season breadcrumb — all weeks with their emoji rating.
         const wbItems: BreadcrumbWeek[] = await Promise.all(
@@ -393,7 +387,6 @@ export default function SeasonSummaryPage() {
           })
         );
         setWeeksBreadcrumb(wbItems);
-        setLoadProgress(100);
       } catch (err) {
         console.error("Failed to load season summary:", err);
         setErrorMessage("Could not load season summary.");
@@ -422,8 +415,13 @@ export default function SeasonSummaryPage() {
       <TopBar title="Season summary" backTo="/" backLabel="Dashboard" />
 
       <section className="season-summary-shell">
-        {isLoading ? (
-          <PageLoader label="Building your season summary…" progress={loadProgress} />
+        {!loaderDone ? (
+          <PageLoader
+            label="Building your season summary…"
+            durationMs={5000}
+            ready={!isLoading}
+            onDone={() => setLoaderDone(true)}
+          />
         ) : (() => {
           const { totalSets, totalSessions, totalWeeks, durationLabel, volumeScore, intensityScore, consistencyScore, seasonScore, grade, endedEarly } = metrics!;
           const color = gradeColor(grade);
