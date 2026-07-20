@@ -9,6 +9,7 @@ import {
   type RepBox,
 } from "../services/yearInReview";
 import { formatDuration } from "../services/sessionMetrics";
+import useCountUp from "../hooks/useCountUp";
 import "./YearInReviewPage.css";
 
 const numberFormat = new Intl.NumberFormat("en-GB");
@@ -71,31 +72,6 @@ function ordinalDate(date: string): string {
   const v = d % 100;
   const suffix = ["th", "st", "nd", "rd"][(v - 20) % 10] || ["th", "st", "nd", "rd"][v] || "th";
   return `${d}${suffix} ${months[m - 1]}`;
-}
-
-// ─── Count-up (the deck's only JS animation) ─────────────────────────────────
-
-function useCountUp(target: number, durationMs = 600): number {
-  const [value, setValue] = useState(() =>
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches ? target : 0
-  );
-  useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setValue(target);
-      return;
-    }
-    let raf = 0;
-    const start = performance.now();
-    const tick = (t: number) => {
-      const p = Math.min((t - start) / durationMs, 1);
-      const eased = 1 - Math.pow(1 - p, 3);
-      setValue(Math.round(target * eased));
-      if (p < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target, durationMs]);
-  return value;
 }
 
 // ─── Slides ───────────────────────────────────────────────────────────────────

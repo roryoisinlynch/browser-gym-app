@@ -8,12 +8,9 @@ import {
   getWeekInstancesForSeasonInstance,
   getWeekMetrics,
   getSessionInstancesForWeekInstance,
-  getWeekTemplateItemsForWeekTemplate,
-  getWeekInstanceItemsForWeekInstance,
   getSeasonPRs,
   getSeasonTemplateById,
 } from "../repositories/programRepository";
-import type { SessionInstance } from "../domain/models";
 import { gradeColor } from "../services/seasonMetrics";
 import type { SeasonMetrics, SeasonGrade } from "../services/seasonMetrics";
 import type { SeasonInstance } from "../domain/models";
@@ -22,16 +19,17 @@ import {
   getQuestions,
   getEntriesForDateRange,
 } from "../repositories/heuristicsRepository";
-import { colorForHeuristicScore, percentileOrNull } from "../services/heuristicsScale";
+import { colorForHeuristicScore } from "../services/heuristicsScale";
 import WeeksBreadcrumb from "../components/WeeksBreadcrumb";
 import type { BreadcrumbWeek } from "../components/WeeksBreadcrumb";
+import SeasonGradeHero from "../components/SeasonGradeHero";
+import SeasonCalendar from "../components/SeasonCalendar";
+import type { SeasonDayStatus, SeasonMonth } from "../components/SeasonCalendar";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import PageLoader from "../components/PageLoader";
+import useInView from "../hooks/useInView";
 import "./SeasonSummaryPage.css";
-
-type DaySquareStatus = "green" | "overdue" | "skipped" | "grey" | "rest-past" | "rest-future";
-interface DaySquare { type: "session" | "rest"; scheduledDate: string; status: DaySquareStatus; }
 
 function localDateIso(d: Date = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -39,6 +37,14 @@ function localDateIso(d: Date = new Date()): string {
 function toLocalMidnight(iso: string): Date {
   const d = new Date(iso);
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function fmtDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function buildSeasonNarrative(metrics: SeasonMetrics): string {
@@ -98,28 +104,71 @@ interface HeuristicSummaryRow {
   label: string;
   avg: number | null;
   givenCount: number;
-  missingDays: number;
   totalDays: number;
-  /** Q1/Q3 of the user's actual answers in this window; null when n < 2. */
-  q1: number | null;
-  q3: number | null;
+}
+
+interface CalendarData {
+  months: SeasonMonth[];
+  dayStatus: Map<string, SeasonDayStatus>;
+  startIso: string;
+  endIso: string;
+  todayIso: string | null;
 }
 
 function dayDiffInclusive(startIso: string, endIso: string): number {
   const s = new Date(startIso + "T00:00:00").getTime();
   const e = new Date(endIso + "T00:00:00").getTime();
-  return Math.floor((e - s) / 86_400_000) + 1;
+  // Round, not floor: a span crossing a DST boundary is 23 or 25 hours short of
+  // a whole number of days, and flooring that lost an entire day — which showed
+  // up as heuristic coverage above 100%.
+  return Math.round((e - s) / 86_400_000) + 1;
+}
+
+/** Every calendar month between two dates inclusive, even one grazed by a day. */
+function monthsBetween(startIso: string, endIso: string): SeasonMonth[] {
+  const start = toLocalMidnight(startIso);
+  const end = toLocalMidnight(endIso);
+  const months: SeasonMonth[] = [];
+  const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+  const last = new Date(end.getFullYear(), end.getMonth(), 1);
+  while (cursor <= last) {
+    months.push({ year: cursor.getFullYear(), month: cursor.getMonth() });
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+  return months;
+}
+
+/** A page section that staggers its children in as it scrolls into view. */
+function RevealSection({
+  title,
+  className,
+  children,
+}: {
+  title?: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const [ref, inView] = useInView<HTMLElement>();
+  return (
+    <section
+      ref={ref}
+      className={`ss-section${inView ? " is-in" : ""}${className ? ` ${className}` : ""}`}
+    >
+      {title && <h2 className="ss-section__title ss-reveal">{title}</h2>}
+      {children}
+    </section>
+  );
 }
 
 export default function SeasonSummaryPage() {
   const { seasonInstanceId } = useParams<{ seasonInstanceId: string }>();
   const [seasonName, setSeasonName] = useState<string | null>(null);
+  const [seasonDates, setSeasonDates] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<SeasonMetrics | null>(null);
   const [prs, setPrs] = useState<SessionPR[]>([]);
   const [seasonRows, setSeasonRows] = useState<SeasonRow[]>([]);
   const [weeksBreadcrumb, setWeeksBreadcrumb] = useState<BreadcrumbWeek[]>([]);
-  const [seasonDaySquares, setSeasonDaySquares] = useState<DaySquare[]>([]);
-  const [seasonExtraRestDays, setSeasonExtraRestDays] = useState<number>(0);
+  const [calendar, setCalendar] = useState<CalendarData | null>(null);
   const [heuristicSummary, setHeuristicSummary] = useState<HeuristicSummaryRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loaderDone, setLoaderDone] = useState(false);
@@ -150,120 +199,52 @@ export default function SeasonSummaryPage() {
           getWeekInstancesForSeasonInstance(seasonInstanceId),
         ]);
 
-        const completedWeeks = weeks.filter(w => w.status === "completed");
-
-        // Collect sessions per week (reused for both metrics and day squares)
-        const sessionsByWeek = new Map<string, SessionInstance[]>();
-        let weekLength = 0;
-
-        // Fetch sessions per completed week for the day-square timeline (and
-        // the week length); the season's score itself comes from frozen metrics.
-        await Promise.all(
-          completedWeeks.map(async (w) => {
-            const [sessions, templateItems] = await Promise.all([
-              getSessionInstancesForWeekInstance(w.id),
-              getWeekTemplateItemsForWeekTemplate(w.weekTemplateId),
-            ]);
-            sessionsByWeek.set(w.id, sessions);
-            if (weekLength === 0) weekLength = templateItems.length;
-          })
-        );
-
         const computed = await getSeasonMetrics(seasonInstance);
         setMetrics(computed);
         setSeasonName(seasonTemplate?.name ?? "Season summary");
         setPrs(seasonPRs);
 
-        // Compute season-level day squares
-        if (seasonInstance.startedAt && weekLength > 0) {
-          // For active seasons the cutoff is today; for ended ones (completed
-          // or cancelled) the cutoff is when the season ended, otherwise the
-          // "missed" count would keep growing as wall-clock time advances.
-          const seasonEnded = seasonInstance.status !== "in_progress";
-          const today =
+        const seasonEnded = seasonInstance.status !== "in_progress";
+
+        if (seasonInstance.startedAt) {
+          const startIso = localDateIso(toLocalMidnight(seasonInstance.startedAt));
+          const endIso =
             seasonEnded && seasonInstance.completedAt
               ? localDateIso(toLocalMidnight(seasonInstance.completedAt))
               : localDateIso();
-          const seasonStartMs = toLocalMidnight(seasonInstance.startedAt).getTime();
-          const sortedWeeks = [...weeks].sort((a, b) => a.order - b.order);
-
-          // Populate session info from every week, not just completed ones —
-          // otherwise sessions in not-yet-completed weeks fall through the
-          // day-square classifier and get marked "upcoming" even when their
-          // scheduled date is already past.
-          const sessionInfoMap = new Map<string, { date: string; status: string; completedAt: string | null }>();
-          for (const w of sortedWeeks) {
-            if (!sessionsByWeek.has(w.id)) {
-              sessionsByWeek.set(w.id, await getSessionInstancesForWeekInstance(w.id));
-            }
-            for (const s of sessionsByWeek.get(w.id)!) {
-              sessionInfoMap.set(s.id, { date: s.date, status: s.status, completedAt: s.completedAt ?? null });
-            }
-          }
-
-          const weekInstanceItemsPerWeek = await Promise.all(
-            sortedWeeks.map(w => getWeekInstanceItemsForWeekInstance(w.id))
+          setSeasonDates(
+            startIso === endIso
+              ? fmtDate(seasonInstance.startedAt)
+              : `${fmtDate(startIso)} – ${fmtDate(endIso)}`
           );
-          const squares: DaySquare[] = [];
-          for (let wi = 0; wi < sortedWeeks.length; wi++) {
-            const items = weekInstanceItemsPerWeek[wi].sort((a, b) => a.order - b.order);
-            for (const item of items) {
-              const dayIndex = wi * weekLength + (item.order - 1);
-              const scheduledDate = localDateIso(new Date(seasonStartMs + dayIndex * 86400000));
-              if (item.type === "rest") {
-                squares.push({ type: "rest", scheduledDate, status: scheduledDate < today ? "rest-past" : "rest-future" });
-                continue;
-              }
-              if (!item.sessionInstanceId) {
-                squares.push({ type: "session", scheduledDate, status: scheduledDate < today ? "overdue" : "grey" });
-                continue;
-              }
-              const session = sessionInfoMap.get(item.sessionInstanceId);
-              if (!session) { squares.push({ type: "session", scheduledDate, status: "grey" }); continue; }
-              if (session.status === "skipped") {
-                squares.push({ type: "session", scheduledDate, status: "skipped" });
-                continue;
-              }
-              if (session.status !== "completed") {
-                squares.push({ type: "session", scheduledDate, status: scheduledDate < today ? "overdue" : "grey" });
-                continue;
-              }
-              squares.push({ type: "session", scheduledDate, status: "green" });
-            }
-          }
-          setSeasonDaySquares(squares);
 
-          // Partition the season into per-week calendar spans using the same
-          // boundary rule as the week summary: a week's end is the next week's
-          // earliest completed session (or its startedAt, or season end / today
-          // when nothing is logged yet). Each calendar day belongs to exactly
-          // one week. Extra rest = span - template length, summed across weeks.
-          const seasonEndIso =
-            seasonEnded && seasonInstance.completedAt
-              ? seasonInstance.completedAt
-              : new Date().toISOString();
-          const boundaries: string[] = [seasonInstance.startedAt];
-          for (let i = 0; i < sortedWeeks.length; i++) {
-            const nextW = sortedWeeks[i + 1];
-            let boundaryIso: string | null = null;
-            if (nextW) {
-              const nextSessions = sessionsByWeek.get(nextW.id) ?? [];
-              const earliestCompleted = nextSessions
-                .filter((s) => s.status === "completed" && s.completedAt)
-                .map((s) => s.completedAt!)
-                .sort((a, b) => a.localeCompare(b))[0];
-              boundaryIso = earliestCompleted ?? nextW.startedAt ?? null;
+          // ── Calendar ──────────────────────────────────────────────────────
+          // Squares land on the day a session actually settled, not the day the
+          // template planned it for, so drift shows up honestly. Weeks that
+          // aren't completed still contribute — their sessions happened too.
+          const sessionsPerWeek = await Promise.all(
+            weeks.map((w) => getSessionInstancesForWeekInstance(w.id))
+          );
+          const dayStatus = new Map<string, SeasonDayStatus>();
+          for (const sessions of sessionsPerWeek) {
+            for (const s of sessions) {
+              if (s.status !== "completed" && s.status !== "skipped") continue;
+              const iso = localDateIso(toLocalMidnight(s.completedAt ?? s.date));
+              const incoming: SeasonDayStatus =
+                s.status === "completed" ? "done" : "skipped";
+              const existing = dayStatus.get(iso);
+              if (!existing) dayStatus.set(iso, incoming);
+              else if (existing !== incoming) dayStatus.set(iso, "both");
             }
-            boundaries.push(boundaryIso ?? seasonEndIso);
           }
-          let totalExtraRest = 0;
-          for (let i = 0; i < sortedWeeks.length; i++) {
-            const startMs = toLocalMidnight(boundaries[i]).getTime();
-            const endMs = toLocalMidnight(boundaries[i + 1]).getTime();
-            const dayDiff = Math.max(0, Math.round((endMs - startMs) / 86_400_000));
-            totalExtraRest += Math.max(0, dayDiff - weekLength);
-          }
-          setSeasonExtraRestDays(totalExtraRest);
+
+          setCalendar({
+            months: monthsBetween(startIso, endIso),
+            dayStatus,
+            startIso,
+            endIso,
+            todayIso: seasonEnded ? null : localDateIso(),
+          });
         }
 
         // ── Heuristics summary ───────────────────────────────────────────
@@ -271,7 +252,6 @@ export default function SeasonSummaryPage() {
           const questions = await getQuestions();
           if (questions.length > 0) {
             const startIso = localDateIso(toLocalMidnight(seasonInstance.startedAt));
-            const seasonEnded = seasonInstance.status !== "in_progress";
             const endSourceIso =
               seasonEnded && seasonInstance.completedAt
                 ? seasonInstance.completedAt
@@ -291,35 +271,23 @@ export default function SeasonSummaryPage() {
               const summary: HeuristicSummaryRow[] = questions.map((q) => {
                 const qEntries = byQuestion.get(q.id) ?? [];
                 const datesAnswered = new Set<string>();
-                const values: number[] = [];
                 let sum = 0;
                 for (const e of qEntries) {
                   if (e.value != null && !datesAnswered.has(e.date)) {
                     datesAnswered.add(e.date);
                     sum += e.value;
-                    values.push(e.value);
                   }
                 }
                 const givenCount = datesAnswered.size;
-                const missingDays = Math.max(0, totalDays - givenCount);
-                // Simple mean of answered values only. Earlier this imputed a
-                // neutral 3 for missing days to anchor the (now removed)
-                // uncertainty band — but that pulled the pin toward 3 while
-                // Q1/Q3 below were computed from real answers only, so they'd
-                // read from different distributions on low-coverage rows.
-                const avg = givenCount > 0 ? sum / givenCount : null;
-                const sortedValues = [...values].sort((a, b) => a - b);
-                const q1 = percentileOrNull(sortedValues, 0.25);
-                const q3 = percentileOrNull(sortedValues, 0.75);
+                // Mean of answered values only; coverage is reported alongside
+                // it so a mean over a third of the days can't pass for a mean
+                // over nearly all of them.
                 return {
                   questionId: q.id,
                   label: q.label,
-                  avg,
+                  avg: givenCount > 0 ? sum / givenCount : null,
                   givenCount,
-                  missingDays,
                   totalDays,
-                  q1,
-                  q3,
                 };
               });
               // Drop questions the user never answered in this window — an
@@ -402,8 +370,8 @@ export default function SeasonSummaryPage() {
     return (
       <main className="season-summary-page">
         <TopBar title="Season summary" backTo="/" backLabel="Dashboard" />
-        <section className="season-summary-shell">
-          <p className="season-summary-error">{errorMessage ?? "Something went wrong."}</p>
+        <section className="ss-shell">
+          <p className="ss-error">{errorMessage ?? "Something went wrong."}</p>
         </section>
         <BottomNav activeTab="session" />
       </main>
@@ -414,7 +382,7 @@ export default function SeasonSummaryPage() {
     <main className="season-summary-page">
       <TopBar title="Season summary" backTo="/" backLabel="Dashboard" />
 
-      <section className="season-summary-shell">
+      <section className="ss-shell">
         {!loaderDone ? (
           <PageLoader
             label="Building your season summary…"
@@ -423,281 +391,183 @@ export default function SeasonSummaryPage() {
             onDone={() => setLoaderDone(true)}
           />
         ) : (() => {
-          const { totalSets, totalSessions, totalWeeks, durationLabel, volumeScore, intensityScore, consistencyScore, seasonScore, grade, endedEarly } = metrics!;
-          const color = gradeColor(grade);
+          const { volumeScore, intensityScore, consistencyScore, grade, endedEarly } = metrics!;
           return (<>
-        {/* ── Season name ── */}
-        <header className="season-summary-header">
-          <h1 className="season-summary-title">{seasonName}</h1>
-          {endedEarly && (
-            <p className="season-summary-eyebrow season-summary-eyebrow--ended-early">
-              Ended early
-            </p>
-          )}
-        </header>
+            {/* ── Header ── */}
+            <header className="ss-header">
+              <h1 className="ss-title">{seasonName}</h1>
+              {seasonDates && <p className="ss-dates">{seasonDates}</p>}
+            </header>
 
-        {/* ── Descriptive stats ── */}
-        <div className="season-summary-stats-rows">
-          <div className="season-summary-stats-row">
-            {durationLabel && (
-              <>
-                <div className="season-summary-stat">
-                  <span className="season-summary-stat__value">{durationLabel}</span>
-                  <span className="season-summary-stat__label">Duration</span>
-                </div>
-                <div className="season-summary-stat-divider" />
-              </>
+            {/* ── Grade, then the three scores behind it ── */}
+            <SeasonGradeHero
+              grade={grade}
+              volumeScore={volumeScore}
+              intensityScore={intensityScore}
+              consistencyScore={consistencyScore}
+              endedEarly={endedEarly}
+            />
+
+            {/* ── Narrative ── */}
+            <RevealSection className="ss-section--narrative">
+              <p className="ss-narrative ss-reveal">{buildSeasonNarrative(metrics!)}</p>
+            </RevealSection>
+
+            {/* ── Calendar ── */}
+            {calendar && calendar.months.length > 0 && (
+              <RevealSection title="The season, day by day">
+                <SeasonCalendar
+                  months={calendar.months}
+                  dayStatus={calendar.dayStatus}
+                  seasonStartIso={calendar.startIso}
+                  seasonEndIso={calendar.endIso}
+                  todayIso={calendar.todayIso}
+                />
+              </RevealSection>
             )}
-            <div className="season-summary-stat">
-              <span className="season-summary-stat__value">{totalWeeks}</span>
-              <span className="season-summary-stat__label">Weeks</span>
-            </div>
-            <div className="season-summary-stat-divider" />
-            <div className="season-summary-stat">
-              <span className="season-summary-stat__value">{totalSessions}</span>
-              <span className="season-summary-stat__label">Sessions</span>
-            </div>
-          </div>
-          <div className="season-summary-stats-row">
-            <div className="season-summary-stat">
-              <span className="season-summary-stat__value">{totalSets}</span>
-              <span className="season-summary-stat__label">Total sets</span>
-            </div>
-            <div className="season-summary-stat-divider" />
-            <div className="season-summary-stat">
-              <span className="season-summary-stat__value">{prs.length}</span>
-              <span className="season-summary-stat__label">Total PRs</span>
-            </div>
-          </div>
-        </div>
 
-        {/* ── Results ── */}
-        <section className="season-summary-section">
-          <h2 className="season-summary-section-title">Results</h2>
-
-          <p className="season-summary-narrative">{buildSeasonNarrative(metrics!)}</p>
-
-          <div className="season-summary-score-block">
-            {/* Left: grade badge + season score */}
-            <div className="season-summary-score-primary">
-              <span className={`season-summary-grade season-summary-grade--${color}`}>
-                {grade}
-              </span>
-              <div className="season-summary-score-center">
-                <span className="season-summary-score-total">{seasonScore}</span>
-                <span className="season-summary-score-label">Season score</span>
-              </div>
-            </div>
-
-            <div className="season-summary-score-divider" />
-
-            {/* Right: volume, intensity, consistency */}
-            <div className="season-summary-score-secondary">
-              <div className="season-summary-score-item">
-                <span className="season-summary-score-item__pct">{volumeScore}%</span>
-                <span className="season-summary-score-item__label">Volume</span>
-              </div>
-              <div className="season-summary-score-item">
-                <span className="season-summary-score-item__pct">{intensityScore}%</span>
-                <span className="season-summary-score-item__label">Intensity</span>
-              </div>
-              <div className="season-summary-score-item">
-                <span className="season-summary-score-item__pct">{consistencyScore}%</span>
-                <span className="season-summary-score-item__label">Consistency</span>
-              </div>
-            </div>
-          </div>
-
-          <p className="season-summary-score-footnote">
-            Score = average of volume, intensity and consistency (each out of 100)
-          </p>
-        </section>
-
-        {/* ── Weeks this season ── */}
-        {/* ── Schedule day counts ── */}
-        {seasonDaySquares.length > 0 && (() => {
-          const countItems = [
-            { label: "Done",      color: "#6bcb77", n: seasonDaySquares.filter(d => d.status === "green").length },
-            { label: "Skipped",   color: "#e63946", n: seasonDaySquares.filter(d => d.status === "skipped").length },
-            { label: "Missed",    color: "#f4a261", n: seasonDaySquares.filter(d => d.status === "overdue").length },
-            { label: "Upcoming",  color: null,      n: seasonDaySquares.filter(d => d.status === "grey").length },
-            { label: "Rest",      color: null,      n: seasonDaySquares.filter(d => d.type === "rest").length },
-            { label: "Extra rest", color: null,     n: seasonExtraRestDays },
-          ].filter(i => i.n > 0);
-          if (countItems.length === 0) return null;
-          const rows = countItems.length <= 3
-            ? [countItems]
-            : [countItems.slice(0, Math.ceil(countItems.length / 2)), countItems.slice(Math.ceil(countItems.length / 2))];
-          return (
-            <div className="season-summary-stats-rows">
-              {rows.map((row, ri) => (
-                <div key={ri} className="season-summary-stats-row">
-                  {row.map((item, i) => (
-                    <div key={item.label} style={{ display: "contents" }}>
-                      {i > 0 && <div className="season-summary-stat-divider" />}
-                      <div className="season-summary-stat">
-                        <span className="season-summary-stat__value" style={item.color ? { color: item.color } : undefined}>{item.n}</span>
-                        <span className="season-summary-stat__label">{item.label}</span>
-                      </div>
-                    </div>
-                  ))}
+            {/* ── Weeks breadcrumb ── */}
+            {weeksBreadcrumb.length > 0 && (
+              <RevealSection title="Week by week" className="ss-breadcrumb">
+                <div className="ss-reveal">
+                  <WeeksBreadcrumb weeks={weeksBreadcrumb} showLabel={false} />
                 </div>
-              ))}
-            </div>
-          );
-        })()}
+              </RevealSection>
+            )}
 
-        {weeksBreadcrumb.length > 0 && (
-          <section className="season-summary-section season-summary-section--breadcrumb">
-            <WeeksBreadcrumb weeks={weeksBreadcrumb} />
-          </section>
-        )}
-
-        {/* ── Personal records ── */}
-        {prs.length > 0 && (
-          <section className="season-summary-section season-summary-section--pr">
-            <h2 className="season-summary-section-title season-summary-section-title--accent">
-              Personal records
-            </h2>
-            <ul className="season-summary-pr-list">
-              {prs.map((pr) => (
-                <li key={pr.exerciseName} className="season-summary-pr-item">
-                  <span className="season-summary-pr-name">{pr.exerciseName}</span>
-                  {pr.prType === "reps" ? (
-                    <span className="season-summary-pr-detail">
-                      {pr.previousReps != null && <>{pr.previousReps} reps <span className="season-summary-pr-arrow">→</span> </>}
-                      <span className="season-summary-pr-new-value">{pr.newReps} reps</span>
-                    </span>
-                  ) : pr.previousE1RM != null && pr.newE1RM != null ? (
-                    <span className="season-summary-pr-detail">
-                      {Math.round(pr.previousE1RM * 100) / 100}kg{" "}
-                      <span className="season-summary-pr-arrow">→</span>{" "}
-                      <span className="season-summary-pr-new-value">{Math.round(pr.newE1RM * 100) / 100}kg</span>{" "}
-                      e1RM
-                      {<> (+{Math.round((pr.newE1RM / pr.previousE1RM - 1) * 100)}%)</>}
-                      <>, up {Math.round((pr.newE1RM - pr.previousE1RM) * 100) / 100}kg</>
-                    </span>
-                  ) : pr.newE1RM != null ? (
-                    <span className="season-summary-pr-detail">
-                      <span className="season-summary-pr-new-value">{Math.round(pr.newE1RM * 100) / 100}kg</span>{" "}
-                      e1RM
-                    </span>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {/* ── Heuristics ── */}
-        {heuristicSummary.length > 0 && (
-          <section className="season-summary-section">
-            <h2 className="season-summary-section-title">Heuristics</h2>
-            <ul className="hs-list">
-              {heuristicSummary.map((row) => {
-                const avgPct = row.avg != null ? ((row.avg - 1) / 4) * 100 : null;
-                const coveragePct =
-                  row.totalDays > 0
-                    ? Math.round((row.givenCount / row.totalDays) * 100)
-                    : 0;
-                const valueColor =
-                  row.avg != null ? colorForHeuristicScore(row.avg) : undefined;
-                const barStyle =
-                  row.q1 != null && row.q3 != null
-                    ? (() => {
-                        // Band starts as the IQR but stretches outward to
-                        // include the mean if it falls outside — keeps the
-                        // pin inside the vivid zone on skewed distributions.
-                        const bandLow = row.avg != null ? Math.min(row.q1, row.avg) : row.q1;
-                        const bandHigh = row.avg != null ? Math.max(row.q3, row.avg) : row.q3;
-                        const lowPct = ((bandLow - 1) / 4) * 100;
-                        const highPct = ((bandHigh - 1) / 4) * 100;
-                        // Fade radius scales with the band width: wider bands
-                        // get softer transitions, narrow ones stay tight.
-                        const fadePct = (highPct - lowPct) * 0.2;
-                        return {
-                          "--iqr-low": `${lowPct}%`,
-                          "--iqr-high": `${highPct}%`,
-                          "--iqr-fade": `${fadePct}%`,
-                        } as React.CSSProperties;
-                      })()
-                    : undefined;
-                return (
-                  <li key={row.questionId} className="hs-row">
-                    <div className="hs-row__head">
-                      <span className="hs-row__label">{row.label}</span>
-                      <span className="hs-row__value" style={valueColor ? { color: valueColor } : undefined}>
-                        {row.avg != null ? row.avg.toFixed(1) : "—"}
-                      </span>
-                    </div>
-                    <div className="hs-bar" style={barStyle}>
-                      {avgPct != null && (
-                        <div
-                          className="hs-bar__pin"
-                          style={{ left: `${avgPct}%` }}
-                        />
-                      )}
-                    </div>
-                    <div className="hs-row__coverage">
-                      {coveragePct}% coverage, {row.missingDays} missed
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        )}
-
-        {/* ── All seasons ── */}
-        {seasonRows.length > 0 && (
-          <section className="season-summary-section">
-            <h2 className="season-summary-section-title">All seasons</h2>
-            <ul className="season-summary-seasons-list">
-              {seasonRows.map((row) => {
-                const isCurrent = row.season.id === seasonInstanceId;
-                const rowColor = row.grade ? gradeColor(row.grade) : null;
-                const fmtDate = (iso: string) =>
-                  new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-                const startDate = row.season.startedAt ? fmtDate(row.season.startedAt) : null;
-                const finishDate = row.completedAt ? fmtDate(row.completedAt) : null;
-                const dateRange = startDate && finishDate
-                  ? `${startDate} – ${finishDate}`
-                  : startDate ?? finishDate ?? null;
-                return (
-                  <li key={row.season.id} className={`season-summary-season-row${isCurrent ? " season-summary-season-row--current" : ""}`}>
-                    <div className="season-summary-season-row__main">
-                      <span className="season-summary-season-row__name">
-                        {row.programName
-                          ? `${row.programName} · ${row.season.name}`
-                          : row.season.name}
-                      </span>
-                      <span className="season-summary-season-row__meta">
-                        {row.seasonScore != null && (
-                          <span className="season-summary-season-row__score">{row.seasonScore}</span>
-                        )}
-                        {row.grade && rowColor && (
-                          <span className={`season-summary-season-row__grade season-summary-season-row__grade--${rowColor}`}>
-                            {row.grade}
+            {/* ── Personal records ── */}
+            {prs.length > 0 && (
+              <RevealSection title={`Personal records · ${prs.length}`}>
+                <ul className="ss-list">
+                  {prs.map((pr, i) => {
+                    const gainPct =
+                      pr.prType !== "reps" && pr.previousE1RM != null && pr.newE1RM != null
+                        ? Math.round((pr.newE1RM / pr.previousE1RM - 1) * 100)
+                        : null;
+                    return (
+                      <li
+                        key={pr.exerciseName}
+                        className="ss-row ss-reveal"
+                        style={{ "--i": i } as React.CSSProperties}
+                      >
+                        <div className="ss-row__head">
+                          <span className="ss-row__name">{pr.exerciseName}</span>
+                          {gainPct != null && (
+                            <span className="ss-chip">+{gainPct}%</span>
+                          )}
+                        </div>
+                        {pr.prType === "reps" ? (
+                          <span className="ss-row__detail">
+                            {pr.previousReps != null && <>{pr.previousReps} reps <span className="ss-arrow">→</span> </>}
+                            <span className="ss-row__value">{pr.newReps} reps</span>
                           </span>
-                        )}
-                      </span>
-                    </div>
-                    <div className="season-summary-season-row__sub">
-                      {row.durationLabel && (
-                        <span className="season-summary-season-row__duration">{row.durationLabel}</span>
-                      )}
-                      <span className="season-summary-season-row__prs">{row.prCount} PR{row.prCount !== 1 ? "s" : ""}</span>
-                      {dateRange && (
-                        <span className="season-summary-season-row__date">{dateRange}</span>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        )}
-        </>);
+                        ) : pr.previousE1RM != null && pr.newE1RM != null ? (
+                          <span className="ss-row__detail">
+                            {Math.round(pr.previousE1RM * 100) / 100}kg{" "}
+                            <span className="ss-arrow">→</span>{" "}
+                            <span className="ss-row__value">{Math.round(pr.newE1RM * 100) / 100}kg</span>{" "}
+                            e1RM, up {Math.round((pr.newE1RM - pr.previousE1RM) * 100) / 100}kg
+                          </span>
+                        ) : pr.newE1RM != null ? (
+                          <span className="ss-row__detail">
+                            <span className="ss-row__value">{Math.round(pr.newE1RM * 100) / 100}kg</span>{" "}
+                            e1RM
+                          </span>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </RevealSection>
+            )}
+
+            {/* ── Heuristics ── */}
+            {heuristicSummary.length > 0 && (
+              <RevealSection title="Heuristics">
+                <ul className="ss-list ss-list--flush">
+                  {heuristicSummary.map((row, i) => {
+                    const avgPct = row.avg != null ? ((row.avg - 1) / 4) * 100 : null;
+                    const coveragePct =
+                      row.totalDays > 0
+                        ? Math.round((row.givenCount / row.totalDays) * 100)
+                        : 0;
+                    const valueColor =
+                      row.avg != null ? colorForHeuristicScore(row.avg) : undefined;
+                    return (
+                      <li
+                        key={row.questionId}
+                        className="ss-hs-row ss-reveal"
+                        style={{ "--i": i } as React.CSSProperties}
+                      >
+                        <div className="ss-hs-row__head">
+                          <span className="ss-hs-row__label">{row.label}</span>
+                          <span className="ss-hs-row__value" style={valueColor ? { color: valueColor } : undefined}>
+                            {row.avg != null ? row.avg.toFixed(1) : "—"}
+                          </span>
+                        </div>
+                        <div className="ss-hs-bar">
+                          {avgPct != null && (
+                            <div
+                              className="ss-hs-bar__fill"
+                              style={{ width: `${avgPct}%`, background: valueColor }}
+                            />
+                          )}
+                        </div>
+                        <div className="ss-hs-row__coverage">{coveragePct}% coverage</div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </RevealSection>
+            )}
+
+            {/* ── All seasons ── */}
+            {seasonRows.length > 0 && (
+              <RevealSection title="All seasons">
+                <ul className="ss-list">
+                  {seasonRows.map((row, i) => {
+                    const isCurrent = row.season.id === seasonInstanceId;
+                    const rowColor = row.grade ? gradeColor(row.grade) : null;
+                    const startDate = row.season.startedAt ? fmtDate(row.season.startedAt) : null;
+                    const finishDate = row.completedAt ? fmtDate(row.completedAt) : null;
+                    const dateRange = startDate && finishDate
+                      ? `${startDate} – ${finishDate}`
+                      : startDate ?? finishDate ?? null;
+                    return (
+                      <li
+                        key={row.season.id}
+                        className={`ss-row ss-reveal${isCurrent ? " ss-row--current" : ""}`}
+                        style={{ "--i": i } as React.CSSProperties}
+                      >
+                        <div className="ss-row__head">
+                          <span className="ss-row__name">
+                            {row.programName
+                              ? `${row.programName} · ${row.season.name}`
+                              : row.season.name}
+                          </span>
+                          <span className="ss-row__meta">
+                            {row.seasonScore != null && (
+                              <span className="ss-row__score">{row.seasonScore}</span>
+                            )}
+                            {row.grade && rowColor && (
+                              <span className={`ss-row__grade ss-row__grade--${rowColor}`}>
+                                {row.grade}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        <div className="ss-row__sub">
+                          {row.durationLabel && <span>{row.durationLabel}</span>}
+                          <span>{row.prCount} PR{row.prCount !== 1 ? "s" : ""}</span>
+                          {dateRange && <span>{dateRange}</span>}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </RevealSection>
+            )}
+          </>);
         })()}
       </section>
 

@@ -11,14 +11,16 @@ export interface BreadcrumbWeek {
 
 interface WeeksBreadcrumbProps {
   weeks: BreadcrumbWeek[];
+  /** Off where the page already supplies its own section heading. */
+  showLabel?: boolean;
 }
 
-export default function WeeksBreadcrumb({ weeks }: WeeksBreadcrumbProps) {
+export default function WeeksBreadcrumb({ weeks, showLabel = true }: WeeksBreadcrumbProps) {
   if (weeks.length === 0) return null;
 
   return (
     <div className="weeks-breadcrumb" aria-label="Weeks this season">
-      <p className="weeks-breadcrumb__label">Weeks this season</p>
+      {showLabel && <p className="weeks-breadcrumb__label">Weeks this season</p>}
       <div className="weeks-breadcrumb__trail">
         {weeks.map((week, index) => (
           <div key={week.weekInstanceId} className="weeks-breadcrumb__item">

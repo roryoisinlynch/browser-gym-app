@@ -1,0 +1,116 @@
+.ss-cal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Two months per row, so a four-month season reads as a 2x2 block. */
+.ss-cal__months {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px 14px;
+}
+
+/* A lone month would stretch to full width and dwarf the cells of a
+   multi-month season; cap it at the width it would have had in a pair. */
+.ss-cal__months:has(> .ss-cal__month:only-child) {
+  grid-template-columns: minmax(0, calc(50% - 7px));
+  justify-content: center;
+}
+
+.ss-cal__month {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ss-cal__month-label {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.ss-cal__weekdays,
+.ss-cal__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.ss-cal__weekday {
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--text-soft);
+  opacity: 0.6;
+  text-align: center;
+  line-height: 1;
+}
+
+.ss-cal__cell {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  /* A day inside the season with nothing logged. */
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.ss-cal__cell--pad {
+  visibility: hidden;
+}
+
+/* Days the season didn't cover stay visible so the month keeps its shape, but
+   sit far enough back that they never read as a day the user missed. */
+.ss-cal__cell--outside {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Same colours as the dashboard timeline, so the two views agree at a glance. */
+.ss-cal__cell--done    { background: #6bcb77; }
+.ss-cal__cell--skipped { background: #e63946; }
+.ss-cal__cell--both {
+  background: linear-gradient(135deg, #6bcb77 50%, #e63946 50%);
+}
+
+.ss-cal__cell--today {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+/* ── Legend ── */
+
+.ss-cal__legend {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  font-size: 0.74rem;
+  color: var(--text-soft);
+}
+
+.ss-cal__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ss-cal__legend-swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+}
+
+.ss-cal__legend-swatch--done    { background: #6bcb77; }
+.ss-cal__legend-swatch--skipped { background: #e63946; }
+
+/* ── Motion ──
+   Cells are final-state by default; only the no-preference block animates. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes ss-cal-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  .ss-cal.is-in .ss-cal__cell {
+    animation: ss-cal-fade 260ms ease-out calc(var(--c, 0) * 30ms) backwards;
+  }
+}

@@ -402,3 +402,95 @@
   font-weight: 700;
 }
 
+
+/* ── Heuristics summary ──
+   These rules used to live in SeasonSummaryPage.css and were picked up here by
+   virtue of both stylesheets being global. The season summary now draws its
+   heuristics with its own simplified ss-hs-* bar, leaving this page as the only
+   consumer, so the original IQR-band treatment moved here verbatim. */
+.hs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.hs-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hs-row__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hs-row__label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.hs-row__value {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-strong);
+}
+
+.hs-bar {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  /* Two stacked gradients: the colour ramp underneath, and a dark mask above
+     that's transparent only between the row's central band. The band starts
+     as the IQR (Q1..Q3) but is stretched outward if necessary to include the
+     mean (the pin), so a skew-driven mean never sits in the muted zone.
+     Each boundary fades over ±--iqr-fade (set per-row to a fraction of the
+     band's own width), so wider bands get softer transitions and narrower
+     bands get tighter ones — the boundary "meshes" into the muted outside
+     instead of hard-cutting. Defaults (--iqr-low: 0%, --iqr-high: 100%,
+     --iqr-fade: 0%) yield a fully transparent mask, so rows with too few
+     answers to compute a meaningful band keep the full vivid bar. */
+  background:
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.55) 0%,
+      rgba(0, 0, 0, 0.55) calc(var(--iqr-low, 0%) - var(--iqr-fade, 0%)),
+      transparent           calc(var(--iqr-low, 0%) + var(--iqr-fade, 0%)),
+      transparent           calc(var(--iqr-high, 100%) - var(--iqr-fade, 0%)),
+      rgba(0, 0, 0, 0.55) calc(var(--iqr-high, 100%) + var(--iqr-fade, 0%)),
+      rgba(0, 0, 0, 0.55) 100%
+    ),
+    linear-gradient(
+      90deg,
+      #e76f51 0%,
+      #f4a261 25%,
+      #f4d35e 50%,
+      #a8d065 75%,
+      #6bcb77 100%
+    );
+  overflow: visible;
+}
+
+.hs-bar__pin {
+  position: absolute;
+  top: -5px;
+  width: 3px;
+  height: 18px;
+  background: var(--text-strong);
+  border-radius: 2px;
+  transform: translateX(-1.5px);
+  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.hs-row__coverage {
+  font-size: 0.75rem;
+  color: var(--text-soft);
+  margin-top: 2px;
+}
