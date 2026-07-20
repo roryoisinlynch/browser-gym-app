@@ -4,25 +4,21 @@
   gap: 16px;
 }
 
-/* Two months per row, so a four-month season reads as a 2x2 block. */
+/* Two months per row, so a four-month season reads as a 2x2 block. The cell
+   grid inside each month is a fixed size, so the halves are even columns rather
+   than shrink-to-fit ones — that keeps every month's left edge on either the
+   section heading's margin or the midpoint, instead of the whole block floating
+   free of the heading above it. */
 .ss-cal__months {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 20px 14px;
-}
-
-/* A lone month would stretch to full width and dwarf the cells of a
-   multi-month season; cap it at the width it would have had in a pair. */
-.ss-cal__months:has(> .ss-cal__month:only-child) {
-  grid-template-columns: minmax(0, calc(50% - 7px));
-  justify-content: center;
+  gap: 16px 12px;
 }
 
 .ss-cal__month {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  min-width: 0;
+  gap: 5px;
 }
 
 .ss-cal__month-label {
@@ -33,15 +29,17 @@
   color: var(--text-soft);
 }
 
+/* 13px cells on a 3px gap: the same profile as the deck's month calendar, so
+   the two features read as the same object at the same scale. */
 .ss-cal__weekdays,
 .ss-cal__grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, 13px);
   gap: 3px;
 }
 
 .ss-cal__weekday {
-  font-size: 0.56rem;
+  font-size: 0.52rem;
   font-weight: 700;
   color: var(--text-soft);
   opacity: 0.6;
@@ -50,8 +48,9 @@
 }
 
 .ss-cal__cell {
-  aspect-ratio: 1;
-  border-radius: 3px;
+  width: 13px;
+  height: 13px;
+  border-radius: 2px;
   /* A day inside the season with nothing logged. */
   background: rgba(255, 255, 255, 0.06);
 }
@@ -74,14 +73,13 @@
 }
 
 .ss-cal__cell--today {
-  box-shadow: inset 0 0 0 2px var(--accent);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
 }
 
 /* ── Legend ── */
 
 .ss-cal__legend {
   display: flex;
-  justify-content: center;
   gap: 16px;
   font-size: 0.74rem;
   color: var(--text-soft);

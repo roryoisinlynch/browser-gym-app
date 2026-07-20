@@ -10,12 +10,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 12px 0 4px;
+  gap: 10px;
+  padding: 26px 0 12px;
 }
 
 .ss-hero__grade {
-  font-size: 7rem;
+  font-size: 9.5rem;
   line-height: 1;
   font-weight: 900;
   letter-spacing: -0.04em;
@@ -84,10 +84,7 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 12px 6px 10px;
-  border-radius: 14px;
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
+  padding: 0 6px;
 }
 
 .ss-score__pct {
@@ -123,14 +120,6 @@
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: var(--text-soft);
-  text-align: center;
-}
-
-.ss-hero__footnote {
-  margin: 0;
-  font-size: 0.74rem;
-  line-height: 1.4;
   color: var(--text-soft);
   text-align: center;
 }

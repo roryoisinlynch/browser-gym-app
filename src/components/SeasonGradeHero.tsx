@@ -16,7 +16,7 @@ interface SeasonGradeHeroProps {
 /** Letters the slot cycles through while the sub-scores are still counting. */
 const CYCLE_LETTERS = ["A", "B", "C", "D", "F"];
 
-const CYCLE_INTERVAL_MS = 80;
+const CYCLE_INTERVAL_MS = 45;
 /** ~100ms after the last sub-score settles (750ms start + 650ms duration). */
 const SETTLE_AT_MS = 1500;
 const SCORE_START_MS = [250, 500, 750];
@@ -120,10 +120,6 @@ export default function SeasonGradeHero({
         <ScoreTile score={intensityScore} label="Intensity" index={1} started={inView} />
         <ScoreTile score={consistencyScore} label="Consistency" index={2} started={inView} />
       </div>
-
-      <p className="ss-hero__footnote">
-        Grade is the average of volume, intensity and consistency, each out of 100.
-      </p>
     </div>
   );
 }
