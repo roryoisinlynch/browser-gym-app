@@ -4,6 +4,8 @@ import {
   isTutorialDismissed,
   type TutorialId,
 } from "../repositories/tutorialsRepository";
+import useInView from "../hooks/useInView";
+import "./Reveal.css";
 import "./TutorialBlock.css";
 
 interface Props {
@@ -21,6 +23,10 @@ interface Props {
 // flicker into view on dashboard mount.
 export default function TutorialBlock({ id, title, blurb, children, unwrapped }: Props) {
   const [state, setState] = useState<"loading" | "visible" | "dismissed">("loading");
+  // The block carries its own reveal rather than being wrapped in one: it
+  // returns null until its dismissed state resolves, so an outer wrapper would
+  // be observing an element that doesn't exist yet.
+  const [revealRef, revealed] = useInView<HTMLElement>();
 
   useEffect(() => {
     let cancelled = false;
@@ -41,7 +47,11 @@ export default function TutorialBlock({ id, title, blurb, children, unwrapped }:
   if (state !== "visible") return null;
 
   return (
-    <section className="tutorial-block" aria-label={`Tutorial: ${title}`}>
+    <section
+      ref={revealRef}
+      className={`tutorial-block reveal-block${revealed ? " is-in" : ""}`}
+      aria-label={`Tutorial: ${title}`}
+    >
       <header className="tutorial-block__header">
         <div className="tutorial-block__header-text">
           <span className="tutorial-block__pill">Tutorial</span>

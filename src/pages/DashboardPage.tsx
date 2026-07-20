@@ -32,6 +32,7 @@ import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import PageLoader from "../components/PageLoader";
 import TutorialBlock from "../components/TutorialBlock";
+import Reveal from "../components/Reveal";
 import WeeksBreadcrumb from "../components/WeeksBreadcrumb";
 import type { BreadcrumbWeek } from "../components/WeeksBreadcrumb";
 import ExerciseSummaryCard from "../components/ExerciseSummaryCard";
@@ -2559,67 +2560,73 @@ export default function DashboardPage() {
           />
         ) : (
           <>
-        {yearReviewYear != null && (
-          <section className="dashboard-section">
-            <div
-              className="dashboard-up-next dashboard-up-next--year-review dashboard-up-next--with-cta"
-              role="button"
-              tabIndex={0}
-              onClick={() => navigate("/year-in-review")}
-              onKeyDown={(e) => e.key === "Enter" && navigate("/year-in-review")}
-            >
-              <div className="dashboard-up-next__content">
-                <span className="dashboard-up-next__pill dashboard-up-next__pill--year-review">
-                  Limited time
-                </span>
-                <p className="dashboard-up-next__heading">
-                  Your {yearReviewYear} Year in Review
-                </p>
-                <p className="dashboard-up-next__sub">
-                  View the key metrics from this past year of training.
-                </p>
-              </div>
-              <span className="dashboard-up-next__cta dashboard-up-next__cta--year-review">
-                Open →
-              </span>
-            </div>
-          </section>
-        )}
-
-        <section className="dashboard-section">
-          {renderUpNext()}
-        </section>
-
-        {renderTimeline()}
-
-        {hasAnyRecent && (
-          <section className="dashboard-section">
-            <div className="dashboard-section-header" ref={recentTooltipRef}>
-              <h2 className="dashboard-section-title">Recent activity</h2>
-              <button
-                className="dashboard-info-btn"
-                aria-expanded={recentTooltipOpen}
-                onClick={() => setRecentTooltipOpen((v) => !v)}
-              >?</button>
-              {recentTooltipOpen && (
-                <div className="dashboard-info-tooltip">
-                  Tap a session, week, or season icon to view its full summary.
+        <Reveal>
+          {yearReviewYear != null && (
+            <section className="dashboard-section">
+              <div
+                className="dashboard-up-next dashboard-up-next--year-review dashboard-up-next--with-cta"
+                role="button"
+                tabIndex={0}
+                onClick={() => navigate("/year-in-review")}
+                onKeyDown={(e) => e.key === "Enter" && navigate("/year-in-review")}
+              >
+                <div className="dashboard-up-next__content">
+                  <span className="dashboard-up-next__pill dashboard-up-next__pill--year-review">
+                    Limited time
+                  </span>
+                  <p className="dashboard-up-next__heading">
+                    Your {yearReviewYear} Year in Review
+                  </p>
+                  <p className="dashboard-up-next__sub">
+                    View the key metrics from this past year of training.
+                  </p>
                 </div>
-              )}
-            </div>
-            <div className="dashboard-recent-grid">
-              {renderRecentCard(recentSession, "Session")}
-              {renderRecentCard(recentWeek, "Week")}
-              {renderRecentCard(recentSeason, "Season")}
-            </div>
+                <span className="dashboard-up-next__cta dashboard-up-next__cta--year-review">
+                  Open →
+                </span>
+              </div>
+            </section>
+          )}
+        </Reveal>
+
+        <Reveal>
+          <section className="dashboard-section">
+            {renderUpNext()}
           </section>
-        )}
+        </Reveal>
 
-        {renderBackupNudge()}
+        <Reveal>{renderTimeline()}</Reveal>
 
-        {renderPRSpotlight()}
+        <Reveal>
+          {hasAnyRecent && (
+            <section className="dashboard-section">
+              <div className="dashboard-section-header" ref={recentTooltipRef}>
+                <h2 className="dashboard-section-title">Recent activity</h2>
+                <button
+                  className="dashboard-info-btn"
+                  aria-expanded={recentTooltipOpen}
+                  onClick={() => setRecentTooltipOpen((v) => !v)}
+                >?</button>
+                {recentTooltipOpen && (
+                  <div className="dashboard-info-tooltip">
+                    Tap a session, week, or season icon to view its full summary.
+                  </div>
+                )}
+              </div>
+              <div className="dashboard-recent-grid">
+                {renderRecentCard(recentSession, "Session")}
+                {renderRecentCard(recentWeek, "Week")}
+                {renderRecentCard(recentSeason, "Season")}
+              </div>
+            </section>
+          )}
+        </Reveal>
 
-        {renderAchievements()}
+        <Reveal>{renderBackupNudge()}</Reveal>
+
+        <Reveal>{renderPRSpotlight()}</Reveal>
+
+        <Reveal>{renderAchievements()}</Reveal>
 
         <TutorialBlock
           id="schedule"
