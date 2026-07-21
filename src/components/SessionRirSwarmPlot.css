@@ -51,10 +51,18 @@
   position: absolute;
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  background: var(--accent);
   /* Surface ring so stacked/overlapping dots stay individually legible and so
      dots read over the target line. */
   box-shadow: 0 0 0 2px var(--bg-bottom);
+}
+
+/* Working sets carry the effort; warmups are recessive context. */
+.rir-swarm__dot--working {
+  background: var(--accent);
+}
+
+.rir-swarm__dot--warmup {
+  background: var(--text-soft);
 }
 
 /* Reference line for the session's RIR target. Drawn behind the dots (so a
@@ -83,6 +91,28 @@
   font-size: 0.66rem;
   font-variant-numeric: tabular-nums;
   color: var(--text-soft);
+}
+
+/* ── Legend (shown only when warmup sets are present) ── */
+
+.rir-swarm__legend {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+.rir-swarm__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  color: var(--text-soft);
+}
+
+.rir-swarm__legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
 }
 
 /* ── Caption ── */
