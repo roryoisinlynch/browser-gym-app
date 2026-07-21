@@ -386,7 +386,7 @@ export default function SeasonSummaryPage() {
         {!loaderDone ? (
           <PageLoader
             label="Building your season summary…"
-            durationMs={5000}
+            durationMs={6000}
             ready={!isLoading}
             onDone={() => setLoaderDone(true)}
           />
