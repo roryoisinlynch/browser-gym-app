@@ -1024,6 +1024,7 @@ export default function DashboardPage() {
   const [isPreviousSeason, setIsPreviousSeason] = useState(false);
   const [timelineLoading, setTimelineLoading] = useState(true);
   const [recentDays, setRecentDays] = useState<RecentDaysData | null>(null);
+  const [recentDaysLoading, setRecentDaysLoading] = useState(true);
   const [recentSession, setRecentSession] = useState<RecentCard | null | typeof LOADING_CARD>(LOADING_CARD);
   const [recentWeek, setRecentWeek] = useState<RecentCard | null | typeof LOADING_CARD>(LOADING_CARD);
   const [recentSeason, setRecentSeason] = useState<RecentCard | null | typeof LOADING_CARD>(LOADING_CARD);
@@ -1100,12 +1101,17 @@ export default function DashboardPage() {
       // Day-by-day grid is anchored to "now" — only render for an active season.
       if (activeSeason) {
         loadRecentDays(activeSeason).then((data) => {
-          if (!cancelled.current) setRecentDays(data);
+          if (!cancelled.current) {
+            setRecentDays(data);
+            setRecentDaysLoading(false);
+          }
         });
 
         findExerciseNeedingWeight(activeSeason.id).then((ex) => {
           if (!cancelled.current) setExerciseNeedingWeight(ex);
         });
+      } else {
+        setRecentDaysLoading(false);
       }
 
       loadSecondary();
@@ -1438,15 +1444,7 @@ export default function DashboardPage() {
 
   // ─── Season timeline ──────────────────────────────────────────────────────
 
-  function renderTimeline() {
-    if (timelineLoading) {
-      return (
-        <section className="dashboard-section">
-          <h2 className="dashboard-section-title">Season progress</h2>
-          <div className="dashboard-spinner" />
-        </section>
-      );
-    }
+  function renderPlannedSchedule() {
     if (!seasonTimeline) return null;
     const { startDate, endDate, weeks, currentWeekOrder, sessionsCompleted, sessionsExpected, totalWeeks } = seasonTimeline;
     const isAhead = sessionsCompleted > sessionsExpected;
@@ -1552,11 +1550,17 @@ export default function DashboardPage() {
             ) : null;
           })()}
         </div>
+      </section>
+    );
+  }
 
-        {recentDays && (
-          <div className="dashboard-timeline-recent">
-            <div className="dashboard-timeline-recent__label">Schedule (actual)</div>
-            <div className="dashboard-timeline-recent__grid">
+  function renderActualSchedule() {
+    if (!recentDays) return null;
+    return (
+      <section className="dashboard-section">
+        <div className="dashboard-timeline-recent">
+          <div className="dashboard-timeline-recent__label">Schedule (actual)</div>
+          <div className="dashboard-timeline-recent__grid">
               {recentDays.rows.map((row, ri) => {
                 const deltaLabel = row.delta > 0
                   ? `${row.delta} day${row.delta === 1 ? "" : "s"} ahead`
@@ -1627,9 +1631,8 @@ export default function DashboardPage() {
                   </div>
                 );
               })}
-            </div>
           </div>
-        )}
+        </div>
       </section>
     );
   }
@@ -1637,38 +1640,35 @@ export default function DashboardPage() {
   // ─── Recent summaries ─────────────────────────────────────────────────────
 
   function renderRecentCard(card: RecentCard | null | typeof LOADING_CARD, label: string) {
-    const isLoading = card === LOADING_CARD;
-    const data = isLoading ? null : card;
-    if (!isLoading && !data) return null;
+    // The recent-activity panel only reveals once every card has resolved, so
+    // a card here is either present or genuinely absent — never mid-load.
+    const data = card === LOADING_CARD ? null : card;
+    if (!data) return null;
     return (
       <div
-        className={`dashboard-recent-card${data ? " dashboard-recent-card--link" : ""}`}
+        className="dashboard-recent-card dashboard-recent-card--link"
         aria-label={label}
-        role={data ? "button" : undefined}
-        tabIndex={data ? 0 : undefined}
-        onClick={() => data && navigate(data.link)}
-        onKeyDown={(e) => e.key === "Enter" && data && navigate(data.link)}
+        role="button"
+        tabIndex={0}
+        onClick={() => navigate(data.link)}
+        onKeyDown={(e) => e.key === "Enter" && navigate(data.link)}
       >
         <div className="dashboard-recent-card__icon">
-          {isLoading ? (
-            <div className="dashboard-spinner" />
-          ) : data!.ragStatus ? (
-            <Medal status={data!.ragStatus} size="lg" />
-          ) : data!.grade ? (
+          {data.ragStatus ? (
+            <Medal status={data.ragStatus} size="lg" />
+          ) : data.grade ? (
             <span
               className={[
                 "dashboard-recent-card__grade",
-                data!.gradeKind ? `dashboard-recent-card__grade--${data!.gradeKind}` : "",
-                data!.gradeColor ? `dashboard-recent-card__grade--${data!.gradeColor}` : "",
+                data.gradeKind ? `dashboard-recent-card__grade--${data.gradeKind}` : "",
+                data.gradeColor ? `dashboard-recent-card__grade--${data.gradeColor}` : "",
               ].filter(Boolean).join(" ")}
             >
-              {data!.grade}
+              {data.grade}
             </span>
           ) : null}
         </div>
-        {!isLoading && (
-          <span className="dashboard-recent-card__name">{data!.name}</span>
-        )}
+        <span className="dashboard-recent-card__name">{data.name}</span>
       </div>
     );
   }
@@ -1684,14 +1684,7 @@ export default function DashboardPage() {
   ];
 
   function renderAchievements() {
-    if (achievements === null) {
-      return (
-        <section className="dashboard-section">
-          <h2 className="dashboard-section-title">Achievements</h2>
-          <div className="dashboard-spinner" />
-        </section>
-      );
-    }
+    if (achievements === null) return null;
     const { goldSessions, perfectWeeks, aSeasons } = achievements;
     if (goldSessions.length === 0 && perfectWeeks.length === 0 && aSeasons.length === 0) {
       return null;
@@ -1794,20 +1787,12 @@ export default function DashboardPage() {
   const spotlight = prEvents?.[0] ?? null;
 
   function renderPRSpotlight() {
-    if (prEvents === null) {
-      return (
-        <section className="dashboard-section">
-          <h2 className="dashboard-section-title">Recent personal records</h2>
-          <div className="dashboard-spinner" />
-        </section>
-      );
-    }
     if (!spotlight) return null;
 
     // Stack every PR set on the most recent PR date — different exercises can
-    // peak on the same day. These are the graphed records; the list nested
-    // below continues with the next PRs chronologically before this batch.
-    const spotlightPRs = prEvents.filter((pr) => pr.date === spotlight.date);
+    // peak on the same day. These are the graphed records; the list below
+    // continues with the next PRs chronologically before this batch.
+    const spotlightPRs = prEvents!.filter((pr) => pr.date === spotlight.date);
 
     return (
       <section className="dashboard-section">
@@ -1817,7 +1802,6 @@ export default function DashboardPage() {
             renderSpotlightCard(pr, spotlightHistories?.[pr.exerciseName] ?? null)
           )}
         </div>
-        {renderAllPRs()}
       </section>
     );
   }
@@ -2036,8 +2020,8 @@ export default function DashboardPage() {
   // ─── All PRs ──────────────────────────────────────────────────────────────
 
   function renderAllPRs() {
-    // The spotlight section above owns the loading / empty states and the
-    // shared heading; this renders the continuation list nested inside it.
+    // Continuation list beneath the spotlight: its own reveal gate, held back
+    // until the spotlight above it is in.
     if (prEvents === null || !spotlight) return null;
     // Drop the most-recent-date batch (shown as graphs above) and list the
     // next 5 PRs chronologically before it so none appear twice.
@@ -2046,6 +2030,7 @@ export default function DashboardPage() {
       .slice(0, 5);
     if (displayedPRs.length === 0) return null;
     return (
+      <section className="dashboard-section">
       <ul className="dashboard-pr-list">
         {displayedPRs.map((pr, i) => {
           const daysAgo = daysBetween(pr.date, localDateIso());
@@ -2082,6 +2067,7 @@ export default function DashboardPage() {
           );
         })}
       </ul>
+      </section>
     );
   }
 
@@ -2517,13 +2503,139 @@ export default function DashboardPage() {
     );
   }
 
-  // The intro loader holds only until the up-next card and the season schedule
-  // are ready, so the page becomes available as soon as its primary visuals
-  // exist. Every section below the schedule (recent activity, PR spotlight,
-  // achievements) carries its own loading state and streams in independently as
-  // its own data resolves. Both of these settle on every path (including the
-  // no-program first run, where the timeline is skipped outright).
-  const dashboardReady = upNext.type !== "loading" && !timelineLoading;
+  // The intro loader releases the moment the first visual (up next) is ready,
+  // so the page opens without waiting on the slower sections. From there each
+  // section reveals in strict top-to-bottom order — a lower one that resolves
+  // first is held until everything above it is in — and a single status row
+  // beneath the last revealed section names whatever is loading next.
+  const firstVisualReady = upNext.type !== "loading";
+  const recentResolved =
+    recentSession !== LOADING_CARD &&
+    recentWeek !== LOADING_CARD &&
+    recentSeason !== LOADING_CARD;
+
+  // The ordered column of visuals. `free` entries (the year-in-review banner
+  // and the backup nudge) never gate the order and are never named — they just
+  // appear at their fixed spot once their own data resolves, as before.
+  const panels: {
+    id: string;
+    label?: string;
+    ready?: boolean;
+    free?: boolean;
+    render: () => React.ReactNode;
+  }[] = [
+    {
+      id: "year-review",
+      free: true,
+      render: () =>
+        yearReviewYear != null && (
+          <section className="dashboard-section">
+            <div
+              className="dashboard-up-next dashboard-up-next--year-review dashboard-up-next--with-cta"
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate("/year-in-review")}
+              onKeyDown={(e) => e.key === "Enter" && navigate("/year-in-review")}
+            >
+              <div className="dashboard-up-next__content">
+                <span className="dashboard-up-next__pill dashboard-up-next__pill--year-review">
+                  Limited time
+                </span>
+                <p className="dashboard-up-next__heading">
+                  Your {yearReviewYear} Year in Review
+                </p>
+                <p className="dashboard-up-next__sub">
+                  View the key metrics from this past year of training.
+                </p>
+              </div>
+              <span className="dashboard-up-next__cta dashboard-up-next__cta--year-review">
+                Open →
+              </span>
+            </div>
+          </section>
+        ),
+    },
+    {
+      id: "up-next",
+      label: "up next",
+      ready: upNext.type !== "loading",
+      render: () => <section className="dashboard-section">{renderUpNext()}</section>,
+    },
+    {
+      id: "season-planned",
+      label: "season progress",
+      ready: !timelineLoading,
+      render: renderPlannedSchedule,
+    },
+    {
+      id: "season-actual",
+      label: "recent progress",
+      ready: !recentDaysLoading,
+      render: renderActualSchedule,
+    },
+    {
+      id: "recent-activity",
+      label: "recent activity",
+      ready: recentResolved,
+      render: () =>
+        hasAnyRecent && (
+          <section className="dashboard-section">
+            <div className="dashboard-section-header" ref={recentTooltipRef}>
+              <h2 className="dashboard-section-title">Recent activity</h2>
+              <button
+                className="dashboard-info-btn"
+                aria-expanded={recentTooltipOpen}
+                onClick={() => setRecentTooltipOpen((v) => !v)}
+              >?</button>
+              {recentTooltipOpen && (
+                <div className="dashboard-info-tooltip">
+                  Tap a session, week, or season icon to view its full summary.
+                </div>
+              )}
+            </div>
+            <div className="dashboard-recent-grid">
+              {renderRecentCard(recentSession, "Session")}
+              {renderRecentCard(recentWeek, "Week")}
+              {renderRecentCard(recentSeason, "Season")}
+            </div>
+          </section>
+        ),
+    },
+    {
+      id: "backup",
+      free: true,
+      render: renderBackupNudge,
+    },
+    {
+      id: "pr-spotlight",
+      label: "your latest PR",
+      ready: prEvents !== null && spotlightHistories !== null,
+      render: renderPRSpotlight,
+    },
+    {
+      id: "pr-list",
+      label: "recent PRs",
+      ready: prEvents !== null,
+      render: renderAllPRs,
+    },
+    {
+      id: "achievements",
+      label: "achievements",
+      ready: achievements !== null,
+      render: renderAchievements,
+    },
+  ];
+
+  // First panel that is neither ready nor free — the strict-order barrier.
+  // Everything above it reveals; it becomes the one named "Loading …" row.
+  let blockIndex = panels.length;
+  for (let i = 0; i < panels.length; i++) {
+    if (!panels[i].free && !panels[i].ready) {
+      blockIndex = i;
+      break;
+    }
+  }
+  const allRevealed = blockIndex === panels.length;
 
   return (
     <main className="dashboard-page">
@@ -2531,81 +2643,30 @@ export default function DashboardPage() {
       <section className="dashboard-shell">
         {!loaderDone ? (
           <PageLoader
-            label="Loading…"
+            label="Loading up next"
             durationMs={3000}
-            ready={dashboardReady}
+            ready={firstVisualReady}
             onDone={() => setLoaderDone(true)}
           />
         ) : (
           <>
-        <Reveal>
-          {yearReviewYear != null && (
-            <section className="dashboard-section">
-              <div
-                className="dashboard-up-next dashboard-up-next--year-review dashboard-up-next--with-cta"
-                role="button"
-                tabIndex={0}
-                onClick={() => navigate("/year-in-review")}
-                onKeyDown={(e) => e.key === "Enter" && navigate("/year-in-review")}
-              >
-                <div className="dashboard-up-next__content">
-                  <span className="dashboard-up-next__pill dashboard-up-next__pill--year-review">
-                    Limited time
-                  </span>
-                  <p className="dashboard-up-next__heading">
-                    Your {yearReviewYear} Year in Review
-                  </p>
-                  <p className="dashboard-up-next__sub">
-                    View the key metrics from this past year of training.
-                  </p>
-                </div>
-                <span className="dashboard-up-next__cta dashboard-up-next__cta--year-review">
-                  Open →
-                </span>
-              </div>
-            </section>
-          )}
-        </Reveal>
+        {panels.slice(0, blockIndex).map((p) => (
+          <Reveal key={p.id}>{p.render()}</Reveal>
+        ))}
 
-        <Reveal>
-          <section className="dashboard-section">
-            {renderUpNext()}
-          </section>
-        </Reveal>
+        {!allRevealed && (
+          <div className="dashboard-loading-status" role="status" aria-live="polite">
+            <span>Loading {panels[blockIndex].label}</span>
+            <span className="dashboard-loading-status__dots" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </span>
+          </div>
+        )}
 
-        <Reveal>{renderTimeline()}</Reveal>
-
-        <Reveal>
-          {hasAnyRecent && (
-            <section className="dashboard-section">
-              <div className="dashboard-section-header" ref={recentTooltipRef}>
-                <h2 className="dashboard-section-title">Recent activity</h2>
-                <button
-                  className="dashboard-info-btn"
-                  aria-expanded={recentTooltipOpen}
-                  onClick={() => setRecentTooltipOpen((v) => !v)}
-                >?</button>
-                {recentTooltipOpen && (
-                  <div className="dashboard-info-tooltip">
-                    Tap a session, week, or season icon to view its full summary.
-                  </div>
-                )}
-              </div>
-              <div className="dashboard-recent-grid">
-                {renderRecentCard(recentSession, "Session")}
-                {renderRecentCard(recentWeek, "Week")}
-                {renderRecentCard(recentSeason, "Season")}
-              </div>
-            </section>
-          )}
-        </Reveal>
-
-        <Reveal>{renderBackupNudge()}</Reveal>
-
-        <Reveal>{renderPRSpotlight()}</Reveal>
-
-        <Reveal>{renderAchievements()}</Reveal>
-
+        {allRevealed && (
+          <>
         <TutorialBlock
           id="schedule"
           title="Your season schedule"
@@ -2702,6 +2763,8 @@ export default function DashboardPage() {
         >
           {renderProgramMock()}
         </TutorialBlock>
+          </>
+        )}
           </>
         )}
       </section>
