@@ -13,7 +13,7 @@ import {
   formatDuration,
 } from "../services/sessionMetrics";
 import SessionGradeHero from "../components/SessionGradeHero";
-import SessionRirBoxPlot from "../components/SessionRirBoxPlot";
+import SessionRirSwarmPlot from "../components/SessionRirSwarmPlot";
 import { computeSessionRir } from "../services/sessionRir";
 import WeeklyBreadcrumb from "../components/WeeklyBreadcrumb";
 import type { BreadcrumbSession } from "../components/WeeklyBreadcrumb";
@@ -255,7 +255,7 @@ export default function SessionSummaryPage() {
             {/* ── Reps in reserve ── */}
             {rir && (rir.workingSetCount > 0 || rir.amrapExcludedCount > 0) && (
               <RevealSection title="Reps in reserve">
-                <SessionRirBoxPlot summary={rir} />
+                <SessionRirSwarmPlot summary={rir} />
               </RevealSection>
             )}
 

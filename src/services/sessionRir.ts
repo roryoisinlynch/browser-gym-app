@@ -1,17 +1,8 @@
 import type { SessionInstanceView } from "../repositories/programRepository";
 import { percentileOrNull } from "./heuristicsScale";
 
-/** Five-number summary of the session's working-set RIR, for a box plot. */
-export interface SessionRirBox {
-  q1: number;
-  median: number;
-  q3: number;
-  whiskerLow: number;
-  whiskerHigh: number;
-}
-
 export interface SessionRirSummary {
-  /** Per working, non-AMRAP set RIR, sorted ascending. */
+  /** Per working, non-AMRAP set RIR, sorted ascending — one entry per set. */
   values: number[];
   /** The session's target RIR (sv.effectiveRir) to draw as a reference line. */
   target: number;
@@ -23,8 +14,8 @@ export interface SessionRirSummary {
    * gap rather than silently hide it.
    */
   amrapExcludedCount: number;
-  /** Null when there are fewer than two values (percentileOrNull convention). */
-  box: SessionRirBox | null;
+  /** Median RIR for the caption; null when there are no values. */
+  median: number | null;
 }
 
 /**
@@ -91,24 +82,15 @@ export function computeSessionRir(sv: SessionInstanceView): SessionRirSummary {
 
   values.sort((a, b) => a - b);
 
-  // Whiskers are NOT clamped: RIR is signed, and a set taken past a 0-RIR
-  // prediction is legitimately negative.
-  const box: SessionRirBox | null =
-    values.length < 2
-      ? null
-      : {
-          q1: percentileOrNull(values, 0.25)!,
-          median: percentileOrNull(values, 0.5)!,
-          q3: percentileOrNull(values, 0.75)!,
-          whiskerLow: percentileOrNull(values, 0.05)!,
-          whiskerHigh: percentileOrNull(values, 0.95)!,
-        };
+  // percentileOrNull returns null for n < 2; a lone sample is its own median.
+  const median =
+    values.length === 0 ? null : (percentileOrNull(values, 0.5) ?? values[0]);
 
   return {
     values,
     target: sv.effectiveRir,
     workingSetCount: values.length,
     amrapExcludedCount,
-    box,
+    median,
   };
 }

@@ -1,0 +1,106 @@
+/* Session working-set RIR swarm plot. One dot per set, stacked into a centred
+   column at each integer RIR value; the target rides a labeled reference line. */
+
+.rir-swarm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.rir-swarm__chart {
+  width: 100%;
+}
+
+/* ── Target label row (sits just above the track) ── */
+
+.rir-swarm__labelrow {
+  position: relative;
+  height: 18px;
+}
+
+.rir-swarm__target-label {
+  position: absolute;
+  bottom: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text-strong);
+  white-space: nowrap;
+}
+
+/* Anchor to whichever side keeps the label inside the plot, offset a hair off
+   the reference line it belongs to. */
+.rir-swarm__target-label--right {
+  padding-left: 6px;
+}
+
+.rir-swarm__target-label--left {
+  padding-right: 6px;
+  text-align: right;
+}
+
+/* ── Plot track ── */
+
+.rir-swarm__track {
+  position: relative;
+  width: 100%;
+}
+
+.rir-swarm__dot {
+  position: absolute;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--accent);
+  /* Surface ring so stacked/overlapping dots stay individually legible and so
+     dots read over the target line. */
+  box-shadow: 0 0 0 2px var(--bg-bottom);
+}
+
+/* Reference line for the session's RIR target. Drawn behind the dots (so a
+   column can sit over it) but full height, and named by its label. */
+.rir-swarm__target {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  transform: translateX(-50%);
+  background: var(--text-strong);
+}
+
+/* ── Axis ── */
+
+.rir-swarm__axis {
+  position: relative;
+  height: 16px;
+  margin-top: 6px;
+}
+
+.rir-swarm__tick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-soft);
+}
+
+/* ── Caption ── */
+
+.rir-swarm__caption {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--text-soft);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Empty state ── */
+
+.rir-swarm__empty {
+  margin: 0;
+  font-size: var(--sum-fs-body, 1rem);
+  line-height: 1.5;
+  color: var(--text-muted);
+  text-align: center;
+}
