@@ -37,6 +37,14 @@
   background: var(--text-soft);
 }
 
+/* The stretch below "min effort" — warmups easier than the least-effort working
+   set — is dashed to set it apart from the solid working-effort range. */
+.rir-swarm__effort-line--dashed {
+  height: 0;
+  background: none;
+  border-top: 1.5px dashed var(--text-soft);
+}
+
 /* Right-pointing head; its tip lands at the max-effort (0 RIR) position. */
 .rir-swarm__effort-head {
   position: absolute;
@@ -141,6 +149,14 @@
   color: var(--text-soft);
 }
 
+.rir-swarm__axis-title {
+  margin: 4px 0 0;
+  text-align: center;
+  font-size: 0.66rem;
+  letter-spacing: 0.02em;
+  color: var(--text-soft);
+}
+
 /* ── Legend (shown only when warmup sets are present) ── */
 
 .rir-swarm__legend {
@@ -161,6 +177,22 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
+}
+
+/* ── Narrative ── */
+
+.rir-swarm__narrative {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rir-swarm__narrative p {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+  text-align: center;
 }
 
 /* ── Empty state ── */
