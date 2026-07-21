@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import "./PageLoader.css";
 
 interface PageLoaderProps {
-  /** Short factual label, e.g. "Building your week summary…". */
-  label: string;
+  /** Short factual label, e.g. "Building your week summary…". Omit for a
+   *  bare bar with no caption (used where the loader is on screen briefly). */
+  label?: string;
   /** Time in ms for the synthetic bar to log-climb to the 90% cap. */
   durationMs: number;
   /** True once the page's data is loaded; this releases the final 10%. */
@@ -98,8 +99,13 @@ export default function PageLoader({ label, durationMs, ready, onDone }: PageLoa
   }, [durationMs]);
 
   return (
-    <div className="page-loader" role="status" aria-live="polite">
-      <p className="page-loader__label">{label}</p>
+    <div
+      className="page-loader"
+      role="status"
+      aria-live="polite"
+      aria-label={label ? undefined : "Loading"}
+    >
+      {label && <p className="page-loader__label">{label}</p>}
       <div className="page-loader__bar">
         <div className="page-loader__fill" style={{ width: `${progress}%` }} />
       </div>

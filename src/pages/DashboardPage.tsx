@@ -2515,11 +2515,10 @@ export default function DashboardPage() {
     recentSeason !== LOADING_CARD;
 
   // The ordered column of visuals. `free` entries (the year-in-review banner
-  // and the backup nudge) never gate the order and are never named — they just
-  // appear at their fixed spot once their own data resolves, as before.
+  // and the backup nudge) never gate the order — they just appear at their
+  // fixed spot once their own data resolves, as before.
   const panels: {
     id: string;
-    label?: string;
     ready?: boolean;
     free?: boolean;
     render: () => React.ReactNode;
@@ -2557,25 +2556,21 @@ export default function DashboardPage() {
     },
     {
       id: "up-next",
-      label: "up next",
       ready: upNext.type !== "loading",
       render: () => <section className="dashboard-section">{renderUpNext()}</section>,
     },
     {
       id: "season-planned",
-      label: "season progress",
       ready: !timelineLoading,
       render: renderPlannedSchedule,
     },
     {
       id: "season-actual",
-      label: "recent progress",
       ready: !recentDaysLoading,
       render: renderActualSchedule,
     },
     {
       id: "recent-activity",
-      label: "recent activity",
       ready: recentResolved,
       render: () =>
         hasAnyRecent && (
@@ -2608,26 +2603,23 @@ export default function DashboardPage() {
     },
     {
       id: "pr-spotlight",
-      label: "your latest PR",
       ready: prEvents !== null && spotlightHistories !== null,
       render: renderPRSpotlight,
     },
     {
       id: "pr-list",
-      label: "recent PRs",
       ready: prEvents !== null,
       render: renderAllPRs,
     },
     {
       id: "achievements",
-      label: "achievements",
       ready: achievements !== null,
       render: renderAchievements,
     },
   ];
 
   // First panel that is neither ready nor free — the strict-order barrier.
-  // Everything above it reveals; it becomes the one named "Loading …" row.
+  // Everything above it reveals; a single pulsing-ellipsis row sits below it.
   let blockIndex = panels.length;
   for (let i = 0; i < panels.length; i++) {
     if (!panels[i].free && !panels[i].ready) {
@@ -2643,7 +2635,6 @@ export default function DashboardPage() {
       <section className="dashboard-shell">
         {!loaderDone ? (
           <PageLoader
-            label="Loading up next"
             durationMs={3000}
             ready={firstVisualReady}
             onDone={() => setLoaderDone(true)}
@@ -2655,8 +2646,7 @@ export default function DashboardPage() {
         ))}
 
         {!allRevealed && (
-          <div className="dashboard-loading-status" role="status" aria-live="polite">
-            <span>Loading {panels[blockIndex].label}</span>
+          <div className="dashboard-loading-status" role="status" aria-label="Loading">
             <span className="dashboard-loading-status__dots" aria-hidden="true">
               <span />
               <span />
