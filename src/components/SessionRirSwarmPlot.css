@@ -12,6 +12,43 @@
   width: 100%;
 }
 
+/* ── Effort arrow (runs left→right, min effort to max effort) ── */
+
+.rir-swarm__effort {
+  position: relative;
+  height: 30px;
+}
+
+.rir-swarm__effort-label {
+  position: absolute;
+  top: 0;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+
+.rir-swarm__effort-line {
+  position: absolute;
+  top: 22px;
+  height: 1.5px;
+  background: var(--text-soft);
+}
+
+/* Right-pointing head; its tip lands at the max-effort (0 RIR) position. */
+.rir-swarm__effort-head {
+  position: absolute;
+  top: 22.75px;
+  width: 0;
+  height: 0;
+  transform: translate(-100%, -50%);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 6px solid var(--text-soft);
+}
+
 /* ── Target label row (sits just above the track) ── */
 
 .rir-swarm__labelrow {
@@ -45,6 +82,17 @@
 .rir-swarm__track {
   position: relative;
   width: 100%;
+}
+
+/* Per-integer gridlines, full track height, recessive behind the target line
+   and dots. */
+.rir-swarm__grid {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  transform: translateX(-50%);
+  background: var(--panel-border);
 }
 
 .rir-swarm__dot {
@@ -113,16 +161,6 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-}
-
-/* ── Caption ── */
-
-.rir-swarm__caption {
-  margin: 0;
-  font-size: 0.72rem;
-  color: var(--text-soft);
-  text-align: center;
-  font-variant-numeric: tabular-nums;
 }
 
 /* ── Empty state ── */

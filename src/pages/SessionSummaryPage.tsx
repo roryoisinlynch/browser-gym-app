@@ -252,9 +252,9 @@ export default function SessionSummaryPage() {
               </RevealSection>
             )}
 
-            {/* ── Reps in reserve ── */}
+            {/* ── Reps in reserve (no section header by design) ── */}
             {rir && (rir.workingSetCount > 0 || rir.amrapExcludedCount > 0) && (
-              <RevealSection title="Reps in reserve">
+              <RevealSection>
                 <SessionRirSwarmPlot summary={rir} />
               </RevealSection>
             )}

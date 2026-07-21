@@ -1,7 +1,7 @@
 import type { SessionRirSummary } from "../services/sessionRir";
 import "./SessionRirSwarmPlot.css";
 
-/** Trim a trailing ".0" so integer medians read as "3", not "3.0". */
+/** Trim a trailing ".0" so integer values read as "3", not "3.0". */
 function formatRir(value: number): string {
   return Number.isInteger(value) ? `${value}` : value.toFixed(1);
 }
@@ -14,12 +14,17 @@ const IDEAL_H = 112; // target height for the tallest column
 const DOT_MIN = 4;
 const DOT_MAX = 9;
 
+// The least-effort working set is RIR 5 (working sets are RIR < 6). The effort
+// arrow's "min effort" end anchors there, unless the week's target asks for even
+// less effort (a higher RIR), in which case it anchors to the target.
+const MIN_EFFORT_RIR = 5;
+
 /**
  * A swarm plot of the session's per-set RIR: one dot per set, stacked into a
  * centred column at each integer RIR value, with a labeled reference line for
  * the RIR target. Working sets carry the effort (accent); warmups ride along as
  * grey context. The axis is flipped so fewer reps in reserve (closer to failure)
- * sits to the right.
+ * sits to the right, under an arrow running from min to max effort.
  */
 export default function SessionRirSwarmPlot({ summary }: { summary: SessionRirSummary }) {
   const { points, target, workingSetCount, warmupSetCount, amrapExcludedCount, median } = summary;
@@ -37,17 +42,25 @@ export default function SessionRirSwarmPlot({ summary }: { summary: SessionRirSu
   }
 
   const rirs = points.map((p) => p.rir);
-  // Integer axis domain padded half a unit each side, so each column sits on a
-  // tick centre. Values are already clamped to ≥ 0 in the service.
-  const loInt = Math.floor(Math.min(...rirs, target));
-  const hiInt = Math.ceil(Math.max(...rirs, target));
+  // "Min effort" sits at RIR 5, or at the target when the target asks for less
+  // effort (a higher RIR) than that.
+  const minEffortRir = Math.max(MIN_EFFORT_RIR, target);
+  // Integer axis domain: always from 0 (max effort) up to at least the
+  // min-effort anchor, extending further left for any higher warmup RIRs.
+  const loInt = 0;
+  const hiInt = Math.max(minEffortRir, Math.ceil(Math.max(...rirs, target)));
   const axisLo = loInt - 0.5;
   const axisHi = hiInt + 0.5;
   // Flipped: high RIR (easy) on the left, low RIR (near failure) on the right.
   const pos = (v: number) => ((axisHi - v) / (axisHi - axisLo)) * 100;
 
+  const gridValues: number[] = [];
+  for (let g = loInt; g <= hiInt; g++) gridValues.push(g);
+
+  // Label every integer (matching the gridlines) until the range gets wide
+  // enough to crowd, then thin the labels out.
   const range = hiInt - loInt;
-  const step = range <= 8 ? 1 : Math.ceil(range / 8);
+  const step = range <= 12 ? 1 : Math.ceil(range / 10);
   const ticks: number[] = [];
   for (let t = loInt; t <= hiInt; t += step) ticks.push(t);
 
@@ -76,17 +89,41 @@ export default function SessionRirSwarmPlot({ summary }: { summary: SessionRirSu
   const targetLabelStyle =
     targetPos <= 55 ? { left: `${targetPos}%` } : { right: `${100 - targetPos}%` };
 
-  const caption =
-    `${workingSetCount} working set${workingSetCount === 1 ? "" : "s"}` +
-    (warmupSetCount > 0 ? ` · ${warmupSetCount} warmup` : "") +
-    (median != null ? ` · median ${formatRir(median)} RIR` : "") +
-    (amrapExcludedCount > 0
-      ? ` · ${amrapExcludedCount} AMRAP set${amrapExcludedCount === 1 ? "" : "s"} excluded`
-      : "");
+  const minEffortPos = pos(minEffortRir);
+  const maxEffortPos = pos(0);
+
+  // Kept for screen readers now that the visible caption is gone.
+  const ariaLabel =
+    `Reps in reserve. ${workingSetCount} working set${workingSetCount === 1 ? "" : "s"}` +
+    (warmupSetCount > 0 ? `, ${warmupSetCount} warmup` : "") +
+    (median != null ? `, median ${formatRir(median)} RIR` : "") +
+    `, target ${formatRir(target)} RIR` +
+    (amrapExcludedCount > 0 ? `, ${amrapExcludedCount} AMRAP excluded` : "") +
+    ".";
 
   return (
-    <div className="rir-swarm sum-reveal">
+    <div className="rir-swarm sum-reveal" role="img" aria-label={ariaLabel}>
       <div className="rir-swarm__chart" aria-hidden="true">
+        <div className="rir-swarm__effort">
+          <span
+            className="rir-swarm__effort-label rir-swarm__effort-label--min"
+            style={{ left: `${minEffortPos}%` }}
+          >
+            Min effort
+          </span>
+          <span
+            className="rir-swarm__effort-label rir-swarm__effort-label--max"
+            style={{ right: `${100 - maxEffortPos}%` }}
+          >
+            Max effort
+          </span>
+          <span
+            className="rir-swarm__effort-line"
+            style={{ left: `${minEffortPos}%`, width: `${maxEffortPos - minEffortPos}%` }}
+          />
+          <span className="rir-swarm__effort-head" style={{ left: `${maxEffortPos}%` }} />
+        </div>
+
         <div className="rir-swarm__labelrow">
           <span
             className={`rir-swarm__target-label${targetPos <= 55 ? " rir-swarm__target-label--right" : " rir-swarm__target-label--left"}`}
@@ -97,6 +134,9 @@ export default function SessionRirSwarmPlot({ summary }: { summary: SessionRirSu
         </div>
 
         <div className="rir-swarm__track" style={{ height: `${plotH}px` }}>
+          {gridValues.map((g) => (
+            <span key={`grid-${g}`} className="rir-swarm__grid" style={{ left: `${pos(g)}%` }} />
+          ))}
           <span className="rir-swarm__target" style={{ left: `${targetPos}%` }} />
           {dots.map((d, i) => {
             const count = counts.get(d.rir)!;
@@ -137,8 +177,6 @@ export default function SessionRirSwarmPlot({ summary }: { summary: SessionRirSu
           </span>
         </div>
       )}
-
-      <p className="rir-swarm__caption">{caption}</p>
     </div>
   );
 }
