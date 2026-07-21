@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { gradeColor } from "../services/seasonMetrics";
 import type { SeasonGrade } from "../services/seasonMetrics";
-import useCountUp from "../hooks/useCountUp";
+import ScoreBlock from "./ScoreBlock";
 import useInView from "../hooks/useInView";
 import "./SeasonGradeHero.css";
 
@@ -20,43 +20,6 @@ const CYCLE_INTERVAL_MS = 45;
 /** ~100ms after the last sub-score settles (750ms start + 650ms duration). */
 const SETTLE_AT_MS = 1500;
 const SCORE_START_MS = [250, 500, 750];
-const SCORE_DURATION_MS = 650;
-
-/** Same buckets buildSeasonNarrative reads: met / almost / missed. */
-function scoreTone(score: number): "green" | "amber" | "red" {
-  if (score >= 100) return "green";
-  if (score >= 90) return "amber";
-  return "red";
-}
-
-function ScoreTile({
-  score,
-  label,
-  index,
-  started,
-}: {
-  score: number;
-  label: string;
-  index: number;
-  started: boolean;
-}) {
-  const shown = useCountUp(score, SCORE_DURATION_MS, {
-    delayMs: SCORE_START_MS[index],
-    enabled: started,
-  });
-  return (
-    <div className={`ss-score ss-score--${scoreTone(score)}`}>
-      <span className="ss-score__pct">{shown}%</span>
-      <span className="ss-score__track">
-        <span
-          className="ss-score__fill"
-          style={{ width: `${Math.min(score, 100)}%` }}
-        />
-      </span>
-      <span className="ss-score__label">{label}</span>
-    </div>
-  );
-}
 
 /**
  * The season's headline: the grade letter alone on its own row, with volume,
@@ -116,9 +79,9 @@ export default function SeasonGradeHero({
       </div>
 
       <div className="ss-hero__scores">
-        <ScoreTile score={volumeScore} label="Volume" index={0} started={inView} />
-        <ScoreTile score={intensityScore} label="Intensity" index={1} started={inView} />
-        <ScoreTile score={consistencyScore} label="Consistency" index={2} started={inView} />
+        <ScoreBlock score={volumeScore} label="Volume" delayMs={SCORE_START_MS[0]} started={inView} />
+        <ScoreBlock score={intensityScore} label="Intensity" delayMs={SCORE_START_MS[1]} started={inView} />
+        <ScoreBlock score={consistencyScore} label="Consistency" delayMs={SCORE_START_MS[2]} started={inView} />
       </div>
     </div>
   );

@@ -40,77 +40,18 @@
   filter: drop-shadow(0 0 16px rgba(231, 111, 81, 0.4));
 }
 
-/* ── Score blocks ── */
+/* ── Score blocks ──
+   The blocks themselves are the shared .sum-score in summary.css, in their
+   flush-left variant. Only their stacking is the week's own: the gap is tuned so
+   three of them rise to the emoji's height, leaving the two sides of the row the
+   same depth.
 
-/* Gap tuned so three blocks stack to the emoji's height, leaving the two sides
-   of the row the same depth. */
+   Nothing here animates the face. It has no reveal of its own — the cycling
+   slot-machine belongs to the season report, so each report up the chain earns a
+   little more ceremony than the one below it. */
 .wk-hero__scores {
   display: flex;
   flex-direction: column;
   gap: 5px;
   min-width: 0;
-}
-
-.wk-score {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-}
-
-.wk-score__pct {
-  font-size: var(--sum-fs-figure, 1.5rem);
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-strong);
-}
-
-.wk-score__track {
-  width: 100%;
-  height: 3px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  overflow: hidden;
-}
-
-.wk-score__fill {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  transform-origin: left;
-}
-
-.wk-score--green .wk-score__fill { background: #6bcb77; }
-.wk-score--amber .wk-score__fill { background: #f4a261; }
-.wk-score--red   .wk-score__fill { background: #e76f51; }
-
-.wk-score__label {
-  font-size: var(--sum-fs-label, 0.7rem);
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--text-soft);
-}
-
-/* ── Motion ──
-   Only the score bars move. The face has no reveal of its own: the cycling
-   slot-machine belongs to the season report, so each report up the chain earns
-   a little more ceremony than the one below it. Base styles above are the final
-   resting state, so reduced-motion users see everything settled. */
-@media (prefers-reduced-motion: no-preference) {
-  @keyframes wk-hero-grow-x {
-    from { transform: scaleX(0); }
-    to   { transform: scaleX(1); }
-  }
-
-  /* Tracks grow alongside their own block's count-up, not on a shared clock. */
-  .wk-score__fill {
-    animation: wk-hero-grow-x 650ms cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
-  }
-
-  .wk-hero__scores > .wk-score:nth-child(1) .wk-score__fill { animation-delay: 250ms; }
-  .wk-hero__scores > .wk-score:nth-child(2) .wk-score__fill { animation-delay: 500ms; }
-  .wk-hero__scores > .wk-score:nth-child(3) .wk-score__fill { animation-delay: 750ms; }
 }

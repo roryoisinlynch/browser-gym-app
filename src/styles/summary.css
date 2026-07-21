@@ -53,6 +53,93 @@
   color: var(--text-soft);
 }
 
+/* Opts a fragment out of the line's uppercasing. Durations are the only user of
+   this: formatDuration's "48m" becomes "48M" under the transform, which reads as
+   a different unit entirely. */
+.sum-eyebrow__lower {
+  text-transform: none;
+}
+
+/* ── Score blocks ──
+   The percentage / bar / label unit every report's hero is built from. Shared so
+   the season's centred row, the week's flush-left stack and the session's
+   mirrored pair are provably the same object; see ScoreBlock.tsx. */
+
+.sum-score {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sum-score--center {
+  align-items: center;
+  text-align: center;
+  padding: 0 6px;
+}
+
+/* The week stacks three of these against a fixed emoji height, so its internal
+   gap runs a notch tighter than the season's row. */
+.sum-score--start {
+  align-items: flex-start;
+  gap: 6px;
+}
+
+/* The session's left-hand block, mirrored so its bar fills toward the medal. */
+.sum-score--end {
+  align-items: flex-end;
+  text-align: right;
+  gap: 6px;
+}
+
+.sum-score__pct {
+  font-size: var(--sum-fs-figure, 1.5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-strong);
+}
+
+.sum-score__track {
+  width: 100%;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.sum-score__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transform-origin: left;
+}
+
+/* The fill is positioned by the flex box rather than by its own width alone, so
+   flex-none is load-bearing: without it the inline width is treated as a basis
+   and shrinks. */
+.sum-score--end .sum-score__track {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.sum-score--end .sum-score__fill {
+  flex: none;
+  transform-origin: right;
+}
+
+.sum-score--green .sum-score__fill { background: #6bcb77; }
+.sum-score--amber .sum-score__fill { background: #f4a261; }
+.sum-score--red   .sum-score__fill { background: #e76f51; }
+
+.sum-score__label {
+  font-size: var(--sum-fs-label, 0.7rem);
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
 /* ── Sections ── */
 
 .sum-section {
@@ -213,6 +300,30 @@
   opacity: 0.5;
 }
 
+/* ── Report CTA ──
+   The link on to the next report up the chain. Deliberately the quietest thing
+   on the page: it's an exit, not a result. */
+
+.sum-cta {
+  display: block;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: var(--sum-fs-support, 0.875rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text-strong);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.sum-cta:active {
+  opacity: 0.8;
+}
+
 /* ── Weeks breadcrumb ──
    The component is shared with the dashboard and week summary, so its upgrade
    is scoped here rather than applied to the component's own stylesheet. */
@@ -336,6 +447,14 @@
     to   { transform: scaleX(1); }
   }
 
+  /* Each bar grows alongside its own block's count-up, not on a shared clock.
+     The delay rides on a custom property because the session's two blocks sit in
+     separate grid cells, where DOM order says nothing about sequence. */
+  .sum-score__fill {
+    animation: ss-grow-x 650ms cubic-bezier(0.2, 0.8, 0.3, 1)
+      var(--score-delay, 0ms) backwards;
+  }
+
   /* Hidden until the section is reached, so nothing animates off-screen and
      nothing below the fold arrives looking pre-loaded. */
   .sum-section .sum-reveal {
@@ -360,14 +479,26 @@
     animation: ss-pop 300ms cubic-bezier(0.2, 0.8, 0.3, 1.3) backwards;
   }
 
-  /* The session medals land on the hero's beat: its last score starts counting
-     at 750ms and runs 650ms, so it settles at 1400ms, and a 300ms pop has to
-     begin at 1100ms to finish alongside it.
+  /* A trail the reader scrolls to gets a brisk stagger on its own clock: the
+     section only starts animating once it's in view, so anything slower reads as
+     the page having failed to draw. */
+  .sum-breadcrumb.is-in .weekly-breadcrumb__item .weekly-breadcrumb__dot {
+    animation-delay: calc(120ms + var(--i, 0) * 60ms);
+  }
+
+  /* The week report's trail is the exception: it sits directly under the hero and
+     shares its entrance, so its medals land on the hero's beat instead. The last
+     score starts counting at 750ms and runs 650ms, so it settles at 1400ms, and
+     a 300ms pop has to begin at 1100ms to finish alongside it.
      The delay is measured backwards from that last medal rather than forwards
      from the first, so the trail always ends on 1400ms whether the week holds
      two sessions or seven — only the spacing between them changes. The max()
-     keeps a single-session week from dividing by zero. */
-  .sum-breadcrumb.is-in .weekly-breadcrumb__item .weekly-breadcrumb__dot {
+     keeps a single-session week from dividing by zero.
+     Both class names are load-bearing: with only one the two selectors tie on
+     specificity and source order decides which wins. */
+  .sum-breadcrumb.sum-breadcrumb--hero-sync.is-in
+    .weekly-breadcrumb__item
+    .weekly-breadcrumb__dot {
     animation-delay: calc(
       1100ms - 850ms * (var(--n, 1) - 1 - var(--i, 0)) / max(1, var(--n, 1) - 1)
     );

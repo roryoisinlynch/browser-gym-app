@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { SessionInstanceView, SessionPR } from "../repositories/programRepository";
 import {
@@ -12,14 +12,14 @@ import {
   computeSessionMetrics,
   formatDuration,
 } from "../services/sessionMetrics";
-import Medal from "../components/Medal";
+import SessionGradeHero from "../components/SessionGradeHero";
 import WeeklyBreadcrumb from "../components/WeeklyBreadcrumb";
 import type { BreadcrumbSession } from "../components/WeeklyBreadcrumb";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import PageLoader from "../components/PageLoader";
-import "./SessionSummaryPage.css";
-
+import useInView from "../hooks/useInView";
+import "../styles/summary.css";
 
 function buildNarrative(metrics: ReturnType<typeof computeSessionMetrics>): string | null {
   const { workingSetsTarget, intensityTarget, volumeScore, intensityScore } = metrics;
@@ -57,6 +57,28 @@ function buildNarrative(metrics: ReturnType<typeof computeSessionMetrics>): stri
   const conjunction = volumePositive === intensityPositive ? "and" : "but";
 
   return `You ${volumePhrase}, ${conjunction} you ${intensityPhrase}.`;
+}
+
+/** A page section that staggers its children in as it scrolls into view. */
+function RevealSection({
+  title,
+  className,
+  children,
+}: {
+  title?: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const [ref, inView] = useInView<HTMLElement>();
+  return (
+    <section
+      ref={ref}
+      className={`sum-section${inView ? " is-in" : ""}${className ? ` ${className}` : ""}`}
+    >
+      {title && <h2 className="sum-section__title sum-reveal">{title}</h2>}
+      {children}
+    </section>
+  );
 }
 
 export default function SessionSummaryPage() {
@@ -150,28 +172,42 @@ export default function SessionSummaryPage() {
     [sessionView]
   );
 
+  // One line at label size, the same collapse the week report uses. Any part
+  // that can't be resolved drops out rather than showing a placeholder, and the
+  // session's position goes with it when the week holds only one.
+  const eyebrowParts = useMemo<React.ReactNode[]>(() => {
+    if (!sessionView) return [];
+    const position = breadcrumbSessions.findIndex((s) => s.isCurrent);
+    return [
+      `Week ${sessionView.weekInstance.order}`,
+      position >= 0 && breadcrumbSessions.length > 1
+        ? `Session ${position + 1} of ${breadcrumbSessions.length}`
+        : null,
+      `${sessionView.effectiveRir} RIR`,
+      // Exempt from the line's uppercasing: "48m" would otherwise read "48M".
+      sessionDuration != null ? (
+        <span className="sum-eyebrow__lower">{formatDuration(sessionDuration)}</span>
+      ) : null,
+    ].filter(Boolean);
+  }, [sessionView, breadcrumbSessions, sessionDuration]);
+
   if (!isLoading && (errorMessage || !sessionView || !metrics)) {
     return (
       <main className="summary-page">
         <TopBar title="Session summary" backTo="/" backLabel="Dashboard" />
-        <section className="summary-shell">
-          <p className="summary-error">{errorMessage ?? "Something went wrong."}</p>
+        <section className="sum-shell">
+          <p className="sum-error">{errorMessage ?? "Something went wrong."}</p>
         </section>
         <BottomNav activeTab="session" />
       </main>
     );
   }
 
-
   return (
     <main className="summary-page">
-      <TopBar
-        title="Session summary"
-        backTo="/"
-        backLabel="Dashboard"
-      />
+      <TopBar title="Session summary" backTo="/" backLabel="Dashboard" />
 
-      <section className="summary-shell">
+      <section className="sum-shell">
         {!loaderDone ? (
           <PageLoader
             label="Building your session summary…"
@@ -182,137 +218,107 @@ export default function SessionSummaryPage() {
         ) : (() => {
           const sv = sessionView!;
           const m = metrics!;
-          const { ragStatus, sessionScore, volumeScore, intensityScore, totalSets } = m;
+          const { ragStatus, volumeScore, intensityScore } = m;
           const isSkipped = sv.sessionInstance.status === "skipped";
           const narrative = isSkipped
-            ? "You skipped this session — it counts as zero volume and zero intensity."
+            ? "You skipped this session, so it counts as zero volume and zero intensity."
             : buildNarrative(m);
           return (<>
-        {/* ── Session name ── */}
-        <header className="summary-header">
-          <h1 className="summary-title">{sv.sessionTemplate.name}</h1>
-        </header>
+            {/* ── Eyebrow ── */}
+            {eyebrowParts.length > 0 && (
+              <p className="sum-eyebrow">
+                {eyebrowParts.map((part, i) => (
+                  <Fragment key={i}>
+                    {i > 0 && " · "}
+                    {part}
+                  </Fragment>
+                ))}
+              </p>
+            )}
 
-        {/* ── Descriptive stats ── */}
-        <div className="summary-stats-row">
-          <div className="summary-stat">
-            <span className="summary-stat__value">
-              {sessionDuration != null
-                ? formatDuration(sessionDuration)
-                : "—"}
-            </span>
-            <span className="summary-stat__label">Duration</span>
-          </div>
-          <div className="summary-stat-divider" />
-          <div className="summary-stat">
-            <span className="summary-stat__value">{totalSets}</span>
-            <span className="summary-stat__label">Total sets</span>
-          </div>
-        </div>
+            <SessionGradeHero
+              ragStatus={isSkipped ? "skipped" : ragStatus}
+              volumeScore={volumeScore}
+              intensityScore={intensityScore}
+            />
 
-        {/* ── Results ── */}
-        <section className="summary-section">
-          <h2 className="summary-section-title">Results</h2>
+            {/* ── Narrative ── */}
+            {narrative && (
+              <RevealSection>
+                <p className="sum-narrative sum-reveal">{narrative}</p>
+              </RevealSection>
+            )}
 
-          {narrative && (
-            <p className="summary-narrative">{narrative}</p>
-          )}
+            {/* ── Personal records ── */}
+            {prs.length > 0 && (
+              <RevealSection title={`Personal records · ${prs.length}`}>
+                <ul className="sum-list">
+                  {prs.map((pr, i) => {
+                    const gainPct =
+                      pr.prType !== "reps" && pr.previousE1RM != null && pr.newE1RM != null
+                        ? Math.round((pr.newE1RM / pr.previousE1RM - 1) * 100)
+                        : null;
+                    return (
+                      <li
+                        key={pr.exerciseName}
+                        className="sum-row sum-reveal"
+                        style={{ "--i": i } as React.CSSProperties}
+                      >
+                        <div className="sum-row__head">
+                          <span className="sum-row__name">{pr.exerciseName}</span>
+                          {gainPct != null && (
+                            <span className="sum-chip">+{gainPct}%</span>
+                          )}
+                        </div>
+                        {pr.prType === "reps" ? (
+                          <span className="sum-row__detail">
+                            {pr.previousReps != null && <>{pr.previousReps} reps <span className="sum-arrow">→</span> </>}
+                            <span className="sum-row__value">{pr.newReps} reps</span>
+                          </span>
+                        ) : pr.previousE1RM != null && pr.newE1RM != null ? (
+                          <span className="sum-row__detail">
+                            {Math.round(pr.previousE1RM * 100) / 100}kg{" "}
+                            <span className="sum-arrow">→</span>{" "}
+                            <span className="sum-row__value">{Math.round(pr.newE1RM * 100) / 100}kg</span>{" "}
+                            e1RM, up {Math.round((pr.newE1RM - pr.previousE1RM) * 100) / 100}kg
+                          </span>
+                        ) : pr.newE1RM != null ? (
+                          <span className="sum-row__detail">
+                            <span className="sum-row__value">{Math.round(pr.newE1RM * 100) / 100}kg</span>{" "}
+                            e1RM
+                          </span>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </RevealSection>
+            )}
 
-          <div className="summary-score-block">
-            {/* Left: traffic lights + score + label */}
-            <div className="summary-score-primary">
-              <Medal status={isSkipped ? "skipped" : ragStatus} size="lg" />
-              <div className="summary-score-center">
-                <span className="summary-score-item__pct summary-score-item__pct--total">
-                  {sessionScore}
-                </span>
-                <span className="summary-score-rag-label">Session score</span>
-              </div>
-            </div>
+            {/* ── Sessions this week ──
+                Unlike the week report's trail, this one keeps its current
+                marker: locating yourself among the week's sessions is the whole
+                reason it's here. */}
+            {breadcrumbSessions.length > 1 && (
+              <RevealSection title="Sessions this week" className="sum-breadcrumb">
+                <div className="sum-reveal">
+                  <WeeklyBreadcrumb sessions={breadcrumbSessions} />
+                </div>
+              </RevealSection>
+            )}
 
-            <div className="summary-score-divider" />
-
-            {/* Right: volume + intensity */}
-            <div className={`summary-score-secondary${volumeScore >= 100 && intensityScore >= 100 ? " summary-score-secondary--stacked" : ""}`}>
-              <div className="summary-score-item">
-                <span className="summary-score-item__pct">{volumeScore}%</span>
-                <span className="summary-score-item__label">Volume</span>
-              </div>
-              <div className="summary-score-item">
-                <span className="summary-score-item__pct">{intensityScore}%</span>
-                <span className="summary-score-item__label">Intensity</span>
-              </div>
-            </div>
-          </div>
-
-          <p className="summary-score-footnote">
-            Score = average of volume and intensity (each out of 100)
-          </p>
-        </section>
-
-        {/* ── Weekly breadcrumb ── */}
-        {breadcrumbSessions.length > 1 && (
-          <section className="summary-section summary-section--breadcrumb">
-            <WeeklyBreadcrumb sessions={breadcrumbSessions} />
-          </section>
-        )}
-
-        {/* ── Personal records ── */}
-        {prs.length > 0 && (
-          <section className="summary-section summary-section--pr">
-            <h2 className="summary-section-title summary-section-title--accent">Personal records</h2>
-            <ul className="summary-pr-list">
-              {prs.map((pr) => {
-                const daysSince = pr.previousDate
-                  ? (() => {
-                      const [y, m, d] = pr.previousDate.split("-").map(Number);
-                      const prevLocal = new Date(y, m - 1, d).getTime();
-                      const today = new Date();
-                      const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-                      return Math.round((todayLocal - prevLocal) / 86400000);
-                    })()
-                  : null;
-                return (
-                  <li key={pr.exerciseName} className="summary-pr-item">
-                    <span className="summary-pr-name">{pr.exerciseName}</span>
-                    {pr.prType === "reps" ? (
-                      <span className="summary-pr-detail">
-                        {pr.previousReps != null && <>{pr.previousReps} reps <span className="summary-pr-arrow">→</span> </>}
-                        <span className="summary-pr-new-value">{pr.newReps} reps</span>
-                        {daysSince != null && <> from {daysSince}d ago</>}
-                      </span>
-                    ) : pr.previousE1RM != null && pr.newE1RM != null ? (
-                      <span className="summary-pr-detail">
-                        {Math.round(pr.previousE1RM * 100) / 100}kg{" "}
-                        <span className="summary-pr-arrow">→</span>{" "}
-                        <span className="summary-pr-new-value">{Math.round(pr.newE1RM * 100) / 100}kg</span> e1RM
-                        {<> (+{Math.round((pr.newE1RM / pr.previousE1RM - 1) * 100)}%)</>}
-                        <>, up {Math.round((pr.newE1RM - pr.previousE1RM) * 100) / 100}kg
-                        {daysSince != null && <> from {daysSince}d ago</>}
-                        </>
-                      </span>
-                    ) : pr.newE1RM != null ? (
-                      <span className="summary-pr-detail">
-                        <span className="summary-pr-new-value">{Math.round(pr.newE1RM * 100) / 100}kg</span> e1RM
-                      </span>
-                    ) : null}
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        )}
-
-        {/* ── Week summary CTA (shown when this was the last session in the week) ── */}
-        {sv.weekInstance.status === "completed" && (
-          <button
-            className="summary-week-cta"
-            onClick={() => navigate(`/week/${sv.weekInstance.id}/summary`)}
-          >
-            View week summary →
-          </button>
-        )}
-        </>);
+            {/* ── Week summary CTA (shown when this was the last session in the week) ── */}
+            {sv.weekInstance.status === "completed" && (
+              <RevealSection>
+                <button
+                  className="sum-cta sum-reveal"
+                  onClick={() => navigate(`/week/${sv.weekInstance.id}/summary`)}
+                >
+                  View week summary →
+                </button>
+              </RevealSection>
+            )}
+          </>);
         })()}
       </section>
 

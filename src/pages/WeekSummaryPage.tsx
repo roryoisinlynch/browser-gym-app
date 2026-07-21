@@ -30,7 +30,6 @@ import BottomNav from "../components/BottomNav";
 import PageLoader from "../components/PageLoader";
 import useInView from "../hooks/useInView";
 import "../styles/summary.css";
-import "./WeekSummaryPage.css";
 
 function buildWeekNarrative(metrics: WeekMetrics): string {
   const { volumeScore, intensityScore, consistencyScore } = metrics;
@@ -390,7 +389,7 @@ export default function WeekSummaryPage() {
 
             {/* ── Sessions this week ── */}
             {sessionBreadcrumb.length > 0 && (
-              <RevealSection className="sum-breadcrumb">
+              <RevealSection className="sum-breadcrumb sum-breadcrumb--hero-sync">
                 <div className="sum-reveal">
                   <WeeklyBreadcrumb sessions={sessionBreadcrumb} />
                 </div>
@@ -504,7 +503,7 @@ export default function WeekSummaryPage() {
             {seasonInstance && (
               <RevealSection>
                 <button
-                  className="week-summary-season-cta sum-reveal"
+                  className="sum-cta sum-reveal"
                   onClick={() => navigate(`/season/${seasonInstance.id}/summary`)}
                 >
                   View season summary →
