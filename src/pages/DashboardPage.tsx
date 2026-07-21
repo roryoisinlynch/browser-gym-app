@@ -1038,6 +1038,9 @@ export default function DashboardPage() {
   const [lastBackupAt, setLastBackupAt] = useState<string | null | "loading">("loading");
   const [hasSettledWeek, setHasSettledWeek] = useState<boolean | "loading">("loading");
   const [achievements, setAchievements] = useState<Achievements | null>(null);
+  // Held true until the recent-PR list has finished cascading in, so the
+  // achievements shelf below it waits its turn rather than racing the PRs.
+  const [achievementsGate, setAchievementsGate] = useState(false);
   const [pendingHeuristicDays, setPendingHeuristicDays] = useState(0);
   const [exerciseNeedingWeight, setExerciseNeedingWeight] = useState<
     { exerciseTemplateId: string; exerciseName: string; sessionName: string } | null
@@ -1188,6 +1191,21 @@ export default function DashboardPage() {
     }
     loadHeuristics();
   }, []);
+
+  // How many rows the recent-PR list will actually show: the spotlight date is
+  // rendered separately above it, and the list is capped at five.
+  const recentPrSpotlightDate = prEvents?.[0]?.date ?? null;
+  const recentPrCount =
+    prEvents && recentPrSpotlightDate != null
+      ? prEvents.filter((pr) => pr.date !== recentPrSpotlightDate).slice(0, 5).length
+      : 0;
+
+  // With no continuation PRs there's nothing to wait for — let the shelf reveal
+  // freely. (Guard on prEvents so a still-loading null count doesn't open the
+  // gate before the PRs arrive.)
+  useEffect(() => {
+    if (prEvents !== null && recentPrCount === 0) setAchievementsGate(true);
+  }, [prEvents, recentPrCount]);
 
   // Cards that yield priority to a higher-priority secondary CTA (exercise
   // needing weight, then heuristics, in that order). Sessions in active/today
@@ -2514,6 +2532,20 @@ export default function DashboardPage() {
     recentWeek !== LOADING_CARD &&
     recentSeason !== LOADING_CARD;
 
+  // Open the achievements gate once the PR list's cascade has run. Timing is
+  // measured from when the PR list reaches the viewport (this fires on its
+  // reveal), so scrolling to the shelf later — after the cascade is done — finds
+  // the gate already open and reveals it with no wait. Mirrors the per-row step
+  // and rise duration in DashboardPage.css / Reveal.css.
+  const PR_STEP_MS = 70;
+  const PR_RISE_MS = 460;
+  function revealAchievementsAfterPrs() {
+    const cascadeMs = Math.max(0, recentPrCount - 1) * PR_STEP_MS + PR_RISE_MS;
+    window.setTimeout(() => {
+      if (!cancelled.current) setAchievementsGate(true);
+    }, cascadeMs);
+  }
+
   // The ordered column of visuals. `free` entries (the year-in-review banner
   // and the backup nudge) never gate the order — they just appear at their
   // fixed spot once their own data resolves, as before.
@@ -2526,6 +2558,10 @@ export default function DashboardPage() {
     revealDelayMs?: number;
     // Keep the block still and let its children cascade in individually.
     staggerContents?: boolean;
+    // Keep the block hidden even in view until this is false.
+    hold?: boolean;
+    // Fires once when the block first reaches the viewport.
+    onReveal?: () => void;
   }[] = [
     {
       id: "year-review",
@@ -2619,11 +2655,15 @@ export default function DashboardPage() {
       render: renderAllPRs,
       // The block holds still; each PR row cascades in one after another.
       staggerContents: true,
+      // Start the achievements gate's timer when this list reaches the viewport.
+      onReveal: revealAchievementsAfterPrs,
     },
     {
       id: "achievements",
       ready: achievements !== null,
       render: renderAchievements,
+      // Wait until the PR list above has finished cascading in.
+      hold: !achievementsGate,
     },
   ];
 
@@ -2651,7 +2691,13 @@ export default function DashboardPage() {
         ) : (
           <>
         {panels.slice(0, blockIndex).map((p) => (
-          <Reveal key={p.id} delayMs={p.revealDelayMs} staggerContents={p.staggerContents}>
+          <Reveal
+            key={p.id}
+            delayMs={p.revealDelayMs}
+            staggerContents={p.staggerContents}
+            hold={p.hold}
+            onReveal={p.onReveal}
+          >
             {p.render()}
           </Reveal>
         ))}
