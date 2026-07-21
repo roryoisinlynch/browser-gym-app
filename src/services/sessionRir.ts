@@ -17,11 +17,6 @@ export interface SessionRirSummary {
   /** Warmup sets that produced a usable RIR (shown as context). */
   warmupSetCount: number;
   /**
-   * Working sets that met or beat the target effort, i.e. RIR ≤ target (fewer
-   * reps in reserve = at least as hard as prescribed).
-   */
-  targetMetCount: number;
-  /**
    * Working sets dropped because their exercise had no baseline to measure RIR
    * against (AMRAP / dormant / no history). Surfaced so the UI can explain the
    * gap rather than silently hide it.
@@ -107,16 +102,11 @@ export function computeSessionRir(sv: SessionInstanceView): SessionRirSummary {
       ? null
       : (percentileOrNull(workingValues, 0.5) ?? workingValues[0]);
 
-  const target = sv.effectiveRir;
-  // Met or beat the effort target: fewer (or equal) reps in reserve than asked.
-  const targetMetCount = workingValues.filter((rir) => rir <= target).length;
-
   return {
     points,
-    target,
+    target: sv.effectiveRir,
     workingSetCount: workingValues.length,
     warmupSetCount: points.length - workingValues.length,
-    targetMetCount,
     amrapExcludedCount,
     median,
   };

@@ -1,3 +1,4 @@
+import type { SessionMetrics } from "../domain/models";
 import type { SessionRirSummary } from "../services/sessionRir";
 import "./SessionRirSwarmPlot.css";
 
@@ -33,8 +34,14 @@ const AXIS_MAX_RIR = 10;
  * grey context. The axis is flipped so fewer reps in reserve (closer to failure)
  * sits to the right, under an arrow running from min to max effort.
  */
-export default function SessionRirSwarmPlot({ summary }: { summary: SessionRirSummary }) {
-  const { points, target, workingSetCount, warmupSetCount, targetMetCount, amrapExcludedCount } = summary;
+export default function SessionRirSwarmPlot({
+  summary,
+  metrics,
+}: {
+  summary: SessionRirSummary;
+  metrics: SessionMetrics;
+}) {
+  const { points, target, workingSetCount, warmupSetCount, amrapExcludedCount } = summary;
 
   // The section is about working-set effort against the target; with no working
   // sets there's nothing to compare, so state why rather than hiding it.
@@ -106,13 +113,22 @@ export default function SessionRirSwarmPlot({ summary }: { summary: SessionRirSu
   const axisStartPos = pos(hiInt);
   const showDashedExtension = hiInt > minEffortRir;
 
+  // Line 1 restates the volume score, line 2 the intensity score, so both draw
+  // from the session metrics rather than the plotted subset.
+  const { workingSetsCompleted, workingSetsTarget, setsMetIntensity, intensityTarget } = metrics;
+  const workingPart =
+    workingSetsTarget > 0
+      ? `${workingSetsCompleted} out of a required ${plural(workingSetsTarget, "working set")}`
+      : plural(workingSetsCompleted, "working set");
   const loggedLine =
     warmupSetCount > 0
-      ? `You logged ${plural(warmupSetCount, "warmup set")}, and ${plural(workingSetCount, "working set")}.`
-      : `You logged ${plural(workingSetCount, "working set")}.`;
+      ? `You logged ${plural(warmupSetCount, "warmup set")}, and ${workingPart}.`
+      : `You logged ${workingPart}.`;
+  // Skip the intensity line when the session is too short to require an intense set.
   const targetLine =
-    `${targetMetCount} of ${workingSetCount} working set${workingSetCount === 1 ? "" : "s"}` +
-    ` met or exceeded today's ${formatRir(target)} RIR target.`;
+    intensityTarget > 0
+      ? `${setsMetIntensity} out of a required ${plural(intensityTarget, "set")} met or exceeded today's ${formatRir(target)} RIR target.`
+      : null;
 
   return (
     <div className="rir-swarm sum-reveal">
@@ -201,7 +217,7 @@ export default function SessionRirSwarmPlot({ summary }: { summary: SessionRirSu
 
       <div className="rir-swarm__narrative">
         <p>{loggedLine}</p>
-        <p>{targetLine}</p>
+        {targetLine && <p>{targetLine}</p>}
       </div>
     </div>
   );

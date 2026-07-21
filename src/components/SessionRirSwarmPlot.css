@@ -38,11 +38,15 @@
 }
 
 /* The stretch below "min effort" — warmups easier than the least-effort working
-   set — is dashed to set it apart from the solid working-effort range. */
+   set — is dashed to set it apart from the solid working-effort range. A
+   gradient (rather than a dashed border) keeps it the exact 1.5px thickness of
+   the solid line and lets us set the dash and gap lengths. */
 .rir-swarm__effort-line--dashed {
-  height: 0;
-  background: none;
-  border-top: 1.5px dashed var(--text-soft);
+  background: repeating-linear-gradient(
+    to right,
+    var(--text-soft) 0 5px,
+    transparent 5px 9px
+  );
 }
 
 /* Right-pointing head; its tip lands at the max-effort (0 RIR) position. */
