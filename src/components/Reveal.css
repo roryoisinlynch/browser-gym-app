@@ -25,4 +25,15 @@
   .reveal-block.is-in {
     animation: reveal-rise 460ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
   }
+
+  /* Container variant: the block stays put and visible so its children can stage
+     their own entrance (e.g. a list whose rows rise one after another). The
+     per-child timing lives in the consumer's CSS. */
+  .reveal-block--contents {
+    opacity: 1;
+  }
+
+  .reveal-block--contents.is-in {
+    animation: none;
+  }
 }

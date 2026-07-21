@@ -2036,7 +2036,7 @@ export default function DashboardPage() {
           const daysAgo = daysBetween(pr.date, localDateIso());
           const agoLabel = daysAgo === 0 ? "Today" : daysAgo === 1 ? "Yesterday" : `${daysAgo} days ago`;
           return (
-            <li key={i} className="dashboard-pr-item">
+            <li key={i} className="dashboard-pr-item" style={{ "--i": i } as React.CSSProperties}>
               <div className="dashboard-pr-item__top">
                 <span className="dashboard-pr-item__exercise">{pr.exerciseName}</span>
                 <span className="dashboard-pr-item__date">{shortDate(pr.date)}</span>
@@ -2522,6 +2522,10 @@ export default function DashboardPage() {
     ready?: boolean;
     free?: boolean;
     render: () => React.ReactNode;
+    // Hold this block's entrance back a beat, so it rises just after the one above.
+    revealDelayMs?: number;
+    // Keep the block still and let its children cascade in individually.
+    staggerContents?: boolean;
   }[] = [
     {
       id: "year-review",
@@ -2568,6 +2572,9 @@ export default function DashboardPage() {
       id: "season-actual",
       ready: !recentDaysLoading,
       render: renderActualSchedule,
+      // Rise just after the planned schedule above it, the way report sections
+      // stagger in one after another.
+      revealDelayMs: 150,
     },
     {
       id: "recent-activity",
@@ -2610,6 +2617,8 @@ export default function DashboardPage() {
       id: "pr-list",
       ready: prEvents !== null,
       render: renderAllPRs,
+      // The block holds still; each PR row cascades in one after another.
+      staggerContents: true,
     },
     {
       id: "achievements",
@@ -2642,7 +2651,9 @@ export default function DashboardPage() {
         ) : (
           <>
         {panels.slice(0, blockIndex).map((p) => (
-          <Reveal key={p.id}>{p.render()}</Reveal>
+          <Reveal key={p.id} delayMs={p.revealDelayMs} staggerContents={p.staggerContents}>
+            {p.render()}
+          </Reveal>
         ))}
 
         {!allRevealed && (
