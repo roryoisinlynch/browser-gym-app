@@ -13,6 +13,8 @@ import {
   formatDuration,
 } from "../services/sessionMetrics";
 import SessionGradeHero from "../components/SessionGradeHero";
+import SessionRirBoxPlot from "../components/SessionRirBoxPlot";
+import { computeSessionRir } from "../services/sessionRir";
 import WeeklyBreadcrumb from "../components/WeeklyBreadcrumb";
 import type { BreadcrumbSession } from "../components/WeeklyBreadcrumb";
 import TopBar from "../components/TopBar";
@@ -223,6 +225,7 @@ export default function SessionSummaryPage() {
           const narrative = isSkipped
             ? "You skipped this session, so it counts as zero volume and zero intensity."
             : buildNarrative(m);
+          const rir = isSkipped ? null : computeSessionRir(sv);
           return (<>
             {/* ── Eyebrow ── */}
             {eyebrowParts.length > 0 && (
@@ -246,6 +249,13 @@ export default function SessionSummaryPage() {
             {narrative && (
               <RevealSection>
                 <p className="sum-narrative sum-reveal">{narrative}</p>
+              </RevealSection>
+            )}
+
+            {/* ── Reps in reserve ── */}
+            {rir && (rir.workingSetCount > 0 || rir.amrapExcludedCount > 0) && (
+              <RevealSection title="Reps in reserve">
+                <SessionRirBoxPlot summary={rir} />
               </RevealSection>
             )}
 

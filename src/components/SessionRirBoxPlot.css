@@ -1,0 +1,146 @@
+/* Session working-set RIR box plot. Geometry mirrors the Year in Review reps
+   box plot (RepBoxPlot); the axis is signed and the target rides a labeled
+   reference line. */
+
+.rir-plot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.rir-plot__chart {
+  width: 100%;
+}
+
+/* ── Target label row (sits just above the track) ── */
+
+.rir-plot__labelrow {
+  position: relative;
+  height: 18px;
+}
+
+.rir-plot__target-label {
+  position: absolute;
+  bottom: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text-strong);
+  white-space: nowrap;
+}
+
+/* Anchor to whichever side keeps the label inside the plot, offset a hair off
+   the reference line it belongs to. */
+.rir-plot__target-label--right {
+  padding-left: 6px;
+}
+
+.rir-plot__target-label--left {
+  padding-right: 6px;
+  text-align: right;
+}
+
+/* ── Plot track ── */
+
+.rir-plot__track {
+  position: relative;
+  height: 20px;
+  width: 100%;
+}
+
+.rir-plot__whisker {
+  position: absolute;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.rir-plot__cap {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 11px;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.rir-plot__box {
+  position: absolute;
+  top: 50%;
+  height: 16px;
+  transform: translateY(-50%);
+  border-radius: 4px;
+  background: rgba(216, 240, 106, 0.16);
+  border: 1px solid var(--accent);
+}
+
+.rir-plot__median {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+  background: var(--accent);
+}
+
+.rir-plot__point {
+  position: absolute;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--accent);
+  /* Surface ring so it stays legible where it crosses the target line. */
+  box-shadow: 0 0 0 2px var(--bg-bottom);
+}
+
+/* Reference line for the session's RIR target. Drawn last, so it reads over the
+   box; distinct from the lime median by colour and its label. */
+.rir-plot__target {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 20px;
+  transform: translate(-50%, -50%);
+  background: var(--text-strong);
+}
+
+/* ── Axis ── */
+
+.rir-plot__axis {
+  position: relative;
+  height: 16px;
+  margin-top: 4px;
+}
+
+.rir-plot__tick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-soft);
+}
+
+/* ── Caption ── */
+
+.rir-plot__caption {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--text-soft);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Empty state ── */
+
+.rir-plot__empty {
+  margin: 0;
+  font-size: var(--sum-fs-body, 1rem);
+  line-height: 1.5;
+  color: var(--text-muted);
+  text-align: center;
+}

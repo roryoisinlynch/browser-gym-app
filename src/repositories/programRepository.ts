@@ -99,6 +99,13 @@ export interface SessionInstanceExerciseView {
   warmupSetCount: number;
   effectiveE1RM: number | null;
   /**
+   * Recency-adjusted rep baseline for bodyweight exercises (recentMaxReps ??
+   * historicalBestReps), the same value the warmup threshold and prescription
+   * use. Null for weighted exercises. Lets consumers derive a bodyweight set's
+   * RIR as effectiveBaselineReps − performedReps.
+   */
+  effectiveBaselineReps: number | null;
+  /**
    * Prescription computed from history for THIS session's week-RIR, regardless
    * of whether the user has opened the exercise yet. Mirrors what
    * getExerciseInstanceView would compute on open. Null fields = AMRAP / no
@@ -2232,6 +2239,7 @@ export async function getSessionInstanceView(
         workingSetCount,
         warmupSetCount,
         effectiveE1RM,
+        effectiveBaselineReps,
         prescribedWeight,
         prescribedRepTarget,
         isDormant,
