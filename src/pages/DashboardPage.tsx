@@ -2517,18 +2517,13 @@ export default function DashboardPage() {
     );
   }
 
-  // The intro loader holds until every data-driven section has resolved, so the
-  // dashboard reveals fully built rather than with sections spinning in place.
-  // All of these settle on every path (including the no-program first run).
-  const dashboardReady =
-    upNext.type !== "loading" &&
-    !timelineLoading &&
-    recentSession !== LOADING_CARD &&
-    recentWeek !== LOADING_CARD &&
-    recentSeason !== LOADING_CARD &&
-    prEvents !== null &&
-    spotlightHistories !== null &&
-    achievements !== null;
+  // The intro loader holds only until the up-next card and the season schedule
+  // are ready, so the page becomes available as soon as its primary visuals
+  // exist. Every section below the schedule (recent activity, PR spotlight,
+  // achievements) carries its own loading state and streams in independently as
+  // its own data resolves. Both of these settle on every path (including the
+  // no-program first run, where the timeline is skipped outright).
+  const dashboardReady = upNext.type !== "loading" && !timelineLoading;
 
   return (
     <main className="dashboard-page">
@@ -2536,7 +2531,7 @@ export default function DashboardPage() {
       <section className="dashboard-shell">
         {!loaderDone ? (
           <PageLoader
-            label="Building your dashboard…"
+            label="Loading…"
             durationMs={3000}
             ready={dashboardReady}
             onDone={() => setLoaderDone(true)}
