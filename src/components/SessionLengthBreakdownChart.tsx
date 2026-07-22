@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { formatDuration } from "../services/sessionMetrics";
 import type { SessionLengthBreakdown } from "../services/sessionLengthBreakdown";
 import "./SessionLengthBreakdownChart.css";
@@ -7,76 +8,52 @@ function formatRir(value: number): string {
   return Number.isInteger(value) ? `${value}` : value.toFixed(1);
 }
 
-// Plot geometry. The track is a fixed height; dots are positioned by percentage
-// across (program day, dodged by RIR) and by pixels down (session length).
-const TRACK_H = 200; // px
-const Y_GUTTER = 50; // px reserved for the duration axis labels
-// Fraction of a program-day column's width the dots spread across when a week's
-// RIR targets fan out left→right; keeps columns visually distinct.
-const BAND_FRACTION = 0.6;
+// Session length is a first-set-to-last-set span, so a single stray late-logged
+// set can balloon one session to many hours. The colour scale caps at 3h so one
+// outlier can't wash the whole grid toward the dim end; a longer cell still
+// prints its true value and just takes the brightest shade.
+const DURATION_CAP_SECONDS = 3 * 60 * 60;
 
-// Sequential RIR ramp on the accent hue: dim olive for the easiest week (highest
-// RIR) climbing to bright accent lime for the hardest (lowest RIR), matching the
-// swarm plot's "effort = accent" language. RIR is also encoded by column
-// position and the legend, so colour is never the only channel.
-const EASY_ANCHOR = [96, 110, 68]; // #606e44
-const HARD_ANCHOR = [216, 240, 106]; // #d8f06a (var(--accent))
+// Sequential shade for session length, on the accent hue: a dim square for the
+// shortest session climbing to bright accent lime for the longest.
+const SHORT_ANCHOR = [52, 66, 30]; // #34421e
+const LONG_ANCHOR = [216, 240, 106]; // #d8f06a (var(--accent))
 
-function rirColor(rir: number | null, rirTargets: number[]): string {
-  if (rir == null || rirTargets.length === 0) return "var(--text-soft)";
-  const i = rirTargets.indexOf(rir);
-  if (i < 0) return "var(--text-soft)";
-  const t = rirTargets.length > 1 ? i / (rirTargets.length - 1) : 1;
-  const c = EASY_ANCHOR.map((e, k) => Math.round(e + (HARD_ANCHOR[k] - e) * t));
+function shadeFor(t: number): number[] {
+  const clamped = Math.max(0, Math.min(1, t));
+  return SHORT_ANCHOR.map((s, k) =>
+    Math.round(s + (LONG_ANCHOR[k] - s) * clamped)
+  );
+}
+
+function rgb(c: number[]): string {
   return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
 }
 
-// Session length is a first-set-to-last-set span, so a single stray late-logged
-// set can balloon one session's "duration" to many hours. Cap the axis at 3h so
-// one outlier can't squash every real session against the baseline; anything
-// longer clamps to the top, which then reads ">3h".
-const DURATION_CAP_SECONDS = 3 * 60 * 60;
-
-/**
- * Round the longest session up to a tidy axis maximum (never past the 3h cap) and
- * pick a tick step that yields at most four gridlines. Steps are in minutes; the
- * returned values are in seconds to match formatDuration and the raw durations.
- */
-function niceDurationAxis(maxSeconds: number): {
-  maxSeconds: number;
-  tickStepSeconds: number;
-} {
-  const capMin = DURATION_CAP_SECONDS / 60;
-  const maxMin = Math.max(1, Math.min(maxSeconds, DURATION_CAP_SECONDS) / 60);
-  const steps = [5, 10, 15, 20, 30, 60, 90, 120];
-  let step = steps[steps.length - 1];
-  for (const s of steps) {
-    if (Math.ceil(maxMin / s) <= 4) {
-      step = s;
-      break;
-    }
-  }
-  const niceMaxMin = Math.min(Math.ceil(maxMin / step) * step, capMin);
-  return { maxSeconds: niceMaxMin * 60, tickStepSeconds: step * 60 };
+// Light or dark ink, whichever reads on the cell's shade. A cheap perceived
+// luminance is enough for the binary choice.
+function inkFor(c: number[]): string {
+  const lum = (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) / 255;
+  return lum > 0.5 ? "#0f1318" : "#e8edf5"; // --bg-bottom : --text-strong
 }
 
 /**
- * Grouped dot plot of session length across two dimensions: program day (the
- * x-axis columns) and RIR target (dot colour and the left→right dodge within a
- * column). Each dot is one completed, timed session, placed vertically by its
- * first-set-to-last-set duration. Hand-built with positioned spans in the same
- * idiom as SessionRirSwarmPlot.
+ * A 2-D heatmap of session length across two dimensions: program day (rows) and
+ * RIR target (columns, easiest→hardest left to right). Each square is shaded and
+ * labelled with the median length of its sessions. Hand-built with a CSS grid,
+ * in the same token vocabulary as the rest of the summary.
  */
 export default function SessionLengthBreakdownChart({
   breakdown,
 }: {
   breakdown: SessionLengthBreakdown;
 }) {
-  const { points, programDays, rirTargets, maxDurationSeconds, excludedCount } =
+  const { programDays, rirTargets, cells, minSeconds, maxSeconds, excludedCount } =
     breakdown;
 
-  // A distribution needs at least a couple of points to say anything.
-  if (points.length < 2) {
+  const totalSessions = cells.reduce((n, c) => n + c.count, 0);
+  // A grid needs at least a couple of sessions to say anything.
+  if (totalSessions < 2 || rirTargets.length === 0) {
     return (
       <p className="slbc__empty sum-reveal">
         Not enough completed sessions this season to chart session length yet.
@@ -86,125 +63,94 @@ export default function SessionLengthBreakdownChart({
     );
   }
 
-  const { maxSeconds: axisMax, tickStepSeconds } =
-    niceDurationAxis(maxDurationSeconds);
-  const hasOverflow = maxDurationSeconds > DURATION_CAP_SECONDS;
+  const cellByKey = new Map(
+    cells.map((c) => [`${c.programDayId}|${c.rirTarget}`, c])
+  );
+  const nCols = rirTargets.length;
 
-  const ticks: number[] = [];
-  for (let s = 0; s <= axisMax; s += tickStepSeconds) ticks.push(s);
-
-  const nCols = programDays.length;
-  const colIndex = new Map(programDays.map((d, i) => [d.id, i]));
-  // Half the pixel-free band a column's dots may fan across, as a percentage of
-  // the whole track width.
-  const bandHalf = ((100 / nCols) * BAND_FRACTION) / 2;
-
-  function dotLeft(programDayId: string, rir: number | null): number {
-    const col = colIndex.get(programDayId) ?? 0;
-    const center = ((col + 0.5) / nCols) * 100;
-    if (rir == null || rirTargets.length <= 1) return center;
-    // Same RIR lands at the same offset in every column, so the hardest week is
-    // always rightmost and the ramp reads consistently across days.
-    const idx = rirTargets.indexOf(rir);
-    const frac = idx < 0 ? 0.5 : idx / (rirTargets.length - 1);
-    return center + (frac - 0.5) * bandHalf * 2;
-  }
-
-  function dotTop(durationSeconds: number): number {
-    // Clamp so an over-cap outlier sits on the top line rather than above it.
-    const clamped = Math.min(durationSeconds, axisMax);
-    return (1 - clamped / axisMax) * TRACK_H;
-  }
+  const domainMax = Math.min(maxSeconds, DURATION_CAP_SECONDS);
+  const hasOverflow = maxSeconds > DURATION_CAP_SECONDS;
+  const norm = (v: number) =>
+    domainMax > minSeconds
+      ? (Math.min(v, domainMax) - minSeconds) / (domainMax - minSeconds)
+      : 0.75;
 
   return (
     <div className="slbc sum-reveal">
-      <div className="slbc__chart">
-        <div className="slbc__plot" aria-hidden="true">
-          <div className="slbc__yaxis" style={{ height: `${TRACK_H}px` }}>
-            {ticks.map((s) => (
-              <span
-                key={s}
-                className="slbc__ytick"
-                style={{ top: `${dotTop(s)}px` }}
-              >
-                {s === 0
-                  ? "0"
-                  : hasOverflow && s === axisMax
-                    ? ">3h"
-                    : formatDuration(s)}
-              </span>
-            ))}
-          </div>
+      <p className="slbc__xtitle">RIR target</p>
 
-          <div className="slbc__track" style={{ height: `${TRACK_H}px` }}>
-            {ticks.map((s) => (
-              <span
-                key={`grid-${s}`}
-                className="slbc__grid"
-                style={{ top: `${dotTop(s)}px` }}
-              />
-            ))}
-            {points.map((p, i) => (
-              <span
-                key={p.sessionId}
-                className="slbc__dot"
-                title={
-                  p.rirTarget != null
-                    ? `${p.programDayLabel} · RIR ${formatRir(p.rirTarget)} · ${formatDuration(p.durationSeconds)}`
-                    : `${p.programDayLabel} · ${formatDuration(p.durationSeconds)}`
-                }
-                style={
-                  {
-                    left: `${dotLeft(p.programDayId, p.rirTarget)}%`,
-                    top: `${dotTop(p.durationSeconds)}px`,
-                    background: rirColor(p.rirTarget, rirTargets),
-                    "--i": i,
-                  } as React.CSSProperties
-                }
-              />
-            ))}
-          </div>
-        </div>
+      <div
+        className="slbc__grid"
+        style={{ gridTemplateColumns: `auto repeat(${nCols}, minmax(0, 1fr))` }}
+        aria-hidden="true"
+      >
+        <span className="slbc__corner" />
+        {rirTargets.map((r) => (
+          <span key={`head-${r}`} className="slbc__colhead">
+            {formatRir(r)}
+          </span>
+        ))}
 
-        <div
-          className="slbc__xaxis"
-          style={{ marginLeft: `${Y_GUTTER}px` }}
-          aria-hidden="true"
-        >
-          {programDays.map((d) => (
-            <span key={d.id} className="slbc__xlabel">
-              {d.label}
-            </span>
-          ))}
-        </div>
-        <p className="slbc__xtitle" style={{ marginLeft: `${Y_GUTTER}px` }}>
-          Program day
-        </p>
+        {programDays.map((day, ri) => (
+          <Fragment key={day.id}>
+            <span className="slbc__rowhead">{day.label}</span>
+            {rirTargets.map((r, ci) => {
+              const cell = cellByKey.get(`${day.id}|${r}`);
+              const i = ri * nCols + ci;
+              if (!cell) {
+                return (
+                  <span
+                    key={r}
+                    className="slbc__cell slbc__cell--empty"
+                    style={{ "--i": i } as React.CSSProperties}
+                  >
+                    ·
+                  </span>
+                );
+              }
+              const shade = shadeFor(norm(cell.medianSeconds));
+              return (
+                <span
+                  key={r}
+                  className="slbc__cell"
+                  title={`${day.label} · RIR ${formatRir(r)} · ${formatDuration(cell.medianSeconds)}${cell.count > 1 ? ` (median of ${cell.count})` : ""}`}
+                  style={
+                    {
+                      background: rgb(shade),
+                      color: inkFor(shade),
+                      "--i": i,
+                    } as React.CSSProperties
+                  }
+                >
+                  {formatDuration(cell.medianSeconds)}
+                </span>
+              );
+            })}
+          </Fragment>
+        ))}
       </div>
 
-      {rirTargets.length > 0 && (
-        <div className="slbc__legend">
-          <span className="slbc__legend-title">RIR target</span>
-          {rirTargets.map((r) => (
-            <span key={r} className="slbc__legend-item">
-              <span
-                className="slbc__legend-dot"
-                style={{ background: rirColor(r, rirTargets) }}
-              />
-              {formatRir(r)}
-            </span>
-          ))}
-        </div>
-      )}
+      <div className="slbc__scale" aria-hidden="true">
+        <span className="slbc__scale-end">{formatDuration(minSeconds)}</span>
+        <span
+          className="slbc__scale-bar"
+          style={{
+            background: `linear-gradient(to right, ${rgb(SHORT_ANCHOR)}, ${rgb(LONG_ANCHOR)})`,
+          }}
+        />
+        <span className="slbc__scale-end">
+          {hasOverflow ? ">3h" : formatDuration(domainMax)}
+        </span>
+      </div>
 
       <p className="slbc__caption">
-        Each dot is one completed session, placed by how long it ran between the
-        first and last set logged. Columns group sessions by program day; dot
-        shade marks the week's RIR target.
+        Rows are program days, columns RIR targets from higher (easier) to lower
+        (closer to failure). Each square is the median session length for that
+        pairing; brighter ran longer.
         {hasOverflow && (
           <span className="slbc__caption-note">
             {" "}
-            The axis caps at 3h; longer sessions sit on the top line.
+            The shade scale caps at 3h.
           </span>
         )}
         {excludedCount > 0 && (

@@ -456,7 +456,7 @@ export default function SeasonSummaryPage() {
             )}
 
             {/* ── Session length ── */}
-            {breakdown && breakdown.points.length > 0 && (
+            {breakdown && breakdown.cells.length > 0 && (
               <RevealSection title="Session length">
                 <SessionLengthBreakdownChart breakdown={breakdown} />
               </RevealSection>
