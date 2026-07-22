@@ -31,17 +31,24 @@ function rirColor(rir: number | null, rirTargets: number[]): string {
   return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
 }
 
+// Session length is a first-set-to-last-set span, so a single stray late-logged
+// set can balloon one session's "duration" to many hours. Cap the axis at 3h so
+// one outlier can't squash every real session against the baseline; anything
+// longer clamps to the top, which then reads ">3h".
+const DURATION_CAP_SECONDS = 3 * 60 * 60;
+
 /**
- * Round the longest session up to a tidy axis maximum and pick a tick step that
- * yields at most four gridlines. Steps are in minutes; the returned values are
- * in seconds to match formatDuration and the raw durations.
+ * Round the longest session up to a tidy axis maximum (never past the 3h cap) and
+ * pick a tick step that yields at most four gridlines. Steps are in minutes; the
+ * returned values are in seconds to match formatDuration and the raw durations.
  */
 function niceDurationAxis(maxSeconds: number): {
   maxSeconds: number;
   tickStepSeconds: number;
 } {
-  const maxMin = Math.max(1, maxSeconds / 60);
-  const steps = [5, 10, 15, 20, 30, 45, 60, 90, 120];
+  const capMin = DURATION_CAP_SECONDS / 60;
+  const maxMin = Math.max(1, Math.min(maxSeconds, DURATION_CAP_SECONDS) / 60);
+  const steps = [5, 10, 15, 20, 30, 60, 90, 120];
   let step = steps[steps.length - 1];
   for (const s of steps) {
     if (Math.ceil(maxMin / s) <= 4) {
@@ -49,7 +56,7 @@ function niceDurationAxis(maxSeconds: number): {
       break;
     }
   }
-  const niceMaxMin = Math.ceil(maxMin / step) * step;
+  const niceMaxMin = Math.min(Math.ceil(maxMin / step) * step, capMin);
   return { maxSeconds: niceMaxMin * 60, tickStepSeconds: step * 60 };
 }
 
@@ -81,6 +88,7 @@ export default function SessionLengthBreakdownChart({
 
   const { maxSeconds: axisMax, tickStepSeconds } =
     niceDurationAxis(maxDurationSeconds);
+  const hasOverflow = maxDurationSeconds > DURATION_CAP_SECONDS;
 
   const ticks: number[] = [];
   for (let s = 0; s <= axisMax; s += tickStepSeconds) ticks.push(s);
@@ -103,7 +111,9 @@ export default function SessionLengthBreakdownChart({
   }
 
   function dotTop(durationSeconds: number): number {
-    return (1 - durationSeconds / axisMax) * TRACK_H;
+    // Clamp so an over-cap outlier sits on the top line rather than above it.
+    const clamped = Math.min(durationSeconds, axisMax);
+    return (1 - clamped / axisMax) * TRACK_H;
   }
 
   return (
@@ -117,7 +127,11 @@ export default function SessionLengthBreakdownChart({
                 className="slbc__ytick"
                 style={{ top: `${dotTop(s)}px` }}
               >
-                {s === 0 ? "0" : formatDuration(s)}
+                {s === 0
+                  ? "0"
+                  : hasOverflow && s === axisMax
+                    ? ">3h"
+                    : formatDuration(s)}
               </span>
             ))}
           </div>
@@ -187,6 +201,12 @@ export default function SessionLengthBreakdownChart({
         Each dot is one completed session, placed by how long it ran between the
         first and last set logged. Columns group sessions by program day; dot
         shade marks the week's RIR target.
+        {hasOverflow && (
+          <span className="slbc__caption-note">
+            {" "}
+            The axis caps at 3h; longer sessions sit on the top line.
+          </span>
+        )}
         {excludedCount > 0 && (
           <span className="slbc__caption-note">
             {" "}
