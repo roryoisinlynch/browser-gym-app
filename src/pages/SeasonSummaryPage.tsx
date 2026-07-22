@@ -10,6 +10,7 @@ import {
   getSessionInstancesForWeekInstance,
   getSeasonPRs,
   getSeasonTemplateById,
+  getSeasonSessionLengthPoints,
 } from "../repositories/programRepository";
 import { gradeColor } from "../services/seasonMetrics";
 import type { SeasonMetrics, SeasonGrade } from "../services/seasonMetrics";
@@ -26,6 +27,9 @@ import type { BreadcrumbWeek } from "../components/WeeksBreadcrumb";
 import SeasonGradeHero from "../components/SeasonGradeHero";
 import SeasonCalendar from "../components/SeasonCalendar";
 import type { SeasonMonth } from "../components/SeasonCalendar";
+import SessionLengthBreakdownChart from "../components/SessionLengthBreakdownChart";
+import { buildSessionLengthBreakdown } from "../services/sessionLengthBreakdown";
+import type { SessionLengthBreakdown } from "../services/sessionLengthBreakdown";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import PageLoader from "../components/PageLoader";
@@ -169,6 +173,7 @@ export default function SeasonSummaryPage() {
   const [seasonRows, setSeasonRows] = useState<SeasonRow[]>([]);
   const [weeksBreadcrumb, setWeeksBreadcrumb] = useState<BreadcrumbWeek[]>([]);
   const [calendar, setCalendar] = useState<CalendarData | null>(null);
+  const [breakdown, setBreakdown] = useState<SessionLengthBreakdown | null>(null);
   const [heuristicSummary, setHeuristicSummary] = useState<HeuristicSummaryRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loaderDone, setLoaderDone] = useState(false);
@@ -199,6 +204,16 @@ export default function SeasonSummaryPage() {
         const computed = await getSeasonMetrics(seasonInstance);
         setMetrics(computed);
         setPrs(seasonPRs);
+
+        // Session length by program day and RIR target. Reuses getSessionDuration
+        // (first-set to last-set span), so it never reads the start/finish buttons.
+        const seasonLengths = await getSeasonSessionLengthPoints(seasonInstance);
+        setBreakdown(
+          buildSessionLengthBreakdown(
+            seasonLengths.points,
+            seasonLengths.excludedCount
+          )
+        );
 
         const seasonEnded = seasonInstance.status !== "in_progress";
 
@@ -437,6 +452,13 @@ export default function SeasonSummaryPage() {
                   todayIso={calendar.todayIso}
                   tone={gradeColor(grade)}
                 />
+              </RevealSection>
+            )}
+
+            {/* ── Session length ── */}
+            {breakdown && breakdown.points.length > 0 && (
+              <RevealSection title="Session length">
+                <SessionLengthBreakdownChart breakdown={breakdown} />
               </RevealSection>
             )}
 

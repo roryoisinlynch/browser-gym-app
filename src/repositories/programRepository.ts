@@ -38,6 +38,7 @@ import {
 import { computeSeasonConsistency, computeSeasonMetrics } from "../services/seasonMetrics";
 import { computeSessionMetrics } from "../services/sessionMetrics";
 import { computeWeekMetricsFromSessions } from "../services/weekMetrics";
+import type { SessionLengthPoint } from "../services/sessionLengthBreakdown";
 
 import { mergeWithImportedSets } from "../services/importMerge";
 import { loadAllImportedSets, loadImportedSetsForExercise } from "../services/importedSetStore";
@@ -2409,6 +2410,57 @@ export async function getSessionInstancesForWeekInstance(
   );
 
   return sessions.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export interface SeasonSessionLengths {
+  points: SessionLengthPoint[];
+  excludedCount: number;
+}
+
+/**
+ * Gathers per-session length data for one season, tagged with its program day
+ * (the session template) and RIR target (the week's prescribed reps-in-reserve).
+ * Only completed sessions count; a completed session whose set timing can't be
+ * recovered is tallied in excludedCount rather than dropped silently. Duration
+ * is the first-logged-set to last-logged-set span from getSessionDuration, so
+ * this inherits that definition and never uses the start/finish button times.
+ *
+ * Points are emitted in week-then-day order (weeks sorted by order, sessions by
+ * date), which buildSessionLengthBreakdown relies on to order the day columns.
+ */
+export async function getSeasonSessionLengthPoints(
+  seasonInstance: SeasonInstance
+): Promise<SeasonSessionLengths> {
+  const weeks = await getWeekInstancesForSeasonInstance(seasonInstance.id);
+  const seasonTemplate = await getSeasonTemplateById(
+    seasonInstance.seasonTemplateId
+  );
+
+  const points: SessionLengthPoint[] = [];
+  let excludedCount = 0;
+
+  for (const week of weeks) {
+    const rirTarget =
+      week.rirTarget ?? seasonTemplate?.rirSequence?.[week.order - 1] ?? null;
+    const sessions = await getSessionInstancesForWeekInstance(week.id);
+    for (const session of sessions) {
+      if (session.status !== "completed") continue;
+      const durationSeconds = await getSessionDuration(session);
+      if (durationSeconds == null) {
+        excludedCount++;
+        continue;
+      }
+      points.push({
+        sessionId: session.id,
+        programDayId: session.sessionTemplateId,
+        programDayLabel: session.sessionName,
+        rirTarget,
+        durationSeconds,
+      });
+    }
+  }
+
+  return { points, excludedCount };
 }
 
 export async function getWeekInstanceItemsForWeekInstance(
