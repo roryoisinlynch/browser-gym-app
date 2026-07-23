@@ -4,6 +4,7 @@ import type { SeasonInstance, SessionInstance, WeekInstance } from "../domain/mo
 import type { ExerciseSessionDataPoint, PREvent, WeekInstanceItemView } from "../repositories/programRepository";
 import {
   getActiveSeasonInstance,
+  getAllSeasonInstances,
   getAllTimePREvents,
   getCanonicalWeekTemplateForSeason,
   findExerciseNeedingWeight,
@@ -26,7 +27,14 @@ import { formatDayCount } from "../services/relativeTime";
 import {
   isHeuristicsEnabled,
   getPendingHeuristicDates,
+  getQuestions,
+  getEntriesForDateRange,
 } from "../repositories/heuristicsRepository";
+import {
+  aggregateHeuristicSeason,
+  type HeuristicSeasonAggregate,
+} from "../services/heuristicsSeasonSummary";
+import { colorForHeuristicScore } from "../services/heuristicsScale";
 import Medal from "../components/Medal";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
@@ -283,6 +291,19 @@ function toLocalMidnight(iso: string): Date {
 
 function daysBetween(fromIso: string, toIso: string): number {
   return Math.round((toLocalMidnight(toIso).getTime() - toLocalMidnight(fromIso).getTime()) / 86400000);
+}
+
+// A season's heuristics window as local ISO dates. An active (in-progress)
+// season runs up to today; an ended one stops at its completion date.
+function seasonRange(season: SeasonInstance): { startIso: string; endIso: string } | null {
+  if (!season.startedAt) return null;
+  const startIso = localDateIso(toLocalMidnight(season.startedAt));
+  const ended = season.status !== "in_progress";
+  const endIso =
+    ended && season.completedAt
+      ? localDateIso(toLocalMidnight(season.completedAt))
+      : localDateIso(); // active season → today
+  return { startIso, endIso };
 }
 
 function friendlyDate(iso: string): string {
@@ -1042,6 +1063,10 @@ export default function DashboardPage() {
   // achievements shelf below it waits its turn rather than racing the PRs.
   const [achievementsGate, setAchievementsGate] = useState(false);
   const [pendingHeuristicDays, setPendingHeuristicDays] = useState(0);
+  const [heuristicCompare, setHeuristicCompare] = useState<{
+    current: HeuristicSeasonAggregate;
+    previous: HeuristicSeasonAggregate;
+  } | null>(null);
   const [exerciseNeedingWeight, setExerciseNeedingWeight] = useState<
     { exerciseTemplateId: string; exerciseName: string; sessionName: string } | null
   >(null);
@@ -1190,6 +1215,61 @@ export default function DashboardPage() {
       setPendingHeuristicDays(pending.length);
     }
     loadHeuristics();
+  }, []);
+
+  // Season-vs-previous-season heuristics comparison. Own effect so a disabled
+  // or slow load never blocks loadBase or the reveal barrier below.
+  useEffect(() => {
+    async function loadHeuristicCompare() {
+      if (!(await isHeuristicsEnabled())) return;
+      const questions = await getQuestions();
+      if (questions.length === 0) return;
+      const activeIds = new Set(questions.map((q) => q.id));
+
+      const [active, allSeasons] = await Promise.all([
+        getActiveSeasonInstance(),
+        getAllSeasonInstances(),
+      ]);
+      // getAllSeasonInstances sorts by per-template order, so re-sort ended
+      // seasons by completedAt for true chronology.
+      const endedSorted = allSeasons
+        .filter(
+          (s) => (s.status === "completed" || s.status === "cancelled") && s.completedAt
+        )
+        .sort((a, b) => b.completedAt!.localeCompare(a.completedAt!));
+      const current = active ?? endedSorted[0];
+      const previous = active ? endedSorted[0] : endedSorted[1];
+      if (!current || !previous) return;
+
+      const cr = seasonRange(current);
+      const pr = seasonRange(previous);
+      if (!cr || !pr) return;
+
+      const [cEntries, pEntries] = await Promise.all([
+        getEntriesForDateRange(cr.startIso, cr.endIso),
+        getEntriesForDateRange(pr.startIso, pr.endIso),
+      ]);
+      const currentAgg = aggregateHeuristicSeason(
+        cEntries,
+        activeIds,
+        questions.length,
+        cr.startIso,
+        cr.endIso
+      );
+      const previousAgg = aggregateHeuristicSeason(
+        pEntries,
+        activeIds,
+        questions.length,
+        pr.startIso,
+        pr.endIso
+      );
+
+      // Gate: ≥2 distinct real-rating days in BOTH seasons.
+      if (currentAgg.distinctAnswerDays < 2 || previousAgg.distinctAnswerDays < 2) return;
+      if (cancelled.current) return;
+      setHeuristicCompare({ current: currentAgg, previous: previousAgg });
+    }
+    loadHeuristicCompare();
   }, []);
 
   // How many rows the recent-PR list will actually show: the spotlight date is
@@ -1803,6 +1883,49 @@ export default function DashboardPage() {
   // ─── PR Spotlight ─────────────────────────────────────────────────────────
 
   const spotlight = prEvents?.[0] ?? null;
+
+  function renderHeuristicsSummary() {
+    if (!heuristicCompare) return null;
+    const { current, previous } = heuristicCompare;
+    if (current.mean == null || previous.mean == null) return null; // defensive
+
+    const delta = current.mean - previous.mean;
+    const deltaClass =
+      delta > 0
+        ? "dashboard-heuristics__delta--up"
+        : delta < 0
+          ? "dashboard-heuristics__delta--down"
+          : "dashboard-heuristics__delta--flat";
+    const deltaText = `${delta >= 0 ? "+" : "−"}${Math.abs(delta).toFixed(1)}`;
+
+    const col = (agg: HeuristicSeasonAggregate, label: string) => (
+      <div className="dashboard-heuristics__col">
+        <span
+          className="dashboard-heuristics__mean"
+          style={{ color: colorForHeuristicScore(agg.mean!) }}
+        >
+          {agg.mean!.toFixed(1)}
+        </span>
+        <span className="dashboard-heuristics__label">{label}</span>
+        <span className="dashboard-heuristics__coverage">
+          {agg.coveragePct != null ? `${Math.round(agg.coveragePct)}% coverage` : "—"}
+        </span>
+      </div>
+    );
+
+    return (
+      <section className="dashboard-section">
+        <h2 className="dashboard-section-title">Heuristics vs last season</h2>
+        <div className="dashboard-heuristics__card">
+          <div className="dashboard-heuristics__row">
+            {col(current, "This season")}
+            <span className={`dashboard-heuristics__delta ${deltaClass}`}>{deltaText}</span>
+            {col(previous, "Last season")}
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   function renderPRSpotlight() {
     if (!spotlight) return null;
@@ -2638,6 +2761,11 @@ export default function DashboardPage() {
             </div>
           </section>
         ),
+    },
+    {
+      id: "heuristics-summary",
+      free: true,
+      render: renderHeuristicsSummary,
     },
     {
       id: "backup",

@@ -1165,3 +1165,70 @@
 .dashboard-report-mock .sum-narrative {
   text-align: left;
 }
+
+/* ── Heuristics season comparison ── */
+
+.dashboard-heuristics__card {
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel-bg);
+}
+
+.dashboard-heuristics__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dashboard-heuristics__col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.dashboard-heuristics__mean {
+  font-size: 1.8rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.dashboard-heuristics__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.dashboard-heuristics__coverage {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.dashboard-heuristics__delta {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.dashboard-heuristics__delta--up {
+  color: #6bcb77;
+  background: rgba(107, 203, 119, 0.12);
+}
+
+.dashboard-heuristics__delta--down {
+  color: #e76f51;
+  background: rgba(231, 111, 81, 0.12);
+}
+
+.dashboard-heuristics__delta--flat {
+  color: var(--text-soft);
+  background: rgba(255, 255, 255, 0.05);
+}
