@@ -1527,27 +1527,49 @@ function countWorkingSetsForInstance(params: {
 }
 
 /**
- * Running-best scan over per-session history: returns the most recent prior
- * session whose top metric beat all earlier history (the last all-time PR), or
- * null. Mirrors detectPRsForInstances — the very first attempt never counts.
+ * Running-best scan over date-sorted per-session history. Returns each session
+ * that set a genuine all-time PR (its top metric beat every earlier session),
+ * paired with the session that held the prior best. The very first session is
+ * never a PR — there is nothing before it to beat — which is the single PR rule
+ * shared by the "since last PR" stat, the season PR badge, and the all-time PR
+ * events feed (getAllTimePREvents). `rawHistory` must be sorted ascending by date.
+ */
+function collectPrEventDataPoints(
+  rawHistory: ExerciseSessionDataPoint[],
+  isBodyweight: boolean
+): Array<{ dp: ExerciseSessionDataPoint; previousDp: ExerciseSessionDataPoint | null }> {
+  const metricOf = (dp: ExerciseSessionDataPoint) =>
+    isBodyweight ? dp.topRepCount : dp.topEstimatedOneRepMax;
+  let runningBest: number | null = null;
+  let bestDp: ExerciseSessionDataPoint | null = null;
+  const events: Array<{ dp: ExerciseSessionDataPoint; previousDp: ExerciseSessionDataPoint | null }> = [];
+  for (const dp of rawHistory) {
+    const m = metricOf(dp);
+    if (m == null) continue;
+    if (runningBest != null && m > runningBest) events.push({ dp, previousDp: bestDp });
+    if (runningBest == null || m > runningBest) {
+      runningBest = m;
+      bestDp = dp;
+    }
+  }
+  return events;
+}
+
+/**
+ * The most recent all-time PR before the current session, or null. Excludes the
+ * current session's own instance so the "since last PR" stat means "since the
+ * last PR *before* today".
  */
 function findLastPrDataPoint(
   rawHistory: ExerciseSessionDataPoint[],
   currentExerciseInstanceId: string,
   isBodyweight: boolean
 ): ExerciseSessionDataPoint | null {
-  const metricOf = (dp: ExerciseSessionDataPoint) =>
-    isBodyweight ? dp.topRepCount : dp.topEstimatedOneRepMax;
-  let runningBest: number | null = null;
-  let lastPr: ExerciseSessionDataPoint | null = null;
-  for (const dp of rawHistory) {
-    if (dp.exerciseInstanceId === currentExerciseInstanceId) continue;
-    const m = metricOf(dp);
-    if (m == null) continue;
-    if (runningBest != null && m > runningBest) lastPr = dp;
-    if (runningBest == null || m > runningBest) runningBest = m;
-  }
-  return lastPr;
+  const events = collectPrEventDataPoints(
+    rawHistory.filter((dp) => dp.exerciseInstanceId !== currentExerciseInstanceId),
+    isBodyweight
+  );
+  return events.length ? events[events.length - 1].dp : null;
 }
 
 /**
@@ -3185,7 +3207,8 @@ async function resolvePreviousDate(
  * Returns exercises where the session produced a genuine all-time PR.
  *
  * Rules:
- *  - Must have at least 1 prior exercise instance (only the very first is excluded).
+ *  - Requires a valid prior best to beat: an exercise with no scorable prior
+ *    history (the very first time it is performed) never counts as a PR.
  *  - Weighted exercises: top set e1RM must beat all-time prior best e1RM.
  *  - Bodyweight exercises: max reps in a single set must beat all-time prior max reps.
  */
@@ -3236,7 +3259,7 @@ async function detectPRsForInstances(
       }
     }
 
-    if (previousMaxReps === null || newMaxReps > previousMaxReps) {
+    if (previousMaxReps !== null && newMaxReps > previousMaxReps) {
       prs.push({
         prType: "reps",
         exerciseName,
@@ -3271,7 +3294,7 @@ async function detectPRsForInstances(
       }
     }
 
-    if (previousE1RM === null || newE1RM > previousE1RM) {
+    if (previousE1RM !== null && newE1RM > previousE1RM) {
       prs.push({
         prType: "e1rm",
         exerciseName,
@@ -3398,14 +3421,18 @@ export async function getWeekPRs(weekInstanceId: string): Promise<SessionPR[]> {
 // ─── Season PRs ───────────────────────────────────────────────────────────────
 
 /**
- * Returns exercises where the season produced a genuine all-time e1RM PR.
+ * Returns exercises that set a genuine all-time PR *during* this season.
  *
- * Same rules as getWeekPRs, but scoped to the full season:
- *  - Groups all exercise instances across every session in every week by name.
- *  - Must have at least 1 prior instance from OUTSIDE this season.
- *  - The best e1RM achieved anywhere in the season must beat all prior history.
- *  - Multiple PRs for the same exercise within the season collapse into one entry.
- *  - previousE1RM is the all-time best BEFORE the season started.
+ * A PR is a session whose top metric beat every strictly-earlier session
+ * (imported history and earlier weeks of this season included); the first-ever
+ * session is never a PR. This is the same running-best rule the "since last PR"
+ * stat and getAllTimePREvents use, so the season PR badge can never disagree
+ * with them. An exercise qualifies iff at least one of its PR events lands on a
+ * session in this season — so a debut season counts only once a later session
+ * beats the debut, and a plateau at the opening best never counts.
+ *
+ * One entry per exercise: the "new" figures are the season's best PR, the
+ * "previous" figures are the baseline held before the season's first PR.
  */
 export async function getSeasonPRs(seasonInstanceId: string): Promise<SessionPR[]> {
   const seasonWeeks = await getWeekInstancesForSeasonInstance(seasonInstanceId);
@@ -3416,16 +3443,60 @@ export async function getSeasonPRs(seasonInstanceId: string): Promise<SessionPR[
     await Promise.all(allSeasonSessions.map((s) => getExerciseInstancesForSessionInstance(s.id)))
   ).flat();
 
-  const groups = await groupInstancesByName(allSeasonExerciseInstances);
+  // Distinct exercises appearing in the season, with their bodyweight flag.
+  const byName = new Map<string, ExerciseInstance[]>();
+  for (const ei of allSeasonExerciseInstances) {
+    const key = ei.exerciseName?.trim().toLowerCase();
+    if (!key) continue;
+    const list = byName.get(key);
+    if (list) list.push(ei);
+    else byName.set(key, [ei]);
+  }
+
   const prs: SessionPR[] = [];
-  for (const g of groups) {
-    prs.push(...await detectPRsForInstances(
-      allSeasonExerciseInstances.filter((i) => g.scopedInstanceIds.has(i.id)),
-      g.scopedInstanceIds,
-      g.exerciseName,
-      g.isBodyweight,
-      g.priorInstances
-    ));
+  for (const [, instances] of byName) {
+    const exerciseName = instances[0].exerciseName;
+    const sie = await getById<SessionInstanceExercise>(
+      STORE_NAMES.sessionInstanceExercises,
+      instances[0].sessionInstanceExerciseId
+    );
+    const isBodyweight = sie?.weightMode === "bodyweight";
+
+    const rawHistory = await getExerciseSessionHistory(exerciseName);
+    const events = collectPrEventDataPoints(rawHistory, isBodyweight);
+    const seasonEvents = events.filter((e) => e.dp.seasonInstanceId === seasonInstanceId);
+    if (seasonEvents.length === 0) continue;
+
+    const newDp = seasonEvents[seasonEvents.length - 1].dp; // season's best PR
+    const prevDp = seasonEvents[0].previousDp; // baseline before the season's first PR
+    const previousDate =
+      prevDp && prevDp.exerciseInstanceId !== "__imported__" ? prevDp.date : null;
+
+    if (isBodyweight) {
+      prs.push({
+        prType: "reps",
+        exerciseName,
+        newE1RM: null,
+        newWeight: null,
+        newReps: newDp.topRepCount ?? newDp.topReps ?? 0,
+        previousE1RM: null,
+        previousWeight: null,
+        previousReps: prevDp?.topRepCount ?? null,
+        previousDate,
+      });
+    } else {
+      prs.push({
+        prType: "e1rm",
+        exerciseName,
+        newE1RM: newDp.topEstimatedOneRepMax,
+        newWeight: newDp.topWeight,
+        newReps: newDp.topReps ?? 0,
+        previousE1RM: prevDp?.topEstimatedOneRepMax ?? null,
+        previousWeight: prevDp?.topWeight ?? null,
+        previousReps: prevDp?.topReps ?? null,
+        previousDate,
+      });
+    }
   }
   return prs;
 }
