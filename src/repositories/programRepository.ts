@@ -120,6 +120,10 @@ export interface SessionInstanceExerciseView {
    * one — a recent session must re-establish the baseline first.
    */
   isDormant: boolean;
+  /** Date of the most recent all-time PR before this session, or null if none. */
+  lastPrDate: string | null;
+  /** Working sets logged for this exercise across the current season, incl. this session. */
+  workingSetsThisSeason: number;
 }
 
 export interface SessionInstanceMuscleGroupView {
@@ -1475,6 +1479,155 @@ export interface ExerciseInstanceStats {
 }
 
 /**
+ * Classifies one exercise instance's sets against a baseline pinned to a given
+ * as-of date and returns how many were working sets. Shared by getExerciseStats
+ * and getSessionInstanceView so the "working sets this season" figure is
+ * computed identically wherever it appears.
+ */
+function countWorkingSetsForInstance(params: {
+  sets: ExerciseSet[];
+  rawHistory: ExerciseSessionDataPoint[];
+  /** Instances to drop from the baseline (a session's own within-session PRs). */
+  excludeInstanceIds: ReadonlySet<string>;
+  /** Pin the baseline window here (completed session), or undefined to keep it live. */
+  asOfDate: string | undefined;
+  weightMode: WeightMode;
+  configuredWeight: number | null;
+  weekRir: number;
+  isBodyweight: boolean;
+}): number {
+  const { historicalBest, recentMax, historicalBestReps, recentMaxReps, lastAttemptedDate } =
+    effectiveE1RMFromHistory(params.rawHistory, params.excludeInstanceIds, params.asOfDate);
+  const effectiveE1RM = recentMax ?? historicalBest;
+  const effectiveReps = recentMaxReps ?? historicalBestReps;
+
+  const { prescribedWeight, prescribedRepTarget } = computePrescription({
+    weightMode: params.weightMode,
+    configuredWeight: params.configuredWeight,
+    effectiveOneRepMax: effectiveE1RM,
+    effectiveReps,
+    weekRir: params.weekRir,
+    isDormant: isDormantSince(lastAttemptedDate, params.asOfDate),
+  });
+
+  const effectiveBaselineReps = params.isBodyweight ? effectiveReps : null;
+  let working = 0;
+  for (const set of params.sets) {
+    const { setType } = analyzeSet(
+      set,
+      [],
+      effectiveE1RM,
+      effectiveBaselineReps,
+      prescribedRepTarget,
+      prescribedWeight
+    );
+    if (setType === "working") working++;
+  }
+  return working;
+}
+
+/**
+ * Running-best scan over per-session history: returns the most recent prior
+ * session whose top metric beat all earlier history (the last all-time PR), or
+ * null. Mirrors detectPRsForInstances — the very first attempt never counts.
+ */
+function findLastPrDataPoint(
+  rawHistory: ExerciseSessionDataPoint[],
+  currentExerciseInstanceId: string,
+  isBodyweight: boolean
+): ExerciseSessionDataPoint | null {
+  const metricOf = (dp: ExerciseSessionDataPoint) =>
+    isBodyweight ? dp.topRepCount : dp.topEstimatedOneRepMax;
+  let runningBest: number | null = null;
+  let lastPr: ExerciseSessionDataPoint | null = null;
+  for (const dp of rawHistory) {
+    if (dp.exerciseInstanceId === currentExerciseInstanceId) continue;
+    const m = metricOf(dp);
+    if (m == null) continue;
+    if (runningBest != null && m > runningBest) lastPr = dp;
+    if (runningBest == null || m > runningBest) runningBest = m;
+  }
+  return lastPr;
+}
+
+/**
+ * Sums working sets logged in a given season for one exercise, across every
+ * instance EXCEPT the ones in excludeInstanceIds (the caller counts the current
+ * session's own instance from its live view). Reuses history and set lists the
+ * caller already loaded — the only extra reads are indexed point lookups for the
+ * handful of prior instances in the season, so it never adds a full-store scan.
+ * Kept in parity with getExerciseStats by classifying through the same
+ * countWorkingSetsForInstance helper.
+ */
+async function countPriorSeasonWorkingSets(
+  rawHistory: ExerciseSessionDataPoint[],
+  allHistoricalSets: ExerciseSet[],
+  seasonKey: string,
+  excludeInstanceIds: ReadonlySet<string>,
+  fallbackWeightMode: WeightMode,
+  isBodyweight: boolean
+): Promise<number> {
+  // Prior instances of this exercise that logged sets in the target season.
+  const dateByInstance = new Map<string, string>();
+  for (const dp of rawHistory) {
+    if (dp.exerciseInstanceId === "__imported__") continue;
+    if (excludeInstanceIds.has(dp.exerciseInstanceId)) continue;
+    if (resolveExerciseSeasonKey(dp.seasonInstanceId, dp.date) !== seasonKey) continue;
+    dateByInstance.set(dp.exerciseInstanceId, dp.date);
+  }
+  if (dateByInstance.size === 0) return 0;
+
+  const setsByInstance = new Map<string, ExerciseSet[]>();
+  for (const s of allHistoricalSets) {
+    const arr = setsByInstance.get(s.exerciseInstanceId);
+    if (arr) arr.push(s);
+    else setsByInstance.set(s.exerciseInstanceId, [s]);
+  }
+
+  // Load each season instance and group by session so a session's own
+  // within-session PRs are excluded from its baseline (mirrors getExerciseStats).
+  const instancesById = new Map<string, ExerciseInstance>();
+  const siblingsBySession = new Map<string, string[]>();
+  for (const instanceId of dateByInstance.keys()) {
+    const instance = await getById<ExerciseInstance>(
+      STORE_NAMES.exerciseInstances,
+      instanceId
+    );
+    if (!instance) continue;
+    instancesById.set(instanceId, instance);
+    const siblings = siblingsBySession.get(instance.sessionInstanceId);
+    if (siblings) siblings.push(instanceId);
+    else siblingsBySession.set(instance.sessionInstanceId, [instanceId]);
+  }
+
+  let total = 0;
+  for (const [instanceId, instance] of instancesById) {
+    const sets = (setsByInstance.get(instanceId) ?? [])
+      .slice()
+      .sort((a, b) => a.setIndex - b.setIndex);
+    if (sets.length === 0) continue;
+    const sie = await getById<SessionInstanceExercise>(
+      STORE_NAMES.sessionInstanceExercises,
+      instance.sessionInstanceExerciseId
+    );
+    total += countWorkingSetsForInstance({
+      sets,
+      rawHistory,
+      excludeInstanceIds: new Set(
+        siblingsBySession.get(instance.sessionInstanceId) ?? [instanceId]
+      ),
+      // Prior sessions are settled, so pin the baseline to their date.
+      asOfDate: dateByInstance.get(instanceId),
+      weightMode: sie?.weightMode ?? fallbackWeightMode,
+      configuredWeight: sie?.prescribedWeight ?? null,
+      weekRir: instance.prescribedRir ?? 0,
+      isBodyweight,
+    });
+  }
+  return total;
+}
+
+/**
  * Computes the headline stats shown beneath the exercise insights chart:
  * recency of the last lift, working-set volume this season, and the most
  * recent all-time PR with working-set volume accrued since.
@@ -1537,33 +1690,16 @@ export async function getExerciseStats(
         .filter((i) => i.sessionInstanceId === instance.sessionInstanceId)
         .map((i) => i.id)
     );
-    const { historicalBest, recentMax, historicalBestReps, recentMaxReps, lastAttemptedDate } =
-      effectiveE1RMFromHistory(rawHistory, excludeIds, asOfDate);
-    const effectiveE1RM = recentMax ?? historicalBest;
-    const effectiveReps = recentMaxReps ?? historicalBestReps;
-
-    const { prescribedWeight, prescribedRepTarget } = computePrescription({
+    const working = countWorkingSetsForInstance({
+      sets,
+      rawHistory,
+      excludeInstanceIds: excludeIds,
+      asOfDate,
       weightMode: sie?.weightMode ?? (isBodyweight ? "bodyweight" : "increment"),
       configuredWeight: sie?.prescribedWeight ?? null,
-      effectiveOneRepMax: effectiveE1RM,
-      effectiveReps,
       weekRir: instance.prescribedRir ?? 0,
-      isDormant: isDormantSince(lastAttemptedDate, asOfDate),
+      isBodyweight,
     });
-
-    const effectiveBaselineReps = isBodyweight ? effectiveReps : null;
-    let working = 0;
-    for (const set of sets) {
-      const { setType } = analyzeSet(
-        set,
-        [],
-        effectiveE1RM,
-        effectiveBaselineReps,
-        prescribedRepTarget,
-        prescribedWeight
-      );
-      if (setType === "working") working++;
-    }
     workingByInstance.set(instance.id, working);
   }
 
@@ -1576,17 +1712,7 @@ export async function getExerciseStats(
 
   // Last PR: the most recent prior session whose top metric beat all earlier
   // history. Mirrors detectPRsForInstances — the very first attempt never counts.
-  const metricOf = (dp: ExerciseSessionDataPoint) =>
-    isBodyweight ? dp.topRepCount : dp.topEstimatedOneRepMax;
-  let runningBest: number | null = null;
-  let lastPr: ExerciseSessionDataPoint | null = null;
-  for (const dp of rawHistory) {
-    if (dp.exerciseInstanceId === currentExerciseInstanceId) continue;
-    const m = metricOf(dp);
-    if (m == null) continue;
-    if (runningBest != null && m > runningBest) lastPr = dp;
-    if (runningBest == null || m > runningBest) runningBest = m;
-  }
+  const lastPr = findLastPrDataPoint(rawHistory, currentExerciseInstanceId, isBodyweight);
 
   const currentSeasonKey = seasonKeyByInstance.get(currentExerciseInstanceId) ?? null;
   let workingSetsThisSeason = 0;
@@ -2173,11 +2299,12 @@ export async function getSessionInstanceView(
         sessionInstance.status === "completed"
           ? sessionCompletedDate(sessionInstance)
           : undefined;
-      const { historicalBest, recentMax, historicalBestReps, recentMaxReps, lastAttemptedDate } = await getEffectiveE1RM(
-        sie.exerciseName,
-        currentSessionExerciseInstanceIds,
-        sessionAsOfDate
-      );
+      // Load the per-session history once and reuse it for the e1RM baseline,
+      // the last-PR date, and the season working-set count below (getEffectiveE1RM
+      // would otherwise load the same history internally and discard it).
+      const rawHistory = await getExerciseSessionHistory(sie.exerciseName);
+      const { historicalBest, recentMax, historicalBestReps, recentMaxReps, lastAttemptedDate } =
+        effectiveE1RMFromHistory(rawHistory, currentSessionExerciseInstanceIds, sessionAsOfDate);
       const effectiveE1RM = recentMax ?? historicalBest;
       // For bodyweight exercises, use the same recency-adjusted rep baseline as
       // getExerciseInstanceView so stale PRs don't inflate the warmup threshold.
@@ -2231,6 +2358,30 @@ export async function getSessionInstanceView(
         (item) => item.analysis.setType === "warmup"
       ).length;
 
+      const isBodyweightExercise = sie.weightMode === "bodyweight";
+      const lastPrDate =
+        findLastPrDataPoint(rawHistory, exerciseInstance?.id ?? "", isBodyweightExercise)
+          ?.date ?? null;
+
+      // Season working sets = this session's working sets (already classified in
+      // the live view above) plus every prior session's working sets in the same
+      // season. Keyed off the session's season id so it's correct even for
+      // exercises the user hasn't opened yet (no instance).
+      const currentSeasonKey = resolveExerciseSeasonKey(
+        sessionInstance.seasonInstanceId,
+        sessionCompletedDate(sessionInstance)
+      );
+      const workingSetsThisSeason =
+        workingSetCount +
+        (await countPriorSeasonWorkingSets(
+          rawHistory,
+          allHistoricalSets,
+          currentSeasonKey,
+          currentSessionExerciseInstanceIds,
+          sie.weightMode,
+          isBodyweightExercise
+        ));
+
       hydratedExercises.push({
         sessionInstanceExerciseId: sie.id,
         exerciseTemplate,
@@ -2244,6 +2395,8 @@ export async function getSessionInstanceView(
         prescribedWeight,
         prescribedRepTarget,
         isDormant,
+        lastPrDate,
+        workingSetsThisSeason,
       });
     }
 

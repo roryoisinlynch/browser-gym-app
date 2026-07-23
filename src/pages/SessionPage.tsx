@@ -13,6 +13,7 @@ import BottomNav from "../components/BottomNav";
 import TopBar from "../components/TopBar";
 import { calculateEstimatedOneRepMax } from "../services/setAnalysis";
 import { computeSessionMetrics } from "../services/sessionMetrics";
+import { formatDurationSince } from "../services/relativeTime";
 import {
   type MovementTone,
   PALETTE,
@@ -678,8 +679,7 @@ export default function SessionPage() {
                       {!isCollapsed && (
                         <ul className="exercise-list">
                           {exercises.map(
-                            ({ sessionInstanceExerciseId, exerciseTemplate, movementType, exerciseInstance, sets, prescribedWeight, prescribedRepTarget, effectiveE1RM, isDormant }) => {
-                              const tone = groupToneMap.get(movementType.name) ?? PALETTE[0];
+                            ({ sessionInstanceExerciseId, exerciseTemplate, exerciseInstance, sets, prescribedWeight, prescribedRepTarget, effectiveE1RM, isDormant, lastPrDate, workingSetsThisSeason }) => {
                               const isBodyweight = exerciseTemplate.weightMode === "bodyweight";
                               const hasSeasonPR = seasonPRNames.has(
                                 exerciseTemplate.exerciseName.trim().toLowerCase()
@@ -782,12 +782,16 @@ export default function SessionPage() {
                                         </span>
                                       </div>
 
-                                      <span
-                                        className="exercise-chip exercise-chip--tone"
-                                        style={getMovementToneStyle(tone)}
-                                      >
-                                        {movementType.name}
-                                      </span>
+                                      <div className="exercise-card__stats">
+                                        <span className="exercise-card__stat">
+                                          {lastPrDate
+                                            ? `${formatDurationSince(lastPrDate)} since last PR`
+                                            : "No PR yet"}
+                                        </span>
+                                        <span className="exercise-card__stat">
+                                          {`${workingSetsThisSeason} ${workingSetsThisSeason === 1 ? "set" : "sets"} this season`}
+                                        </span>
+                                      </div>
                                     </div>
                                   </button>
                                 </li>

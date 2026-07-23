@@ -539,23 +539,21 @@
   color: var(--text-muted);
 }
 
-.exercise-chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 26px;
-  padding: 0 10px;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  white-space: nowrap;
-  background: var(--pill-muted-bg);
-  color: var(--pill-muted-text);
+.exercise-card__stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+  text-align: right;
 }
 
-.exercise-chip--tone {
-  background: var(--movement-border, var(--pill-muted-bg));
-  color: var(--movement-text, var(--pill-muted-text));
+.exercise-card__stat {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
 .session-footer {
