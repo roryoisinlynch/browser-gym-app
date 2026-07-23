@@ -122,6 +122,8 @@ export interface SessionInstanceExerciseView {
   isDormant: boolean;
   /** Date of the most recent all-time PR before this session, or null if none. */
   lastPrDate: string | null;
+  /** True when this session's own instance set an all-time PR (card shows "PR set today"). */
+  prSetThisSession: boolean;
   /** Working sets logged for this exercise across the current season, incl. this session. */
   workingSetsThisSeason: number;
 }
@@ -2381,9 +2383,22 @@ export async function getSessionInstanceView(
       ).length;
 
       const isBodyweightExercise = sie.weightMode === "bodyweight";
-      const lastPrDate =
-        findLastPrDataPoint(rawHistory, exerciseInstance?.id ?? "", isBodyweightExercise)
-          ?.date ?? null;
+      // PR events for this exercise across all history (running-best; the first
+      // session never counts). Used both for the last-PR date and to tell whether
+      // the current session's own instance just set a PR — so the card can say
+      // "PR set today" instead of excluding today and misreading it as "No PR yet".
+      const prEvents = collectPrEventDataPoints(rawHistory, isBodyweightExercise);
+      const currentInstanceId = exerciseInstance?.id ?? "";
+      const prSetThisSession =
+        currentInstanceId !== "" &&
+        prEvents.some((e) => e.dp.exerciseInstanceId === currentInstanceId);
+      let lastPrDate: string | null = null;
+      for (let i = prEvents.length - 1; i >= 0; i--) {
+        if (prEvents[i].dp.exerciseInstanceId !== currentInstanceId) {
+          lastPrDate = prEvents[i].dp.date;
+          break;
+        }
+      }
 
       // Season working sets = this session's working sets (already classified in
       // the live view above) plus every prior session's working sets in the same
@@ -2418,6 +2433,7 @@ export async function getSessionInstanceView(
         prescribedRepTarget,
         isDormant,
         lastPrDate,
+        prSetThisSession,
         workingSetsThisSeason,
       });
     }

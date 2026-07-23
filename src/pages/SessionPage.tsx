@@ -679,7 +679,7 @@ export default function SessionPage() {
                       {!isCollapsed && (
                         <ul className="exercise-list">
                           {exercises.map(
-                            ({ sessionInstanceExerciseId, exerciseTemplate, exerciseInstance, sets, prescribedWeight, prescribedRepTarget, effectiveE1RM, isDormant, lastPrDate, workingSetsThisSeason }) => {
+                            ({ sessionInstanceExerciseId, exerciseTemplate, exerciseInstance, sets, prescribedWeight, prescribedRepTarget, effectiveE1RM, isDormant, lastPrDate, prSetThisSession, workingSetsThisSeason }) => {
                               const isBodyweight = exerciseTemplate.weightMode === "bodyweight";
                               const hasSeasonPR = seasonPRNames.has(
                                 exerciseTemplate.exerciseName.trim().toLowerCase()
@@ -784,9 +784,11 @@ export default function SessionPage() {
 
                                       <div className="exercise-card__stats">
                                         <span className="exercise-card__stat">
-                                          {lastPrDate
-                                            ? `${formatDurationSince(lastPrDate)} since last PR`
-                                            : "No PR yet"}
+                                          {prSetThisSession
+                                            ? "PR set today"
+                                            : lastPrDate
+                                              ? `${formatDurationSince(lastPrDate)} since last PR`
+                                              : "No PR yet"}
                                         </span>
                                         <span className="exercise-card__stat">
                                           {`${workingSetsThisSeason} ${workingSetsThisSeason === 1 ? "set" : "sets"} this season`}
