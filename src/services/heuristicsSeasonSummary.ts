@@ -15,6 +15,18 @@ export interface HeuristicSeasonAggregate {
   coveragePct: number | null;
   /** Distinct dates carrying ≥1 non-null answer — drives the ≥2-day gate. */
   distinctAnswerDays: number;
+  /** Per-question mean of non-null answers; a question absent here had no real
+   *  rating this season. Feeds the biggest-mover comparison. */
+  meanByQuestion: Map<string, number>;
+}
+
+// The question that moved the most between two seasons.
+export interface HeuristicMover {
+  questionId: string;
+  label: string;
+  from: number; // previous-season mean (rounded to 1 dp)
+  to: number; // current-season mean (rounded to 1 dp)
+  delta: number; // to − from
 }
 
 // Round (not floor) so a DST-crossing span isn't short a day, which would push
@@ -46,6 +58,7 @@ export function aggregateHeuristicSeason(
   let skippedCount = 0;
   const valuedDays = new Set<string>();
   const ratedCells = new Set<string>(); // defensive vs duplicate rows per (q,day)
+  const perQuestion = new Map<string, { sum: number; count: number }>();
 
   for (const e of entries) {
     if (!activeQuestionIds.has(e.questionId)) continue; // drop deleted questions
@@ -59,6 +72,18 @@ export function aggregateHeuristicSeason(
     valueSum += e.value;
     valueCount += 1;
     valuedDays.add(e.date);
+    const pq = perQuestion.get(e.questionId);
+    if (pq) {
+      pq.sum += e.value;
+      pq.count += 1;
+    } else {
+      perQuestion.set(e.questionId, { sum: e.value, count: 1 });
+    }
+  }
+
+  const meanByQuestion = new Map<string, number>();
+  for (const [qid, { sum, count }] of perQuestion) {
+    meanByQuestion.set(qid, sum / count);
   }
 
   const totalDays = Math.max(0, dayDiffInclusive(startIso, endIso));
@@ -71,5 +96,40 @@ export function aggregateHeuristicSeason(
     coveragePct:
       totalSlots > 0 ? Math.min(100, (valueCount / totalSlots) * 100) : null,
     distinctAnswerDays: valuedDays.size,
+    meanByQuestion,
   };
+}
+
+const round1 = (n: number): number => Math.round(n * 10) / 10;
+
+/**
+ * The questions that moved the most between two seasons. A question only
+ * qualifies when it has a real mean in BOTH seasons — otherwise there's no
+ * change to measure. Means are rounded to the displayed 1-decimal precision
+ * first, so a sub-0.05 wobble that reads as "3.0 → 3.0" is not called a mover.
+ * Increase and decrease are disjoint (a delta has one sign); ties keep the
+ * earliest question in the passed order.
+ */
+export function biggestMovers(
+  current: HeuristicSeasonAggregate,
+  previous: HeuristicSeasonAggregate,
+  questions: ReadonlyArray<{ id: string; label: string }>
+): { increase: HeuristicMover | null; decrease: HeuristicMover | null } {
+  let increase: HeuristicMover | null = null;
+  let decrease: HeuristicMover | null = null;
+
+  for (const q of questions) {
+    const rawTo = current.meanByQuestion.get(q.id);
+    const rawFrom = previous.meanByQuestion.get(q.id);
+    if (rawTo == null || rawFrom == null) continue;
+    const to = round1(rawTo);
+    const from = round1(rawFrom);
+    const delta = round1(to - from);
+    if (delta > 0 && (increase == null || delta > increase.delta)) {
+      increase = { questionId: q.id, label: q.label, from, to, delta };
+    } else if (delta < 0 && (decrease == null || delta < decrease.delta)) {
+      decrease = { questionId: q.id, label: q.label, from, to, delta };
+    }
+  }
+  return { increase, decrease };
 }

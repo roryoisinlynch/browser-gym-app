@@ -32,7 +32,9 @@ import {
 } from "../repositories/heuristicsRepository";
 import {
   aggregateHeuristicSeason,
+  biggestMovers,
   type HeuristicSeasonAggregate,
+  type HeuristicMover,
 } from "../services/heuristicsSeasonSummary";
 import { colorForHeuristicScore } from "../services/heuristicsScale";
 import Medal from "../components/Medal";
@@ -1066,6 +1068,7 @@ export default function DashboardPage() {
   const [heuristicCompare, setHeuristicCompare] = useState<{
     current: HeuristicSeasonAggregate;
     previous: HeuristicSeasonAggregate;
+    movers: { increase: HeuristicMover | null; decrease: HeuristicMover | null };
   } | null>(null);
   const [exerciseNeedingWeight, setExerciseNeedingWeight] = useState<
     { exerciseTemplateId: string; exerciseName: string; sessionName: string } | null
@@ -1267,7 +1270,8 @@ export default function DashboardPage() {
       // Gate: ≥2 distinct real-rating days in BOTH seasons.
       if (currentAgg.distinctAnswerDays < 2 || previousAgg.distinctAnswerDays < 2) return;
       if (cancelled.current) return;
-      setHeuristicCompare({ current: currentAgg, previous: previousAgg });
+      const movers = biggestMovers(currentAgg, previousAgg, questions);
+      setHeuristicCompare({ current: currentAgg, previous: previousAgg, movers });
     }
     loadHeuristicCompare();
   }, []);
@@ -1886,7 +1890,7 @@ export default function DashboardPage() {
 
   function renderHeuristicsSummary() {
     if (!heuristicCompare) return null;
-    const { current, previous } = heuristicCompare;
+    const { current, previous, movers } = heuristicCompare;
     if (current.mean == null || previous.mean == null) return null; // defensive
 
     const delta = current.mean - previous.mean;
@@ -1922,6 +1926,28 @@ export default function DashboardPage() {
             <span className={`dashboard-heuristics__delta ${deltaClass}`}>{deltaText}</span>
             {col(previous, "Last season")}
           </div>
+          {(movers.increase || movers.decrease) && (
+            <div className="dashboard-heuristics__movers">
+              {movers.increase && (
+                <div className="dashboard-heuristics__mover">
+                  <span className="dashboard-heuristics__mover-label">Biggest increase</span>
+                  <span className="dashboard-heuristics__mover-value dashboard-heuristics__mover-value--up">
+                    {movers.increase.label} {movers.increase.from.toFixed(1)} →{" "}
+                    {movers.increase.to.toFixed(1)}
+                  </span>
+                </div>
+              )}
+              {movers.decrease && (
+                <div className="dashboard-heuristics__mover">
+                  <span className="dashboard-heuristics__mover-label">Biggest decrease</span>
+                  <span className="dashboard-heuristics__mover-value dashboard-heuristics__mover-value--down">
+                    {movers.decrease.label} {movers.decrease.from.toFixed(1)} →{" "}
+                    {movers.decrease.to.toFixed(1)}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </section>
     );
