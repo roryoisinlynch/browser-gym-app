@@ -1894,26 +1894,51 @@ export default function DashboardPage() {
     if (current.mean == null || previous.mean == null) return null; // defensive
 
     const delta = current.mean - previous.mean;
-    const deltaClass =
-      delta > 0
-        ? "dashboard-heuristics__delta--up"
-        : delta < 0
-          ? "dashboard-heuristics__delta--down"
-          : "dashboard-heuristics__delta--flat";
+    const deltaTone = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
     const deltaText = `${delta >= 0 ? "+" : "−"}${Math.abs(delta).toFixed(1)}`;
 
-    const col = (agg: HeuristicSeasonAggregate, label: string) => (
-      <div className="dashboard-heuristics__col">
-        <span
-          className="dashboard-heuristics__mean"
-          style={{ color: colorForHeuristicScore(agg.mean!) }}
-        >
-          {agg.mean!.toFixed(1)}
-        </span>
-        <span className="dashboard-heuristics__label">{label}</span>
-        <span className="dashboard-heuristics__coverage">
-          {agg.coveragePct != null ? `${Math.round(agg.coveragePct)}% coverage` : "—"}
-        </span>
+    // Map a 1–5 mean onto the meter bar's 0–100% fill.
+    const barPct = (m: number) => Math.max(0, Math.min(100, ((m - 1) / 4) * 100));
+
+    const col = (agg: HeuristicSeasonAggregate, label: string) => {
+      const color = colorForHeuristicScore(agg.mean!);
+      return (
+        <div className="dashboard-heuristics__col">
+          <span className="dashboard-heuristics__mean" style={{ color }}>
+            {agg.mean!.toFixed(1)}
+          </span>
+          <span className="dashboard-heuristics__track">
+            <span
+              className="dashboard-heuristics__fill"
+              style={{ width: `${barPct(agg.mean!)}%`, background: color }}
+            />
+          </span>
+          <span className="dashboard-heuristics__label">{label}</span>
+          <span className="dashboard-heuristics__coverage">
+            {agg.coveragePct != null ? `${Math.round(agg.coveragePct)}% coverage` : "—"}
+          </span>
+        </div>
+      );
+    };
+
+    const moverTile = (m: HeuristicMover, dir: "up" | "down") => (
+      <div className="dashboard-heuristics__mover">
+        <div className="dashboard-heuristics__mover-head">
+          <span className="dashboard-heuristics__mover-label">
+            Biggest {dir === "up" ? "increase" : "decrease"}
+          </span>
+          <span className={`dashboard-heuristics__chip dashboard-heuristics__chip--${dir}`}>
+            {m.delta >= 0 ? "+" : "−"}
+            {Math.abs(m.delta).toFixed(1)}
+          </span>
+        </div>
+        <div className="dashboard-heuristics__mover-sub">
+          <span className="dashboard-heuristics__mover-name">{m.label}</span>
+          <span className="dashboard-heuristics__mover-values">
+            {m.from.toFixed(1)} <span className="dashboard-heuristics__arrow">→</span>{" "}
+            {m.to.toFixed(1)}
+          </span>
+        </div>
       </div>
     );
 
@@ -1923,29 +1948,17 @@ export default function DashboardPage() {
         <div className="dashboard-heuristics__card">
           <div className="dashboard-heuristics__row">
             {col(current, "This season")}
-            <span className={`dashboard-heuristics__delta ${deltaClass}`}>{deltaText}</span>
+            <span
+              className={`dashboard-heuristics__delta dashboard-heuristics__delta--${deltaTone}`}
+            >
+              {deltaText}
+            </span>
             {col(previous, "Last season")}
           </div>
           {(movers.increase || movers.decrease) && (
             <div className="dashboard-heuristics__movers">
-              {movers.increase && (
-                <div className="dashboard-heuristics__mover">
-                  <span className="dashboard-heuristics__mover-label">Biggest increase</span>
-                  <span className="dashboard-heuristics__mover-value dashboard-heuristics__mover-value--up">
-                    {movers.increase.label} {movers.increase.from.toFixed(1)} →{" "}
-                    {movers.increase.to.toFixed(1)}
-                  </span>
-                </div>
-              )}
-              {movers.decrease && (
-                <div className="dashboard-heuristics__mover">
-                  <span className="dashboard-heuristics__mover-label">Biggest decrease</span>
-                  <span className="dashboard-heuristics__mover-value dashboard-heuristics__mover-value--down">
-                    {movers.decrease.label} {movers.decrease.from.toFixed(1)} →{" "}
-                    {movers.decrease.to.toFixed(1)}
-                  </span>
-                </div>
-              )}
+              {movers.increase && moverTile(movers.increase, "up")}
+              {movers.decrease && moverTile(movers.decrease, "down")}
             </div>
           )}
         </div>
