@@ -543,16 +543,9 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 6px;
+  gap: 3px;
   flex-shrink: 0;
   text-align: right;
-}
-
-.exercise-card__stat-group {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 3px;
 }
 
 .exercise-card__stat {
