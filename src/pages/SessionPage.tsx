@@ -13,7 +13,7 @@ import BottomNav from "../components/BottomNav";
 import TopBar from "../components/TopBar";
 import { calculateEstimatedOneRepMax } from "../services/setAnalysis";
 import { computeSessionMetrics } from "../services/sessionMetrics";
-import { formatDurationSince } from "../services/relativeTime";
+import { daysSince, formatDurationSince } from "../services/relativeTime";
 import {
   type MovementTone,
   PALETTE,
@@ -201,6 +201,27 @@ export default function SessionPage() {
       target: metrics.intensityTarget,
       percentage,
     };
+  }, [sessionView]);
+
+  // Upper bounds for the per-card stat bars. The scale is local to this session
+  // instance, so a bar answers "how does this exercise compare to the others I'm
+  // doing today" rather than an absolute question. Read off `sessionView` rather
+  // than the rendered `sortedMuscleGroups` so collapsing a group doesn't rescale
+  // everything.
+  const sessionStatScales = useMemo(() => {
+    let maxPrDays = 0;
+    let maxSeasonSets = 0;
+
+    for (const group of sessionView?.muscleGroups ?? []) {
+      for (const exercise of group.exercises) {
+        if (!exercise.prSetThisSession && exercise.lastPrDate) {
+          maxPrDays = Math.max(maxPrDays, daysSince(exercise.lastPrDate));
+        }
+        maxSeasonSets = Math.max(maxSeasonSets, exercise.workingSetsThisSeason);
+      }
+    }
+
+    return { maxPrDays, maxSeasonSets };
   }, [sessionView]);
 
   const hasAnyPRBadge = useMemo(() => {
@@ -707,6 +728,34 @@ export default function SessionPage() {
                                   s.analysis.estimatedOneRepMax >= targetE1RM - 0.0001;
                               }).length;
 
+                              // Stat bars, scaled against the session-wide maxima. The PR bar is
+                              // inverted (max minus current) because for elapsed time smaller is
+                              // better: a full bar is the freshest PR in the session, an empty bar
+                              // the stalest. An exercise with no PR at all sits at the stale end.
+                              const prDays = prSetThisSession
+                                ? 0
+                                : lastPrDate
+                                  ? daysSince(lastPrDate)
+                                  : null;
+                              const prRecencyPct =
+                                prDays == null
+                                  ? 0
+                                  : sessionStatScales.maxPrDays <= 0
+                                    ? 100
+                                    : clampPercentage(
+                                        ((sessionStatScales.maxPrDays - prDays) /
+                                          sessionStatScales.maxPrDays) *
+                                          100
+                                      );
+                              const seasonSetsPct =
+                                sessionStatScales.maxSeasonSets > 0
+                                  ? clampPercentage(
+                                      (workingSetsThisSeason /
+                                        sessionStatScales.maxSeasonSets) *
+                                        100
+                                    )
+                                  : 0;
+
                               // Only point users at the config page when there's a usable recent
                               // baseline to suggest a weight from; otherwise (no history, or
                               // dormant) the exercise is AMRAP until a recent session re-baselines.
@@ -783,15 +832,37 @@ export default function SessionPage() {
                                       </div>
 
                                       <div className="exercise-card__stats">
-                                        <span className="exercise-card__stat">
-                                          {prSetThisSession
-                                            ? "PR set today"
-                                            : lastPrDate
-                                              ? `${formatDurationSince(lastPrDate)} since last PR`
-                                              : "No PR yet"}
+                                        <span className="exercise-card__stat-group">
+                                          <span className="exercise-card__stat">
+                                            {prSetThisSession
+                                              ? "PR set today"
+                                              : lastPrDate
+                                                ? `${formatDurationSince(lastPrDate)} since last PR`
+                                                : "No PR yet"}
+                                          </span>
+                                          <span
+                                            className="exercise-card__stat-track"
+                                            aria-hidden="true"
+                                          >
+                                            <span
+                                              className="exercise-card__stat-fill"
+                                              style={{ width: `${prRecencyPct}%` }}
+                                            />
+                                          </span>
                                         </span>
-                                        <span className="exercise-card__stat">
-                                          {`${workingSetsThisSeason} ${workingSetsThisSeason === 1 ? "set" : "sets"} this season`}
+                                        <span className="exercise-card__stat-group">
+                                          <span className="exercise-card__stat">
+                                            {`${workingSetsThisSeason} ${workingSetsThisSeason === 1 ? "set" : "sets"} this season`}
+                                          </span>
+                                          <span
+                                            className="exercise-card__stat-track"
+                                            aria-hidden="true"
+                                          >
+                                            <span
+                                              className="exercise-card__stat-fill"
+                                              style={{ width: `${seasonSetsPct}%` }}
+                                            />
+                                          </span>
                                         </span>
                                       </div>
                                     </div>

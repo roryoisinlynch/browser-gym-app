@@ -543,9 +543,16 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 2px;
+  gap: 6px;
   flex-shrink: 0;
   text-align: right;
+}
+
+.exercise-card__stat-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
 }
 
 .exercise-card__stat {
@@ -554,6 +561,27 @@
   color: var(--text-muted);
   letter-spacing: 0.01em;
   white-space: nowrap;
+}
+
+/* Fixed-width track so bar lengths are comparable between cards, rather than
+   varying with the length of the stat text above them. */
+.exercise-card__stat-track {
+  display: flex;
+  justify-content: flex-end;
+  width: 72px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+/* flex-none is load-bearing: without it the inline width is treated as a flex
+   basis and the fill shrinks. Same reason it's set on .sum-score__fill. */
+.exercise-card__stat-fill {
+  flex: none;
+  height: 100%;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.32);
 }
 
 .session-footer {

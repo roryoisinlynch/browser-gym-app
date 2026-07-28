@@ -2,7 +2,7 @@
 // truth for "how long ago" phrasing across the app, so the exercise summary
 // card and the insights stats panel always pick the same increment.
 
-function daysSince(isoDate: string): number {
+export function daysSince(isoDate: string): number {
   return Math.round(
     (Date.now() - new Date(isoDate).getTime()) / (1000 * 60 * 60 * 24)
   );
