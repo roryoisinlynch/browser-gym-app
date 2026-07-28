@@ -10,6 +10,7 @@ import {
   stopSessionInstance,
 } from "../repositories/programRepository";
 import BottomNav from "../components/BottomNav";
+import PageLoader from "../components/PageLoader";
 import TopBar from "../components/TopBar";
 import { calculateEstimatedOneRepMax } from "../services/setAnalysis";
 import { computeSessionMetrics } from "../services/sessionMetrics";
@@ -99,6 +100,7 @@ export default function SessionPage() {
   );
   const [seasonPRNames, setSeasonPRNames] = useState<Set<string>>(() => new Set());
   const [isLoading, setIsLoading] = useState(true);
+  const [loaderDone, setLoaderDone] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isAddExerciseOpen, setIsAddExerciseOpen] = useState(false);
@@ -443,12 +445,18 @@ export default function SessionPage() {
     }
   }
 
-  if (isLoading) {
+  // Held until the loader has filled, so an error or an empty view never flashes
+  // up mid-animation. `isLoading` only ever flips once, at first load.
+  if (!loaderDone) {
     return (
       <main className="session-page">
         <TopBar title="Session" backTo="/week" backLabel="Back to week" />
         <section className="session-shell">
-          <p>Loading session...</p>
+          <PageLoader
+            durationMs={2000}
+            ready={!isLoading}
+            onDone={() => setLoaderDone(true)}
+          />
         </section>
         <BottomNav activeTab="session" />
       </main>
