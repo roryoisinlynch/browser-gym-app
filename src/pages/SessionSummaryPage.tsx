@@ -246,12 +246,17 @@ export default function SessionSummaryPage() {
             />
 
             {/* ── Week summary CTA ──
-                Gated on the week being complete, not on this being its last
-                session: re-opening an earlier session from a finished week
-                should still offer the week's report, because once a newer week
-                finishes that report has no other route into it. Sits directly
-                under the hero rather than at the foot of the page, where it was
-                eight sections below the fold and being missed. */}
+                Gated on the week being complete rather than on this being its
+                last session, which comes to the same thing: the only routes to
+                a session report are finishing one and the dashboard's most-
+                recent card, and a week completes on its final settle, so the
+                one report this can appear on is the one that completed the
+                week. Sessions can settle out of order, though, so that isn't
+                always the last session in the schedule.
+                Sits directly under the hero rather than at the foot of the
+                page, where it was eight sections below the fold and being
+                missed — and it's worth catching here, because once a newer week
+                completes the dashboard stops pointing at this week's report. */}
             {sv.weekInstance.status === "completed" && (
               <RevealSection>
                 <button
