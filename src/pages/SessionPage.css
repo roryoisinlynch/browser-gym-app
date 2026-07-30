@@ -436,7 +436,10 @@
   background: var(--movement-border, var(--text-soft));
 }
 
+/* Ring is brighter than --panel-border so unfinished sets stay legible
+   against the panel background. */
 .volume-dot--empty {
+  border-color: #6b7480;
   background: transparent;
 }
 
