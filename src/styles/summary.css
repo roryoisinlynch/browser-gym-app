@@ -300,28 +300,55 @@
   opacity: 0.5;
 }
 
-/* ── Report CTA ──
-   The link on to the next report up the chain. Deliberately the quietest thing
-   on the page: it's an exit, not a result. */
+/* ── Milestone CTA ──
+   The link on to the next report up the chain. It used to sit last and quietest,
+   on the reasoning that it's an exit rather than a result — but a completed week
+   or season is a result, and eight sections down a 400px column it was simply
+   being missed. It now states the milestone and sits under the hero, in the same
+   accent tint the dashboard gives its year-review card.
+   Type stays inside the page's five sizes and its accent-on-strong row language:
+   the milestone takes label size in accent (it's the result), the action takes
+   body size in strong with an accent arrow, exactly like .sum-row__value. */
 
-.sum-cta {
-  display: block;
+.sum-milestone {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   width: 100%;
   padding: 14px 16px;
   border-radius: 12px;
   font-family: inherit;
-  font-size: var(--sum-fs-support, 0.875rem);
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--text-strong);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
+  background: linear-gradient(
+    135deg,
+    rgba(216, 240, 106, 0.1),
+    rgba(216, 240, 106, 0.03)
+  );
+  border: 1px solid rgba(216, 240, 106, 0.32);
   cursor: pointer;
   transition: opacity 0.15s;
 }
 
-.sum-cta:active {
+.sum-milestone:active {
   opacity: 0.8;
+}
+
+.sum-milestone__label {
+  font-size: var(--sum-fs-label, 0.7rem);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.sum-milestone__action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: var(--sum-fs-body, 1rem);
+  font-weight: 700;
+  color: var(--text-strong);
 }
 
 /* ── Weeks breadcrumb ──
@@ -468,6 +495,14 @@
   /* Rows follow their section title in rather than racing it. */
   .sum-section.is-in .sum-list .sum-reveal {
     animation-delay: calc(90ms + var(--i, 0) * 70ms);
+  }
+
+  /* The milestone card lands once the hero above it has finished, so it reads as
+     that block's last beat rather than competing with the grade. The session's
+     second score starts at 500ms and runs 650ms, so 1150ms is the default; the
+     week report overrides it, because its medal trail lands at 1400ms. */
+  .sum-section.is-in .sum-milestone {
+    animation-delay: var(--milestone-delay, 1150ms);
   }
 
   .sum-section.is-in .sum-hs-bar__fill {

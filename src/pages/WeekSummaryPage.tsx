@@ -396,6 +396,30 @@ export default function WeekSummaryPage() {
               </RevealSection>
             )}
 
+            {/* ── Season summary CTA ──
+                Set only when this week and its season are both complete, so its
+                presence is the signal; see the load effect above. Sits below the
+                hero-synced trail rather than between it and the hero: those
+                medals are timed to land on the hero's last count-up beat, so the
+                two are one block. */}
+            {seasonInstance && (
+              <RevealSection>
+                <button
+                  className="sum-milestone sum-reveal"
+                  style={{ "--milestone-delay": "1500ms" } as React.CSSProperties}
+                  onClick={() => navigate(`/season/${seasonInstance.id}/summary`)}
+                >
+                  <span className="sum-milestone__label">
+                    Season {seasonInstance.order} complete
+                  </span>
+                  <span className="sum-milestone__action">
+                    View season summary
+                    <span className="sum-arrow" aria-hidden="true">→</span>
+                  </span>
+                </button>
+              </RevealSection>
+            )}
+
             {/* ── Narrative ── */}
             <RevealSection>
               <p className="sum-narrative sum-reveal">{buildWeekNarrative(metrics!)}</p>
@@ -496,18 +520,6 @@ export default function WeekSummaryPage() {
                     );
                   })}
                 </ul>
-              </RevealSection>
-            )}
-
-            {/* ── Season summary CTA ── */}
-            {seasonInstance && (
-              <RevealSection>
-                <button
-                  className="sum-cta sum-reveal"
-                  onClick={() => navigate(`/season/${seasonInstance.id}/summary`)}
-                >
-                  View season summary →
-                </button>
               </RevealSection>
             )}
           </>);

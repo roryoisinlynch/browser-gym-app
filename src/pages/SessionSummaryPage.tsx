@@ -245,6 +245,30 @@ export default function SessionSummaryPage() {
               intensityScore={intensityScore}
             />
 
+            {/* ── Week summary CTA ──
+                Gated on the week being complete, not on this being its last
+                session: re-opening an earlier session from a finished week
+                should still offer the week's report, because once a newer week
+                finishes that report has no other route into it. Sits directly
+                under the hero rather than at the foot of the page, where it was
+                eight sections below the fold and being missed. */}
+            {sv.weekInstance.status === "completed" && (
+              <RevealSection>
+                <button
+                  className="sum-milestone sum-reveal"
+                  onClick={() => navigate(`/week/${sv.weekInstance.id}/summary`)}
+                >
+                  <span className="sum-milestone__label">
+                    Week {sv.weekInstance.order} complete
+                  </span>
+                  <span className="sum-milestone__action">
+                    View week summary
+                    <span className="sum-arrow" aria-hidden="true">→</span>
+                  </span>
+                </button>
+              </RevealSection>
+            )}
+
             {/* ── Narrative ── */}
             {narrative && (
               <RevealSection>
@@ -314,18 +338,6 @@ export default function SessionSummaryPage() {
                 <div className="sum-reveal">
                   <WeeklyBreadcrumb sessions={breadcrumbSessions} />
                 </div>
-              </RevealSection>
-            )}
-
-            {/* ── Week summary CTA (shown when this was the last session in the week) ── */}
-            {sv.weekInstance.status === "completed" && (
-              <RevealSection>
-                <button
-                  className="sum-cta sum-reveal"
-                  onClick={() => navigate(`/week/${sv.weekInstance.id}/summary`)}
-                >
-                  View week summary →
-                </button>
               </RevealSection>
             )}
           </>);
