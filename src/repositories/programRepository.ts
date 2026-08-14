@@ -27,6 +27,7 @@ import {
   getById,
   getAllByIndex,
   putItem,
+  bulkPutItems,
   deleteItem,
 } from "../db/db";
 
@@ -3964,6 +3965,94 @@ export async function deleteSessionTemplateById(id: string): Promise<void> {
     await deleteSessionTemplateMuscleGroupById(section.id);
   }
   await deleteItem(STORE_NAMES.sessionTemplates, id);
+}
+
+// Deep-copies a session template (muscle groups + exercise templates, all with
+// fresh ids) and places the copy in the week via a new WeekTemplateItem.
+// MuscleGroup / MovementType are shared references and are not cloned. Reads go
+// through the raw indexes rather than getSessionTemplateGroupsWithExercises,
+// which drops rows whose MuscleGroup or MovementType no longer resolves and
+// would make the copy lossy. Writes bypass saveExerciseTemplate: its snapshot
+// propagation is a guaranteed no-op for brand-new ids.
+export async function duplicateSessionTemplate(
+  sourceSessionTemplateId: string,
+  newName: string,
+  weekTemplateId: string,
+  order: number
+): Promise<SessionTemplate> {
+  const source = await getById<SessionTemplate>(
+    STORE_NAMES.sessionTemplates,
+    sourceSessionTemplateId
+  );
+  if (!source) {
+    throw new Error("Session template not found.");
+  }
+
+  const newSessionTemplate: SessionTemplate = {
+    id: crypto.randomUUID(),
+    seasonTemplateId: source.seasonTemplateId,
+    name: newName,
+    order,
+  };
+
+  const sourceGroups = await getAllByIndex<SessionTemplateMuscleGroup>(
+    STORE_NAMES.sessionTemplateMuscleGroups,
+    "bySessionTemplateId",
+    sourceSessionTemplateId
+  );
+
+  const newGroups: SessionTemplateMuscleGroup[] = [];
+  const newExercises: ExerciseTemplate[] = [];
+
+  for (const group of sourceGroups) {
+    const newGroup: SessionTemplateMuscleGroup = {
+      ...group,
+      id: crypto.randomUUID(),
+      sessionTemplateId: newSessionTemplate.id,
+    };
+    newGroups.push(newGroup);
+
+    // ExerciseTemplate has no order field; within a group, display and
+    // snapshot order are derived by sorting on id. Assign the fresh ids in
+    // sorted order against the source's sorted order so the copy keeps the
+    // same relative exercise order.
+    const sourceExercises = (
+      await getAllByIndex<ExerciseTemplate>(
+        STORE_NAMES.exerciseTemplates,
+        "bySessionTemplateMuscleGroupId",
+        group.id
+      )
+    ).sort((a, b) => a.id.localeCompare(b.id));
+
+    const newIds = sourceExercises
+      .map(() => crypto.randomUUID())
+      .sort((a, b) => a.localeCompare(b));
+
+    sourceExercises.forEach((exercise, i) => {
+      newExercises.push({
+        ...exercise,
+        id: newIds[i],
+        sessionTemplateMuscleGroupId: newGroup.id,
+      });
+    });
+  }
+
+  const newWeekTemplateItem: WeekTemplateItem = {
+    id: crypto.randomUUID(),
+    weekTemplateId,
+    order,
+    type: "session",
+    sessionTemplateId: newSessionTemplate.id,
+  };
+
+  // Children first, then the records that make the copy reachable, so an
+  // interruption cannot leave a visible but incomplete session in the week.
+  await bulkPutItems(STORE_NAMES.exerciseTemplates, newExercises);
+  await bulkPutItems(STORE_NAMES.sessionTemplateMuscleGroups, newGroups);
+  await putItem(STORE_NAMES.sessionTemplates, newSessionTemplate);
+  await putItem(STORE_NAMES.weekTemplateItems, newWeekTemplateItem);
+
+  return newSessionTemplate;
 }
 
 export async function saveMuscleGroup(muscleGroup: MuscleGroup): Promise<void> {

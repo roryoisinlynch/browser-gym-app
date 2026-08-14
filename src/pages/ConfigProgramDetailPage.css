@@ -458,3 +458,30 @@
 .config-program-detail__add-btn--rest {
   color: var(--text-soft);
 }
+
+/* Duplicate */
+
+.config-program-detail__duplicate-btn {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--card-border);
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.config-program-detail__duplicate-btn:hover {
+  background: #262c35;
+  color: var(--accent);
+}
+
+.config-program-detail__duplicate-label {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-soft);
+}

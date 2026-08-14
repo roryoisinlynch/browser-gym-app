@@ -32,7 +32,9 @@ import {
   saveWeekTemplateItem,
   deleteWeekTemplateItemById,
   deleteSessionTemplateById,
+  duplicateSessionTemplate,
 } from "../repositories/programRepository";
+import { suggestDuplicateName } from "../services/sessionNameSuggestion";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import "./ConfigProgramDetailPage.css";
@@ -98,6 +100,13 @@ export default function ConfigProgramDetailPage() {
   const [newSessionName, setNewSessionName] = useState("");
   const [addingSession, setAddingSession] = useState(false);
 
+  // Duplicate session
+  const [duplicateSourceId, setDuplicateSourceId] = useState<string | null>(null);
+  const [duplicateName, setDuplicateName] = useState("");
+  const [duplicating, setDuplicating] = useState(false);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
+  const duplicateInputRef = useRef<HTMLInputElement | null>(null);
+
   // Delete confirm
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -158,6 +167,12 @@ export default function ConfigProgramDetailPage() {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  // Select the suggested name once per form open, so a refocus while editing
+  // does not re-select and clobber the user's changes.
+  useEffect(() => {
+    if (duplicateSourceId) duplicateInputRef.current?.select();
+  }, [duplicateSourceId]);
 
   function parseRir(input: string): number[] | null {
     const parts = input.split(",").map((s) => s.trim());
@@ -220,7 +235,7 @@ export default function ConfigProgramDetailPage() {
   }
 
   async function handleAddSession() {
-    if (!weekTemplate || !seasonTemplateId) return;
+    if (!weekTemplate || !seasonTemplateId || addingSession) return;
     const name = newSessionName.trim();
     if (!name) return;
     setAddingSession(true);
@@ -252,6 +267,56 @@ export default function ConfigProgramDetailPage() {
     }
   }
 
+  function handleStartDuplicate(item: ProgramItem) {
+    if (!item.sessionTemplate) return;
+    const existingNames = items
+      .map((i) => i.sessionTemplate?.name)
+      .filter((n): n is string => !!n);
+    setDuplicateSourceId(item.sessionTemplate.id);
+    setDuplicateName(
+      suggestDuplicateName(item.sessionTemplate.name, existingNames)
+    );
+    setDuplicateError(null);
+    setShowAddSession(false);
+    setNewSessionName("");
+    setConfirmDeleteId(null);
+  }
+
+  function handleCancelDuplicate() {
+    setDuplicateSourceId(null);
+    setDuplicateName("");
+    setDuplicateError(null);
+  }
+
+  async function handleConfirmDuplicate() {
+    if (!weekTemplate || !duplicateSourceId || duplicating) return;
+    const name = duplicateName.trim();
+    if (!name) return;
+    setDuplicating(true);
+    setDuplicateError(null);
+    try {
+      const maxOrder = items.reduce(
+        (m, i) => Math.max(m, i.weekTemplateItem.order),
+        0
+      );
+      await duplicateSessionTemplate(
+        duplicateSourceId,
+        name,
+        weekTemplate.id,
+        maxOrder + 1
+      );
+      setDuplicateSourceId(null);
+      setDuplicateName("");
+      await loadData();
+    } catch (error) {
+      setDuplicateError(
+        error instanceof Error ? error.message : "Could not duplicate session."
+      );
+    } finally {
+      setDuplicating(false);
+    }
+  }
+
   async function handleAddRestDay() {
     if (!weekTemplate) return;
     const maxOrder = items.reduce(
@@ -273,6 +338,9 @@ export default function ConfigProgramDetailPage() {
     try {
       if (item.weekTemplateItem.type === "session" && item.sessionTemplate) {
         await deleteSessionTemplateById(item.sessionTemplate.id);
+        if (item.sessionTemplate.id === duplicateSourceId) {
+          handleCancelDuplicate();
+        }
       }
       await deleteWeekTemplateItemById(item.weekTemplateItem.id);
       setConfirmDeleteId(null);
@@ -492,11 +560,21 @@ export default function ConfigProgramDetailPage() {
                                   {item.sessionTemplate?.name ?? "Unnamed session"}
                                 </span>
                                 <span className="config-program-detail__session-volume">
-                                  Target working set volume: {item.totalWorkingSets}
+                                  Target working sets: {item.totalWorkingSets}
                                 </span>
                               </span>
                               <span className="config-program-detail__session-chevron">›</span>
                             </button>
+                            {item.sessionTemplate && confirmDeleteId !== id && (
+                              <button
+                                type="button"
+                                className="config-program-detail__duplicate-btn"
+                                onClick={() => handleStartDuplicate(item)}
+                                aria-label={`Duplicate ${item.sessionTemplate.name}`}
+                              >
+                                ⧉
+                              </button>
+                            )}
                             {confirmDeleteId === id ? (
                               <div className="config-program-detail__delete-confirm">
                                 <button
@@ -541,6 +619,9 @@ export default function ConfigProgramDetailPage() {
                 type="text"
                 value={newSessionName}
                 onChange={(e) => setNewSessionName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAddSession();
+                }}
                 placeholder="Session name, e.g. Chest Back 1"
                 autoFocus
               />
@@ -559,6 +640,47 @@ export default function ConfigProgramDetailPage() {
                   disabled={addingSession || !newSessionName.trim()}
                 >
                   {addingSession ? "Adding…" : "Add"}
+                </button>
+              </div>
+            </div>
+          ) : duplicateSourceId ? (
+            <div className="config-program-detail__add-session-form">
+              <p className="config-program-detail__duplicate-label">
+                Duplicate of{" "}
+                {items.find((i) => i.sessionTemplate?.id === duplicateSourceId)
+                  ?.sessionTemplate?.name ?? "session"}
+              </p>
+              <input
+                ref={duplicateInputRef}
+                className="config-program-detail__add-session-input"
+                type="text"
+                value={duplicateName}
+                onChange={(e) => setDuplicateName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleConfirmDuplicate();
+                }}
+                placeholder="New session name"
+                aria-label="New session name"
+                autoFocus
+              />
+              {duplicateError && (
+                <p className="config-program-detail__rir-error">{duplicateError}</p>
+              )}
+              <div className="config-program-detail__add-session-actions">
+                <button
+                  type="button"
+                  className="config-program-detail__add-cancel"
+                  onClick={handleCancelDuplicate}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="config-program-detail__add-save"
+                  onClick={handleConfirmDuplicate}
+                  disabled={duplicating || !duplicateName.trim()}
+                >
+                  {duplicating ? "Duplicating…" : "Duplicate"}
                 </button>
               </div>
             </div>
