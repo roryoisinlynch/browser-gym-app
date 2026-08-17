@@ -133,11 +133,12 @@ export default function ExercisePage() {
     !needsWeightConfig &&
     exerciseView.exerciseInstance.prescribedRepTarget == null;
 
-  // Bodyweight equivalent: no prior-session rep history.
+  // Bodyweight equivalent: no computable rep target (no prior history, or
+  // dormant). Mirrors the session page's targetReps == null check.
   const isBodyweightAmrap =
     exerciseView != null &&
     isBodyweight &&
-    !exerciseView.hasPriorHistory;
+    exerciseView.exerciseInstance.prescribedRepTarget == null;
 
   const topSetEstimatedOneRepMax = useMemo(() => {
     if (isBodyweight) return null;
