@@ -18,25 +18,52 @@ function milestoneSentence(milestone: SessionMilestone): string {
   return `You've reached ${articleFor(milestone.threshold)} ${milestone.threshold}kg e1RM on ${milestone.exerciseName}!`;
 }
 
+/** A confetti burst's identity: remount key plus a random launch geometry. */
+function newBurst(n: number) {
+  return {
+    n,
+    angle: Math.random() * Math.PI * 2,
+    radius: 0.85 + Math.random() * 0.5,
+  };
+}
+
 /**
  * One milestone's content, keyed by step index in the parent so each step
- * remounts fresh and the entry animations and confetti replay.
+ * remounts fresh and the entry animations and confetti replay. The confetti
+ * then keeps re-bursting on its own random timer for as long as the step shows.
  */
 function MilestoneStep({ milestone }: { milestone: SessionMilestone }) {
+  const [burst, setBurst] = useState(() => newBurst(0));
+
+  // Reduced-motion users never see confetti (the pieces stay display: none),
+  // so skip the re-burst timer entirely there.
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let timer = 0;
+    const schedule = () => {
+      timer = window.setTimeout(() => {
+        setBurst((current) => newBurst(current.n + 1));
+        schedule();
+      }, 1600 + Math.random() * 2400);
+    };
+    schedule();
+    return () => window.clearTimeout(timer);
+  }, []);
+
   return (
     <div className="milestone-celebration__step">
       <p className="milestone-celebration__eyebrow">New milestone</p>
       <div className="milestone-celebration__ring" aria-hidden="true">
         <span className="milestone-celebration__number">{milestone.threshold}kg</span>
-        <div className="milestone-celebration__confetti">
+        <div className="milestone-celebration__confetti" key={burst.n}>
           {Array.from({ length: 14 }, (_, i) => (
             <span
               key={i}
               style={
                 {
                   "--i": i,
-                  "--dx": `${Math.cos((i / 14) * Math.PI * 2) * 140}px`,
-                  "--dy": `${Math.sin((i / 14) * Math.PI * 2) * 120 - 40}px`,
+                  "--dx": `${Math.cos(burst.angle + (i / 14) * Math.PI * 2) * 140 * burst.radius}px`,
+                  "--dy": `${Math.sin(burst.angle + (i / 14) * Math.PI * 2) * 120 * burst.radius - 40}px`,
                 } as React.CSSProperties
               }
             />
