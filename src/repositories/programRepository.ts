@@ -1037,6 +1037,33 @@ export function computeSessionDuration(sets: ExerciseSet[]): number | null {
 }
 
 /**
+ * Most recent logged-set timestamp (epoch ms) across every set in the
+ * session, for the rest timer. Ghost rows (every performed field null) are
+ * excluded; sets without a recoverable timestamp are skipped. Null when no
+ * set has a usable timestamp.
+ */
+export async function getLastSetLoggedAtMsForSession(
+  sessionInstanceId: string
+): Promise<number | null> {
+  const sets = await getExerciseSetsForSessionInstance(sessionInstanceId);
+
+  let max: number | null = null;
+  for (const set of sets) {
+    if (
+      set.performedWeight == null &&
+      set.performedReps == null &&
+      set.performedRir == null
+    ) {
+      continue;
+    }
+    const t = setLoggedAtMs(set);
+    if (t == null) continue;
+    if (max == null || t > max) max = t;
+  }
+  return max;
+}
+
+/**
  * Session duration, lazily backfilled: an absent sessionDuration means "not
  * yet computed", so it is derived from the session's sets and persisted
  * (null when not derivable) so each record is only computed once. Only

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import "./ExerciseSetTable.css";
+import RestTimer from "./RestTimer";
 
 export interface ExerciseSetTableRow {
   id: string;
@@ -21,6 +22,7 @@ interface ExerciseSetTableProps {
   isBodyweight?: boolean;
   isAmrap?: boolean;
   isBodyweightAmrap?: boolean;
+  restTimerAnchorMs?: number | null;
 }
 
 function formatEstimatedOneRepMax(value: number | null) {
@@ -58,6 +60,7 @@ export default function ExerciseSetTable({
   isBodyweight = false,
   isAmrap = false,
   isBodyweightAmrap = false,
+  restTimerAnchorMs = null,
 }: ExerciseSetTableProps) {
   const targetLabel = getTargetLabel(targetWeight, targetReps, isBodyweight, isAmrap, isBodyweightAmrap);
   const rowClass = `exercise-set-table__row${isBodyweight ? " exercise-set-table__row--bw" : ""}`;
@@ -79,6 +82,7 @@ export default function ExerciseSetTable({
     <section className="exercise-set-table-card">
       <div className="exercise-set-table-card__header">
         <h2 className="exercise-set-table-card__title">Sets</h2>
+        {restTimerAnchorMs != null && <RestTimer anchorMs={restTimerAnchorMs} />}
       </div>
 
       <div className="exercise-set-table">

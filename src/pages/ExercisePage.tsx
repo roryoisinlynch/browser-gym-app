@@ -5,6 +5,7 @@ import {
   createExerciseSet,
   deleteExerciseSet,
   getExerciseInstanceView,
+  getLastSetLoggedAtMsForSession,
   updateExerciseSet,
 } from "../repositories/programRepository";
 import { calculateEstimatedOneRepMax } from "../services/setAnalysis";
@@ -78,6 +79,7 @@ export default function ExercisePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRowSaving, setIsRowSaving] = useState(false);
+  const [restAnchorMs, setRestAnchorMs] = useState<number | null>(null);
   const draftCounterRef = useRef(1);
 
   useEffect(() => {
@@ -98,6 +100,9 @@ export default function ExercisePage() {
 
         setExerciseView(view);
         setRows(hydrateRows(view));
+        setRestAnchorMs(
+          await getLastSetLoggedAtMsForSession(view.sessionInstance.id)
+        );
       } catch (error) {
         console.error("Failed to load exercise page:", error);
         setErrorMessage("Could not load exercise data.");
@@ -139,6 +144,13 @@ export default function ExercisePage() {
     exerciseView != null &&
     isBodyweight &&
     exerciseView.exerciseInstance.prescribedRepTarget == null;
+
+  // Rest timer only makes sense mid-workout: hidden until the session is
+  // started and once it is finished, so old sessions never show a stale count.
+  const isSessionInProgress =
+    exerciseView != null &&
+    exerciseView.sessionInstance.startedAt != null &&
+    exerciseView.sessionInstance.completedAt == null;
 
   const topSetEstimatedOneRepMax = useMemo(() => {
     if (isBodyweight) return null;
@@ -184,6 +196,9 @@ export default function ExercisePage() {
     if (view) {
       setExerciseView(view);
       setRows(hydrateRows(view));
+      setRestAnchorMs(
+        await getLastSetLoggedAtMsForSession(view.sessionInstance.id)
+      );
     }
   }
 
@@ -218,6 +233,11 @@ export default function ExercisePage() {
         }
 
         persistedSetId = createdSet.id;
+        setRestAnchorMs(
+          createdSet.loggedAt
+            ? new Date(createdSet.loggedAt).getTime()
+            : Date.now()
+        );
       }
 
       await updateExerciseSet(persistedSetId, {
@@ -428,6 +448,7 @@ export default function ExercisePage() {
             isBodyweight={isBodyweight}
             isAmrap={isAmrap}
             isBodyweightAmrap={isBodyweightAmrap}
+            restTimerAnchorMs={isSessionInProgress ? restAnchorMs : null}
           />
 
           {!isAmrap && !isBodyweightAmrap && (
