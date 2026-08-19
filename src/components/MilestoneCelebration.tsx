@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import type { SessionMilestone } from "../repositories/programRepository";
-import useCountUp from "../hooks/useCountUp";
 import "./MilestoneCelebration.css";
 
 interface MilestoneCelebrationProps {
@@ -21,15 +20,14 @@ function milestoneSentence(milestone: SessionMilestone): string {
 
 /**
  * One milestone's content, keyed by step index in the parent so each step
- * remounts fresh and the entry animations, confetti, and count-up replay.
+ * remounts fresh and the entry animations and confetti replay.
  */
 function MilestoneStep({ milestone }: { milestone: SessionMilestone }) {
-  const shown = useCountUp(milestone.threshold, 700);
   return (
     <div className="milestone-celebration__step">
       <p className="milestone-celebration__eyebrow">New milestone</p>
       <div className="milestone-celebration__ring" aria-hidden="true">
-        <span className="milestone-celebration__number">{shown}kg</span>
+        <span className="milestone-celebration__number">{milestone.threshold}kg</span>
         <div className="milestone-celebration__confetti">
           {Array.from({ length: 14 }, (_, i) => (
             <span
