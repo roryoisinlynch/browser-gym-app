@@ -1,6 +1,13 @@
 .session-page {
   min-height: 100vh;
   padding: 64px 0 100px;
+  /* The finish-ready glow pseudo-elements extend past the right viewport
+     edge; that scrollable overflow makes mobile browsers shrink-to-fit zoom
+     the page, dropping the fixed bottom nav below the visible screen and
+     re-sampling the zoom on every reflow (e.g. the time bar tick). clip, not
+     hidden: hidden would force overflow-y into auto and create a scroll
+     container. */
+  overflow-x: clip;
   background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
   color: var(--text-strong);
 }
