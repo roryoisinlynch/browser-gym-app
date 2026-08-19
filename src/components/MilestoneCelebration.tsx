@@ -15,7 +15,7 @@ function articleFor(threshold: number): string {
 }
 
 function milestoneSentence(milestone: SessionMilestone): string {
-  return `You've reached ${articleFor(milestone.threshold)} ${milestone.threshold}kg e1RM on ${milestone.exerciseName}!`;
+  return `You've reached ${articleFor(milestone.threshold)} ${milestone.threshold}kg ${milestone.exerciseName} e1RM!`;
 }
 
 /** A confetti burst's identity: remount key plus a random launch geometry. */
