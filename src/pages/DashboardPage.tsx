@@ -308,6 +308,11 @@ function seasonRange(season: SeasonInstance): { startIso: string; endIso: string
   return { startIso, endIso };
 }
 
+const MONTH_ABBREVS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
 function friendlyDate(iso: string): string {
   const d = toLocalMidnight(iso);
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -326,24 +331,17 @@ function shortDate(iso: string): string {
 }
 
 // Picks the shortest unambiguous label for an achievement date given its
-// recency: weekday for the past week, ordinal day within this month, month
-// within this year, and bare year for anything older.
+// recency: "Today" for today, ordinal day + month within this year, and
+// bare year for anything older.
 function compactAchievementDate(iso: string): string {
   const d = toLocalMidnight(iso);
   const today = toLocalMidnight(localDateIso());
-  const daysAgo = Math.round((today.getTime() - d.getTime()) / 86400000);
-  if (daysAgo === 0) return "Today";
-  if (daysAgo >= 1 && daysAgo <= 6) {
-    return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()];
-  }
-  if (d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth()) {
+  if (d.getTime() === today.getTime()) return "Today";
+  if (d.getFullYear() === today.getFullYear()) {
     const n = d.getDate();
     const v = n % 100;
     const suffix = ["th", "st", "nd", "rd"][(v - 20) % 10] || ["th", "st", "nd", "rd"][v] || "th";
-    return `${n}${suffix}`;
-  }
-  if (d.getFullYear() === today.getFullYear()) {
-    return ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()];
+    return `${n}${suffix} ${MONTH_ABBREVS[d.getMonth()]}`;
   }
   return String(d.getFullYear());
 }
@@ -1780,11 +1778,6 @@ export default function DashboardPage() {
 
   // ─── Achievements ────────────────────────────────────────────────────────
 
-  const MONTH_ABBREVS = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-  ];
-
   function renderAchievements() {
     if (achievements === null) return null;
     const { goldSessions, perfectWeeks, aSeasons } = achievements;
@@ -2412,17 +2405,18 @@ export default function DashboardPage() {
   function renderAchievementsMock() {
     // Drives the real AchievementsShelf with fabricated entries spanning the
     // three time tiers: this month's achievements show individually (compact
-    // date band — Today/weekday/ordinal); earlier months of this year collapse
-    // into per-type "month" buckets ("Jun 2026"); previous years collapse into
-    // per-type "year" buckets ("2025"). The shelf's ResizeObserver fills any
-    // partial row with placeholder dots — same code path as the live render.
+    // date band — Today / ordinal + month); earlier months of this year
+    // collapse into per-type "month" buckets ("Jun 2026"); previous years
+    // collapse into per-type "year" buckets ("2025"). The shelf's
+    // ResizeObserver fills any partial row with placeholder dots — same code
+    // path as the live render.
     const individuals: ShelfIndividual[] = [
       { icon: "🥇", displayDate: "Today" },
-      { icon: "🤩", displayDate: "Wed" },
-      { icon: "🥇", displayDate: "Tue" },
-      { icon: "🥇", displayDate: "8th" },
-      { icon: "🤩", displayDate: "4th" },
-      { icon: "🥇", displayDate: "1st" },
+      { icon: "🤩", displayDate: "14th Jun" },
+      { icon: "🥇", displayDate: "12th Jun" },
+      { icon: "🥇", displayDate: "8th Jun" },
+      { icon: "🤩", displayDate: "4th Jun" },
+      { icon: "🥇", displayDate: "1st Jun" },
     ];
     const buckets: ShelfBucket[] = [
       // Earlier this year → bucketed by month + type, newest month first.
