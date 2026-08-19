@@ -1003,7 +1003,7 @@ export async function getExerciseSetsForExerciseInstance(
 }
 
 /** When the set was first logged, from loggedAt or the Date.now() id suffix. */
-function setLoggedAtMs(set: ExerciseSet): number | null {
+export function setLoggedAtMs(set: ExerciseSet): number | null {
   if (set.loggedAt) {
     const t = new Date(set.loggedAt).getTime();
     if (!Number.isNaN(t)) return t;
@@ -2238,11 +2238,18 @@ export async function getSessionInstanceView(
 
   // Build a SessionTemplate-shaped view from the instance's frozen session name
   // so the display stays correct even if the template is later renamed.
+  // targetSessionMinutes is deliberately read live from the store instead: it
+  // carries no scoring weight, so template edits should reach in-flight
+  // sessions immediately, and a deleted template just yields null.
+  const liveSessionTemplate = await getSessionTemplateById(
+    sessionInstance.sessionTemplateId
+  );
   const sessionTemplate: SessionTemplate = {
     id: sessionInstance.sessionTemplateId,
     seasonTemplateId: seasonInstance.seasonTemplateId,
     name: sessionInstance.sessionName,
     order: 0,
+    targetSessionMinutes: liveSessionTemplate?.targetSessionMinutes ?? null,
   };
 
   const seasonTemplate = await getSeasonTemplateById(seasonInstance.seasonTemplateId);
@@ -4020,6 +4027,7 @@ export async function duplicateSessionTemplate(
     seasonTemplateId: source.seasonTemplateId,
     name: newName,
     order,
+    targetSessionMinutes: source.targetSessionMinutes ?? null,
   };
 
   const sourceGroups = await getAllByIndex<SessionTemplateMuscleGroup>(

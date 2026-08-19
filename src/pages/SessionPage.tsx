@@ -3,14 +3,17 @@ import type { CSSProperties, ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { SessionInstanceView } from "../repositories/programRepository";
 import {
+  computeSessionDuration,
   ensureExerciseInstance,
   getSeasonPRs,
   getSessionInstanceView,
+  setLoggedAtMs,
   startSessionInstance,
   stopSessionInstance,
 } from "../repositories/programRepository";
 import BottomNav from "../components/BottomNav";
 import PageLoader from "../components/PageLoader";
+import SessionTimeBar from "../components/SessionTimeBar";
 import TopBar from "../components/TopBar";
 import { calculateEstimatedOneRepMax } from "../services/setAnalysis";
 import { computeSessionMetrics } from "../services/sessionMetrics";
@@ -181,6 +184,42 @@ export default function SessionPage() {
     const percentage = target > 0 ? clampPercentage((completed / target) * 100) : 0;
 
     return { completed, target, percentage };
+  }, [sessionView]);
+
+  // Anchor for the time-target bar: earliest logged-set timestamp; finished
+  // sessions freeze at the first-to-last-set span. Ghost rows (every
+  // performed field null) are skipped, matching computeSessionDuration.
+  const sessionTimeInfo = useMemo(() => {
+    if (!sessionView) {
+      return {
+        anchorMs: null as number | null,
+        frozenDurationSeconds: null as number | null,
+      };
+    }
+
+    const allSets = sessionView.muscleGroups.flatMap((group) =>
+      group.exercises.flatMap((exercise) => exercise.sets.map((s) => s.set))
+    );
+
+    let anchorMs: number | null = null;
+    for (const set of allSets) {
+      if (
+        set.performedWeight == null &&
+        set.performedReps == null &&
+        set.performedRir == null
+      ) {
+        continue;
+      }
+      const t = setLoggedAtMs(set);
+      if (t == null) continue;
+      if (anchorMs == null || t < anchorMs) anchorMs = t;
+    }
+
+    const frozenDurationSeconds = sessionView.sessionInstance.completedAt
+      ? computeSessionDuration(allSets)
+      : null;
+
+    return { anchorMs, frozenDurationSeconds };
   }, [sessionView]);
 
   const sessionIntensityProgress = useMemo(() => {
@@ -553,6 +592,16 @@ export default function SessionPage() {
                 {finishButtonLabel}
               </button>
             </div>
+
+            {sessionView.sessionTemplate.targetSessionMinutes != null &&
+              sessionView.sessionTemplate.targetSessionMinutes > 0 && (
+                <SessionTimeBar
+                  targetMinutes={sessionView.sessionTemplate.targetSessionMinutes}
+                  anchorMs={sessionTimeInfo.anchorMs}
+                  frozenDurationSeconds={sessionTimeInfo.frozenDurationSeconds}
+                  finished={sessionFinished}
+                />
+              )}
 
             <div className="session-progress-block">
               <div className="session-progress-row">

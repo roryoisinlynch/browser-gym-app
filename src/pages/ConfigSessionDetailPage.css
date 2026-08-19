@@ -411,3 +411,81 @@
   color: var(--text-muted);
   line-height: 1.45;
 }
+
+/* Target session length field (tooltip pattern ported from ConfigProgramDetailPage) */
+.config-session-detail__label-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  margin-bottom: 10px;
+}
+
+.config-session-detail__field-label {
+  margin: 0;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.config-session-detail__info-btn {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-soft);
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 0.65rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  transition: border-color 0.14s, color 0.14s;
+}
+
+.config-session-detail__info-btn:hover {
+  border-color: var(--text-muted);
+  color: var(--text-muted);
+}
+
+.config-session-detail__info-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 10;
+  width: 280px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--panel-shadow);
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.config-session-detail__info-tooltip strong {
+  color: var(--text-strong);
+}
+
+.config-session-detail__target-minutes-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.config-session-detail__target-minutes-input {
+  width: 90px;
+}
+
+.config-session-detail__target-minutes-unit {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-soft);
+}

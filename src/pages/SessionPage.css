@@ -333,6 +333,11 @@
   background: var(--accent);
 }
 
+/* Overtime: matches the dashboard timeline overdue orange. */
+.session-progress-fill--overdue {
+  background: #f4a261;
+}
+
 .intensity-dots {
   display: flex;
   flex-wrap: wrap;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   DndContext,
@@ -26,6 +26,7 @@ import {
   getSessionTemplateGroupsWithExercises,
   saveMuscleGroup,
   saveExerciseTemplate,
+  saveSessionTemplate,
   saveSessionTemplateMuscleGroup,
   deleteSessionTemplateMuscleGroupById,
 } from "../repositories/programRepository";
@@ -123,6 +124,14 @@ function DroppableSectionBody({ stmgId, isEmpty, children }: DroppableSectionBod
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
+function parseTargetMinutes(value: string): number | null {
+  if (value.trim() === "") return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  const rounded = Math.round(parsed);
+  return rounded >= 1 ? rounded : null;
+}
+
 export default function ConfigSessionDetailPage() {
   const { sessionTemplateId } = useParams<{ sessionTemplateId: string }>();
   const navigate = useNavigate();
@@ -136,6 +145,11 @@ export default function ConfigSessionDetailPage() {
   const [selectedMuscleGroupId, setSelectedMuscleGroupId] = useState("");
   const [newMuscleGroupName, setNewMuscleGroupName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+
+  // Target session length field state
+  const [targetMinutesInput, setTargetMinutesInput] = useState("");
+  const [targetTooltipOpen, setTargetTooltipOpen] = useState(false);
+  const targetTooltipRef = useRef<HTMLDivElement | null>(null);
 
   // Drag overlay state
   const [activeExerciseTemplate, setActiveExerciseTemplate] =
@@ -157,6 +171,9 @@ export default function ConfigSessionDetailPage() {
 
     if (!tmpl) return;
     setSessionTemplate(tmpl);
+    setTargetMinutesInput(
+      tmpl.targetSessionMinutes != null ? String(tmpl.targetSessionMinutes) : ""
+    );
     setAllMuscleGroups(muscleGroups);
     setSections(
       groups.sort(
@@ -169,6 +186,28 @@ export default function ConfigSessionDetailPage() {
   useEffect(() => {
     loadData();
   }, [sessionTemplateId]);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (!targetTooltipRef.current?.contains(e.target as Node)) {
+        setTargetTooltipOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  async function handleSaveTargetMinutes() {
+    if (!sessionTemplate) return;
+    const parsed = parseTargetMinutes(targetMinutesInput);
+    if (parsed === (sessionTemplate.targetSessionMinutes ?? null)) {
+      // No-op write, but re-normalize whatever was typed (e.g. "abc" or "0").
+      setTargetMinutesInput(parsed != null ? String(parsed) : "");
+      return;
+    }
+    await saveSessionTemplate({ ...sessionTemplate, targetSessionMinutes: parsed });
+    await loadData();
+  }
 
   async function handleAddSection() {
     if (!sessionTemplateId) return;
@@ -268,6 +307,42 @@ export default function ConfigSessionDetailPage() {
             variety to pick from each time you train.
           </p>
         </header>
+
+        <div className="config-session-detail__section">
+          <div className="config-session-detail__label-row" ref={targetTooltipRef}>
+            <p className="config-session-detail__field-label">Target session length</p>
+            <button
+              type="button"
+              className="config-session-detail__info-btn"
+              aria-expanded={targetTooltipOpen}
+              onClick={() => setTargetTooltipOpen((v) => !v)}
+            >?</button>
+            {targetTooltipOpen && (
+              <div className="config-session-detail__info-tooltip">
+                <strong>Target session length</strong> is optional and can be
+                left blank. It does not affect session, week, or season scores.
+                During a session it shows a progress bar indicating how closely
+                you are tracking your ideal session duration.
+              </div>
+            )}
+          </div>
+          <div className="config-session-detail__target-minutes-row">
+            <input
+              className="config-session-detail__input config-session-detail__target-minutes-input"
+              type="number"
+              min={1}
+              step={1}
+              inputMode="numeric"
+              placeholder="e.g. 60"
+              value={targetMinutesInput}
+              onChange={(e) => setTargetMinutesInput(e.target.value)}
+              onBlur={handleSaveTargetMinutes}
+              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+              aria-label="Target session length in minutes"
+            />
+            <span className="config-session-detail__target-minutes-unit">min</span>
+          </div>
+        </div>
 
         {/* Warnings */}
         {(() => {

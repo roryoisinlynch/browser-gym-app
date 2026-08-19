@@ -83,6 +83,9 @@ export interface SessionTemplate {
   seasonTemplateId: ID;
   name: string;
   order: number;
+
+  /** Optional target session length in minutes; null/absent = no target. */
+  targetSessionMinutes?: number | null;
 }
 
 /**
