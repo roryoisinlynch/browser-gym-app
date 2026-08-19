@@ -3438,6 +3438,112 @@ export async function getSessionPRs(sessionInstanceId: string): Promise<SessionP
   return prs;
 }
 
+// ─── e1RM milestones ──────────────────────────────────────────────────────────
+
+/** A 10kg all-time e1RM milestone crossed for the first time in a session. */
+export interface SessionMilestone {
+  exerciseName: string;
+  /** The multiple of 10 that was crossed, e.g. 70. Always >= MILESTONE_MIN. */
+  threshold: number;
+  /** Best e1RM achieved in this session (the value that crossed the threshold). */
+  newE1RM: number;
+  /** All-time best e1RM before this session, pinned to the session date. */
+  previousBest: number;
+}
+
+const MILESTONE_STEP = 10;
+const MILESTONE_MIN = 50;
+
+/**
+ * Returns the 10kg all-time e1RM milestones this session crossed, in exercise
+ * order and then ascending threshold. A threshold qualifies only when:
+ *  - it is at least MILESTONE_MIN kg,
+ *  - some prior record sits strictly below threshold - 10, so the user worked
+ *    up through at least a full decade rather than debuting just under it,
+ *  - the exercise has history from before this session's season started
+ *    (imported sets count), so a first-season exercise never celebrates.
+ * Prior history is pinned to the session date, mirroring the e1RM baseline
+ * convention, so reopening an old report replays the same milestones.
+ */
+export async function getSessionMilestones(
+  sessionInstanceId: string
+): Promise<SessionMilestone[]> {
+  const session = await getSessionInstanceById(sessionInstanceId);
+  if (!session || session.status !== "completed") return [];
+
+  const season = await getSeasonInstanceById(session.seasonInstanceId);
+  if (!season?.startedAt) return [];
+  const sd = new Date(season.startedAt);
+  const seasonStartDate = `${sd.getFullYear()}-${String(sd.getMonth() + 1).padStart(2, "0")}-${String(sd.getDate()).padStart(2, "0")}`;
+
+  const sessionDate = sessionCompletedDate(session);
+  const exerciseInstances = await getExerciseInstancesForSessionInstance(sessionInstanceId);
+  const groups = await groupInstancesByName(exerciseInstances);
+
+  const maxE1RM = (points: ExerciseSessionDataPoint[]): number | null =>
+    points.reduce<number | null>(
+      (best, dp) =>
+        dp.topEstimatedOneRepMax != null &&
+        (best == null || dp.topEstimatedOneRepMax > best)
+          ? dp.topEstimatedOneRepMax
+          : best,
+      null
+    );
+
+  const milestones: SessionMilestone[] = [];
+
+  for (const group of groups) {
+    // Bodyweight exercises carry no e1RM, so decade milestones don't apply.
+    if (group.isBodyweight) continue;
+
+    const history = await getExerciseSessionHistory(group.exerciseName);
+    const sessionPoints = history.filter((dp) =>
+      group.scopedInstanceIds.has(dp.exerciseInstanceId)
+    );
+    // Pin prior history to the session date (same convention as the e1RM
+    // baseline) so later sessions never change what this report celebrates.
+    const priorPoints = history.filter(
+      (dp) =>
+        !group.scopedInstanceIds.has(dp.exerciseInstanceId) &&
+        dp.date <= sessionDate
+    );
+
+    const sessionBest = maxE1RM(sessionPoints);
+    const previousBest = maxE1RM(priorPoints);
+    if (sessionBest == null || previousBest == null || sessionBest <= previousBest) {
+      continue;
+    }
+
+    // First season for this exercise: nothing predates the season, no medal.
+    if (!priorPoints.some((dp) => dp.date < seasonStartDate)) continue;
+
+    const firstThreshold = Math.max(
+      MILESTONE_MIN,
+      Math.floor(previousBest / MILESTONE_STEP) * MILESTONE_STEP + MILESTONE_STEP
+    );
+    for (
+      let threshold = firstThreshold;
+      threshold <= sessionBest + 1e-9;
+      threshold += MILESTONE_STEP
+    ) {
+      const hasRampedUp = priorPoints.some(
+        (dp) =>
+          dp.topEstimatedOneRepMax != null &&
+          dp.topEstimatedOneRepMax < threshold - MILESTONE_STEP
+      );
+      if (!hasRampedUp) continue;
+      milestones.push({
+        exerciseName: group.exerciseName,
+        threshold,
+        newE1RM: sessionBest,
+        previousBest,
+      });
+    }
+  }
+
+  return milestones;
+}
+
 // ─── Week PRs ─────────────────────────────────────────────────────────────────
 
 /**

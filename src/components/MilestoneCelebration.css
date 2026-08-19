@@ -1,0 +1,155 @@
+.milestone-celebration {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 32px;
+  overscroll-behavior: none;
+  cursor: pointer;
+  text-align: center;
+  background:
+    radial-gradient(ellipse 90% 55% at 50% 30%, rgba(216, 240, 106, 0.10), transparent 70%),
+    linear-gradient(180deg, #0c0f14 0%, #14181f 100%);
+  color: var(--text-strong);
+}
+
+.milestone-celebration__step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+}
+
+.milestone-celebration__eyebrow {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-strong);
+}
+
+.milestone-celebration__ring {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 220px;
+  height: 220px;
+  border: 2px solid rgba(216, 240, 106, 0.35);
+  border-radius: 50%;
+  box-shadow:
+    0 0 40px rgba(216, 240, 106, 0.15),
+    inset 0 0 30px rgba(216, 240, 106, 0.06);
+}
+
+.milestone-celebration__number {
+  font-size: 3.4rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  background: linear-gradient(160deg, var(--accent) 20%, var(--accent-strong) 60%, #7a8d2e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.milestone-celebration__confetti {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  pointer-events: none;
+}
+
+.milestone-celebration__confetti span {
+  display: none;
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.milestone-celebration__confetti span:nth-child(3n) { background: #6bcb77; border-radius: 999px; }
+.milestone-celebration__confetti span:nth-child(4n) { background: #f4a161; }
+.milestone-celebration__confetti span:nth-child(5n) { background: #7fb1ff; }
+
+.milestone-celebration__copy {
+  margin: 0;
+  max-width: 320px;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.milestone-celebration__dots {
+  display: flex;
+  gap: 8px;
+}
+
+.milestone-celebration__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(216, 240, 106, 0.25);
+}
+
+.milestone-celebration__dot.is-active {
+  background: var(--accent);
+}
+
+.milestone-celebration__cta {
+  margin-top: 8px;
+  padding: 14px 26px;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #0f1113;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.35);
+}
+
+/* ── Animations ──
+   Every animation lives inside the no-preference block; the base styles above
+   are the final resting state, so reduced-motion users get a static screen
+   (full number immediately, no confetti). */
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes mc-rise {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes mc-ring-pop {
+    from { opacity: 0; transform: scale(0.82); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes mc-confetti-burst {
+    0%   { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+    100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(240deg); }
+  }
+
+  .milestone-celebration__ring {
+    animation: mc-ring-pop 420ms cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+  }
+
+  .milestone-celebration__eyebrow,
+  .milestone-celebration__copy {
+    animation: mc-rise 460ms cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+  }
+
+  .milestone-celebration__copy {
+    animation-delay: 180ms;
+  }
+
+  .milestone-celebration__confetti span {
+    display: block;
+    animation: mc-confetti-burst 950ms ease-out calc(260ms + var(--i) * 18ms) both;
+  }
+}

@@ -1,11 +1,12 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import type { SessionInstanceView, SessionPR } from "../repositories/programRepository";
+import type { SessionInstanceView, SessionMilestone, SessionPR } from "../repositories/programRepository";
 import {
   getSessionInstanceView,
   getSessionInstancesForWeekInstance,
   getSessionMetrics,
   getSessionPRs,
+  getSessionMilestones,
   getSessionDuration,
 } from "../repositories/programRepository";
 import {
@@ -20,6 +21,7 @@ import type { BreadcrumbSession } from "../components/WeeklyBreadcrumb";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import PageLoader from "../components/PageLoader";
+import MilestoneCelebration from "../components/MilestoneCelebration";
 import useInView from "../hooks/useInView";
 import "../styles/summary.css";
 
@@ -91,6 +93,8 @@ export default function SessionSummaryPage() {
   const [sessionDuration, setSessionDuration] = useState<number | null>(null);
   const [breadcrumbSessions, setBreadcrumbSessions] = useState<BreadcrumbSession[]>([]);
   const [prs, setPrs] = useState<SessionPR[]>([]);
+  const [milestones, setMilestones] = useState<SessionMilestone[]>([]);
+  const [celebrationDone, setCelebrationDone] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loaderDone, setLoaderDone] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -155,6 +159,7 @@ export default function SessionSummaryPage() {
 
         setBreadcrumbSessions(breadcrumbItems);
         setPrs(await getSessionPRs(sessionInstanceId));
+        setMilestones(await getSessionMilestones(sessionInstanceId));
       } catch (error) {
         console.error("Failed to load session summary:", error);
         setErrorMessage("Could not load session summary.");
@@ -216,6 +221,13 @@ export default function SessionSummaryPage() {
             durationMs={1000}
             ready={!isLoading}
             onDone={() => setLoaderDone(true)}
+          />
+        ) : milestones.length > 0 && !celebrationDone ? (
+          // Milestone celebrations cover the report until tapped through; the
+          // report mounts only afterwards so its reveal animations play seen.
+          <MilestoneCelebration
+            milestones={milestones}
+            onDismiss={() => setCelebrationDone(true)}
           />
         ) : (() => {
           const sv = sessionView!;
