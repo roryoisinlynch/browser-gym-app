@@ -51,10 +51,7 @@
   font-size: 3.4rem;
   font-weight: 800;
   letter-spacing: -0.03em;
-  background: linear-gradient(160deg, var(--accent) 20%, var(--accent-strong) 60%, #7a8d2e 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--text-strong);
 }
 
 .milestone-celebration__confetti {
