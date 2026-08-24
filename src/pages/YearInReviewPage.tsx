@@ -32,21 +32,27 @@ function formatGainPct(relativeGain: number): string {
   return `${Math.round(pct)}`;
 }
 
-/** Caption for the dry-streak spotlight, tiered by how long the drought was. */
+/**
+ * Caption for the spotlight PR. The pick is by sets logged since the previous
+ * PR, so the set count leads; the time gap follows as context when it is long
+ * enough to be worth saying.
+ */
 function drySpellCaption(pr: NonNullable<YearInReviewStats["drySpellPr"]>): string {
-  const sets =
-    pr.setsBetween > 0 ? ` ${formatInt(pr.setsBetween)} sets in the making.` : "";
+  const lead =
+    pr.setsBetween > 0
+      ? `${ordinalDate(pr.date)}. ${formatInt(pr.setsBetween)} sets in the making.`
+      : `${ordinalDate(pr.date)}. A new ${pr.exerciseName} best.`;
   if (pr.gapDays >= 365) {
     const years = Math.floor(pr.gapDays / 365);
-    return `${ordinalDate(pr.date)}. Your first ${pr.exerciseName} PR in over ${
+    return `${lead} Your first ${pr.exerciseName} PR in over ${
       years === 1 ? "a year" : `${years} years`
-    }.${sets}`;
+    }.`;
   }
   if (pr.gapDays >= 60) {
     const months = Math.round(pr.gapDays / 30.44);
-    return `${ordinalDate(pr.date)}. ${months} months between bests.${sets}`;
+    return `${lead} ${months} months between bests.`;
   }
-  return `${ordinalDate(pr.date)}. The longest-standing best you broke this year.`;
+  return lead;
 }
 
 /** "2024-10-14" -> "14th Oct 2024", for ranges that can leave the review year. */

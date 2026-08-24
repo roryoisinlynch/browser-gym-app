@@ -237,7 +237,7 @@ export interface YearInReviewStats {
   prDownCount: number;
   /** Exercises first trained this year. */
   debutExercises: DebutExercise[];
-  /** The longest dry streak broken this year, by days and sets combined. */
+  /** The in-year e1RM PR with the most sets logged since the previous PR. */
   drySpellPr: DrySpellPr | null;
   biggestRepPr: BiggestRepPr | null;
   /** e1RM history of the spotlight exercise through the end of the review year, date-ascending, for the sparkline. */
@@ -753,15 +753,14 @@ export async function computeYearInReviewStats(
   );
   volumeDecliners.splice(3);
 
-  // ── The Big One: the longest dry streak broken this year ──
+  // ── The Big One: the PR that took the most work ──
   // Every in-year e1RM PR event ends a dry streak that began at the previous
-  // PR. Size each streak by days elapsed and by sets logged between the two
-  // PRs, normalize both against the biggest candidate, and spotlight the
-  // largest combined score. Sets count double: an exercise ignored for years
-  // and then beaten on return would otherwise dominate on elapsed days alone,
-  // while a year of consistent work on a stubborn lift is the more deserving
-  // story. Percentage uplift is deliberately not a factor: it over-rewards
-  // barely-trained exercises.
+  // PR. Size each streak purely by sets logged between the two PRs and
+  // spotlight the largest. Elapsed days are deliberately not a factor: an
+  // exercise ignored for years and then beaten on return would dominate on
+  // time alone, while a year of consistent work on a stubborn lift is the
+  // more deserving story. Percentage uplift is not a factor either: it
+  // over-rewards barely-trained exercises.
   let drySpellPr: DrySpellPr | null = null;
   {
     const candidates: DrySpellPr[] = [];
@@ -788,18 +787,11 @@ export async function computeYearInReviewStats(
         newReps: e.newReps,
       });
     }
-    const maxGap = Math.max(...candidates.map((c) => c.gapDays), 0);
-    const maxSets = Math.max(...candidates.map((c) => c.setsBetween), 0);
-    const score = (c: DrySpellPr) =>
-      (maxGap > 0 ? c.gapDays / maxGap : 0) +
-      2 * (maxSets > 0 ? c.setsBetween / maxSets : 0);
     for (const c of candidates) {
       if (
         drySpellPr == null ||
-        score(c) > score(drySpellPr) ||
-        (score(c) === score(drySpellPr) &&
-          (c.gapDays > drySpellPr.gapDays ||
-            (c.gapDays === drySpellPr.gapDays && c.date < drySpellPr.date)))
+        c.setsBetween > drySpellPr.setsBetween ||
+        (c.setsBetween === drySpellPr.setsBetween && c.date < drySpellPr.date)
       ) {
         drySpellPr = c;
       }
