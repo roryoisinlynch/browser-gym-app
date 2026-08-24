@@ -757,8 +757,11 @@ export async function computeYearInReviewStats(
   // Every in-year e1RM PR event ends a dry streak that began at the previous
   // PR. Size each streak by days elapsed and by sets logged between the two
   // PRs, normalize both against the biggest candidate, and spotlight the
-  // largest combined score. Percentage uplift is deliberately not a factor:
-  // it over-rewards barely-trained exercises.
+  // largest combined score. Sets count double: an exercise ignored for years
+  // and then beaten on return would otherwise dominate on elapsed days alone,
+  // while a year of consistent work on a stubborn lift is the more deserving
+  // story. Percentage uplift is deliberately not a factor: it over-rewards
+  // barely-trained exercises.
   let drySpellPr: DrySpellPr | null = null;
   {
     const candidates: DrySpellPr[] = [];
@@ -789,7 +792,7 @@ export async function computeYearInReviewStats(
     const maxSets = Math.max(...candidates.map((c) => c.setsBetween), 0);
     const score = (c: DrySpellPr) =>
       (maxGap > 0 ? c.gapDays / maxGap : 0) +
-      (maxSets > 0 ? c.setsBetween / maxSets : 0);
+      2 * (maxSets > 0 ? c.setsBetween / maxSets : 0);
     for (const c of candidates) {
       if (
         drySpellPr == null ||
