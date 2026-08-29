@@ -1,0 +1,95 @@
+/* Day-by-day heuristics chart nested in the dashboard's heuristics card.
+   Inset well frame mirrors .exercise-insights__chart; label, legend, and note
+   sizes follow the summary reports' chart chrome. */
+
+.heuristics-chart {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(15, 19, 24, 0.36);
+  border: 1px solid var(--panel-border);
+}
+
+.heuristics-chart__label {
+  margin: 0 0 6px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.heuristics-chart__legend {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.heuristics-chart__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  color: var(--text-soft);
+}
+
+.heuristics-chart__swatch {
+  width: 16px;
+  height: 2px;
+  border-radius: 999px;
+}
+
+.heuristics-chart__swatch--current {
+  background: var(--accent);
+}
+
+.heuristics-chart__swatch--previous {
+  background: var(--text-soft);
+  opacity: 0.55;
+}
+
+.heuristics-chart__note {
+  margin: 6px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* Draw-on: context line first, then the current season over it, dots last.
+   Every dash property stays inside the motion gate so reduced-motion users get
+   fully drawn lines; the un-animated CSS is the final resting state. */
+@media (prefers-reduced-motion: no-preference) {
+  .heuristics-chart__line--previous {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: heuristics-chart-draw 700ms ease-out 250ms forwards;
+  }
+
+  .heuristics-chart__line--current {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: heuristics-chart-draw 700ms cubic-bezier(0.2, 0.8, 0.3, 1) 600ms forwards;
+  }
+
+  .heuristics-chart__pt {
+    animation: heuristics-chart-fade 300ms ease-out 900ms backwards;
+  }
+
+  .heuristics-chart__enddot {
+    animation: heuristics-chart-fade 300ms ease-out 1300ms backwards;
+  }
+
+  @keyframes heuristics-chart-draw {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @keyframes heuristics-chart-fade {
+    from {
+      opacity: 0;
+    }
+  }
+}

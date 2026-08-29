@@ -33,9 +33,12 @@ import {
 import {
   aggregateHeuristicSeason,
   biggestMovers,
+  dailyHeuristicMeans,
   type HeuristicSeasonAggregate,
   type HeuristicMover,
+  type HeuristicDayPoint,
 } from "../services/heuristicsSeasonSummary";
+import HeuristicsSeasonChart from "../components/HeuristicsSeasonChart";
 import { colorForHeuristicScore } from "../services/heuristicsScale";
 import Medal from "../components/Medal";
 import TopBar from "../components/TopBar";
@@ -1067,6 +1070,7 @@ export default function DashboardPage() {
     current: HeuristicSeasonAggregate;
     previous: HeuristicSeasonAggregate;
     movers: { increase: HeuristicMover | null; decrease: HeuristicMover | null };
+    series: { current: HeuristicDayPoint[]; previous: HeuristicDayPoint[] };
   } | null>(null);
   const [exerciseNeedingWeight, setExerciseNeedingWeight] = useState<
     { exerciseTemplateId: string; exerciseName: string; sessionName: string } | null
@@ -1269,7 +1273,23 @@ export default function DashboardPage() {
       if (currentAgg.distinctAnswerDays < 2 || previousAgg.distinctAnswerDays < 2) return;
       if (cancelled.current) return;
       const movers = biggestMovers(currentAgg, previousAgg, questions);
-      setHeuristicCompare({ current: currentAgg, previous: previousAgg, movers });
+      // Day-by-day series on a shared day-index axis: the previous season is
+      // truncated to the current window's length, so a shorter previous season
+      // simply ends early. Slicing the day series (not the entries) keeps the
+      // lengths tied to the same dayDiffInclusive arithmetic.
+      const currentSeries = dailyHeuristicMeans(cEntries, activeIds, cr.startIso, cr.endIso);
+      const previousSeries = dailyHeuristicMeans(
+        pEntries,
+        activeIds,
+        pr.startIso,
+        pr.endIso
+      ).slice(0, currentSeries.length);
+      setHeuristicCompare({
+        current: currentAgg,
+        previous: previousAgg,
+        movers,
+        series: { current: currentSeries, previous: previousSeries },
+      });
     }
     loadHeuristicCompare();
   }, []);
@@ -1948,6 +1968,10 @@ export default function DashboardPage() {
             </span>
             {col(previous, "Last season")}
           </div>
+          <HeuristicsSeasonChart
+            current={heuristicCompare.series.current}
+            previous={heuristicCompare.series.previous}
+          />
           {(movers.increase || movers.decrease) && (
             <div className="dashboard-heuristics__movers">
               {movers.increase && moverTile(movers.increase, "up")}

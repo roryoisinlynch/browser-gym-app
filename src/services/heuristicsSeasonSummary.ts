@@ -100,6 +100,66 @@ export function aggregateHeuristicSeason(
   };
 }
 
+// One calendar day of the day-by-day chart series.
+export interface HeuristicDayPoint {
+  /** Local ISO date "YYYY-MM-DD". */
+  date: string;
+  /** Mean of that day's non-null answers across active questions; null when none. */
+  mean: number | null;
+  /** Count of rated (1–5) answers that day. */
+  count: number;
+}
+
+/**
+ * Per-day heuristic means over an inclusive date range, one element per
+ * calendar day. Follows the same rules as aggregateHeuristicSeason: entries
+ * from deleted questions are dropped, null answers (explicit skips) never
+ * form a point, and duplicate (question, day) rows keep the first. A day with
+ * no rated answers yields mean: null so the chart can break its line there.
+ */
+export function dailyHeuristicMeans(
+  entries: ReadonlyArray<HeuristicEntry>,
+  activeQuestionIds: ReadonlySet<string>,
+  startIso: string,
+  endIso: string
+): HeuristicDayPoint[] {
+  const ratedCells = new Set<string>();
+  const byDate = new Map<string, { sum: number; count: number }>();
+
+  for (const e of entries) {
+    if (!activeQuestionIds.has(e.questionId)) continue;
+    if (e.value == null) continue;
+    const key = `${e.questionId}_${e.date}`;
+    if (ratedCells.has(key)) continue;
+    ratedCells.add(key);
+    const cell = byDate.get(e.date);
+    if (cell) {
+      cell.sum += e.value;
+      cell.count += 1;
+    } else {
+      byDate.set(e.date, { sum: e.value, count: 1 });
+    }
+  }
+
+  // Enumerate by fixed count with local-date increments so the series length
+  // always equals dayDiffInclusive, even across DST.
+  const totalDays = Math.max(0, dayDiffInclusive(startIso, endIso));
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const out: HeuristicDayPoint[] = [];
+  const d = new Date(startIso + "T00:00:00");
+  for (let i = 0; i < totalDays; i++) {
+    const iso = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const cell = byDate.get(iso);
+    out.push(
+      cell
+        ? { date: iso, mean: cell.sum / cell.count, count: cell.count }
+        : { date: iso, mean: null, count: 0 }
+    );
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
+}
+
 const round1 = (n: number): number => Math.round(n * 10) / 10;
 
 /**
