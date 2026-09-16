@@ -21,12 +21,14 @@ export interface MuscleGroup {
 }
 
 /**
- * Reusable definition of a movement type.
+ * Secondary label within a muscle group.
  *
- * A movement type belongs to a parent muscle group so the app can:
- * - aggregate stats consistently
- * - avoid duplicate near-equivalent categories
- * - validate exercise categorisation
+ * No longer chosen in the UI: new exercise templates are assigned a
+ * per-muscle-group "General" movement type automatically (see
+ * getOrCreateDefaultMovementType in programRepository). Kept because
+ * ExerciseTemplate and SessionInstanceExercise still reference it, existing
+ * data carries the seeded categories, and the session page orders exercises
+ * within a muscle group by movement type set totals.
  */
 export interface MovementType {
   id: ID;

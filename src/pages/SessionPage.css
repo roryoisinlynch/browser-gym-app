@@ -444,8 +444,8 @@
 }
 
 .volume-dot--filled {
-  border-color: var(--movement-border, var(--text-soft));
-  background: var(--movement-border, var(--text-soft));
+  border-color: var(--accent-pastel);
+  background: var(--accent-pastel);
 }
 
 /* Ring is brighter than --panel-border so unfinished sets stay legible

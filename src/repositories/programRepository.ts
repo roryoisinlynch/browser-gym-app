@@ -4022,6 +4022,44 @@ export async function getMovementTypesByMuscleGroupId(
   );
 }
 
+/**
+ * Movement types are no longer chosen in the UI. New exercise templates are
+ * assigned a per-muscle-group "General" movement type, created on first use,
+ * so the required movementTypeId reference always resolves.
+ */
+export const DEFAULT_MOVEMENT_TYPE_NAME = "General";
+
+export async function getOrCreateDefaultMovementType(
+  sessionTemplateMuscleGroupId: string
+): Promise<MovementType> {
+  const stmg = await getById<SessionTemplateMuscleGroup>(
+    STORE_NAMES.sessionTemplateMuscleGroups,
+    sessionTemplateMuscleGroupId
+  );
+  if (!stmg) {
+    throw new Error(
+      `SessionTemplateMuscleGroup ${sessionTemplateMuscleGroupId} not found`
+    );
+  }
+
+  const existing = await getMovementTypesByMuscleGroupId(stmg.muscleGroupId);
+  const found = existing.find(
+    (movementType) => movementType.name === DEFAULT_MOVEMENT_TYPE_NAME
+  );
+  if (found) {
+    return found;
+  }
+
+  const created: MovementType = {
+    id: crypto.randomUUID(),
+    muscleGroupId: stmg.muscleGroupId,
+    name: DEFAULT_MOVEMENT_TYPE_NAME,
+    order: existing.length + 1,
+  };
+  await saveMovementType(created);
+  return created;
+}
+
 export async function getAllSessionTemplates(): Promise<SessionTemplate[]> {
   const templates = await getAll<SessionTemplate>(STORE_NAMES.sessionTemplates);
   return templates.sort((a, b) => a.order - b.order);
