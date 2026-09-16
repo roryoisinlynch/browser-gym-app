@@ -31,7 +31,7 @@ export const WEIGHT_PRESETS: WeightPreset[] = [
   {
     id: "machine-stack",
     label: "Machine stack, 5 to 87 kg",
-    description: "10 lb plates with a 5 lb add-on, labelled in kg.",
+    description: "Alternating 2.5 kg and 2 kg steps.",
     config: { kind: "list", weights: MACHINE_STACK_WEIGHTS },
   },
   {
