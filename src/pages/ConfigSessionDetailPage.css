@@ -222,11 +222,6 @@
   text-overflow: ellipsis;
 }
 
-.config-session-detail__exercise-meta {
-  font-size: 0.76rem;
-  color: var(--text-soft);
-}
-
 .config-session-detail__exercise-right {
   display: flex;
   align-items: center;

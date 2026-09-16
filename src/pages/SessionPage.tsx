@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { SessionInstanceView } from "../repositories/programRepository";
 import {
@@ -17,11 +17,6 @@ import SessionTimeBar from "../components/SessionTimeBar";
 import TopBar from "../components/TopBar";
 import { calculateEstimatedOneRepMax } from "../services/setAnalysis";
 import { computeSessionMetrics } from "../services/sessionMetrics";
-import {
-  type MovementTone,
-  PALETTE,
-  buildGroupToneMap,
-} from "../services/movementTones";
 import "./SessionPage.css";
 
 function clampPercentage(value: number) {
@@ -50,20 +45,6 @@ function formatDateTime(value: string | null | undefined) {
 
 function formatWeight(value: number): string {
   return Number.isInteger(value) ? `${value}` : value.toFixed(1);
-}
-
-type MovementToneStyle = CSSProperties & {
-  "--movement-bg": string;
-  "--movement-text": string;
-  "--movement-border": string;
-};
-
-function getMovementToneStyle(tone: MovementTone): MovementToneStyle {
-  return {
-    "--movement-bg": tone.bg,
-    "--movement-text": tone.text,
-    "--movement-border": tone.border,
-  };
 }
 
 type SessionActionState = "locked" | "available" | "ready";
@@ -682,17 +663,6 @@ export default function SessionPage() {
                     workingSetsCompleted
                   );
 
-                  const groupToneMap = buildGroupToneMap(exercises);
-
-                  const filledDotTones = exercises.flatMap((exercise) => {
-                    const tone = groupToneMap.get(exercise.movementType.name) ?? PALETTE[0];
-
-                    return Array.from(
-                      { length: exercise.workingSetCount },
-                      () => tone
-                    );
-                  });
-
                   const isCollapsed =
                     collapsedGroups[sessionTemplateMuscleGroup.id] ?? false;
 
@@ -719,7 +689,6 @@ export default function SessionPage() {
                             {Array.from({ length: progressDotCount }).map((_, index) => {
                               const isFilled = index < workingSetsCompleted;
                               const isOverflow = index >= targetWorkingSets;
-                              const tone = filledDotTones[index];
 
                               return (
                                 <span
@@ -731,11 +700,6 @@ export default function SessionPage() {
                                   ]
                                     .filter(Boolean)
                                     .join(" ")}
-                                  style={
-                                    isFilled && tone
-                                      ? getMovementToneStyle(tone)
-                                      : undefined
-                                  }
                                 />
                               );
                             })}

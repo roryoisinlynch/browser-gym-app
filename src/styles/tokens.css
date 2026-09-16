@@ -21,6 +21,8 @@
   --accent: #d8f06a;
   --accent-soft: #2a3017;
   --accent-strong: #c4e23c;
+  /* pastel tint of the accent, used for filled progress dots */
+  --accent-pastel: color-mix(in srgb, var(--accent) 60%, white);
 
   /* muted surfaces */
   --pill-muted-bg: #262c35;

@@ -14,7 +14,6 @@ import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import type {
   ExerciseTemplate,
-  MovementType,
   MuscleGroup,
   SessionTemplate,
   SessionTemplateMuscleGroup,
@@ -44,14 +43,12 @@ function weightModeLabel(mode: string): string {
 
 interface DraggableExerciseRowProps {
   exerciseTemplate: ExerciseTemplate;
-  movementType: MovementType;
   stmg: SessionTemplateMuscleGroup;
   onNavigate: () => void;
 }
 
 function DraggableExerciseRow({
   exerciseTemplate,
-  movementType,
   stmg,
   onNavigate,
 }: DraggableExerciseRowProps) {
@@ -83,7 +80,6 @@ function DraggableExerciseRow({
         <span className="config-session-detail__exercise-name">
           {exerciseTemplate.exerciseName}
         </span>
-        <span className="config-session-detail__exercise-meta">{movementType.name}</span>
       </div>
       <div className="config-session-detail__exercise-right">
         <span className="config-session-detail__mode-badge">
@@ -451,11 +447,10 @@ export default function ConfigSessionDetailPage() {
                   {section.exercises.length === 0 ? (
                     <p className="config-session-detail__empty">No exercises yet.</p>
                   ) : (
-                    section.exercises.map(({ exerciseTemplate, movementType }) => (
+                    section.exercises.map(({ exerciseTemplate }) => (
                       <DraggableExerciseRow
                         key={exerciseTemplate.id}
                         exerciseTemplate={exerciseTemplate}
-                        movementType={movementType}
                         stmg={stmg}
                         onNavigate={() =>
                           navigate(

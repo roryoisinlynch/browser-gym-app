@@ -1,17 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import type { ExerciseTemplate, MovementType, WeightMode } from "../domain/models";
+import type { ExerciseTemplate, WeightMode } from "../domain/models";
 import {
   attachExerciseTemplateToSessionInstance,
   deleteExerciseTemplateById,
   getAllExerciseTemplates,
-  getAllMovementTypes,
   getEffectiveE1RM,
   getExerciseTemplateById,
-  getMovementTypeById,
+  getOrCreateDefaultMovementType,
   getSeasonTemplates,
   saveExerciseTemplate,
-  saveMovementType,
 } from "../repositories/programRepository";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
@@ -26,14 +24,12 @@ export default function ConfigExercisePage() {
 
   const isNew = exerciseTemplateId === "new";
   const stmgId = searchParams.get("stmgId") ?? "";
-  const muscleGroupId = searchParams.get("muscleGroupId") ?? "";
   const returnTo = searchParams.get("returnTo");
   const addToSessionId = searchParams.get("addToSession");
   const addToSimgId = searchParams.get("simgId");
 
   // Core form state
   const [exerciseName, setExerciseName] = useState("");
-  const [movementTypeId, setMovementTypeId] = useState("");
   const [weightMode, setWeightMode] = useState<WeightMode>("increment");
   const [weightIncrement, setWeightIncrement] = useState("2.5");
   const [availableWeights, setAvailableWeights] = useState<number[]>([]);
@@ -45,11 +41,6 @@ export default function ConfigExercisePage() {
   const [recentMaxE1RM, setRecentMaxE1RM] = useState<number | null>(null);
   const [rirScheme, setRirScheme] = useState<number[]>([]);
 
-  // Movement type options
-  const [movementTypes, setMovementTypes] = useState<MovementType[]>([]);
-  const [newMovementTypeName, setNewMovementTypeName] = useState("");
-  const [resolvedMuscleGroupId, setResolvedMuscleGroupId] = useState(muscleGroupId);
-
   const [allExerciseNames, setAllExerciseNames] = useState<string[]>([]);
 
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -58,17 +49,11 @@ export default function ConfigExercisePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [movementTypeTooltipOpen, setMovementTypeTooltipOpen] = useState(false);
-  const movementTypeTooltipRef = useRef<HTMLSpanElement | null>(null);
-
   const [weightModeTooltipOpen, setWeightModeTooltipOpen] = useState(false);
   const weightModeTooltipRef = useRef<HTMLSpanElement | null>(null);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (!movementTypeTooltipRef.current?.contains(e.target as Node)) {
-        setMovementTypeTooltipOpen(false);
-      }
       if (!weightModeTooltipRef.current?.contains(e.target as Node)) {
         setWeightModeTooltipOpen(false);
       }
@@ -88,15 +73,6 @@ export default function ConfigExercisePage() {
       setRirScheme(scheme);
 
       if (isNew) {
-        const allMts = await getAllMovementTypes();
-        console.log("[ConfigExercisePage] muscleGroupId param:", JSON.stringify(muscleGroupId));
-        console.log("[ConfigExercisePage] all movement types:", allMts);
-        if (muscleGroupId) {
-          const mts = allMts.filter((mt) => mt.muscleGroupId === muscleGroupId);
-          console.log("[ConfigExercisePage] filtered mts:", mts);
-          setMovementTypes(mts.sort((a, b) => a.order - b.order));
-          setResolvedMuscleGroupId(muscleGroupId);
-        }
         return;
       }
 
@@ -106,20 +82,10 @@ export default function ConfigExercisePage() {
       if (!template) return;
 
       setExerciseName(template.exerciseName);
-      setMovementTypeId(template.movementTypeId);
       setWeightMode(template.weightMode);
       setWeightIncrement(String(template.weightIncrement ?? 2.5));
       setAvailableWeights(template.availableWeights ?? []);
       setSelectedWeight(template.prescribedWeight ?? null);
-
-      const mt = await getMovementTypeById(template.movementTypeId);
-      if (mt) {
-        const mgId = mt.muscleGroupId;
-        setResolvedMuscleGroupId(mgId);
-        const allMts = await getAllMovementTypes();
-        const mts = allMts.filter((m) => m.muscleGroupId === mgId);
-        setMovementTypes(mts.sort((a, b) => a.order - b.order));
-      }
 
       if (template.weightMode !== "bodyweight") {
         const { historicalBest, recentMax } = await getEffectiveE1RM(
@@ -130,7 +96,7 @@ export default function ConfigExercisePage() {
       }
     }
     load();
-  }, [exerciseTemplateId, isNew, muscleGroupId]);
+  }, [exerciseTemplateId, isNew]);
 
   const effectiveE1RM = recentMaxE1RM ?? historicalBestE1RM;
 
@@ -165,29 +131,6 @@ export default function ConfigExercisePage() {
       return;
     }
 
-    let resolvedMovementTypeId = movementTypeId;
-
-    if (movementTypeId === "__new__") {
-      const mtName = newMovementTypeName.trim();
-      if (!mtName) {
-        setError("Movement type name is required.");
-        return;
-      }
-      const newMt: MovementType = {
-        id: crypto.randomUUID(),
-        muscleGroupId: resolvedMuscleGroupId,
-        name: mtName,
-        order: movementTypes.length + 1,
-      };
-      await saveMovementType(newMt);
-      resolvedMovementTypeId = newMt.id;
-    }
-
-    if (!resolvedMovementTypeId) {
-      setError("Please select a movement type.");
-      return;
-    }
-
     if (
       weightMode !== "bodyweight" &&
       weightOptions.length > 0 &&
@@ -201,16 +144,21 @@ export default function ConfigExercisePage() {
     setError(null);
 
     try {
-      let existingStmgId = stmgId;
-      if (!isNew) {
-        const existing = await getExerciseTemplateById(exerciseTemplateId!);
-        existingStmgId = existing?.sessionTemplateMuscleGroupId ?? stmgId;
-      }
+      const existing = isNew
+        ? undefined
+        : await getExerciseTemplateById(exerciseTemplateId!);
+      const existingStmgId = existing?.sessionTemplateMuscleGroupId ?? stmgId;
+
+      // Movement type is no longer chosen in the UI. Existing templates keep
+      // theirs; new ones get the muscle group's default.
+      const movementTypeId = existing?.movementTypeId
+        ? existing.movementTypeId
+        : (await getOrCreateDefaultMovementType(existingStmgId)).id;
 
       const template: ExerciseTemplate = {
         id: isNew ? crypto.randomUUID() : exerciseTemplateId!,
         sessionTemplateMuscleGroupId: existingStmgId,
-        movementTypeId: resolvedMovementTypeId,
+        movementTypeId,
         exerciseName: name,
         weightMode,
         prescribedWeight: weightMode === "bodyweight" ? null : selectedWeight,
@@ -323,48 +271,6 @@ export default function ConfigExercisePage() {
                 </li>
               ))}
             </ul>
-          )}
-        </div>
-
-        <div className="config-exercise__field-group">
-          <div className="config-exercise__label-row">
-            <span className="config-exercise__label">Movement type</span>
-            <span ref={movementTypeTooltipRef} style={{ position: "relative" }}>
-              <button
-                type="button"
-                className="config-exercise__info-btn"
-                aria-expanded={movementTypeTooltipOpen}
-                onClick={() => setMovementTypeTooltipOpen((v) => !v)}
-              >?</button>
-              {movementTypeTooltipOpen && (
-                <div className="config-exercise__info-tooltip">
-                  Movement type is a secondary label within a muscle group — a way to organise exercises into subcategories. For example, under <strong>Chest</strong> you might create movement types like <strong>Flat</strong>, <strong>Incline</strong>, <strong>Dip</strong>, or <strong>Fly</strong>. It does not affect calculations or program management in any way.
-                </div>
-              )}
-            </span>
-          </div>
-          <select
-            className="config-exercise__select"
-            value={movementTypeId}
-            onChange={(e) => setMovementTypeId(e.target.value)}
-          >
-            <option value="">Select…</option>
-            {movementTypes.map((mt) => (
-              <option key={mt.id} value={mt.id}>
-                {mt.name}
-              </option>
-            ))}
-            <option value="__new__">+ Create new</option>
-          </select>
-          {movementTypeId === "__new__" && (
-            <input
-              className="config-exercise__input"
-              style={{ marginTop: 8 }}
-              type="text"
-              placeholder="Movement type name"
-              value={newMovementTypeName}
-              onChange={(e) => setNewMovementTypeName(e.target.value)}
-            />
           )}
         </div>
 
