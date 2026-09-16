@@ -1,0 +1,109 @@
+/* The option rows keep the exact styling they had on the exercise config
+   page; only the in-page height cap is gone now that they fill a screen. */
+
+.config-exercise__e1rm-recency-note {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  color: var(--text-soft);
+  font-style: italic;
+}
+
+.config-exercise__option-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.config-exercise__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 6px;
+  border: none;
+  border-bottom: 1px solid var(--panel-border);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s, color 0.12s;
+}
+
+.config-exercise__option:last-child {
+  border-bottom: none;
+}
+
+.config-exercise__option:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.config-exercise__option--selected {
+  background: rgba(216, 240, 106, 0.06);
+}
+
+.config-exercise__option-weight {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--text-strong);
+  flex-shrink: 0;
+  min-width: 52px;
+}
+
+.config-exercise__option--selected .config-exercise__option-weight {
+  color: var(--accent);
+}
+
+.config-exercise__option-middle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.config-exercise__option-reps {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.config-exercise__option--selected .config-exercise__option-reps {
+  color: var(--text-muted);
+}
+
+.working-weight-picker__tag {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(216, 240, 106, 0.32);
+  background: rgba(216, 240, 106, 0.08);
+  color: var(--accent);
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.working-weight-picker__reset {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  padding: 13px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.working-weight-picker__reset:hover {
+  background: rgba(255, 255, 255, 0.03);
+}

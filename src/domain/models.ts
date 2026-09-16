@@ -6,12 +6,12 @@ export type SeasonStatus = InstanceStatus | "cancelled";
 /**
  * How an exercise's load is chosen.
  * - "bodyweight": rep-only; no weight is prescribed.
- * - "explicit_list": candidates come from availableWeights. The only mode
- *   the exercise form writes for weighted exercises.
- * - "increment": legacy. Candidates are step multiples of weightIncrement
- *   below the e1RM. Still produced by the seed data and by records saved
- *   before lists became canonical; read forever, and rewritten as
- *   "explicit_list" only when the user edits the list in the exercise form.
+ * - "increment": even increments of weightIncrement with no upper bound;
+ *   candidates are step multiples below the e1RM. Written by the wizard's
+ *   increment presets and custom step.
+ * - "explicit_list": a fixed list in availableWeights (a preset stack, a
+ *   filled range, or a typed list). An empty list means the exercise is
+ *   not configured yet; sessions run AMRAP until it is.
  */
 export type WeightMode = "increment" | "explicit_list" | "bodyweight";
 export type WeekItemType = "session" | "rest";
@@ -165,10 +165,9 @@ export interface ExerciseTemplate {
   rirSequence?: number[];
 
   weightMode: WeightMode;
-  // In "increment" mode weightIncrement drives candidate generation. In
-  // "explicit_list" mode it is informational only: the last step used to
-  // fill the list, kept so the next fill is pre-populated and a converted
-  // record stays traceable. The engine never reads it for a list.
+  // The step in "increment" mode. On an "explicit_list" record it is
+  // informational: the list's constant step when it has one, used to
+  // pre-fill the wizard. The engine never reads it for a list.
   weightIncrement?: number;
   availableWeights?: number[];
 }

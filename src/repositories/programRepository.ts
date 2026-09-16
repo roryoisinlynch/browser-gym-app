@@ -3759,6 +3759,18 @@ export async function getLastCompletedSeasonInstance(): Promise<SeasonInstance |
   return sorted[0] ?? null;
 }
 
+export interface ExerciseNeedingWeight {
+  exerciseTemplateId: string;
+  exerciseName: string;
+  sessionName: string;
+  /**
+   * False for an explicit_list template whose list is empty: the exercise
+   * cannot be given a weight until its available weights are configured, so
+   * the dashboard links to the available-weights wizard instead of the picker.
+   */
+  hasAvailableWeights: boolean;
+}
+
 /**
  * Returns the first exercise in the active season that needs a working
  * weight set: non-bodyweight, no prescribedWeight on its snapshot, and
@@ -3771,11 +3783,7 @@ export async function getLastCompletedSeasonInstance(): Promise<SeasonInstance |
  */
 export async function findExerciseNeedingWeight(
   seasonInstanceId: string
-): Promise<{
-  exerciseTemplateId: string;
-  exerciseName: string;
-  sessionName: string;
-} | null> {
+): Promise<ExerciseNeedingWeight | null> {
   const weeks = (await getWeekInstancesForSeasonInstance(seasonInstanceId))
     .sort((a, b) => a.order - b.order);
 
@@ -3816,10 +3824,14 @@ export async function findExerciseNeedingWeight(
     // don't nudge the user to set one — a recent session must re-baseline first.
     const { historicalBest, lastAttemptedDate } = await getEffectiveE1RM(sie.exerciseName);
     if (historicalBest != null && !isDormantSince(lastAttemptedDate)) {
+      const hasAvailableWeights =
+        liveTemplate.weightMode !== "explicit_list" ||
+        (liveTemplate.availableWeights ?? []).length > 0;
       return {
         exerciseTemplateId: sie.sourceExerciseTemplateId,
         exerciseName: sie.exerciseName,
         sessionName,
+        hasAvailableWeights,
       };
     }
   }
