@@ -1,3 +1,8 @@
+/* The overlay is a stacking context, so the app's fixed TopBar rendered
+   inside it sits at the top of the overlay, above its body and above the
+   page's own bar underneath. The body pads by the bar's height like every
+   page does. */
+
 .sub-screen {
   position: fixed;
   inset: 0;
@@ -9,60 +14,9 @@
   outline: none;
 }
 
-.sub-screen__header {
-  flex: 0 0 64px;
-  background: var(--panel-bg);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--card-border);
-}
-
-.sub-screen__header-inner {
-  height: 100%;
-  max-width: 460px;
-  margin: 0 auto;
-  padding: 0 14px;
-  display: grid;
-  grid-template-columns: 48px 1fr 48px;
-  align-items: center;
-}
-
-.sub-screen__spacer {
-  width: 36px;
-  height: 36px;
-}
-
-.sub-screen__title {
-  margin: 0;
-  text-align: center;
-  font-size: 1.08rem;
-  font-weight: 700;
-  color: var(--text-strong);
-  letter-spacing: -0.02em;
-}
-
-.sub-screen__close {
-  justify-self: end;
-  width: 36px;
-  height: 36px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  border: none;
-  background: none;
-  padding: 0;
-  color: var(--text-strong);
-  font-size: 1.5rem;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.sub-screen__close:active {
-  transform: scale(0.96);
-}
-
 .sub-screen__body {
   flex: 1;
+  padding-top: 64px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }

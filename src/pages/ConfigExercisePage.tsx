@@ -302,12 +302,11 @@ export default function ConfigExercisePage() {
         onBack={() => navigate(-1)}
       />
       <section className="config-exercise-shell">
-        <header className="config-exercise-header">
-          <p className="config-exercise-eyebrow">
-            {isNew ? "New exercise" : "Edit exercise"}
-          </p>
-          {error && <p className="config-exercise-error">{error}</p>}
-        </header>
+        {error && (
+          <header className="config-exercise-header">
+            <p className="config-exercise-error">{error}</p>
+          </header>
+        )}
 
         <div className="config-exercise__field-group config-exercise__autocomplete-wrap">
           <label className="config-exercise__label">Exercise name</label>

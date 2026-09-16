@@ -11,20 +11,11 @@
 }
 
 .config-exercise-header {
-  padding: 20px 20px 4px;
-}
-
-.config-exercise-eyebrow {
-  margin: 0 0 4px;
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--accent);
+  padding: 4px 20px 0;
 }
 
 .config-exercise-error {
-  margin: 8px 0 0;
+  margin: 0;
   font-size: 0.84rem;
   color: #f87171;
 }

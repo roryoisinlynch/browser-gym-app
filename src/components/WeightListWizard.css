@@ -1,4 +1,4 @@
-/* ── Rows (presets, methods) ── */
+/* ── Rows (start screen, presets) ── */
 
 .weight-wizard__rows {
   display: flex;
@@ -60,19 +60,6 @@
 
 /* ── Inputs ── */
 
-.weight-wizard__field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.weight-wizard__field > span,
-.weight-wizard__fill-field > span {
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: var(--text-soft);
-}
-
 .weight-wizard__input {
   display: block;
   width: 100%;
@@ -92,6 +79,101 @@
   border-color: rgba(216, 240, 106, 0.4);
 }
 
+.weight-wizard__input[aria-invalid="true"] {
+  border-color: rgba(248, 113, 113, 0.6);
+}
+
+/* ── Row editor ── */
+
+.weight-wizard__row-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.weight-wizard__row-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.weight-wizard__row-item .weight-wizard__input {
+  flex: 1;
+}
+
+.weight-wizard__row-remove,
+.weight-wizard__row-spacer {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+}
+
+.weight-wizard__row-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--text-soft);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.weight-wizard__row-remove:hover {
+  color: #f87171;
+}
+
+.weight-wizard__add-row-btn {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px dashed var(--panel-border);
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.88rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.weight-wizard__add-row-btn:hover {
+  background: rgba(216, 240, 106, 0.06);
+  border-color: rgba(216, 240, 106, 0.3);
+}
+
+/* ── Range generator ── */
+
+.weight-wizard__generate-cta {
+  display: block;
+  margin: 14px auto 0;
+  padding: 6px 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 0.84rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.weight-wizard__generator {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+}
+
 .weight-wizard__fill-row {
   display: flex;
   gap: 8px;
@@ -106,100 +188,28 @@
   gap: 4px;
 }
 
-/* ── Fixed list chips ── */
-
-.weight-wizard__weight-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
-  min-height: 28px;
-}
-
-.weight-wizard__weight-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--card-border);
-  background: var(--card-bg);
-  font-size: 0.82rem;
+.weight-wizard__fill-field > span {
+  font-size: 0.76rem;
   font-weight: 700;
-  color: var(--text-muted);
-}
-
-.weight-wizard__weight-tag-remove {
-  border: none;
-  background: transparent;
-  color: var(--text-soft);
-  font-size: 1rem;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.15s;
-}
-
-.weight-wizard__weight-tag-remove:hover {
-  color: #f87171;
-}
-
-.weight-wizard__empty {
-  margin: 0 0 10px;
-  font-size: 0.84rem;
   color: var(--text-soft);
 }
 
-.weight-wizard__weight-add-row {
-  display: flex;
-  gap: 8px;
-}
-
-.weight-wizard__weight-add-row .weight-wizard__input {
-  flex: 1;
-}
-
-.weight-wizard__add-weight-btn {
-  padding: 10px 16px;
-  border-radius: 10px;
-  border: 1px solid var(--panel-border);
-  background: rgba(216, 240, 106, 0.08);
-  color: var(--accent);
-  font-size: 0.88rem;
-  font-weight: 800;
-  font-family: inherit;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.15s;
-}
-
-.weight-wizard__add-weight-btn:hover {
-  background: rgba(216, 240, 106, 0.14);
-}
-
-/* ── Preview, errors, footer ── */
+/* ── Preview, errors, buttons ── */
 
 .weight-wizard__preview {
-  margin: 12px 0 0;
+  margin: 14px 0 0;
   font-size: 0.84rem;
   font-weight: 700;
   color: var(--text-muted);
 }
 
 .weight-wizard__error {
-  margin: 8px 0 0;
+  margin: 0;
   font-size: 0.84rem;
   color: #f87171;
 }
 
-.weight-wizard__footer {
-  display: flex;
-  gap: 10px;
-  margin-top: 24px;
-}
-
 .weight-wizard__btn {
-  flex: 1;
   padding: 13px 16px;
   border-radius: 14px;
   border: 1px solid var(--panel-border);
@@ -229,4 +239,14 @@
 
 .weight-wizard__btn--primary:hover:not(:disabled) {
   background: rgba(216, 240, 106, 0.18);
+}
+
+.weight-wizard__generate-btn,
+.weight-wizard__done {
+  display: block;
+  width: 100%;
+}
+
+.weight-wizard__done {
+  margin-top: 24px;
 }

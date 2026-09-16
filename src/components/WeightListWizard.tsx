@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 import SubScreen from "./SubScreen";
 import { WEIGHT_PRESETS } from "../data/weightPresets";
 import { normaliseWeightList, weightsFromIncrement } from "../services/weightOptions";
@@ -10,31 +10,55 @@ import {
 } from "../services/weightConfig";
 import "./WeightListWizard.css";
 
-type Step = "presets" | "method" | "increment" | "range" | "list";
+type Step = "start" | "presets" | "define";
 
 const MAX_FILL_ENTRIES = 500;
 
 const TITLES: Record<Step, string> = {
-  presets: "Available weights",
-  method: "Choose a method",
-  increment: "Custom increment",
-  range: "Even steps over a range",
-  list: "Fixed list of weights",
+  start: "Available weights",
+  presets: "Presets",
+  define: "Define your own",
 };
 
-interface WeightListWizardProps {
-  initial: WeightConfig;
-  onApply: (config: WeightConfig) => void;
-  onClose: () => void;
+// ── Row editor helpers (pure) ───────────────────────────────────────────────
+
+interface WeightRow {
+  id: number;
+  text: string;
 }
 
-function stepOf(config: WeightConfig): number {
-  if (config.kind === "increment") return config.step;
-  if (config.kind === "list") {
-    return config.step ?? detectConstantStep(config.weights) ?? DEFAULT_STEP;
-  }
-  return DEFAULT_STEP;
+function rowValue(row: WeightRow): number | null {
+  const v = parseFloat(row.text);
+  return Number.isFinite(v) && v > 0 ? v : null;
 }
+
+function rowValues(rows: WeightRow[]): number[] {
+  const out: number[] = [];
+  for (const row of rows) {
+    const v = rowValue(row);
+    if (v != null) out.push(v);
+  }
+  return out;
+}
+
+function isBlank(row: WeightRow): boolean {
+  return row.text.trim() === "";
+}
+
+// Invariant: the last row is always blank, so there is always somewhere to type.
+function withTrailingEmpty(rows: WeightRow[], allocId: () => number): WeightRow[] {
+  const last = rows[rows.length - 1];
+  return last && isBlank(last) ? rows : [...rows, { id: allocId(), text: "" }];
+}
+
+// Ids 0..n-1 for the existing weights, n for the trailing blank row.
+function initialRows(initial: WeightConfig): WeightRow[] {
+  const values = initial.kind === "list" ? normaliseWeightList(initial.weights) : [];
+  const rows = values.map((w, i) => ({ id: i, text: String(w) }));
+  return [...rows, { id: rows.length, text: "" }];
+}
+
+// ── Range generator ─────────────────────────────────────────────────────────
 
 type RangeResult = { error: string } | { weights: number[]; step: number };
 
@@ -52,6 +76,8 @@ function evaluateRange(fromText: string, toText: string, stepText: string): Rang
   }
   return { weights: weightsFromIncrement(step, from, to), step };
 }
+
+// ── Rows shared by the start and presets screens ────────────────────────────
 
 interface RowProps {
   title: string;
@@ -73,30 +99,12 @@ function WizardRow({ title, description, onClick }: RowProps) {
   );
 }
 
-interface FooterProps {
-  onBack: () => void;
-  onDone?: () => void;
-  doneDisabled?: boolean;
-}
+// ── Wizard ──────────────────────────────────────────────────────────────────
 
-function WizardFooter({ onBack, onDone, doneDisabled }: FooterProps) {
-  return (
-    <div className="weight-wizard__footer">
-      <button type="button" className="weight-wizard__btn" onClick={onBack}>
-        Back
-      </button>
-      {onDone && (
-        <button
-          type="button"
-          className="weight-wizard__btn weight-wizard__btn--primary"
-          onClick={onDone}
-          disabled={doneDisabled}
-        >
-          Done
-        </button>
-      )}
-    </div>
-  );
+interface WeightListWizardProps {
+  initial: WeightConfig;
+  onApply: (config: WeightConfig) => void;
+  onClose: () => void;
 }
 
 export default function WeightListWizard({
@@ -104,87 +112,126 @@ export default function WeightListWizard({
   onApply,
   onClose,
 }: WeightListWizardProps) {
-  const [step, setStep] = useState<Step>("presets");
-  const [error, setError] = useState<string | null>(null);
+  const [step, setStep] = useState<Step>("start");
 
-  // Pre-fill from the current configuration, once.
-  const [stepInput, setStepInput] = useState(() => String(stepOf(initial)));
-  const [fillStep, setFillStep] = useState(() => String(stepOf(initial)));
-  const [fillFrom, setFillFrom] = useState(() => {
-    if (initial.kind !== "list" || detectConstantStep(initial.weights) == null) return "";
-    return String(normaliseWeightList(initial.weights)[0]);
-  });
-  const [fillTo, setFillTo] = useState(() => {
-    if (initial.kind !== "list" || detectConstantStep(initial.weights) == null) return "";
-    const sorted = normaliseWeightList(initial.weights);
-    return String(sorted[sorted.length - 1]);
-  });
-  const [weights, setWeights] = useState<number[]>(() =>
-    initial.kind === "list" ? normaliseWeightList(initial.weights) : []
-  );
-  const [newWeightInput, setNewWeightInput] = useState("");
+  // Row editor. All state lives here, not in a per-screen child, so typed
+  // rows survive going back to the first screen and forward again.
+  const [rows, setRows] = useState<WeightRow[]>(() => initialRows(initial));
+  const nextIdRef = useRef(rows.length);
+  const inputsRef = useRef(new Map<number, HTMLInputElement>());
+  // A row created by "Add weight" focuses itself when it mounts.
+  const [focusRowId, setFocusRowId] = useState<number | null>(null);
+
+  // Inline range generator.
+  const [generatorOpen, setGeneratorOpen] = useState(false);
+  const [genFrom, setGenFrom] = useState("");
+  const [genTo, setGenTo] = useState("");
+  const [genStep, setGenStep] = useState(String(DEFAULT_STEP));
+  const [genError, setGenError] = useState<string | null>(null);
+
+  const values = normaliseWeightList(rowValues(rows));
+  const preview =
+    values.length > 0
+      ? `${values.length} ${values.length === 1 ? "weight" : "weights"}: ${describeWeightConfig({ kind: "list", weights: values })}`
+      : null;
+
+  function allocId(): number {
+    return nextIdRef.current++;
+  }
 
   function go(next: Step) {
-    setError(null);
     setStep(next);
+    setGenError(null);
+    setFocusRowId(null);
   }
 
-  function applyIncrement() {
-    const s = parseFloat(stepInput);
-    if (!(s > 0)) {
-      setError("Step must be greater than 0.");
+  function back() {
+    if (step === "start") onClose();
+    else go("start");
+  }
+
+  function handleRowChange(id: number, text: string) {
+    const next = rows.map((row) => (row.id === id ? { ...row, text } : row));
+    setRows(withTrailingEmpty(next, allocId));
+  }
+
+  function handleRowKeyDown(e: KeyboardEvent<HTMLInputElement>, id: number) {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const index = rows.findIndex((row) => row.id === id);
+    const next = rows[index + 1];
+    if (next) inputsRef.current.get(next.id)?.focus();
+  }
+
+  function handleRemoveRow(id: number) {
+    const next = rows.filter((row) => row.id !== id);
+    setRows(withTrailingEmpty(next, allocId));
+    if (focusRowId === id) setFocusRowId(null);
+  }
+
+  function handleAddWeight() {
+    const last = rows[rows.length - 1];
+    if (last && isBlank(last)) {
+      inputsRef.current.get(last.id)?.focus();
       return;
     }
-    onApply({ kind: "increment", step: s });
+    const id = allocId();
+    setRows([...rows, { id, text: "" }]);
+    setFocusRowId(id);
   }
 
-  function applyRange() {
-    const result = evaluateRange(fillFrom, fillTo, fillStep);
+  function openGenerator() {
+    const detected = detectConstantStep(values);
+    const seed = detected ?? (initial.kind === "increment" ? initial.step : DEFAULT_STEP);
+    setGenStep(String(seed));
+    setGenFrom(detected != null ? String(values[0]) : "");
+    setGenTo(detected != null ? String(values[values.length - 1]) : "");
+    setGenError(null);
+    setGeneratorOpen(true);
+  }
+
+  function handleGenerate() {
+    const result = evaluateRange(genFrom, genTo, genStep);
     if ("error" in result) {
-      setError(result.error);
+      setGenError(result.error);
       return;
     }
-    onApply({ kind: "list", weights: result.weights, step: result.step });
+    const merged = normaliseWeightList([...rowValues(rows), ...result.weights]);
+    const next = merged.map((w) => ({ id: allocId(), text: String(w) }));
+    next.push({ id: allocId(), text: "" });
+    setRows(next);
+    setGeneratorOpen(false);
+    setGenError(null);
+    setFocusRowId(null);
   }
 
-  function applyList() {
-    if (weights.length === 0) return;
-    const detected = detectConstantStep(weights);
+  function handleDone() {
+    if (values.length === 0) return;
+    const detected = detectConstantStep(values);
     onApply(
       detected != null
-        ? { kind: "list", weights, step: detected }
-        : { kind: "list", weights }
+        ? { kind: "list", weights: values, step: detected }
+        : { kind: "list", weights: values }
     );
   }
 
-  function addWeight() {
-    const val = parseFloat(newWeightInput);
-    if (!Number.isFinite(val) || val <= 0) return;
-    setWeights(normaliseWeightList([...weights, val]));
-    setNewWeightInput("");
-  }
-
-  function removeWeight(w: number) {
-    setWeights(weights.filter((v) => v !== w));
-  }
-
-  const incrementStep = parseFloat(stepInput);
-  const incrementPreview =
-    incrementStep > 0 ? describeWeightConfig({ kind: "increment", step: incrementStep }) : null;
-
-  const rangeResult = evaluateRange(fillFrom, fillTo, fillStep);
-  const rangePreview =
-    "weights" in rangeResult
-      ? `${describeWeightConfig({ kind: "list", weights: rangeResult.weights, step: rangeResult.step })} (${rangeResult.weights.length} ${rangeResult.weights.length === 1 ? "weight" : "weights"})`
-      : null;
-
-  const listPreview =
-    weights.length > 0
-      ? `${describeWeightConfig({ kind: "list", weights })} (${weights.length} ${weights.length === 1 ? "weight" : "weights"})`
-      : null;
-
   return (
-    <SubScreen title={TITLES[step]} onClose={onClose}>
+    <SubScreen title={TITLES[step]} onBack={back}>
+      {step === "start" && (
+        <div className="weight-wizard__rows">
+          <WizardRow
+            title="Pick from a preset"
+            description="2.5 kg or 5 kg increments, or a machine stack."
+            onClick={() => go("presets")}
+          />
+          <WizardRow
+            title="Define your own"
+            description="Type your weights one by one, or generate them from a range."
+            onClick={() => go("define")}
+          />
+        </div>
+      )}
+
       {step === "presets" && (
         <div className="weight-wizard__rows">
           {WEIGHT_PRESETS.map((preset) => (
@@ -195,159 +242,140 @@ export default function WeightListWizard({
               onClick={() => onApply(preset.config)}
             />
           ))}
-          <WizardRow
-            title="Something else"
-            description="Set your own increment, range or list."
-            onClick={() => go("method")}
-          />
         </div>
       )}
 
-      {step === "method" && (
+      {step === "define" && (
         <>
-          <div className="weight-wizard__rows">
-            <WizardRow
-              title="Custom increment"
-              description="Any step, no upper limit."
-              onClick={() => go("increment")}
-            />
-            <WizardRow
-              title="Even steps over a range"
-              description="From, to and step."
-              onClick={() => go("range")}
-            />
-            <WizardRow
-              title="Fixed list of weights"
-              description="Type each weight."
-              onClick={() => go("list")}
-            />
+          <div className="weight-wizard__row-list">
+            {rows.map((row, i) => {
+              const trailing = i === rows.length - 1;
+              const invalid = !isBlank(row) && rowValue(row) == null;
+              return (
+                <div key={row.id} className="weight-wizard__row-item">
+                  <input
+                    ref={(el) => {
+                      const map = inputsRef.current;
+                      if (el) map.set(row.id, el);
+                      else map.delete(row.id);
+                    }}
+                    className="weight-wizard__input"
+                    type="number"
+                    inputMode="decimal"
+                    enterKeyHint="next"
+                    min="0.25"
+                    step="0.25"
+                    placeholder="kg"
+                    value={row.text}
+                    autoFocus={row.id === focusRowId}
+                    aria-label={`Weight ${i + 1}`}
+                    aria-invalid={invalid || undefined}
+                    onChange={(e) => handleRowChange(row.id, e.target.value)}
+                    onKeyDown={(e) => handleRowKeyDown(e, row.id)}
+                  />
+                  {trailing ? (
+                    <span className="weight-wizard__row-spacer" aria-hidden="true" />
+                  ) : (
+                    <button
+                      type="button"
+                      className="weight-wizard__row-remove"
+                      aria-label="Remove"
+                      onClick={() => handleRemoveRow(row.id)}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
-          <WizardFooter onBack={() => go("presets")} />
-        </>
-      )}
 
-      {step === "increment" && (
-        <>
-          <label className="weight-wizard__field">
-            <span>Step (kg)</span>
-            <input
-              className="weight-wizard__input"
-              type="number"
-              min="0.25"
-              step="0.25"
-              value={stepInput}
-              onChange={(e) => {
-                setStepInput(e.target.value);
-                setError(null);
-              }}
-            />
-          </label>
-          {incrementPreview && (
-            <p className="weight-wizard__preview">{incrementPreview}</p>
-          )}
-          {error && <p className="weight-wizard__error">{error}</p>}
-          <WizardFooter onBack={() => go("method")} onDone={applyIncrement} />
-        </>
-      )}
+          <button
+            type="button"
+            className="weight-wizard__add-row-btn"
+            onClick={handleAddWeight}
+          >
+            + Add weight
+          </button>
 
-      {step === "range" && (
-        <>
-          <div className="weight-wizard__fill-row">
-            <label className="weight-wizard__fill-field">
-              <span>From</span>
-              <input
-                className="weight-wizard__input"
-                type="number"
-                min="0.25"
-                step="0.25"
-                value={fillFrom}
-                onChange={(e) => {
-                  setFillFrom(e.target.value);
-                  setError(null);
-                }}
-              />
-            </label>
-            <label className="weight-wizard__fill-field">
-              <span>To</span>
-              <input
-                className="weight-wizard__input"
-                type="number"
-                min="0.25"
-                step="0.25"
-                value={fillTo}
-                onChange={(e) => {
-                  setFillTo(e.target.value);
-                  setError(null);
-                }}
-              />
-            </label>
-            <label className="weight-wizard__fill-field">
-              <span>Step</span>
-              <input
-                className="weight-wizard__input"
-                type="number"
-                min="0.25"
-                step="0.25"
-                value={fillStep}
-                onChange={(e) => {
-                  setFillStep(e.target.value);
-                  setError(null);
-                }}
-              />
-            </label>
-          </div>
-          {rangePreview && <p className="weight-wizard__preview">{rangePreview}</p>}
-          {error && <p className="weight-wizard__error">{error}</p>}
-          <WizardFooter onBack={() => go("method")} onDone={applyRange} />
-        </>
-      )}
-
-      {step === "list" && (
-        <>
-          {weights.length > 0 ? (
-            <div className="weight-wizard__weight-tags">
-              {weights.map((w) => (
-                <span key={w} className="weight-wizard__weight-tag">
-                  {w}
-                  <button
-                    type="button"
-                    className="weight-wizard__weight-tag-remove"
-                    onClick={() => removeWeight(w)}
-                    aria-label={`Remove ${w}kg`}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
+          {generatorOpen ? (
+            <div className="weight-wizard__generator">
+              <div className="weight-wizard__fill-row">
+                <label className="weight-wizard__fill-field">
+                  <span>From</span>
+                  <input
+                    className="weight-wizard__input"
+                    type="number"
+                    inputMode="decimal"
+                    min="0.25"
+                    step="0.25"
+                    value={genFrom}
+                    onChange={(e) => {
+                      setGenFrom(e.target.value);
+                      setGenError(null);
+                    }}
+                  />
+                </label>
+                <label className="weight-wizard__fill-field">
+                  <span>To</span>
+                  <input
+                    className="weight-wizard__input"
+                    type="number"
+                    inputMode="decimal"
+                    min="0.25"
+                    step="0.25"
+                    value={genTo}
+                    onChange={(e) => {
+                      setGenTo(e.target.value);
+                      setGenError(null);
+                    }}
+                  />
+                </label>
+                <label className="weight-wizard__fill-field">
+                  <span>Step</span>
+                  <input
+                    className="weight-wizard__input"
+                    type="number"
+                    inputMode="decimal"
+                    min="0.25"
+                    step="0.25"
+                    value={genStep}
+                    onChange={(e) => {
+                      setGenStep(e.target.value);
+                      setGenError(null);
+                    }}
+                  />
+                </label>
+              </div>
+              {genError && <p className="weight-wizard__error">{genError}</p>}
+              <button
+                type="button"
+                className="weight-wizard__btn weight-wizard__btn--primary weight-wizard__generate-btn"
+                onClick={handleGenerate}
+              >
+                Generate
+              </button>
             </div>
           ) : (
-            <p className="weight-wizard__empty">No weights yet.</p>
-          )}
-          <div className="weight-wizard__weight-add-row">
-            <input
-              className="weight-wizard__input"
-              type="number"
-              min="0.25"
-              step="0.25"
-              placeholder="kg"
-              value={newWeightInput}
-              onChange={(e) => setNewWeightInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addWeight()}
-            />
             <button
               type="button"
-              className="weight-wizard__add-weight-btn"
-              onClick={addWeight}
+              className="weight-wizard__generate-cta"
+              onClick={openGenerator}
             >
-              Add
+              Generate the full list for me
             </button>
-          </div>
-          {listPreview && <p className="weight-wizard__preview">{listPreview}</p>}
-          <WizardFooter
-            onBack={() => go("method")}
-            onDone={applyList}
-            doneDisabled={weights.length === 0}
-          />
+          )}
+
+          {preview && <p className="weight-wizard__preview">{preview}</p>}
+
+          <button
+            type="button"
+            className="weight-wizard__btn weight-wizard__btn--primary weight-wizard__done"
+            onClick={handleDone}
+            disabled={values.length === 0}
+          >
+            Done
+          </button>
         </>
       )}
     </SubScreen>

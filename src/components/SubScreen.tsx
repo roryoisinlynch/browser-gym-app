@@ -1,22 +1,42 @@
-import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
+import TopBar from "./TopBar";
 import "./SubScreen.css";
 
 interface SubScreenProps {
   title: string;
-  onClose: () => void;
+  /** The top bar's back arrow (and Escape). The caller decides whether that
+   *  closes the sub-screen or returns to a previous screen inside it. */
+  onBack: () => void;
   children: ReactNode;
 }
 
 /**
- * Full-screen sub-screen with a header and a scrolling body, used by the
- * exercise config page for the working weight picker and the available
- * weights wizard. Locks body scroll, closes on Escape, and returns focus to
- * the element that opened it. Local state only: it adds no history entry, so
- * the hardware back button leaves the page rather than closing the
- * sub-screen, like the app's other overlays.
+ * Full-screen sub-screen with the app's top bar and a scrolling body, used
+ * by the exercise config page for the working weight picker and the
+ * available weights wizard. Locks body scroll, and returns focus to the
+ * element that opened it when it unmounts. Local state only: it adds no
+ * history entry, so the hardware back button leaves the page rather than
+ * stepping back inside the sub-screen, like the app's other overlays.
  */
-export default function SubScreen({ title, onClose, children }: SubScreenProps) {
+export default function SubScreen({ title, onBack, children }: SubScreenProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Escape is listened for on the document, not the container: a screen
+  // change inside the sub-screen unmounts the control that had focus, which
+  // drops focus to the body, and a container listener would then miss the key.
+  const onBackRef = useRef(onBack);
+  useEffect(() => {
+    onBackRef.current = onBack;
+  }, [onBack]);
+  useEffect(() => {
+    function handleKeyDown(e: globalThis.KeyboardEvent) {
+      if (e.key !== "Escape") return;
+      e.stopPropagation();
+      onBackRef.current();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   useEffect(() => {
     const previous = document.body.style.overflow;
@@ -34,13 +54,6 @@ export default function SubScreen({ title, onClose, children }: SubScreenProps) 
     };
   }, []);
 
-  function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
-    if (e.key === "Escape") {
-      e.stopPropagation();
-      onClose();
-    }
-  }
-
   return (
     <div
       ref={containerRef}
@@ -49,22 +62,8 @@ export default function SubScreen({ title, onClose, children }: SubScreenProps) 
       aria-modal="true"
       aria-label={title}
       tabIndex={-1}
-      onKeyDown={handleKeyDown}
     >
-      <header className="sub-screen__header">
-        <div className="sub-screen__header-inner">
-          <span className="sub-screen__spacer" />
-          <h2 className="sub-screen__title">{title}</h2>
-          <button
-            type="button"
-            className="sub-screen__close"
-            aria-label="Close"
-            onClick={onClose}
-          >
-            ×
-          </button>
-        </div>
-      </header>
+      <TopBar title={title} onBack={onBack} backLabel="Back" />
       <div className="sub-screen__body">
         <div className="sub-screen__shell">{children}</div>
       </div>
