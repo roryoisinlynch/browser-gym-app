@@ -3,6 +3,16 @@ export type ID = string;
 export type InstanceStatus = "not_started" | "in_progress" | "completed";
 export type SessionInstanceStatus = InstanceStatus | "skipped";
 export type SeasonStatus = InstanceStatus | "cancelled";
+/**
+ * How an exercise's load is chosen.
+ * - "bodyweight": rep-only; no weight is prescribed.
+ * - "explicit_list": candidates come from availableWeights. The only mode
+ *   the exercise form writes for weighted exercises.
+ * - "increment": legacy. Candidates are step multiples of weightIncrement
+ *   below the e1RM. Still produced by the seed data and by records saved
+ *   before lists became canonical; read forever, and rewritten as
+ *   "explicit_list" only when the user edits the list in the exercise form.
+ */
 export type WeightMode = "increment" | "explicit_list" | "bodyweight";
 export type WeekItemType = "session" | "rest";
 
@@ -129,6 +139,7 @@ export interface SessionInstanceExercise {
   exerciseName: string;
   weightMode: WeightMode;
   prescribedWeight: number | null;
+  // See ExerciseTemplate.weightIncrement: only read in "increment" mode.
   weightIncrement?: number;
   availableWeights?: number[];
 }
@@ -154,6 +165,10 @@ export interface ExerciseTemplate {
   rirSequence?: number[];
 
   weightMode: WeightMode;
+  // In "increment" mode weightIncrement drives candidate generation. In
+  // "explicit_list" mode it is informational only: the last step used to
+  // fill the list, kept so the next fill is pre-populated and a converted
+  // record stays traceable. The engine never reads it for a list.
   weightIncrement?: number;
   availableWeights?: number[];
 }

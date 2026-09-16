@@ -229,17 +229,6 @@
   flex-shrink: 0;
 }
 
-.config-session-detail__mode-badge {
-  padding: 2px 7px;
-  border-radius: 999px;
-  border: 1px solid var(--panel-border);
-  font-size: 0.7rem;
-  font-weight: 800;
-  color: var(--text-soft);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
 .config-session-detail__reps {
   font-size: 0.8rem;
   font-weight: 700;
