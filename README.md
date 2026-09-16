@@ -274,12 +274,12 @@ The chosen weight is then prescribed **unchanged for every week** of the season;
 `ExerciseTemplate.weightMode` (and the season snapshot's copy of it) takes one of three values:
 
 - `bodyweight`: rep-only. No weight is prescribed; the rep target is the rep baseline minus the week's RIR.
-- `increment`: even increments of `weightIncrement` with no upper bound. Candidates are step multiples below the e1RM. Written by the wizard's increment presets ("2.5 kg increments", "5 kg increments") and its custom step.
-- `explicit_list`: a fixed list in `availableWeights`: a preset stack, a filled range (From / To / Step), or a typed list. An empty list means the exercise is not configured yet; it can be saved that way and runs AMRAP until it is configured, and the exercise page and dashboard show a "Configure available weights" call to action for it.
+- `increment`: even increments of `weightIncrement` with no upper bound. Candidates are step multiples below the e1RM. Written by the wizard's increment presets ("2.5 kg increments", "5 kg increments").
+- `explicit_list`: a fixed list in `availableWeights`: a preset stack, or a list you define by typing weights one by one or generating them from a From / To / Step range. An empty list means the exercise is not configured yet; it can be saved that way and runs AMRAP until it is configured, and the exercise page and dashboard show a "Configure available weights" call to action for it.
 
 `weightIncrement` is the step in `increment` mode. On an `explicit_list` record it is informational: the list's constant step when it has one, used to pre-fill the wizard. The engine never reads it for a list.
 
-The exercise form shows a Bodyweight switch and, for weighted exercises, two cards. **Available weights** opens a wizard (presets in `src/data/weightPresets.ts` first, then a custom increment, an even range, or a fixed list) and summarises the result ("2.5 kg increments", "2.5 kg increments, 20 to 200 kg", or "Choices from 5, 7.5, 10 … 84.5, 87"). **Working weight** shows the stored weight, or the recommended option when none is stored, and opens the option list to change it. Saving stores the displayed weight, so an exercise with options always leaves the form with a weight; the "Set working weight" nudges only appear when no weight could be chosen.
+The exercise form shows a Bodyweight switch and, for weighted exercises, two cards. **Available weights** opens a wizard (pick a preset from `src/data/weightPresets.ts`, or define your own list, typed row by row or generated from a From / To / Step range) and summarises the result ("2.5 kg increments", "2.5 kg increments, 20 to 200 kg", or "Choices from 5, 7.5, 10 … 84.5, 87"). **Working weight** shows the stored weight, or the recommended option when none is stored, and opens the option list to change it. Saving stores the displayed weight, so an exercise with options always leaves the form with a weight; the "Set working weight" nudges only appear when no weight could be chosen.
 
 ---
 

@@ -24,7 +24,7 @@ export default function WorkingWeightPicker({
   const highlighted = selected ?? recommended;
 
   return (
-    <SubScreen title="Working weight" onClose={onClose}>
+    <SubScreen title="Working weight" onBack={onClose}>
       {recencyNote && (
         <p className="config-exercise__e1rm-recency-note">
           Using recent best instead of all-time PR to keep prescriptions
