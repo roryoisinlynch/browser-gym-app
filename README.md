@@ -263,11 +263,21 @@ Week 5 → 12 reps (0 RIR)
 
 The prescribed weight is **chosen by the user** from a generated shortlist of candidates. When configuring an exercise the app:
 
-1. Generates candidate weights from the configured increment or explicit weight list
+1. Generates candidate weights from the exercise's list of available weights (or, for legacy `increment` records, from step multiples of the increment below the e1RM)
 2. Filters them to those whose resulting rep targets fall in the **allowed rep range**
 3. Shows each option with the rep target it would produce, and the user taps one
 
 The chosen weight is then prescribed **unchanged for every week** of the season; only the rep target moves week to week. There is no automatic optimiser that picks the weight — saving is blocked until the user selects an option.
+
+### Weight modes
+
+`ExerciseTemplate.weightMode` (and the season snapshot's copy of it) takes one of three values:
+
+- `bodyweight`: rep-only. No weight is prescribed; the rep target is the rep baseline minus the week's RIR.
+- `explicit_list`: the exercise carries `availableWeights`, the weights that actually exist on the equipment, and candidates are drawn from that list. This is the only weighted shape the exercise form writes. The form's **Weighted** option fills the list from an increment (From / To / Step), from a preset in `src/data/weightPresets.ts`, or by copying another exercise's list; single weights can also be added or removed.
+- `increment`: legacy. Candidates are step multiples of `weightIncrement` below the e1RM. The seed data still produces these records and older data carries them, and the engine reads them indefinitely. Opening one in the form shows the list it stands for; saving without editing that list writes the record back unchanged, and editing the list converts it to `explicit_list`.
+
+`weightIncrement` is the step in `increment` mode. On an `explicit_list` record it is informational only: the last step used to fill the list, kept so the next fill is pre-populated and a converted record stays traceable. The engine never reads it for a list.
 
 ---
 
@@ -497,15 +507,15 @@ These records are written once at season-start and never modified by template ed
 Template edits are still useful going forward. When `saveExerciseTemplate` is called, it:
 
 1. Updates the `ExerciseTemplate` record as before.
-2. Propagates `prescribedWeight`, `weightMode`, `weightIncrement`, and `availableWeights` to **all existing `SessionInstanceExercise` records** that point to the same source template (via `sourceExerciseTemplateId`).
+2. Propagates `prescribedWeight`, `weightMode`, `weightIncrement`, and `availableWeights` to **all existing `SessionInstanceExercise` records** that point to the same source template (via `sourceExerciseTemplateId`), skipping snapshots whose session is already completed.
 
-This means changing the prescribed weight on a template retroactively updates all not-yet-started sessions in the active season while leaving the overall session-isolation model intact.
+This means changing the prescribed weight on a template retroactively updates all not-yet-started sessions in the active season while leaving the overall session-isolation model intact. Converting a legacy `increment` template to `explicit_list` propagates the same way: not-yet-completed snapshots receive the list, and completed sessions keep their `increment` snapshot.
 
 ## Backup version
 
 The instance-isolation change was a breaking schema change, and the backup format has continued to evolve since. `BackupPage.tsx` defines two constants:
 
-- `BACKUP_VERSION` (currently **5**) — stamped onto every export.
+- `BACKUP_VERSION` (currently **6**) — stamped onto every export.
 - `MIN_COMPATIBLE_VERSION` (**2**) — the oldest version `handleRestore` will accept.
 
 There is **no migration script**. On restore, `handleRestore` rejects any backup below `MIN_COMPATIBLE_VERSION` with an error, and otherwise performs a blind `clear()` + `put()` of every record per store with no per-record transformation. Because the restore is unvalidated beyond the version floor, breaking model changes must bump `BACKUP_VERSION` (and raise `MIN_COMPATIBLE_VERSION` if old backups can no longer be loaded as-is) rather than rely on a migration step.

@@ -1,10 +1,5 @@
 import type { ExerciseTemplate } from "../domain/models";
-
-const machineFlyWeights = [5, 7.5, 10, 12, 14.5, 17, 19, 21.5, 24, 26, 28.5, 31, 33, 35.5, 38, 40, 42.5, 45, 47, 49.5, 52, 54, 56.5, 59, 61, 63.5, 66, 68, 70.5, 73, 75, 77.5, 80, 82, 84.5, 87];
-const tricepCableWeights = [2.5, 5, 7.5, 10, 12.5, 15, 17.5, 21.25, 25, 28.75, 32.5, 36.25, 40, 43.75, 47.5];
-const latPulldownWeights = [2.5, 5, 7.5, 10, 12.5, 15, 17.5, 21.25, 25, 28.75, 32.5, 36.25, 40, 43.75, 47.5];
-const facePullWeights = [2.5, 5, 7.5, 10, 12.5, 15, 17.5, 21.25, 25, 28.75, 32.5, 36.25, 40, 43.75, 47.5];
-const reversePecDeckWeights = [5, 7.5, 10, 12, 14.5, 17, 19, 21.5, 24, 26, 28.5, 31, 33, 35.5, 38, 40, 42.5, 45, 47, 49.5, 52, 54, 56.5, 59, 61, 63.5, 66, 68, 70.5, 73, 75, 77.5, 80, 82, 84.5, 87];
+import { CABLE_STACK_WEIGHTS, MACHINE_STACK_WEIGHTS } from "./weightPresets";
 
 export const mockExerciseTemplates: ExerciseTemplate[] = [
   // ── Chest Back A ─────────────────────────────────────────────────────────
@@ -49,7 +44,7 @@ export const mockExerciseTemplates: ExerciseTemplate[] = [
     movementTypeId: "chest-fly",
     exerciseName: "Machine Fly",
     weightMode: "explicit_list",
-    availableWeights: machineFlyWeights,
+    availableWeights: MACHINE_STACK_WEIGHTS,
     prescribedWeight: null,
   },
   // Back
@@ -82,7 +77,7 @@ export const mockExerciseTemplates: ExerciseTemplate[] = [
     movementTypeId: "back-rear-delts",
     exerciseName: "Reverse Fly",
     weightMode: "explicit_list",
-    availableWeights: machineFlyWeights,
+    availableWeights: MACHINE_STACK_WEIGHTS,
     prescribedWeight: null,
   },
 
@@ -117,7 +112,7 @@ export const mockExerciseTemplates: ExerciseTemplate[] = [
     movementTypeId: "back-rear-delts",
     exerciseName: "Reverse Fly",
     weightMode: "explicit_list",
-    availableWeights: machineFlyWeights,
+    availableWeights: MACHINE_STACK_WEIGHTS,
     prescribedWeight: null,
   },
   // Chest
@@ -161,7 +156,7 @@ export const mockExerciseTemplates: ExerciseTemplate[] = [
     movementTypeId: "chest-fly",
     exerciseName: "Machine Fly",
     weightMode: "explicit_list",
-    availableWeights: machineFlyWeights,
+    availableWeights: MACHINE_STACK_WEIGHTS,
     prescribedWeight: null,
   },
 
@@ -226,7 +221,7 @@ export const mockExerciseTemplates: ExerciseTemplate[] = [
     movementTypeId: "arms-tricep",
     exerciseName: "Tricep Pushdown",
     weightMode: "explicit_list",
-    availableWeights: tricepCableWeights,
+    availableWeights: CABLE_STACK_WEIGHTS,
     prescribedWeight: null,
   },
   {
@@ -235,7 +230,7 @@ export const mockExerciseTemplates: ExerciseTemplate[] = [
     movementTypeId: "arms-tricep",
     exerciseName: "Overhead Tricep Rope",
     weightMode: "explicit_list",
-    availableWeights: tricepCableWeights,
+    availableWeights: CABLE_STACK_WEIGHTS,
     prescribedWeight: null,
   },
   // Forearms
@@ -284,7 +279,7 @@ export const mockExerciseTemplates: ExerciseTemplate[] = [
     movementTypeId: "arms-tricep",
     exerciseName: "Tricep Pushdown",
     weightMode: "explicit_list",
-    availableWeights: tricepCableWeights,
+    availableWeights: CABLE_STACK_WEIGHTS,
     prescribedWeight: null,
   },
   {
@@ -293,7 +288,7 @@ export const mockExerciseTemplates: ExerciseTemplate[] = [
     movementTypeId: "arms-tricep",
     exerciseName: "Overhead Tricep Rope",
     weightMode: "explicit_list",
-    availableWeights: tricepCableWeights,
+    availableWeights: CABLE_STACK_WEIGHTS,
     prescribedWeight: null,
   },
   // Shoulder
@@ -472,7 +467,7 @@ export const mockExerciseTemplates: ExerciseTemplate[] = [
     movementTypeId: "chest-fly",
     exerciseName: "Machine Fly",
     weightMode: "explicit_list",
-    availableWeights: machineFlyWeights,
+    availableWeights: MACHINE_STACK_WEIGHTS,
     prescribedWeight: null,
   },
   // Shoulders
@@ -510,7 +505,7 @@ export const mockExerciseTemplates: ExerciseTemplate[] = [
     movementTypeId: "arms-tricep",
     exerciseName: "Tricep Pushdown",
     weightMode: "explicit_list",
-    availableWeights: tricepCableWeights,
+    availableWeights: CABLE_STACK_WEIGHTS,
     prescribedWeight: null,
   },
 
@@ -536,7 +531,7 @@ export const mockExerciseTemplates: ExerciseTemplate[] = [
     movementTypeId: "back-vertical-pull",
     exerciseName: "Lat Pulldown",
     weightMode: "explicit_list",
-    availableWeights: latPulldownWeights,
+    availableWeights: CABLE_STACK_WEIGHTS,
     prescribedWeight: null,
   },
   {
@@ -573,7 +568,7 @@ export const mockExerciseTemplates: ExerciseTemplate[] = [
     movementTypeId: "shoulder-rear-delt",
     exerciseName: "Face Pull",
     weightMode: "explicit_list",
-    availableWeights: facePullWeights,
+    availableWeights: CABLE_STACK_WEIGHTS,
     prescribedWeight: null,
   },
   {
@@ -582,7 +577,7 @@ export const mockExerciseTemplates: ExerciseTemplate[] = [
     movementTypeId: "shoulder-rear-delt",
     exerciseName: "Reverse Pec Deck",
     weightMode: "explicit_list",
-    availableWeights: reversePecDeckWeights,
+    availableWeights: MACHINE_STACK_WEIGHTS,
     prescribedWeight: null,
   },
   // Arms (biceps)

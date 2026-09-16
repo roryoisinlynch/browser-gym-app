@@ -33,12 +33,6 @@ import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import "./ConfigSessionDetailPage.css";
 
-function weightModeLabel(mode: string): string {
-  if (mode === "bodyweight") return "BW";
-  if (mode === "explicit_list") return "List";
-  return "Inc";
-}
-
 // ── Draggable exercise row ────────────────────────────────────────────────────
 
 interface DraggableExerciseRowProps {
@@ -82,9 +76,6 @@ function DraggableExerciseRow({
         </span>
       </div>
       <div className="config-session-detail__exercise-right">
-        <span className="config-session-detail__mode-badge">
-          {weightModeLabel(exerciseTemplate.weightMode)}
-        </span>
         <span className="config-session-detail__reps">
           {exerciseTemplate.weightMode === "bodyweight"
             ? "BW reps"
