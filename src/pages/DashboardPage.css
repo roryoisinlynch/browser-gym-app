@@ -1154,21 +1154,6 @@
   opacity: 0.7;
 }
 
-/* Report tutorial mock — wraps the real WeekGradeHero so the example matches
-   what the week summary actually renders. The narrative keeps the report's
-   centring but sits a tier below the tutorial blurb's 0.82rem, so inside the
-   inset panel it reads as part of the sample rather than as a second
-   description. */
-.dashboard-report-mock {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.dashboard-report-mock .sum-narrative {
-  font-size: 0.74rem;
-}
-
 /* ── Heuristics season comparison ── */
 
 .dashboard-heuristics__card {

@@ -1,4 +1,4 @@
-/* A wrapped block that renders nothing — a dismissed tutorial, a section with
+/* A wrapped block that renders nothing — a section with
    no data yet — must not hold open a gap in the parent's flex column. */
 .reveal-block:empty {
   display: none;

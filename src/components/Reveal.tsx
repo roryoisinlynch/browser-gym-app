@@ -7,7 +7,7 @@ import "./Reveal.css";
  * reached, instead of the whole page arriving pre-rendered behind the loader.
  *
  * Safe to wrap something that renders nothing: the wrapper collapses when empty
- * (see Reveal.css), so a dismissed tutorial or an absent section leaves no
+ * (see Reveal.css), so an absent section leaves no
  * phantom gap in the parent's flex column.
  *
  * `delayMs` holds this block's own entrance back a beat, so a pair of adjacent
