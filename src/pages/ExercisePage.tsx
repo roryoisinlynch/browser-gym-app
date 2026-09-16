@@ -116,6 +116,14 @@ export default function ExercisePage() {
 
   const isBodyweight = exerciseView?.exerciseTemplate.weightMode === "bodyweight";
 
+  // A weighted exercise whose available weights were never configured: the
+  // engine has no candidates, so it stays AMRAP until the list is filled in.
+  const hasNoAvailableWeights =
+    exerciseView != null &&
+    !isBodyweight &&
+    exerciseView.exerciseTemplate.weightMode === "explicit_list" &&
+    (exerciseView.exerciseTemplate.availableWeights ?? []).length === 0;
+
   // Has prior history but no working weight configured in settings yet. Check
   // the configured (snapshot) weight rather than the computed prescription: the
   // latter also goes null when the configured weight sits at/above the e1RM
@@ -308,10 +316,11 @@ export default function ExercisePage() {
     }
 
     const returnTo = `/exercise/${exerciseView.exerciseInstance.id}`;
+    const open = hasNoAvailableWeights ? "weights" : "working-weight";
     navigate(
       `/config/exercises/${exerciseView.exerciseTemplate.id}?returnTo=${encodeURIComponent(
         returnTo
-      )}`
+      )}&open=${open}`
     );
   }
 
@@ -420,7 +429,7 @@ export default function ExercisePage() {
           return null;
         })()}
 
-        {!isBodyweight && !isAmrap && (
+        {!isBodyweight && (!isAmrap || hasNoAvailableWeights) && (
           <div className="exercise-page__config-cta-wrap">
             <button
               type="button"
@@ -429,7 +438,11 @@ export default function ExercisePage() {
               }`}
               onClick={handleConfigureExercise}
             >
-              {needsWeightConfig ? "Set working weight" : "Adjust working weight"}
+              {hasNoAvailableWeights
+                ? "Configure available weights"
+                : needsWeightConfig
+                  ? "Set working weight"
+                  : "Adjust working weight"}
             </button>
           </div>
         )}

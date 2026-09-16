@@ -1,0 +1,232 @@
+/* ── Rows (presets, methods) ── */
+
+.weight-wizard__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.weight-wizard__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s, transform 0.12s;
+}
+
+.weight-wizard__row:hover {
+  background: #262c35;
+  transform: translateY(-1px);
+}
+
+.weight-wizard__row:active {
+  transform: scale(0.985);
+}
+
+.weight-wizard__row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.weight-wizard__row-title {
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.weight-wizard__row-desc {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--text-soft);
+}
+
+.weight-wizard__row-chevron {
+  font-size: 1.2rem;
+  color: var(--text-soft);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* ── Inputs ── */
+
+.weight-wizard__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.weight-wizard__field > span,
+.weight-wizard__fill-field > span {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-soft);
+}
+
+.weight-wizard__input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: rgba(15, 19, 24, 0.5);
+  color: var(--text-strong);
+  font-size: 0.92rem;
+  font-family: inherit;
+}
+
+.weight-wizard__input:focus {
+  outline: none;
+  border-color: rgba(216, 240, 106, 0.4);
+}
+
+.weight-wizard__fill-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.weight-wizard__fill-field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ── Fixed list chips ── */
+
+.weight-wizard__weight-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+  min-height: 28px;
+}
+
+.weight-wizard__weight-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.weight-wizard__weight-tag-remove {
+  border: none;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.weight-wizard__weight-tag-remove:hover {
+  color: #f87171;
+}
+
+.weight-wizard__empty {
+  margin: 0 0 10px;
+  font-size: 0.84rem;
+  color: var(--text-soft);
+}
+
+.weight-wizard__weight-add-row {
+  display: flex;
+  gap: 8px;
+}
+
+.weight-wizard__weight-add-row .weight-wizard__input {
+  flex: 1;
+}
+
+.weight-wizard__add-weight-btn {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: rgba(216, 240, 106, 0.08);
+  color: var(--accent);
+  font-size: 0.88rem;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.weight-wizard__add-weight-btn:hover {
+  background: rgba(216, 240, 106, 0.14);
+}
+
+/* ── Preview, errors, footer ── */
+
+.weight-wizard__preview {
+  margin: 12px 0 0;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.weight-wizard__error {
+  margin: 8px 0 0;
+  font-size: 0.84rem;
+  color: #f87171;
+}
+
+.weight-wizard__footer {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.weight-wizard__btn {
+  flex: 1;
+  padding: 13px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.12s;
+}
+
+.weight-wizard__btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.weight-wizard__btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.weight-wizard__btn--primary {
+  border: 1px solid rgba(216, 240, 106, 0.32);
+  background: rgba(216, 240, 106, 0.1);
+  color: var(--accent);
+}
+
+.weight-wizard__btn--primary:hover:not(:disabled) {
+  background: rgba(216, 240, 106, 0.18);
+}

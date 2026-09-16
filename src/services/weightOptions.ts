@@ -10,19 +10,14 @@ export interface WeightOption {
 const MIN_REPS = 1;
 const MAX_REPS = 30;
 
-// The band the auto-selector optimises toward when silently picking a weight.
-const TARGET_MIN_REPS = 6;
-const TARGET_MAX_REPS = 12;
+// The band the auto-selector optimises toward when picking a weight.
+export const TARGET_MIN_REPS = 6;
+export const TARGET_MAX_REPS = 12;
 
-// Step assumed for a legacy increment record that has no weightIncrement.
+// Step assumed for an increment record that has no stored weightIncrement.
 const DEFAULT_INCREMENT = 2.5;
 
-// Ceiling for a list filled from an increment when the user has not chosen
-// one: comfortably above anything the engine would prescribe today.
-const CEILING_E1RM_FACTOR = 1.5;
-const MIN_CEILING_KG = 100;
-
-function round3(n: number): number {
+export function round3(n: number): number {
   return Math.round(n * 1000) / 1000;
 }
 
@@ -54,42 +49,8 @@ export function normaliseWeightList(values: readonly number[]): number[] {
 }
 
 /**
- * Upper bound for a list filled from an increment when the user has not set
- * one: the next multiple of the step at or above
- * max(e1RM * 1.5, prescribed weight * 1.5, 100 kg).
- */
-export function suggestedListCeiling(
-  step: number,
-  effectiveE1RM: number | null,
-  prescribedWeight: number | null
-): number {
-  const inc = step > 0 ? step : DEFAULT_INCREMENT;
-  const target = Math.max(
-    (effectiveE1RM ?? 0) * CEILING_E1RM_FACTOR,
-    (prescribedWeight ?? 0) * CEILING_E1RM_FACTOR,
-    MIN_CEILING_KG
-  );
-  return round3(Math.ceil(round3(target / inc)) * inc);
-}
-
-/**
- * The list a legacy "increment" record is shown as in the exercise form:
- * every multiple of the step, from the step itself up to the suggested
- * ceiling. Display only; the record keeps its increment until the user edits
- * the list.
- */
-export function legacyWeightList(
-  step: number,
-  effectiveE1RM: number | null,
-  prescribedWeight: number | null
-): number[] {
-  const inc = step > 0 ? step : DEFAULT_INCREMENT;
-  return weightsFromIncrement(inc, inc, suggestedListCeiling(inc, effectiveE1RM, prescribedWeight));
-}
-
-/**
  * Generates the selectable working-weight options for a non-bodyweight
- * exercise: every candidate weight (from the explicit list, or, for legacy
+ * exercise: every candidate weight (from the explicit list, or, for
  * increment records, every step multiple below the e1RM) whose per-week rep
  * targets across the RIR scheme stay within [MIN_REPS, MAX_REPS]. Returned
  * heaviest-first. Empty for bodyweight, no e1RM, an empty scheme, or an empty
@@ -113,8 +74,7 @@ export function computeWeightOptions(params: {
   if (weightMode === "explicit_list") {
     candidates = [...availableWeights].sort((a, b) => a - b);
   } else {
-    // Legacy increment records (and any unknown mode): step multiples below
-    // the e1RM, exactly as before lists became the form's only weighted shape.
+    // Increment records (and any unknown mode): step multiples below the e1RM.
     candidates = weightsFromIncrement(inc, inc, effectiveE1RM).filter((w) => w < effectiveE1RM);
   }
 

@@ -1,7 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { SeasonInstance, SessionInstance, WeekInstance } from "../domain/models";
-import type { ExerciseSessionDataPoint, PREvent, WeekInstanceItemView } from "../repositories/programRepository";
+import type {
+  ExerciseNeedingWeight,
+  ExerciseSessionDataPoint,
+  PREvent,
+  WeekInstanceItemView,
+} from "../repositories/programRepository";
 import {
   getActiveSeasonInstance,
   getAllSeasonInstances,
@@ -907,9 +912,8 @@ export default function DashboardPage() {
     movers: { increase: HeuristicMover | null; decrease: HeuristicMover | null };
     series: { current: HeuristicDayPoint[]; previous: HeuristicDayPoint[] };
   } | null>(null);
-  const [exerciseNeedingWeight, setExerciseNeedingWeight] = useState<
-    { exerciseTemplateId: string; exerciseName: string; sessionName: string } | null
-  >(null);
+  const [exerciseNeedingWeight, setExerciseNeedingWeight] =
+    useState<ExerciseNeedingWeight | null>(null);
   const [yearReviewYear, setYearReviewYear] = useState<number | null>(null);
   const recentTooltipRef = useRef<HTMLDivElement | null>(null);
 
@@ -1160,8 +1164,11 @@ export default function DashboardPage() {
 
   function renderExerciseNeedsWeightCard() {
     if (!exerciseNeedingWeight) return null;
-    const { exerciseTemplateId, exerciseName, sessionName } = exerciseNeedingWeight;
-    const target = `/config/exercises/${exerciseTemplateId}?returnTo=${encodeURIComponent("/")}`;
+    const { exerciseTemplateId, exerciseName, sessionName, hasAvailableWeights } =
+      exerciseNeedingWeight;
+    const target = `/config/exercises/${exerciseTemplateId}?returnTo=${encodeURIComponent("/")}${
+      hasAvailableWeights ? "&open=working-weight" : "&open=weights"
+    }`;
     return (
       <div
         className="dashboard-up-next dashboard-up-next--heuristics dashboard-up-next--with-cta"
@@ -1172,7 +1179,9 @@ export default function DashboardPage() {
       >
         <div className="dashboard-up-next__content">
           <span className="dashboard-up-next__pill dashboard-up-next__pill--heuristics">Up next</span>
-          <p className="dashboard-up-next__heading">Set working weight</p>
+          <p className="dashboard-up-next__heading">
+            {hasAvailableWeights ? "Set working weight" : "Configure available weights"}
+          </p>
           <p className="dashboard-up-next__sub">{exerciseName} · {sessionName}</p>
         </div>
         <span className="dashboard-up-next__cta dashboard-up-next__cta--heuristics">Configure →</span>

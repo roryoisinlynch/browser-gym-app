@@ -263,21 +263,23 @@ Week 5 → 12 reps (0 RIR)
 
 The prescribed weight is **chosen by the user** from a generated shortlist of candidates. When configuring an exercise the app:
 
-1. Generates candidate weights from the exercise's list of available weights (or, for legacy `increment` records, from step multiples of the increment below the e1RM)
+1. Generates candidate weights from the exercise's list of available weights (or, for `increment` records, from step multiples of the increment below the e1RM)
 2. Filters them to those whose resulting rep targets fall in the **allowed rep range**
 3. Shows each option with the rep target it would produce, and the user taps one
 
-The chosen weight is then prescribed **unchanged for every week** of the season; only the rep target moves week to week. There is no automatic optimiser that picks the weight — saving is blocked until the user selects an option.
+The chosen weight is then prescribed **unchanged for every week** of the season; only the rep target moves week to week. When no weight is stored, the form shows the recommended option (closest to 6 to 12 reps) and saving stores it; the session applies the same recommendation if an exercise still has none when it opens.
 
 ### Weight modes
 
 `ExerciseTemplate.weightMode` (and the season snapshot's copy of it) takes one of three values:
 
 - `bodyweight`: rep-only. No weight is prescribed; the rep target is the rep baseline minus the week's RIR.
-- `explicit_list`: the exercise carries `availableWeights`, the weights that actually exist on the equipment, and candidates are drawn from that list. This is the only weighted shape the exercise form writes. The form's **Weighted** option fills the list from an increment (From / To / Step), from a preset in `src/data/weightPresets.ts`, or by copying another exercise's list; single weights can also be added or removed.
-- `increment`: legacy. Candidates are step multiples of `weightIncrement` below the e1RM. The seed data still produces these records and older data carries them, and the engine reads them indefinitely. Opening one in the form shows the list it stands for; saving without editing that list writes the record back unchanged, and editing the list converts it to `explicit_list`.
+- `increment`: even increments of `weightIncrement` with no upper bound. Candidates are step multiples below the e1RM. Written by the wizard's increment presets ("2.5 kg increments", "5 kg increments") and its custom step.
+- `explicit_list`: a fixed list in `availableWeights`: a preset stack, a filled range (From / To / Step), or a typed list. An empty list means the exercise is not configured yet; it can be saved that way and runs AMRAP until it is configured, and the exercise page and dashboard show a "Configure available weights" call to action for it.
 
-`weightIncrement` is the step in `increment` mode. On an `explicit_list` record it is informational only: the last step used to fill the list, kept so the next fill is pre-populated and a converted record stays traceable. The engine never reads it for a list.
+`weightIncrement` is the step in `increment` mode. On an `explicit_list` record it is informational: the list's constant step when it has one, used to pre-fill the wizard. The engine never reads it for a list.
+
+The exercise form shows a Bodyweight switch and, for weighted exercises, two cards. **Available weights** opens a wizard (presets in `src/data/weightPresets.ts` first, then a custom increment, an even range, or a fixed list) and summarises the result ("2.5 kg increments", "2.5 kg increments, 20 to 200 kg", or "Choices from 5, 7.5, 10 … 84.5, 87"). **Working weight** shows the stored weight, or the recommended option when none is stored, and opens the option list to change it. Saving stores the displayed weight, so an exercise with options always leaves the form with a weight; the "Set working weight" nudges only appear when no weight could be chosen.
 
 ---
 
@@ -509,7 +511,7 @@ Template edits are still useful going forward. When `saveExerciseTemplate` is ca
 1. Updates the `ExerciseTemplate` record as before.
 2. Propagates `prescribedWeight`, `weightMode`, `weightIncrement`, and `availableWeights` to **all existing `SessionInstanceExercise` records** that point to the same source template (via `sourceExerciseTemplateId`), skipping snapshots whose session is already completed.
 
-This means changing the prescribed weight on a template retroactively updates all not-yet-started sessions in the active season while leaving the overall session-isolation model intact. Converting a legacy `increment` template to `explicit_list` propagates the same way: not-yet-completed snapshots receive the list, and completed sessions keep their `increment` snapshot.
+This means changing the prescribed weight on a template retroactively updates all not-yet-started sessions in the active season while leaving the overall session-isolation model intact. Changing a template from `increment` to `explicit_list` propagates the same way: not-yet-completed snapshots receive the list, and completed sessions keep their `increment` snapshot.
 
 ## Backup version
 

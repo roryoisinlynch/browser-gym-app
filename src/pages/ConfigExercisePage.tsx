@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import type { ExerciseTemplate, WeightMode } from "../domain/models";
+import type { ExerciseTemplate } from "../domain/models";
 import {
   attachExerciseTemplateToSessionInstance,
   deleteExerciseTemplateById,
@@ -13,43 +13,40 @@ import {
 } from "../repositories/programRepository";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
+import WeightListWizard from "../components/WeightListWizard";
+import WorkingWeightPicker from "../components/WorkingWeightPicker";
 import {
   computeWeightOptions,
-  legacyWeightList,
-  normaliseWeightList,
-  suggestedListCeiling,
-  weightsFromIncrement,
+  pickBestWeightOption,
+  TARGET_MAX_REPS,
+  TARGET_MIN_REPS,
 } from "../services/weightOptions";
 import type { WeightOption } from "../services/weightOptions";
-import { WEIGHT_PRESETS } from "../data/weightPresets";
+import {
+  DEFAULT_STEP,
+  EMPTY_LIST_CONFIG,
+  describeWeightConfig,
+  isWeightConfigured,
+  sameWeightFields,
+  weightConfigFromTemplate,
+  weightFieldsFromConfig,
+  type WeightConfig,
+} from "../services/weightConfig";
 import "./ConfigExercisePage.css";
 
-// The form offers two kinds of exercise. Both legacy "increment" records and
-// "explicit_list" records load as "weighted"; storedWeightMode decides what is
-// written back.
-type WeightKind = "bodyweight" | "weighted";
+type SubScreenKind = "none" | "weights" | "working-weight";
 
-// A list the available weights can be filled from: a built-in preset or
-// another exercise's list.
-interface ListSource {
-  key: string;
-  label: string;
-  weights: number[];
-  step?: number;
+// What the toggle restores when an exercise is switched back from bodyweight.
+interface WeightedMemory {
+  config: WeightConfig;
+  selectedWeight: number | null;
 }
 
-const DEFAULT_STEP = 2.5;
-const MAX_FILL_ENTRIES = 500;
-const INLINE_CHIP_LIMIT = 24;
-
-const PRESET_SOURCES: ListSource[] = WEIGHT_PRESETS.map((p) => ({
-  key: `preset:${p.id}`,
-  label: p.label,
-  weights: p.weights,
-  step: p.step,
-}));
-
-const NUMBER_INPUT_CLASS = "config-exercise__input config-exercise__input--number";
+interface CardState {
+  value: string | null;
+  desc: string;
+  tappable: boolean;
+}
 
 export default function ConfigExercisePage() {
   const { exerciseTemplateId } = useParams<{ exerciseTemplateId: string }>();
@@ -61,237 +58,159 @@ export default function ConfigExercisePage() {
   const returnTo = searchParams.get("returnTo");
   const addToSessionId = searchParams.get("addToSession");
   const addToSimgId = searchParams.get("simgId");
+  const openParam = searchParams.get("open");
 
   // Core form state
   const [exerciseName, setExerciseName] = useState("");
-  const [weightKind, setWeightKind] = useState<WeightKind>("weighted");
-  const [availableWeights, setAvailableWeights] = useState<number[]>([]);
-  const [newWeightInput, setNewWeightInput] = useState("");
+  const [config, setConfig] = useState<WeightConfig>(EMPTY_LIST_CONFIG);
+  const lastWeightedRef = useRef<WeightedMemory>({
+    config: EMPTY_LIST_CONFIG,
+    selectedWeight: null,
+  });
 
-  // Legacy handling. legacyIncrement is set when the loaded record is an
-  // "increment" record. Until the list is touched, the record round-trips
-  // unchanged and the list shown is a display-only materialisation of it.
-  const [listTouched, setListTouched] = useState(false);
-  const [legacyIncrement, setLegacyIncrement] = useState<number | null>(null);
-  const [storedIncrement, setStoredIncrement] = useState<number | null>(null);
-  const [loadedPrescribedWeight, setLoadedPrescribedWeight] = useState<number | null>(null);
-
-  // Fill tools
-  const [lastStep, setLastStep] = useState<number | null>(null);
-  const [fillFrom, setFillFrom] = useState("");
-  const [fillTo, setFillTo] = useState("");
-  const [fillStep, setFillStep] = useState(String(DEFAULT_STEP));
-  const [listError, setListError] = useState<string | null>(null);
-  const [showAllWeights, setShowAllWeights] = useState(false);
-
-  // Weight selection (the anchor stored on the template)
+  // The explicit working-weight choice; null means "follow the recommendation".
   const [selectedWeight, setSelectedWeight] = useState<number | null>(null);
   const [historicalBestE1RM, setHistoricalBestE1RM] = useState<number | null>(null);
   const [recentMaxE1RM, setRecentMaxE1RM] = useState<number | null>(null);
   const [rirScheme, setRirScheme] = useState<number[]>([]);
 
-  const [allTemplates, setAllTemplates] = useState<ExerciseTemplate[]>([]);
+  // Sub-screens. The ?open= deep link is honoured once, after the template
+  // and its e1RM have loaded, and never again after the user closes it.
+  const [loaded, setLoaded] = useState(false);
+  const [subScreen, setSubScreen] = useState<SubScreenKind>("none");
+  const [deepLinkConsumed, setDeepLinkConsumed] = useState(false);
 
+  const [allExerciseNames, setAllExerciseNames] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [weightModeTooltipOpen, setWeightModeTooltipOpen] = useState(false);
-  const weightModeTooltipRef = useRef<HTMLSpanElement | null>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (!weightModeTooltipRef.current?.contains(e.target as Node)) {
-        setWeightModeTooltipOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
   useEffect(() => {
     async function load() {
       const templates = await getAllExerciseTemplates();
-      setAllTemplates(templates);
+      setAllExerciseNames([...new Set(templates.map((t) => t.exerciseName))].sort());
 
       const seasonTemplates = await getSeasonTemplates();
-      const scheme = seasonTemplates[0]?.rirSequence ?? [];
-      setRirScheme(scheme);
+      setRirScheme(seasonTemplates[0]?.rirSequence ?? []);
 
-      if (isNew) {
-        setFillFrom(String(DEFAULT_STEP));
-        setFillTo(String(suggestedListCeiling(DEFAULT_STEP, null, null)));
+      if (isNew || !exerciseTemplateId) {
+        setLoaded(true);
         return;
       }
 
-      if (!exerciseTemplateId) return;
-
       const template = await getExerciseTemplateById(exerciseTemplateId);
-      if (!template) return;
-
-      setExerciseName(template.exerciseName);
-      setWeightKind(template.weightMode === "bodyweight" ? "bodyweight" : "weighted");
-
-      const stored = template.weightIncrement ?? null;
-      setStoredIncrement(stored);
-      setLegacyIncrement(template.weightMode === "increment" ? (stored ?? DEFAULT_STEP) : null);
-
-      const list = template.availableWeights ?? [];
-      setAvailableWeights(list);
-
-      const prescribed = template.prescribedWeight ?? null;
-      setLoadedPrescribedWeight(prescribed);
-      setSelectedWeight(prescribed);
-
-      const step = stored ?? DEFAULT_STEP;
-      setFillStep(String(step));
-      if (list.length > 0) {
-        setFillFrom(String(Math.min(...list)));
-        setFillTo(String(Math.max(...list)));
-      } else {
-        setFillFrom(String(step));
-        setFillTo(String(suggestedListCeiling(step, null, prescribed)));
+      if (!template) {
+        setLoaded(true);
+        return;
       }
 
-      if (template.weightMode !== "bodyweight") {
-        const { historicalBest, recentMax } = await getEffectiveE1RM(
-          template.exerciseName
-        );
+      setExerciseName(template.exerciseName);
+      const cfg = weightConfigFromTemplate(template);
+      const prescribed = template.prescribedWeight ?? null;
+      setConfig(cfg);
+      setSelectedWeight(prescribed);
+      if (cfg.kind !== "bodyweight") {
+        lastWeightedRef.current = { config: cfg, selectedWeight: prescribed };
+        const { historicalBest, recentMax } = await getEffectiveE1RM(template.exerciseName);
         setHistoricalBestE1RM(historicalBest);
         setRecentMaxE1RM(recentMax);
       }
+      setLoaded(true);
     }
     load();
   }, [exerciseTemplateId, isNew]);
 
   const effectiveE1RM = recentMaxE1RM ?? historicalBestE1RM;
 
-  const isUntouchedLegacy = legacyIncrement != null && !listTouched;
-  const storedWeightMode: WeightMode =
-    weightKind === "bodyweight"
-      ? "bodyweight"
-      : isUntouchedLegacy
-        ? "increment"
-        : "explicit_list";
-
-  // Legacy pre-fill: show an increment record as the list it stands for.
-  // Re-runs when the e1RM arrives (it loads after the template) and stops the
-  // moment the list is touched. Must not clear selectedWeight: an untouched
-  // save has to round-trip prescribedWeight.
-  useEffect(() => {
-    if (legacyIncrement == null || listTouched) return;
-    setAvailableWeights(legacyWeightList(legacyIncrement, effectiveE1RM, loadedPrescribedWeight));
-    setFillFrom(String(legacyIncrement));
-    setFillTo(String(suggestedListCeiling(legacyIncrement, effectiveE1RM, loadedPrescribedWeight)));
-  }, [legacyIncrement, listTouched, effectiveE1RM, loadedPrescribedWeight]);
+  const fields = useMemo(() => weightFieldsFromConfig(config), [config]);
 
   const weightOptions = useMemo<WeightOption[]>(
     () =>
       computeWeightOptions({
         effectiveE1RM,
-        weightMode: storedWeightMode,
-        weightIncrement: legacyIncrement ?? lastStep ?? DEFAULT_STEP,
-        availableWeights,
+        weightMode: fields.weightMode,
+        weightIncrement: fields.weightIncrement ?? DEFAULT_STEP,
+        availableWeights: fields.availableWeights ?? [],
         rirScheme,
       }),
-    [effectiveE1RM, storedWeightMode, legacyIncrement, lastStep, availableWeights, rirScheme]
+    [effectiveE1RM, fields, rirScheme]
   );
 
-  // Other exercises' lists, one entry per distinct list, labelled by the
-  // exercises that share it.
-  const copySources = useMemo<ListSource[]>(() => {
-    const byList = new Map<
-      string,
-      { firstId: string; names: string[]; weights: number[]; step?: number }
-    >();
-    for (const t of allTemplates) {
-      if (t.id === exerciseTemplateId) continue;
-      if (t.weightMode !== "explicit_list") continue;
-      const weights = normaliseWeightList(t.availableWeights ?? []);
-      if (weights.length === 0) continue;
-      const signature = weights.join(",");
-      const entry = byList.get(signature);
-      if (entry) {
-        if (!entry.names.includes(t.exerciseName)) entry.names.push(t.exerciseName);
-        if (entry.step == null && t.weightIncrement != null) entry.step = t.weightIncrement;
-      } else {
-        byList.set(signature, {
-          firstId: t.id,
-          names: [t.exerciseName],
-          weights,
-          step: t.weightIncrement,
-        });
-      }
-    }
-    return [...byList.values()]
-      .map((e) => ({
-        key: `tpl:${e.firstId}`,
-        label: e.names.join(", "),
-        weights: e.weights,
-        step: e.step,
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  }, [allTemplates, exerciseTemplateId]);
+  const recommended = useMemo(() => pickBestWeightOption(weightOptions), [weightOptions]);
 
-  // Every list edit goes through here: it converts a legacy record, clears the
-  // working weight (the options change), and clears any fill error.
-  function touchList(next: number[]) {
-    setAvailableWeights(next);
-    setListTouched(true);
-    setSelectedWeight(null);
-    setListError(null);
+  const isBodyweight = config.kind === "bodyweight";
+  const weightsConfigured = isWeightConfigured(config);
+  const weightsLabel = describeWeightConfig(config);
+
+  // What Save stores: the explicit choice, else the recommendation.
+  const storedWeight = selectedWeight ?? recommended?.weight ?? null;
+  const storedOption = weightOptions.find((o) => o.weight === storedWeight);
+
+  const workingWeightCard: CardState = (() => {
+    if (!weightsConfigured) {
+      return { value: null, desc: "Configure available weights first", tappable: false };
+    }
+    if (effectiveE1RM == null) {
+      return { value: null, desc: "AMRAP until the first session", tappable: false };
+    }
+    if (weightOptions.length === 0) {
+      return {
+        value: null,
+        desc: "None of the available weights give a rep target between 1 and 30.",
+        tappable: false,
+      };
+    }
+    if (storedOption) {
+      const min = Math.min(...storedOption.repRange);
+      const max = Math.max(...storedOption.repRange);
+      return {
+        value: `${storedOption.weight}kg`,
+        desc:
+          selectedWeight == null
+            ? `Recommended: closest to ${TARGET_MIN_REPS} to ${TARGET_MAX_REPS} reps, rep range ${min} to ${max}`
+            : `0 RIR: ${storedOption.zeroRirReps} reps, rep range ${min} to ${max}`,
+        tappable: true,
+      };
+    }
+    return { value: `${storedWeight}kg`, desc: "Not among the current options.", tappable: true };
+  })();
+
+  // Deep link: derived rather than set in an effect, so it needs no extra render.
+  const autoOpen: SubScreenKind =
+    loaded && !deepLinkConsumed
+      ? openParam === "weights" && !isBodyweight
+        ? "weights"
+        : openParam === "working-weight" && weightOptions.length > 0
+          ? "working-weight"
+          : "none"
+      : "none";
+  const activeSubScreen: SubScreenKind = subScreen !== "none" ? subScreen : autoOpen;
+
+  function closeSubScreen() {
+    setDeepLinkConsumed(true);
+    setSubScreen("none");
   }
 
-  function addWeight() {
-    const val = parseFloat(newWeightInput);
-    if (!Number.isFinite(val) || val <= 0) return;
-    touchList(normaliseWeightList([...availableWeights, val]));
-    setNewWeightInput("");
+  function applyWeightConfig(next: WeightConfig) {
+    const same = sameWeightFields(next, config);
+    if (!same) setSelectedWeight(null);
+    setConfig(next);
+    if (next.kind !== "bodyweight") {
+      lastWeightedRef.current = { config: next, selectedWeight: same ? selectedWeight : null };
+    }
   }
 
-  function removeWeight(w: number) {
-    touchList(availableWeights.filter((v) => v !== w));
-  }
-
-  function fillFromIncrement() {
-    const from = parseFloat(fillFrom);
-    const to = parseFloat(fillTo);
-    const step = parseFloat(fillStep);
-    if (!(step > 0)) {
-      setListError("Step must be greater than 0.");
-      return;
-    }
-    if (!(from > 0)) {
-      setListError("From must be greater than 0.");
-      return;
-    }
-    if (!(to >= from)) {
-      setListError("To must be at least From.");
-      return;
-    }
-    if (Math.floor((to - from) / step) + 1 > MAX_FILL_ENTRIES) {
-      setListError(
-        `That range would produce more than ${MAX_FILL_ENTRIES} weights. Use a larger step or a smaller range.`
-      );
-      return;
-    }
-    touchList(normaliseWeightList(weightsFromIncrement(step, from, to)));
-    setLastStep(step);
-  }
-
-  function applyListSource(key: string) {
-    const src =
-      PRESET_SOURCES.find((s) => s.key === key) ?? copySources.find((s) => s.key === key);
-    if (!src) return;
-    const weights = normaliseWeightList(src.weights);
-    touchList(weights);
-    setLastStep(src.step ?? null);
-    if (src.step != null) setFillStep(String(src.step));
-    if (weights.length > 0) {
-      setFillFrom(String(weights[0]));
-      setFillTo(String(weights[weights.length - 1]));
+  function handleToggleBodyweight() {
+    if (isBodyweight) {
+      const memory = lastWeightedRef.current;
+      setConfig(memory.config);
+      setSelectedWeight(memory.selectedWeight);
+    } else {
+      lastWeightedRef.current = { config, selectedWeight };
+      setConfig({ kind: "bodyweight" });
+      setSelectedWeight(null);
     }
   }
 
@@ -299,24 +218,6 @@ export default function ConfigExercisePage() {
     const name = exerciseName.trim();
     if (!name) {
       setError("Exercise name is required.");
-      return;
-    }
-
-    if (
-      weightKind === "weighted" &&
-      !isUntouchedLegacy &&
-      availableWeights.length === 0
-    ) {
-      setError("Add at least one weight, or fill the list from an increment or preset.");
-      return;
-    }
-
-    if (
-      weightKind !== "bodyweight" &&
-      weightOptions.length > 0 &&
-      selectedWeight === null
-    ) {
-      setError("Please select a weight option.");
       return;
     }
 
@@ -335,31 +236,13 @@ export default function ConfigExercisePage() {
         ? existing.movementTypeId
         : (await getOrCreateDefaultMovementType(existingStmgId)).id;
 
-      // An untouched legacy record is written back exactly as it was stored:
-      // still "increment", same step, no availableWeights key.
-      const listStep = lastStep ?? storedIncrement;
-      const weightFields =
-        weightKind === "bodyweight"
-          ? { weightMode: "bodyweight" as const, prescribedWeight: null }
-          : isUntouchedLegacy
-            ? {
-                weightMode: "increment" as const,
-                prescribedWeight: selectedWeight,
-                weightIncrement: legacyIncrement ?? DEFAULT_STEP,
-              }
-            : {
-                weightMode: "explicit_list" as const,
-                prescribedWeight: selectedWeight,
-                availableWeights: normaliseWeightList(availableWeights),
-                ...(listStep != null ? { weightIncrement: listStep } : {}),
-              };
-
       const template: ExerciseTemplate = {
         id: isNew ? crypto.randomUUID() : exerciseTemplateId!,
         sessionTemplateMuscleGroupId: existingStmgId,
         movementTypeId,
         exerciseName: name,
-        ...weightFields,
+        ...weightFieldsFromConfig(config),
+        prescribedWeight: isBodyweight ? null : storedWeight,
       };
 
       await saveExerciseTemplate(template);
@@ -405,21 +288,11 @@ export default function ConfigExercisePage() {
     navigate(-1);
   }
 
-  const selectedOption = weightOptions.find((o) => o.weight === selectedWeight);
-
-  const allExerciseNames = useMemo(
-    () => [...new Set(allTemplates.map((t) => t.exerciseName))].sort(),
-    [allTemplates]
-  );
-
   const filteredSuggestions = useMemo(() => {
     const q = exerciseName.trim().toLowerCase();
     if (!q) return allExerciseNames;
     return allExerciseNames.filter((n) => n.toLowerCase().includes(q));
   }, [exerciseName, allExerciseNames]);
-
-  const weightCount = availableWeights.length;
-  const chipsVisible = weightCount <= INLINE_CHIP_LIMIT || showAllWeights;
 
   return (
     <main className="config-exercise-page">
@@ -474,265 +347,82 @@ export default function ConfigExercisePage() {
           )}
         </div>
 
-        <div className="config-exercise__field-group">
-          <div className="config-exercise__label-row">
-            <span className="config-exercise__label">Weight mode</span>
-            <span ref={weightModeTooltipRef} style={{ position: "relative" }}>
+        <div className="config-exercise__field-group config-exercise__card-list">
+          <div className="config-exercise__card config-exercise__card--toggle">
+            <span className="config-exercise__card-body">
+              <span className="config-exercise__card-title">Bodyweight exercise</span>
+              <span className="config-exercise__card-desc">
+                Reps only. Rep targets come from your historical best minus the
+                week&apos;s RIR.
+              </span>
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isBodyweight}
+              aria-label="Bodyweight exercise"
+              className={`config-exercise__toggle${
+                isBodyweight ? " config-exercise__toggle--on" : ""
+              }`}
+              onClick={handleToggleBodyweight}
+            >
+              <span className="config-exercise__toggle-knob" />
+            </button>
+          </div>
+
+          {!isBodyweight && (
+            <>
               <button
                 type="button"
-                className="config-exercise__info-btn"
-                aria-expanded={weightModeTooltipOpen}
-                onClick={() => setWeightModeTooltipOpen((v) => !v)}
-              >?</button>
-              {weightModeTooltipOpen && (
-                <div className="config-exercise__info-tooltip">
-                  <strong>Bodyweight</strong>: for exercises where the only variable you change week to week is the number of reps, such as pull-ups. Also useful for high-rep exercises where e1RM calculations become unreliable.<br />
-                  <strong>Weighted</strong>: for exercises with an external load. List the weights you can actually load so the app only prescribes weights that exist. Fill the list from an increment, pick a preset for common equipment, or copy the list from another exercise, then add or remove single weights.
-                </div>
-              )}
-            </span>
-          </div>
-          <div className="config-exercise__radio-group">
-            {(
-              [
-                { value: "bodyweight", label: "Bodyweight" },
-                { value: "weighted", label: "Weighted" },
-              ] as { value: WeightKind; label: string }[]
-            ).map(({ value, label }) => (
-              <label key={value} className="config-exercise__radio-label">
-                <input
-                  type="radio"
-                  name="weightMode"
-                  value={value}
-                  checked={weightKind === value}
-                  onChange={() => {
-                    setWeightKind(value);
-                    setSelectedWeight(null);
-                  }}
-                  className="config-exercise__radio"
-                />
-                <span className="config-exercise__radio-text">{label}</span>
-              </label>
-            ))}
-          </div>
-
-          {weightKind === "weighted" && (
-            <div className="config-exercise__sub-field">
-              <label className="config-exercise__sub-label">
-                Available weights (kg)
-              </label>
-              {isUntouchedLegacy && (
-                <p className="config-exercise__list-note">
-                  Filled from this exercise&apos;s {legacyIncrement} kg increment.
-                  Edit the list to save it as a fixed list.
-                </p>
-              )}
-
-              <div className="config-exercise__fill-row">
-                <label className="config-exercise__fill-field">
-                  <span>From</span>
-                  <input
-                    className={NUMBER_INPUT_CLASS}
-                    type="number"
-                    min="0.25"
-                    step="0.25"
-                    value={fillFrom}
-                    onChange={(e) => setFillFrom(e.target.value)}
-                  />
-                </label>
-                <label className="config-exercise__fill-field">
-                  <span>To</span>
-                  <input
-                    className={NUMBER_INPUT_CLASS}
-                    type="number"
-                    min="0.25"
-                    step="0.25"
-                    value={fillTo}
-                    onChange={(e) => setFillTo(e.target.value)}
-                  />
-                </label>
-                <label className="config-exercise__fill-field">
-                  <span>Step</span>
-                  <input
-                    className={NUMBER_INPUT_CLASS}
-                    type="number"
-                    min="0.25"
-                    step="0.25"
-                    value={fillStep}
-                    onChange={(e) => setFillStep(e.target.value)}
-                  />
-                </label>
-                <button
-                  type="button"
-                  className="config-exercise__add-weight-btn"
-                  onClick={fillFromIncrement}
-                >
-                  Fill
-                </button>
-              </div>
-
-              <select
-                className="config-exercise__fill-select"
-                value=""
-                aria-label="Fill from a preset or another exercise"
-                onChange={(e) => {
-                  if (e.target.value) applyListSource(e.target.value);
-                }}
+                className={`config-exercise__card${
+                  workingWeightCard.tappable ? "" : " config-exercise__card--muted"
+                }`}
+                disabled={!workingWeightCard.tappable}
+                onClick={() => setSubScreen("working-weight")}
               >
-                <option value="">Fill from a preset or another exercise</option>
-                <optgroup label="Presets">
-                  {PRESET_SOURCES.map((s) => (
-                    <option key={s.key} value={s.key}>
-                      {s.label}
-                    </option>
-                  ))}
-                </optgroup>
-                {copySources.length > 0 && (
-                  <optgroup label="Copy from exercise">
-                    {copySources.map((s) => (
-                      <option key={s.key} value={s.key}>
-                        {s.label}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-
-              {listError && <p className="config-exercise-error">{listError}</p>}
-
-              {weightCount === 0 ? (
-                <p className="config-exercise__no-options">No weights yet.</p>
-              ) : (
-                <>
-                  <div className="config-exercise__list-summary">
-                    <span>
-                      {weightCount} {weightCount === 1 ? "weight" : "weights"},{" "}
-                      {Math.min(...availableWeights)} to {Math.max(...availableWeights)} kg
+                <span className="config-exercise__card-body">
+                  <span className="config-exercise__card-title">Working weight</span>
+                  <span className="config-exercise__card-desc">
+                    {workingWeightCard.desc}
+                  </span>
+                </span>
+                <span className="config-exercise__card-right">
+                  {workingWeightCard.value && (
+                    <span className="config-exercise__card-value">
+                      {workingWeightCard.value}
                     </span>
-                    {weightCount > INLINE_CHIP_LIMIT && (
-                      <button
-                        type="button"
-                        className="config-exercise__list-toggle"
-                        onClick={() => setShowAllWeights((v) => !v)}
-                      >
-                        {showAllWeights ? "Hide" : "Show all"}
-                      </button>
-                    )}
-                  </div>
-                  {chipsVisible && (
-                    <div className="config-exercise__weight-tags">
-                      {availableWeights.map((w) => (
-                        <span key={w} className="config-exercise__weight-tag">
-                          {w}
-                          <button
-                            type="button"
-                            className="config-exercise__weight-tag-remove"
-                            onClick={() => removeWeight(w)}
-                            aria-label={`Remove ${w}kg`}
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
-                    </div>
                   )}
-                </>
-              )}
+                  {workingWeightCard.tappable && (
+                    <span className="config-exercise__card-chevron">›</span>
+                  )}
+                </span>
+              </button>
 
-              <div className="config-exercise__weight-add-row">
-                <input
-                  className={NUMBER_INPUT_CLASS}
-                  type="number"
-                  min="0.25"
-                  step="0.25"
-                  placeholder="kg"
-                  value={newWeightInput}
-                  onChange={(e) => setNewWeightInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addWeight()}
-                />
-                <button
-                  type="button"
-                  className="config-exercise__add-weight-btn"
-                  onClick={addWeight}
-                >
-                  Add
-                </button>
-              </div>
-            </div>
+              <button
+                type="button"
+                className={`config-exercise__card${
+                  weightsConfigured ? "" : " config-exercise__card--cta"
+                }`}
+                onClick={() => setSubScreen("weights")}
+              >
+                <span className="config-exercise__card-body">
+                  <span className="config-exercise__card-title">
+                    {weightsConfigured
+                      ? "Available weights"
+                      : "Configure available weights"}
+                  </span>
+                  <span className="config-exercise__card-desc">
+                    {weightsLabel ??
+                      "Tell the app which weights you can load so it prescribes from them."}
+                  </span>
+                </span>
+                <span className="config-exercise__card-right">
+                  <span className="config-exercise__card-chevron">›</span>
+                </span>
+              </button>
+            </>
           )}
         </div>
-
-        {weightKind === "bodyweight" ? (
-          <div className="config-exercise__field-group">
-            <div className="config-exercise__bw-note">
-              Rep targets are calculated automatically from your historical best
-              minus the week&apos;s RIR.
-            </div>
-          </div>
-        ) : (
-          <div className="config-exercise__field-group">
-            <label className="config-exercise__label">
-              Working weight
-              {selectedOption && (
-                <span className="config-exercise__label-selected">
-                  {" "}
-                  · {selectedOption.weight}kg · 0 RIR:{" "}
-                  {selectedOption.zeroRirReps} reps
-                </span>
-              )}
-            </label>
-
-            {effectiveE1RM != null ? (
-              <>
-                {recentMaxE1RM != null && historicalBestE1RM != null && (
-                  <p className="config-exercise__e1rm-recency-note">
-                    Using recent best instead of all-time PR to keep prescriptions
-                    realistic.
-                  </p>
-                )}
-
-                {weightOptions.length === 0 ? (
-                  <p className="config-exercise__no-options">
-                    No weight options available.
-                  </p>
-                ) : (
-                  <div className="config-exercise__option-list">
-                    {weightOptions.map((opt) => {
-                      const isSelected = opt.weight === selectedWeight;
-                      return (
-                        <button
-                          key={opt.weight}
-                          type="button"
-                          className={`config-exercise__option${
-                            isSelected
-                              ? " config-exercise__option--selected"
-                              : ""
-                          }`}
-                          onClick={() => setSelectedWeight(opt.weight)}
-                        >
-                          <span className="config-exercise__option-weight">
-                            {opt.weight}kg
-                          </span>
-                          <span className="config-exercise__option-middle">
-                            <span className="config-exercise__option-reps">
-                              Rep range: {Math.min(...opt.repRange)} -{" "}
-                              {Math.max(...opt.repRange)}
-                            </span>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            ) : (
-              <p className="config-exercise__no-history-note">
-                No history yet. Options will appear after the first session
-                (AMRAP to establish a baseline).
-              </p>
-            )}
-          </div>
-        )}
 
         <div className="config-exercise__actions">
           {!isNew && (
@@ -756,6 +446,30 @@ export default function ConfigExercisePage() {
         </div>
       </section>
       <BottomNav activeTab="program" />
+
+      {activeSubScreen === "weights" && (
+        <WeightListWizard
+          initial={config}
+          onApply={(next) => {
+            applyWeightConfig(next);
+            closeSubScreen();
+          }}
+          onClose={closeSubScreen}
+        />
+      )}
+      {activeSubScreen === "working-weight" && (
+        <WorkingWeightPicker
+          options={weightOptions}
+          selected={selectedWeight}
+          recommended={recommended?.weight ?? null}
+          recencyNote={recentMaxE1RM != null && historicalBestE1RM != null}
+          onSelect={(weight) => {
+            setSelectedWeight(weight);
+            closeSubScreen();
+          }}
+          onClose={closeSubScreen}
+        />
+      )}
     </main>
   );
 }
