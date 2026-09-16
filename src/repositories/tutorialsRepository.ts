@@ -7,10 +7,8 @@ export const TUTORIAL_IDS = [
   "exercise_graph",
   "recent_prs",
   "pr_spotlight",
-  "achievements",
   "programs",
   "weeks_breadcrumb",
-  "all_seasons",
   "exercise_summary_card",
 ] as const;
 

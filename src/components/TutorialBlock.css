@@ -80,23 +80,25 @@
   color: var(--text-muted);
 }
 
-/* Center the achievement shelf's grid tracks inside the tutorial card so the
-   leftover horizontal space (from the fixed-44px columns not perfectly
-   dividing the narrower tutorial container) sits equally on both sides
-   rather than piling up on the right. Scoped to .tutorial-block so the live
-   dashboard shelf stays left-aligned. */
-.tutorial-block__preview-bare > .dashboard-achievements {
-  justify-content: center;
+/* Step the week report's hero down inside tutorials: at full size its emoji
+   alone is 168px tall, which reads as the real report rather than a sample of
+   one. Scoped to .tutorial-block so the real WeekSummaryPage is untouched. */
+.tutorial-block .wk-hero {
+  gap: 14px;
+  padding: 0;
 }
+.tutorial-block .wk-hero__emoji   { font-size: 8.25rem; }
+.tutorial-block .sum-score__pct   { font-size: 1.2rem; }
+.tutorial-block .sum-score--start { gap: 4px; }
 
-/* Step the week-summary score block down a notch inside tutorials so the
-   primary number, emoji, % metrics and their labels don't crowd against the
-   tutorial card's tighter horizontal budget. Scoped to .tutorial-block so the
-   real WeekSummaryPage layout is untouched. */
-.tutorial-block .week-summary-emoji          { font-size: 2.5rem; }
-.tutorial-block .week-summary-score-total    { font-size: 3rem; }
-.tutorial-block .week-summary-score-item__pct   { font-size: 1.05rem; }
-.tutorial-block .week-summary-score-item__label { font-size: 0.64rem; }
+/* The insights panel is a page-level card on the exercise screen, with side
+   margins and a drop shadow of its own. Inside a tutorial card those are
+   wrong, and the recovered width keeps the two-column stat eyebrows to two
+   lines on a phone. */
+.tutorial-block .exercise-insights {
+  margin: 0;
+  box-shadow: none;
+}
 
 /* ── Mock: metrics legend ────────────────────────────────────────────────── */
 .tutorial-mock-metrics {

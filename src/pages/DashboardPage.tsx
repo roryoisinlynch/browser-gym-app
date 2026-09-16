@@ -61,52 +61,27 @@ import "./DashboardPage.css";
 // ─── Tutorial: exercise graph mock ─────────────────────────────────────────
 // Standalone component so it can hold its own bin-toggle state. Each bin shows
 // a different fabricated dataset + x-axis labels so the toggle is functional.
+// The stats under the chart are fixed regardless of bin, as they are in the
+// real ExerciseInsights panel.
 
 type GraphBin = "week" | "season" | "quarter" | "year";
 
-const GRAPH_DATASETS: Record<
-  GraphBin,
-  { points: number[]; labels: [string, string, string]; previousLabel: string; bestLabel: string; previousValue: string; bestValue: string; previousE1RM: string; bestE1RM: string }
-> = {
+const GRAPH_DATASETS: Record<GraphBin, { points: number[]; labels: [string, string, string] }> = {
   week: {
     points: [88, 91, 90, 94, 97, 96, 102, 105],
     labels: ["Mar '26", "Apr '26", "May '26"],
-    previousLabel: "7 May '26",
-    bestLabel: "14 May '26",
-    previousValue: "90kg × 5",
-    bestValue: "95kg × 5",
-    previousE1RM: "105kg e1RM",
-    bestE1RM: "110.8kg e1RM",
   },
   season: {
     points: [82, 92, 105],
     labels: ["Autumn '25", "Winter '26", "Spring '26"],
-    previousLabel: "Winter '26",
-    bestLabel: "Spring '26",
-    previousValue: "85kg × 5",
-    bestValue: "95kg × 5",
-    previousE1RM: "99.2kg e1RM",
-    bestE1RM: "110.8kg e1RM",
   },
   quarter: {
     points: [78, 84, 95, 105],
     labels: ["Q2 '25", "Q3 '25", "Q1 '26"],
-    previousLabel: "Q1 '26",
-    bestLabel: "Q2 '26",
-    previousValue: "85kg × 5",
-    bestValue: "95kg × 5",
-    previousE1RM: "99.2kg e1RM",
-    bestE1RM: "110.8kg e1RM",
   },
   year: {
     points: [70, 88, 105],
     labels: ["2024", "2025", "2026"],
-    previousLabel: "2025",
-    bestLabel: "2026",
-    previousValue: "80kg × 5",
-    bestValue: "95kg × 5",
-    previousE1RM: "93.3kg e1RM",
-    bestE1RM: "110.8kg e1RM",
   },
 };
 
@@ -196,18 +171,32 @@ function ExerciseGraphMock() {
           </text>
         </svg>
       </div>
-      <div className="exercise-insights__metrics-grid">
-        <div className="exercise-insights__metric">
-          <span className="exercise-insights__metric-eyebrow">Previous lift</span>
-          <span className="exercise-insights__metric-date">{data.previousLabel}</span>
-          <strong className="exercise-insights__metric-value">{data.previousValue}</strong>
-          <span className="exercise-insights__metric-e1rm">{data.previousE1RM}</span>
+      {/* Mirrors the stats section of the real ExerciseInsights panel. 90kg × 5
+          is 105kg e1RM under Epley, matching the chart's top point in every bin. */}
+      <div className="exercise-insights__stats">
+        <div className="exercise-insights__stats-grid">
+          <div className="exercise-insights__stat">
+            <span className="exercise-insights__stat-eyebrow">Since last lift</span>
+            <strong className="exercise-insights__stat-value">3 days</strong>
+          </div>
+          <div className="exercise-insights__stat">
+            <span className="exercise-insights__stat-eyebrow">Working sets this season</span>
+            <strong className="exercise-insights__stat-value">24</strong>
+          </div>
+          <div className="exercise-insights__stat">
+            <span className="exercise-insights__stat-eyebrow">Since last PR</span>
+            <strong className="exercise-insights__stat-value">4 weeks</strong>
+          </div>
+          <div className="exercise-insights__stat">
+            <span className="exercise-insights__stat-eyebrow">Working sets since last PR</span>
+            <strong className="exercise-insights__stat-value">12</strong>
+          </div>
         </div>
-        <div className="exercise-insights__metric">
-          <span className="exercise-insights__metric-eyebrow">Best lift</span>
-          <span className="exercise-insights__metric-date">{data.bestLabel}</span>
-          <strong className="exercise-insights__metric-value">{data.bestValue}</strong>
-          <span className="exercise-insights__metric-e1rm">{data.bestE1RM}</span>
+        <div className="exercise-insights__stat exercise-insights__stat--wide">
+          <span className="exercise-insights__stat-eyebrow">Last PR</span>
+          <span className="exercise-insights__stat-date">14 May '26</span>
+          <strong className="exercise-insights__stat-value">90kg × 5</strong>
+          <span className="exercise-insights__stat-e1rm">105kg e1RM</span>
         </div>
       </div>
     </section>
@@ -915,10 +904,9 @@ async function loadAchievements(): Promise<Achievements> {
 }
 
 // ─── AchievementsShelf ────────────────────────────────────────────────────────
-// Shared between the real dashboard render and the tutorial mock so both
-// render with identical markup, CSS, and ResizeObserver-driven placeholder
+// The trophy shelf's markup, CSS hooks, and ResizeObserver-driven placeholder
 // fill. Date labels are pre-formatted by the caller (the live render passes
-// values through compactAchievementDate; the mock passes static labels).
+// values through compactAchievementDate).
 
 // Must match the slot width set on `.dashboard-achievement` in the CSS so the
 // column-count math matches what the browser actually lays out.
@@ -2365,12 +2353,11 @@ export default function DashboardPage() {
   }
 
   function renderReportMock() {
-    // Reuses the real week-summary score block markup so the report looks
-    // identical to what the user sees when tapping any completed week. The
-    // narrative sits inside the same card as the score breakdown so the whole
-    // block reads as one self-contained example rather than as commentary.
-    // Reuses the real WeekGradeHero with fabricated scores, so the tutorial
-    // can't drift out of date the way a hand-built copy of the layout did.
+    // Renders the real WeekGradeHero with fabricated scores, so the tutorial
+    // can't drift out of date the way a hand-built copy of the layout did. The
+    // narrative sits in the same inset panel as the hero so the whole block
+    // reads as one sample report rather than as commentary. The type step-down
+    // for the hero inside a tutorial card lives in TutorialBlock.css.
     return (
       <section className="dashboard-report-mock">
         <WeekGradeHero
@@ -2424,36 +2411,6 @@ export default function DashboardPage() {
 
   function renderGraphMock() {
     return <ExerciseGraphMock />;
-  }
-
-  function renderAchievementsMock() {
-    // Drives the real AchievementsShelf with fabricated entries spanning the
-    // three time tiers: this month's achievements show individually (compact
-    // date band — Today / ordinal + month); earlier months of this year
-    // collapse into per-type "month" buckets ("Jun 2026"); previous years
-    // collapse into per-type "year" buckets ("2025"). The shelf's
-    // ResizeObserver fills any partial row with placeholder dots — same code
-    // path as the live render.
-    const individuals: ShelfIndividual[] = [
-      { icon: "🥇", displayDate: "Today" },
-      { icon: "🤩", displayDate: "14th Jun" },
-      { icon: "🥇", displayDate: "12th Jun" },
-      { icon: "🥇", displayDate: "8th Jun" },
-      { icon: "🤩", displayDate: "4th Jun" },
-      { icon: "🥇", displayDate: "1st Jun" },
-    ];
-    const buckets: ShelfBucket[] = [
-      // Earlier this year → bucketed by month + type, newest month first.
-      { icon: "🥇", count: 11, label: "May 2026" },
-      { icon: "🤩", count: 3, label: "May 2026" },
-      { icon: "🥇", count: 9, label: "Apr 2026" },
-      { icon: "A", iconClass: "dashboard-achievement__icon--grade", count: 1, label: "Apr 2026" },
-      // Previous year → the whole year merges into one bucket per type.
-      { icon: "🥇", count: 48, label: "2025" },
-      { icon: "🤩", count: 9, label: "2025" },
-      { icon: "A", iconClass: "dashboard-achievement__icon--grade", count: 1, label: "2025" },
-    ];
-    return <AchievementsShelf individuals={individuals} buckets={buckets} />;
   }
 
   function renderPRSpotlightMock() {
@@ -2564,65 +2521,6 @@ export default function DashboardPage() {
       { weekInstanceId: "mock-6", emojiRating: null, isCurrent: false },
     ];
     return <WeeksBreadcrumb weeks={weeks} />;
-  }
-
-  function renderAllSeasonsMock() {
-    // Reuses the real season-summary-seasons-list markup with three fabricated
-    // seasons: most-recent in progress, two completed at A and B grades.
-    type Row = {
-      id: string;
-      name: string;
-      score: number | null;
-      grade: "A" | "B" | "C" | "D" | null;
-      duration: string | null;
-      prs: number;
-      dates: string | null;
-      isCurrent: boolean;
-    };
-    const rows: Row[] = [
-      { id: "m1", name: "Push / Pull / Legs · Spring '26", score: null, grade: null, duration: "in week 3 of 6", prs: 4, dates: "27 Apr 2026 – 8 Jun 2026", isCurrent: true },
-      { id: "m2", name: "Push / Pull / Legs · Winter '26", score: 92, grade: "A", duration: "6 weeks", prs: 11, dates: "9 Feb 2026 – 22 Mar 2026", isCurrent: false },
-      { id: "m3", name: "Upper / Lower · Autumn '25", score: 84, grade: "B", duration: "5 weeks", prs: 7, dates: "13 Oct 2025 – 16 Nov 2025", isCurrent: false },
-    ];
-    return (
-      <section className="season-summary-section">
-        <h2 className="season-summary-section-title">All seasons</h2>
-        <ul className="season-summary-seasons-list">
-          {rows.map((row) => {
-            const color = row.grade ? gradeColor(row.grade) : null;
-            return (
-              <li
-                key={row.id}
-                className={`season-summary-season-row${row.isCurrent ? " season-summary-season-row--current" : ""}`}
-              >
-                <div className="season-summary-season-row__main">
-                  <span className="season-summary-season-row__name">{row.name}</span>
-                  <span className="season-summary-season-row__meta">
-                    {row.score != null && (
-                      <span className="season-summary-season-row__score">{row.score}</span>
-                    )}
-                    {row.grade && color && (
-                      <span className={`season-summary-season-row__grade season-summary-season-row__grade--${color}`}>
-                        {row.grade}
-                      </span>
-                    )}
-                  </span>
-                </div>
-                <div className="season-summary-season-row__sub">
-                  {row.duration && (
-                    <span className="season-summary-season-row__duration">{row.duration}</span>
-                  )}
-                  <span className="season-summary-season-row__prs">{row.prs} PRs</span>
-                  {row.dates && (
-                    <span className="season-summary-season-row__date">{row.dates}</span>
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-    );
   }
 
   function renderExerciseSummaryCardMock() {
@@ -2912,7 +2810,6 @@ export default function DashboardPage() {
           id="reports"
           title="Session, week & season reports"
           blurb="Every session, week, and season gets a graded report card with consistency, volume and intensity scores so you can see, at a glance, how each block went."
-          unwrapped
         >
           {renderReportMock()}
         </TutorialBlock>
@@ -2953,15 +2850,6 @@ export default function DashboardPage() {
         </TutorialBlock>
 
         <TutorialBlock
-          id="achievements"
-          title="Achievements collection"
-          blurb="Every gold-grade session (🥇), perfect week (🤩) and A-grade season (A) earns a slot. Once you collect more than 25 of any kind they pile up into a ×N badge at the end."
-          unwrapped
-        >
-          {renderAchievementsMock()}
-        </TutorialBlock>
-
-        <TutorialBlock
           id="pr_spotlight"
           title="Your most recent PR"
           blurb="When you set a new personal best, this card celebrates it: the e1RM jump from your previous record, a sparkline of your full history (with the run-up since the last PR in accent), and the volume of sets and sessions it took to get there."
@@ -2976,15 +2864,6 @@ export default function DashboardPage() {
           blurb="When you hit a new e1RM or rep record, it'll show up here with the improvement over your previous best so you can celebrate the wins."
         >
           {renderPRsMock()}
-        </TutorialBlock>
-
-        <TutorialBlock
-          id="all_seasons"
-          title="All seasons"
-          blurb="At the bottom of any season summary you'll find a list of every season you've trained, each with its final grade, score, duration and PR count, so you can compare blocks side-by-side."
-          unwrapped
-        >
-          {renderAllSeasonsMock()}
         </TutorialBlock>
 
         <TutorialBlock
