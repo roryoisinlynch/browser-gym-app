@@ -1,5 +1,7 @@
-/* Layout follows ConfigProgramDetailPage: flat sections on the page
-   background, a lime label per section, cards only for the rows. */
+/* Type only: no cards, no inline controls. The muscle group and its set
+   target are the largest text on the page, exercises are plain hairline rows
+   under them, and the accent is kept for what can be tapped to change
+   something. The warnings block is the one box, because it has to interrupt. */
 
 .config-session-detail-page {
   min-height: 100vh;
@@ -10,120 +12,22 @@
 .config-session-detail-shell {
   max-width: 460px;
   margin: 0 auto;
-  padding: 16px 0 28px;
+  padding: 26px 20px 40px;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 30px;
 }
 
-/* Section */
-
-.config-session-detail__section {
-  padding: 0 20px;
-}
-
-.config-session-detail__label-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  position: relative;
-  margin-bottom: 10px;
-}
-
-.config-session-detail__section-label {
+.config-session-detail__lead {
   margin: 0;
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-
-.config-session-detail__info-btn {
-  flex-shrink: 0;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 1.5px solid var(--text-soft);
-  background: transparent;
-  color: var(--text-soft);
-  font-size: 0.65rem;
-  font-weight: 800;
-  font-family: inherit;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  line-height: 1;
-  transition: border-color 0.14s, color 0.14s;
-}
-
-.config-session-detail__info-btn:hover {
-  border-color: var(--text-muted);
+  font-size: 0.875rem;
+  line-height: 1.4;
   color: var(--text-muted);
 }
 
-.config-session-detail__info-tooltip {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  z-index: 10;
-  width: 280px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
-  box-shadow: var(--panel-shadow);
-  font-size: 0.8rem;
-  line-height: 1.55;
-  color: var(--text-muted);
-}
-
-.config-session-detail__info-tooltip strong {
+.config-session-detail__lead strong {
+  font-weight: 700;
   color: var(--text-strong);
-}
-
-.config-session-detail__hint {
-  margin: 0 0 16px;
-  font-size: 0.76rem;
-  color: var(--text-soft);
-}
-
-/* Target session length */
-
-.config-session-detail__input {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--card-border);
-  background: #1a1e26;
-  color: var(--text-strong);
-  font-size: 0.9rem;
-  font-family: inherit;
-  outline: none;
-}
-
-.config-session-detail__input:focus {
-  border-color: var(--accent);
-}
-
-.config-session-detail__target-minutes-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.config-session-detail__target-minutes-input {
-  width: 90px;
-}
-
-.config-session-detail__target-minutes-unit {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-soft);
 }
 
 /* Warnings */
@@ -158,296 +62,195 @@
   line-height: 1.45;
 }
 
-/* Muscle group */
+/* Muscle groups */
 
-.config-session-detail__group-list {
+.config-session-detail__groups {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 40px;
 }
 
-.config-session-detail__group--over {
-  border-radius: 12px;
-  outline: 1px dashed rgba(216, 240, 106, 0.35);
-  outline-offset: 8px;
-  background: rgba(216, 240, 106, 0.03);
+.config-session-detail__group {
+  display: flex;
+  flex-direction: column;
 }
 
 .config-session-detail__group-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 34px;
-  margin-bottom: 8px;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  padding: 0 0 4px;
+  border: none;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: opacity 0.12s;
 }
 
 .config-session-detail__group-name {
-  flex: 1;
   min-width: 0;
-  margin: 0;
-  font-size: 0.76rem;
+  font-size: 1.44rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-soft);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Target sets stepper */
-
-.config-session-detail__stepper {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.config-session-detail__stepper-btn {
-  flex-shrink: 0;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border-radius: 9px;
-  border: 1px solid var(--card-border);
-  background: transparent;
-  color: var(--text-soft);
-  font-size: 1.05rem;
-  font-family: inherit;
-  line-height: 1;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-
-.config-session-detail__stepper-btn:hover:not(:disabled) {
-  background: #262c35;
-  color: var(--accent);
-}
-
-.config-session-detail__stepper-btn:disabled {
-  opacity: 0.3;
-  cursor: default;
-}
-
-.config-session-detail__stepper-value {
-  min-width: 22px;
-  text-align: center;
-  font-size: 0.92rem;
-  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
   color: var(--text-strong);
+  overflow-wrap: anywhere;
 }
 
-.config-session-detail__stepper-label {
-  margin: 0 4px 0 2px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--text-soft);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-/* Delete */
-
-.config-session-detail__delete-btn {
-  flex-shrink: 0;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border-radius: 9px;
-  border: 1px solid var(--card-border);
-  background: transparent;
-  color: var(--text-soft);
-  font-size: 0.8rem;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-
-.config-session-detail__delete-btn:hover {
-  background: #3a1a1a;
-  color: #e06c6c;
-}
-
-.config-session-detail__delete-confirm {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.config-session-detail__delete-confirm-yes,
-.config-session-detail__delete-confirm-no {
-  padding: 4px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--card-border);
-  font-size: 0.76rem;
-  font-weight: 700;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background 0.15s;
-  white-space: nowrap;
-}
-
-.config-session-detail__delete-confirm-yes {
-  background: #5a1a1a;
-  color: #e06c6c;
-}
-
-.config-session-detail__delete-confirm-yes:hover {
-  background: #7a2020;
-}
-
-.config-session-detail__delete-confirm-no {
-  background: transparent;
-  color: var(--text-soft);
-}
-
-.config-session-detail__delete-confirm-no:hover {
-  background: var(--card-bg);
-}
-
-.config-session-detail__delete-note {
-  margin: 0 0 8px;
-  font-size: 0.78rem;
-  color: #e06c6c;
-}
-
-/* Exercise rows */
-
-.config-session-detail__exercise-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-
-.config-session-detail__empty {
-  margin: 0;
-  padding: 6px 0;
-  font-size: 0.84rem;
-  color: var(--text-soft);
-}
-
-.config-session-detail__exercise-row {
-  display: flex;
+.config-session-detail__group-value {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-}
-
-.config-session-detail__exercise-row--dragging {
-  opacity: 0.4;
-}
-
-.config-session-detail__exercise-row--overlay {
-  cursor: grabbing;
-}
-
-.config-session-detail__exercise-row--overlay .config-session-detail__exercise-card {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-}
-
-.config-session-detail__drag-handle {
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
   color: var(--text-soft);
-  font-size: 1rem;
-  cursor: grab;
-  opacity: 0.5;
-  touch-action: none;
-  user-select: none;
 }
 
-.config-session-detail__drag-handle:active {
-  cursor: grabbing;
+.config-session-detail__group-sets {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
 }
 
-.config-session-detail__exercise-card {
-  flex: 1;
-  min-width: 0;
+.config-session-detail__group-count {
+  font-size: 1.44rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.config-session-detail__group-unit {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
+.config-session-detail__group-value .config-session-detail__chevron {
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
+}
+
+/* Rows */
+
+.config-session-detail__list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--panel-border);
+}
+
+.config-session-detail__row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 13px 16px;
-  border-radius: 12px;
-  border: 1px solid var(--card-border);
-  background: var(--card-bg);
-  color: inherit;
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-bottom: 1px solid #222831;
+  background: none;
+  color: var(--text-muted);
   font-family: inherit;
-  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
   text-align: left;
-  transition: background 0.15s, transform 0.12s;
+  cursor: pointer;
+  transition: opacity 0.12s;
 }
 
-button.config-session-detail__exercise-card:hover {
-  background: #262c35;
-  transform: translateY(-1px);
+.config-session-detail__row--bordered {
+  min-height: 50px;
+  border-top: 1px solid var(--panel-border);
+  border-bottom-color: var(--panel-border);
 }
 
-button.config-session-detail__exercise-card:active {
-  transform: scale(0.985);
-}
-
-.config-session-detail__exercise-name {
-  flex: 1;
+.config-session-detail__row-name {
   min-width: 0;
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: var(--text-strong);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.config-session-detail__exercise-right {
-  display: flex;
+.config-session-detail__row-value {
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-shrink: 0;
-}
-
-.config-session-detail__exercise-weight {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.config-session-detail__exercise-chevron {
-  font-size: 1.1rem;
+  font-size: 0.94rem;
   color: var(--text-soft);
+}
+
+.config-session-detail__chevron {
   flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: var(--text-soft);
+  opacity: 0.55;
 }
 
-/* Add buttons */
+/* Add actions: accent text, no box */
 
-.config-session-detail__add-btn {
-  display: block;
+.config-session-detail__add,
+.config-session-detail__add-group {
   width: 100%;
-  padding: 11px 12px;
-  border-radius: 12px;
-  border: 1px dashed var(--card-border);
-  background: transparent;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
   color: var(--accent);
-  font-size: 0.86rem;
-  font-weight: 700;
   font-family: inherit;
+  text-align: left;
   cursor: pointer;
-  transition: background 0.15s;
-  text-align: center;
+  transition: opacity 0.12s;
 }
 
-.config-session-detail__add-btn:hover {
-  background: var(--card-bg);
-}
-
-.config-session-detail__add-btn--group {
-  margin-top: 28px;
-  padding: 13px 16px;
-  border-radius: 14px;
+.config-session-detail__add {
+  min-height: 46px;
   font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.config-session-detail__add-group {
+  min-height: 52px;
+  border-top: 1px solid var(--panel-border);
+  font-size: 1.06rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.config-session-detail__group-header:active,
+.config-session-detail__row:active,
+.config-session-detail__add:active,
+.config-session-detail__add-group:active {
+  opacity: 0.6;
+}
+
+/* Session */
+
+.config-session-detail__session {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.config-session-detail__label {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-soft);
 }

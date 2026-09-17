@@ -9,10 +9,13 @@ import {
   getExerciseTemplateById,
   getOrCreateDefaultMovementType,
   getSeasonTemplates,
+  getSessionTemplateMuscleGroupsForSection,
   saveExerciseTemplate,
 } from "../repositories/programRepository";
+import type { SessionTemplateMuscleGroupWithMeta } from "../repositories/programRepository";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
+import ExerciseGroupPicker from "../components/ExerciseGroupPicker";
 import WeightListWizard from "../components/WeightListWizard";
 import WorkingWeightPicker from "../components/WorkingWeightPicker";
 import {
@@ -34,7 +37,7 @@ import {
 } from "../services/weightConfig";
 import "./ConfigExercisePage.css";
 
-type SubScreenKind = "none" | "weights" | "working-weight";
+type SubScreenKind = "none" | "weights" | "working-weight" | "muscle-group";
 
 // What the toggle restores when an exercise is switched back from bodyweight.
 interface WeightedMemory {
@@ -74,6 +77,11 @@ export default function ConfigExercisePage() {
   const [recentMaxE1RM, setRecentMaxE1RM] = useState<number | null>(null);
   const [rirScheme, setRirScheme] = useState<number[]>([]);
 
+  // The session's muscle groups and the one this exercise sits in. Picking
+  // another moves the exercise there on Save. Existing exercises only.
+  const [sessionGroups, setSessionGroups] = useState<SessionTemplateMuscleGroupWithMeta[]>([]);
+  const [selectedStmgId, setSelectedStmgId] = useState("");
+
   // Sub-screens. The ?open= deep link is honoured once, after the template
   // and its e1RM have loaded, and never again after the user closes it.
   const [loaded, setLoaded] = useState(false);
@@ -107,6 +115,10 @@ export default function ConfigExercisePage() {
       }
 
       setExerciseName(template.exerciseName);
+      setSelectedStmgId(template.sessionTemplateMuscleGroupId);
+      setSessionGroups(
+        await getSessionTemplateMuscleGroupsForSection(template.sessionTemplateMuscleGroupId)
+      );
       const cfg = weightConfigFromTemplate(template);
       const prescribed = template.prescribedWeight ?? null;
       setConfig(cfg);
@@ -139,6 +151,10 @@ export default function ConfigExercisePage() {
   );
 
   const recommended = useMemo(() => pickBestWeightOption(weightOptions), [weightOptions]);
+
+  const currentGroup = sessionGroups.find(
+    (g) => g.sessionTemplateMuscleGroup.id === selectedStmgId
+  );
 
   const isBodyweight = config.kind === "bodyweight";
   const weightsConfigured = isWeightConfigured(config);
@@ -238,7 +254,9 @@ export default function ConfigExercisePage() {
 
       const template: ExerciseTemplate = {
         id: isNew ? crypto.randomUUID() : exerciseTemplateId!,
-        sessionTemplateMuscleGroupId: existingStmgId,
+        // A move to another muscle group changes only the section; like the
+        // drag and drop it replaces, it leaves the movement type alone.
+        sessionTemplateMuscleGroupId: selectedStmgId || existingStmgId,
         movementTypeId,
         exerciseName: name,
         ...weightFieldsFromConfig(config),
@@ -347,6 +365,27 @@ export default function ConfigExercisePage() {
         </div>
 
         <div className="config-exercise__field-group config-exercise__card-list">
+          {currentGroup && sessionGroups.length > 1 && (
+            <button
+              type="button"
+              className="config-exercise__card"
+              onClick={() => setSubScreen("muscle-group")}
+            >
+              <span className="config-exercise__card-body">
+                <span className="config-exercise__card-title">Muscle group</span>
+                <span className="config-exercise__card-desc">
+                  The muscle group this exercise counts towards in this session.
+                </span>
+              </span>
+              <span className="config-exercise__card-right">
+                <span className="config-exercise__card-value">
+                  {currentGroup.muscleGroup.name}
+                </span>
+                <span className="config-exercise__card-chevron">›</span>
+              </span>
+            </button>
+          )}
+
           <div className="config-exercise__card config-exercise__card--toggle">
             <span className="config-exercise__card-body">
               <span className="config-exercise__card-title">Bodyweight exercise</span>
@@ -451,6 +490,17 @@ export default function ConfigExercisePage() {
           initial={config}
           onApply={(next) => {
             applyWeightConfig(next);
+            closeSubScreen();
+          }}
+          onClose={closeSubScreen}
+        />
+      )}
+      {activeSubScreen === "muscle-group" && (
+        <ExerciseGroupPicker
+          groups={sessionGroups}
+          selectedId={selectedStmgId}
+          onSelect={(id) => {
+            setSelectedStmgId(id);
             closeSubScreen();
           }}
           onClose={closeSubScreen}

@@ -868,6 +868,18 @@ export async function getSessionTemplateMuscleGroups(
     );
 }
 
+/** Every muscle group of the session that owns the given section, in order. */
+export async function getSessionTemplateMuscleGroupsForSection(
+  sessionTemplateMuscleGroupId: string
+): Promise<SessionTemplateMuscleGroupWithMeta[]> {
+  const stmg = await getById<SessionTemplateMuscleGroup>(
+    STORE_NAMES.sessionTemplateMuscleGroups,
+    sessionTemplateMuscleGroupId
+  );
+  if (!stmg) return [];
+  return getSessionTemplateMuscleGroups(stmg.sessionTemplateId);
+}
+
 export async function getExerciseTemplatesForSessionTemplate(
   sessionTemplateId: string
 ): Promise<ExerciseTemplateWithMeta[]> {
