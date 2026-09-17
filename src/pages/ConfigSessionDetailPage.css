@@ -1,3 +1,6 @@
+/* Layout follows ConfigProgramDetailPage: flat sections on the page
+   background, a lime label per section, cards only for the rows. */
+
 .config-session-detail-page {
   min-height: 100vh;
   padding: 64px 0 100px;
@@ -8,395 +11,17 @@
   max-width: 460px;
   margin: 0 auto;
   padding: 16px 0 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
 }
 
-.config-session-detail-header {
-  padding: 20px 20px 8px;
-}
-
-.config-session-detail-eyebrow {
-  margin: 0 0 4px;
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-
-.config-session-detail-title {
-  margin: 0;
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: var(--text-strong);
-}
-
-.config-session-detail-intro {
-  margin: 10px 0 0;
-  font-size: 0.84rem;
-  font-weight: 500;
-  color: var(--text-muted);
-  line-height: 1.55;
-}
-
-/* ── Muscle group section ── */
+/* Section */
 
 .config-session-detail__section {
-  margin: 16px 20px 0;
-  padding: 14px;
-  border-radius: 18px;
-  border: 1px solid var(--card-border);
-  background: var(--card-bg);
+  padding: 0 20px;
 }
 
-.config-session-detail__section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.config-session-detail__section-name {
-  margin: 0;
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-soft);
-}
-
-.config-session-detail__target-stepper {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-left: auto;
-  margin-right: 8px;
-}
-
-.config-session-detail__target-btn {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  border: 1px solid var(--panel-border);
-  background: transparent;
-  color: var(--text-soft);
-  font-size: 1rem;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s, color 0.15s;
-}
-
-.config-session-detail__target-btn:hover:not(:disabled) {
-  background: rgba(216, 240, 106, 0.1);
-  color: var(--accent);
-  border-color: rgba(216, 240, 106, 0.3);
-}
-
-.config-session-detail__target-btn:disabled {
-  opacity: 0.3;
-  cursor: default;
-}
-
-.config-session-detail__target-value {
-  min-width: 18px;
-  text-align: center;
-  font-size: 0.88rem;
-  font-weight: 800;
-  color: var(--text-strong);
-}
-
-.config-session-detail__target-label {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--text-soft);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.config-session-detail__section-delete {
-  padding: 2px 6px;
-  border: none;
-  background: transparent;
-  color: var(--text-soft);
-  font-size: 0.8rem;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: color 0.15s, background 0.15s;
-}
-
-.config-session-detail__section-delete:hover {
-  color: #f87171;
-  background: rgba(248, 113, 113, 0.1);
-}
-
-.config-session-detail__empty {
-  margin: 0 0 10px;
-  font-size: 0.84rem;
-  color: var(--text-soft);
-}
-
-/* ── Exercise rows ── */
-
-.config-session-detail__exercise-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-
-.config-session-detail__exercise-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--panel-border);
-  background: rgba(15, 19, 24, 0.36);
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.15s, transform 0.12s;
-  touch-action: manipulation;
-}
-
-.config-session-detail__exercise-row:hover {
-  background: rgba(15, 19, 24, 0.6);
-  transform: translateY(-1px);
-}
-
-.config-session-detail__exercise-row:active {
-  transform: scale(0.985);
-}
-
-.config-session-detail__exercise-row--dragging {
-  opacity: 0.4;
-  transform: none !important;
-}
-
-.config-session-detail__exercise-row--overlay {
-  opacity: 0.95;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  cursor: grabbing;
-}
-
-.config-session-detail__drag-handle {
-  flex-shrink: 0;
-  font-size: 1rem;
-  color: var(--text-muted);
-  cursor: grab;
-  touch-action: none;
-  padding: 0 2px;
-  line-height: 1;
-}
-
-.config-session-detail__drag-handle:active {
-  cursor: grabbing;
-}
-
-.config-session-detail__exercise-list--over {
-  border-radius: 12px;
-  outline: 1px dashed rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.config-session-detail__exercise-list--empty {
-  min-height: 44px;
-}
-
-.config-session-detail__exercise-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.config-session-detail__exercise-name {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--text-strong);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.config-session-detail__exercise-right {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.config-session-detail__reps {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.config-session-detail__exercise-chevron {
-  font-size: 1.1rem;
-  color: var(--text-soft);
-}
-
-/* ── Add exercise button ── */
-
-.config-session-detail__add-exercise-btn {
-  width: 100%;
-  padding: 9px 12px;
-  border-radius: 10px;
-  border: 1px dashed var(--panel-border);
-  background: transparent;
-  color: var(--accent);
-  font-size: 0.84rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.config-session-detail__add-exercise-btn:hover {
-  background: rgba(216, 240, 106, 0.06);
-  border-color: rgba(216, 240, 106, 0.3);
-}
-
-/* ── Add section form ── */
-
-.config-session-detail__add-section-form {
-  margin: 16px 20px 0;
-  padding: 16px;
-  border-radius: 18px;
-  border: 1px solid var(--card-border);
-  background: var(--card-bg);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.config-session-detail__add-section-title {
-  margin: 0;
-  font-size: 0.84rem;
-  font-weight: 700;
-  color: var(--text-muted);
-}
-
-.config-session-detail__select,
-.config-session-detail__input {
-  display: block;
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--panel-border);
-  background: rgba(15, 19, 24, 0.5);
-  color: var(--text-strong);
-  font-size: 0.9rem;
-  font-family: inherit;
-  appearance: none;
-}
-
-.config-session-detail__select:focus,
-.config-session-detail__input:focus {
-  outline: none;
-  border-color: rgba(216, 240, 106, 0.4);
-}
-
-.config-session-detail__add-section-actions {
-  display: flex;
-  gap: 8px;
-}
-
-/* ── Buttons ── */
-
-.config-session-detail__btn {
-  flex: 1;
-  padding: 10px 16px;
-  border-radius: 10px;
-  font-size: 0.88rem;
-  font-weight: 800;
-  cursor: pointer;
-  transition: background 0.15s, transform 0.12s;
-}
-
-.config-session-detail__btn:active {
-  transform: scale(0.97);
-}
-
-.config-session-detail__btn:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.config-session-detail__btn--primary {
-  border: 1px solid rgba(216, 240, 106, 0.32);
-  background: rgba(216, 240, 106, 0.1);
-  color: var(--accent);
-}
-
-.config-session-detail__btn--primary:hover:not(:disabled) {
-  background: rgba(216, 240, 106, 0.16);
-}
-
-.config-session-detail__btn--secondary {
-  border: 1px solid var(--panel-border);
-  background: transparent;
-  color: var(--text-muted);
-}
-
-.config-session-detail__btn--secondary:hover {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.config-session-detail__btn--ghost {
-  width: 100%;
-  border: 1px dashed var(--panel-border);
-  background: transparent;
-  color: var(--text-soft);
-}
-
-.config-session-detail__btn--ghost:hover {
-  border-color: rgba(216, 240, 106, 0.3);
-  color: var(--accent);
-}
-
-.config-session-detail__footer {
-  margin: 16px 20px 0;
-}
-
-/* Warnings */
-
-.config-session-detail__warnings {
-  margin: 16px 20px 0;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: rgba(244, 161, 97, 0.07);
-  border: 1px solid rgba(244, 161, 97, 0.25);
-}
-
-.config-session-detail__warnings-title {
-  margin: 0 0 8px;
-  font-size: 0.78rem;
-  font-weight: 800;
-  color: #f4a161;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.config-session-detail__warnings-list {
-  margin: 0;
-  padding: 0 0 0 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.config-session-detail__warnings-list li {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  line-height: 1.45;
-}
-
-/* Target session length field (tooltip pattern ported from ConfigProgramDetailPage) */
 .config-session-detail__label-row {
   display: flex;
   align-items: center;
@@ -405,7 +30,7 @@
   margin-bottom: 10px;
 }
 
-.config-session-detail__field-label {
+.config-session-detail__section-label {
   margin: 0;
   font-size: 0.74rem;
   font-weight: 800;
@@ -424,6 +49,7 @@
   color: var(--text-soft);
   font-size: 0.65rem;
   font-weight: 800;
+  font-family: inherit;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -458,6 +84,32 @@
   color: var(--text-strong);
 }
 
+.config-session-detail__hint {
+  margin: 0 0 16px;
+  font-size: 0.76rem;
+  color: var(--text-soft);
+}
+
+/* Target session length */
+
+.config-session-detail__input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  background: #1a1e26;
+  color: var(--text-strong);
+  font-size: 0.9rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.config-session-detail__input:focus {
+  border-color: var(--accent);
+}
+
 .config-session-detail__target-minutes-row {
   display: flex;
   align-items: center;
@@ -472,4 +124,330 @@
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-soft);
+}
+
+/* Warnings */
+
+.config-session-detail__warnings {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(244, 161, 97, 0.07);
+  border: 1px solid rgba(244, 161, 97, 0.25);
+}
+
+.config-session-detail__warnings-title {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #f4a161;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.config-session-detail__warnings-list {
+  margin: 0;
+  padding: 0 0 0 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.config-session-detail__warnings-list li {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+/* Muscle group */
+
+.config-session-detail__group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.config-session-detail__group--over {
+  border-radius: 12px;
+  outline: 1px dashed rgba(216, 240, 106, 0.35);
+  outline-offset: 8px;
+  background: rgba(216, 240, 106, 0.03);
+}
+
+.config-session-detail__group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  margin-bottom: 8px;
+}
+
+.config-session-detail__group-name {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Target sets stepper */
+
+.config-session-detail__stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.config-session-detail__stepper-btn {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 9px;
+  border: 1px solid var(--card-border);
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 1.05rem;
+  font-family: inherit;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.config-session-detail__stepper-btn:hover:not(:disabled) {
+  background: #262c35;
+  color: var(--accent);
+}
+
+.config-session-detail__stepper-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.config-session-detail__stepper-value {
+  min-width: 22px;
+  text-align: center;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--text-strong);
+}
+
+.config-session-detail__stepper-label {
+  margin: 0 4px 0 2px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Delete */
+
+.config-session-detail__delete-btn {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 9px;
+  border: 1px solid var(--card-border);
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 0.8rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.config-session-detail__delete-btn:hover {
+  background: #3a1a1a;
+  color: #e06c6c;
+}
+
+.config-session-detail__delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.config-session-detail__delete-confirm-yes,
+.config-session-detail__delete-confirm-no {
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  font-size: 0.76rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.config-session-detail__delete-confirm-yes {
+  background: #5a1a1a;
+  color: #e06c6c;
+}
+
+.config-session-detail__delete-confirm-yes:hover {
+  background: #7a2020;
+}
+
+.config-session-detail__delete-confirm-no {
+  background: transparent;
+  color: var(--text-soft);
+}
+
+.config-session-detail__delete-confirm-no:hover {
+  background: var(--card-bg);
+}
+
+.config-session-detail__delete-note {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  color: #e06c6c;
+}
+
+/* Exercise rows */
+
+.config-session-detail__exercise-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.config-session-detail__empty {
+  margin: 0;
+  padding: 6px 0;
+  font-size: 0.84rem;
+  color: var(--text-soft);
+}
+
+.config-session-detail__exercise-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.config-session-detail__exercise-row--dragging {
+  opacity: 0.4;
+}
+
+.config-session-detail__exercise-row--overlay {
+  cursor: grabbing;
+}
+
+.config-session-detail__exercise-row--overlay .config-session-detail__exercise-card {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.config-session-detail__drag-handle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  color: var(--text-soft);
+  font-size: 1rem;
+  cursor: grab;
+  opacity: 0.5;
+  touch-action: none;
+  user-select: none;
+}
+
+.config-session-detail__drag-handle:active {
+  cursor: grabbing;
+}
+
+.config-session-detail__exercise-card {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s, transform 0.12s;
+}
+
+button.config-session-detail__exercise-card:hover {
+  background: #262c35;
+  transform: translateY(-1px);
+}
+
+button.config-session-detail__exercise-card:active {
+  transform: scale(0.985);
+}
+
+.config-session-detail__exercise-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.config-session-detail__exercise-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.config-session-detail__exercise-weight {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.config-session-detail__exercise-chevron {
+  font-size: 1.1rem;
+  color: var(--text-soft);
+  flex-shrink: 0;
+}
+
+/* Add buttons */
+
+.config-session-detail__add-btn {
+  display: block;
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 12px;
+  border: 1px dashed var(--card-border);
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.86rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: center;
+}
+
+.config-session-detail__add-btn:hover {
+  background: var(--card-bg);
+}
+
+.config-session-detail__add-btn--group {
+  margin-top: 28px;
+  padding: 13px 16px;
+  border-radius: 14px;
+  font-size: 0.9rem;
 }
