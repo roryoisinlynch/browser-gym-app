@@ -35,7 +35,7 @@
 
 .muscle-group-picker__option-name {
   min-width: 0;
-  font-size: 1rem;
+  font-size: 0.92rem;
   font-weight: 500;
   color: var(--text-strong);
   white-space: nowrap;
@@ -62,8 +62,8 @@
   border: none;
   background: transparent;
   color: var(--accent);
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: 0.86rem;
+  font-weight: 700;
   font-family: inherit;
   text-align: left;
   cursor: pointer;
@@ -79,14 +79,13 @@
 .muscle-group-picker__label {
   display: block;
   margin: 10px 0 10px;
-  font-size: 0.75rem;
+  font-size: 0.76rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-soft);
 }
 
-/* 1rem keeps iOS from zooming the page when the field takes focus. */
 .muscle-group-picker__input {
   display: block;
   width: 100%;
@@ -96,7 +95,7 @@
   border: 1px solid var(--panel-border);
   background: rgba(15, 19, 24, 0.5);
   color: var(--text-strong);
-  font-size: 1rem;
+  font-size: 0.92rem;
   font-family: inherit;
 }
 
@@ -115,7 +114,7 @@
   border: 1px solid rgba(216, 240, 106, 0.32);
   background: rgba(216, 240, 106, 0.1);
   color: var(--accent);
-  font-size: 0.94rem;
+  font-size: 0.92rem;
   font-weight: 800;
   font-family: inherit;
   cursor: pointer;
