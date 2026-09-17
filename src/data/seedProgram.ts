@@ -153,7 +153,7 @@ const DAYS: DayBlueprint[] = [
 // The week runs every day once as A, then every day again as B, then rests.
 const VARIANTS = ["A", "B"] as const;
 
-const RIR_SEQUENCE = [3, 2, 1, 0, -1];
+const RIR_SEQUENCE = [3, 2, 1, 0];
 
 // ── Ids ─────────────────────────────────────────────────────────────────────
 
