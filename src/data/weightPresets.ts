@@ -11,7 +11,7 @@ export interface WeightPreset {
   config: WeightConfig;
 }
 
-// Two real machine stacks with uneven increments. Also used by the seed data.
+// Two real machine stacks with uneven increments.
 export const CABLE_STACK_WEIGHTS = [2.5, 5, 7.5, 10, 12.5, 15, 17.5, 21.25, 25, 28.75, 32.5, 36.25, 40, 43.75, 47.5];
 export const MACHINE_STACK_WEIGHTS = [5, 7.5, 10, 12, 14.5, 17, 19, 21.5, 24, 26, 28.5, 31, 33, 35.5, 38, 40, 42.5, 45, 47, 49.5, 52, 54, 56.5, 59, 61, 63.5, 66, 68, 70.5, 73, 75, 77.5, 80, 82, 84.5, 87];
 

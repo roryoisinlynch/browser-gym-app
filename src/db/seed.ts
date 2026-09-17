@@ -1,62 +1,71 @@
 import { openDatabase, STORE_NAMES, transactionDone } from "./db";
+import type { StoreName } from "./db";
 
-import { mockMuscleGroups } from "../data/mockMuscleGroups";
-import { mockMovementTypes } from "../data/mockMovementTypes";
-import { mockSeasonTemplates } from "../data/mockSeasonTemplates";
-import { mockWeekTemplates } from "../data/mockWeekTemplates";
-import { mockWeekTemplateItems } from "../data/mockWeekTemplateItems";
-import { mockSessionTemplates } from "../data/mockSessionTemplates";
-import { mockSessionTemplateMuscleGroups } from "../data/mockSessionTemplateMuscleGroups";
-import { mockExerciseTemplates } from "../data/mockExerciseTemplates";
+import { buildSeedData } from "../data/seedProgram";
+
+const ALL_STORES = Object.values(STORE_NAMES) as StoreName[];
+
+// True when any object store holds at least one record. Read-only, so a
+// database that already has data is never opened for writing here.
+async function databaseHasData(db: IDBDatabase): Promise<boolean> {
+  const tx = db.transaction(ALL_STORES, "readonly");
+  const counts = await Promise.all(
+    ALL_STORES.map(
+      (name) =>
+        new Promise<number>((resolve, reject) => {
+          const request = tx.objectStore(name).count();
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        })
+    )
+  );
+  return counts.some((count) => count > 0);
+}
 
 export async function seedDatabaseIfNeeded(): Promise<void> {
   const db = await openDatabase();
 
-  // Only seed a blank database. If any season templates already exist the user
-  // has real data — leave everything untouched. The seed runs again only after
-  // an explicit database reset (Settings → Reset database).
-  const hasData = await new Promise<boolean>((resolve, reject) => {
-    const tx = db.transaction(STORE_NAMES.seasonTemplates, "readonly");
-    const request = tx.objectStore(STORE_NAMES.seasonTemplates).count();
-    request.onsuccess = () => resolve(request.result > 0);
-    request.onerror = () => reject(request.error);
-  });
-
-  if (hasData) {
+  // Only seed a blank database: a first launch, or the reload after an
+  // explicit reset (Settings → Reset database). A record in any store means
+  // the user has real data, so nothing is touched. That holds even when every
+  // program has been deleted: muscle groups and history outlive the programs,
+  // and the sample program must not come back on its own.
+  if (await databaseHasData(db)) {
     return;
   }
 
-  const tx = db.transaction(Object.values(STORE_NAMES), "readwrite");
+  const seed = buildSeedData();
+  const tx = db.transaction(ALL_STORES, "readwrite");
 
-  mockMuscleGroups.forEach((item) =>
+  seed.muscleGroups.forEach((item) =>
     tx.objectStore(STORE_NAMES.muscleGroups).put(item)
   );
 
-  mockMovementTypes.forEach((item) =>
+  seed.movementTypes.forEach((item) =>
     tx.objectStore(STORE_NAMES.movementTypes).put(item)
   );
 
-  mockSeasonTemplates.forEach((item) =>
+  seed.seasonTemplates.forEach((item) =>
     tx.objectStore(STORE_NAMES.seasonTemplates).put(item)
   );
 
-  mockWeekTemplates.forEach((item) =>
+  seed.weekTemplates.forEach((item) =>
     tx.objectStore(STORE_NAMES.weekTemplates).put(item)
   );
 
-  mockWeekTemplateItems.forEach((item) =>
+  seed.weekTemplateItems.forEach((item) =>
     tx.objectStore(STORE_NAMES.weekTemplateItems).put(item)
   );
 
-  mockSessionTemplates.forEach((item) =>
+  seed.sessionTemplates.forEach((item) =>
     tx.objectStore(STORE_NAMES.sessionTemplates).put(item)
   );
 
-  mockSessionTemplateMuscleGroups.forEach((item) =>
+  seed.sessionTemplateMuscleGroups.forEach((item) =>
     tx.objectStore(STORE_NAMES.sessionTemplateMuscleGroups).put(item)
   );
 
-  mockExerciseTemplates.forEach((item) =>
+  seed.exerciseTemplates.forEach((item) =>
     tx.objectStore(STORE_NAMES.exerciseTemplates).put(item)
   );
 
