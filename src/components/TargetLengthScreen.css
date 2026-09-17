@@ -1,0 +1,77 @@
+.target-length-screen {
+  display: flex;
+  flex-direction: column;
+  padding-top: 10px;
+}
+
+.target-length-screen__label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.target-length-screen__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 1rem keeps iOS from zooming the page when the field takes focus. */
+.target-length-screen__input {
+  width: 120px;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--panel-border);
+  background: rgba(15, 19, 24, 0.5);
+  color: var(--text-strong);
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: inherit;
+}
+
+.target-length-screen__input:focus {
+  outline: none;
+  border-color: rgba(216, 240, 106, 0.4);
+}
+
+.target-length-screen__unit {
+  font-size: 0.94rem;
+  color: var(--text-muted);
+}
+
+.target-length-screen__help {
+  margin: 22px 0 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.target-length-screen__done {
+  display: block;
+  width: 100%;
+  margin-top: 28px;
+  min-height: 52px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(216, 240, 106, 0.32);
+  background: rgba(216, 240, 106, 0.1);
+  color: var(--accent);
+  font-size: 0.94rem;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.12s;
+}
+
+.target-length-screen__done:hover {
+  background: rgba(216, 240, 106, 0.18);
+}
+
+.target-length-screen__done:active {
+  transform: scale(0.97);
+}

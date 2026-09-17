@@ -64,7 +64,7 @@ export default function MuscleGroupPicker({
               >
                 <span className="muscle-group-picker__option-name">{mg.name}</span>
                 {inSessionIds.has(mg.id) && (
-                  <span className="muscle-group-picker__tag">In session</span>
+                  <span className="muscle-group-picker__note">In session</span>
                 )}
               </button>
             ))}
@@ -91,7 +91,9 @@ export default function MuscleGroupPicker({
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") handleCreate();
+              if (e.key !== "Enter") return;
+              e.preventDefault();
+              handleCreate();
             }}
             placeholder="e.g. Forearms"
             enterKeyHint="done"
