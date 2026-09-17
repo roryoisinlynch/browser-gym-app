@@ -114,7 +114,7 @@ export default function SeasonPage() {
       const weekRows = weekInstances.map((wi) => {
         const rir = rirSequence?.[wi.order - 1];
         const name =
-          rir != null ? `Week ${wi.order} — ${rir} RIR` : `Week ${wi.order}`;
+          rir != null ? `Week ${wi.order}, ${rir} RIR` : `Week ${wi.order}`;
         return { weekInstance: wi, name };
       });
 
@@ -157,7 +157,7 @@ export default function SeasonPage() {
 
   const headerLabel = useMemo(() => {
     if (totalWeeks == null) return seasonLabel;
-    return `${seasonLabel} — ${totalWeeks} weeks`;
+    return `${seasonLabel}, ${totalWeeks} weeks`;
   }, [seasonLabel, totalWeeks]);
 
   if (isLoading) {

@@ -287,7 +287,7 @@ export default function ConfigSessionDetailPage() {
           <p className="config-session-detail-eyebrow">Session</p>
           <h1 className="config-session-detail-title">{sessionTemplate.name}</h1>
           <p className="config-session-detail-intro">
-            Add as many exercises as you like to each muscle group — more than you would
+            Add as many exercises as you like to each muscle group, more than you would
             typically do in a single session. You don't need to do every exercise listed;
             the volume target is driven by the set count at the top of each muscle group,
             not by the number of exercises. A larger exercise list simply gives you more

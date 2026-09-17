@@ -82,7 +82,7 @@ export default function PWAInstallPrompt() {
               {platform === "ios"
                 ? <>Tap the share icon <ShareIcon /> then <strong>Add to Home Screen</strong></>
                 : deferredPrompt
-                  ? "Install Training Log for quick access — no browser bar, full screen."
+                  ? "Install Training Log for quick access, with no browser bar and full screen."
                   : <>Tap <strong>⋮</strong> then <strong>Add to Home Screen</strong></>}
             </span>
           </div>

@@ -80,7 +80,7 @@ export default function SetsPage() {
 
   async function handleDelete(record: SetRecord) {
     const label = `${record.weight ?? "?"}kg × ${record.reps ?? "?"} reps`;
-    if (!window.confirm(`Delete this ${record.source} set?\n${record.exerciseName} — ${label}`)) return;
+    if (!window.confirm(`Delete this ${record.source} set?\n${record.exerciseName}, ${label}`)) return;
     try {
       if (record.source === "imported") {
         await deleteImportedSet(record.id);

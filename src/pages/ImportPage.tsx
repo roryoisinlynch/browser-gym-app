@@ -88,7 +88,7 @@ export default function ImportPage() {
             <div className="import-guide">
               <p className="import-guide__para">
                 Columns must appear in this exact order. The header row is required
-                but its content is ignored — column names do not matter.
+                but its content is ignored, so column names do not matter.
               </p>
               <div className="import-guide__example">
                 <span className="import-guide__example-label">Example</span>
@@ -99,24 +99,24 @@ Deadlift,120,3,16/03/2024`}</pre>
               </div>
               <ul className="import-guide__list">
                 <li>
-                  <strong>Column 1 — Exercise name</strong><br />
-                  Any non-empty text. Matched against your program's exercise names — capitalisation is ignored, but spelling must match exactly.
+                  <strong>Column 1: Exercise name</strong><br />
+                  Any non-empty text. Matched against your program's exercise names, capitalisation is ignored but spelling must match exactly.
                 </li>
                 <li>
-                  <strong>Column 2 — Weight</strong><br />
-                  A number. For bodyweight exercises, use <code>0</code>. If more than 80% of the imported rows for a given exercise name have a weight of 0, the app automatically treats that exercise as bodyweight. Once you begin a training program, bodyweight exercises are evaluated simply on the number of reps you can do — there is no weight variable for them. Exercises can be toggled between bodyweight and normal mode in the exercise config page at any time.
+                  <strong>Column 2: Weight</strong><br />
+                  A number. For bodyweight exercises, use <code>0</code>. If more than 80% of the imported rows for a given exercise name have a weight of 0, the app automatically treats that exercise as bodyweight. Once you begin a training program, bodyweight exercises are evaluated simply on the number of reps you can do, since there is no weight variable for them. Exercises can be toggled between bodyweight and normal mode in the exercise config page at any time.
                 </li>
                 <li>
-                  <strong>Column 3 — Reps</strong><br />
+                  <strong>Column 3: Reps</strong><br />
                   A whole number. Rows with 0 reps are silently skipped.
                 </li>
                 <li>
-                  <strong>Column 4 — Date</strong><br />
+                  <strong>Column 4: Date</strong><br />
                   Day-first format only: <code>DD/MM/YYYY</code> or <code>DD-MM-YYYY</code>. US format (MM/DD/YYYY) and ISO format (YYYY-MM-DD) are not supported.
                 </li>
               </ul>
               <p className="import-guide__para import-guide__para--note">
-                Extra columns after the fourth are ignored. Commas inside a field are not supported — there is no quoted-field handling.
+                Extra columns after the fourth are ignored. Commas inside a field are not supported, as there is no quoted-field handling.
               </p>
             </div>
           </>

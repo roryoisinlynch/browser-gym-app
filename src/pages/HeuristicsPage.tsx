@@ -272,7 +272,7 @@ export default function HeuristicsPage() {
                             className="heuristics-scale__segment"
                             style={{ "--segment-color": SCALE_COLORS[i] } as React.CSSProperties}
                             onClick={() => handleAnswer(item, n)}
-                            aria-label={`${n} — ${SCALE_LABELS[i]}`}
+                            aria-label={`${n}, ${SCALE_LABELS[i]}`}
                           />
                         ))}
                         <button
@@ -280,7 +280,7 @@ export default function HeuristicsPage() {
                           className="heuristics-scale__segment"
                           style={{ "--segment-color": "#9ca3af" } as React.CSSProperties}
                           onClick={() => handleAnswer(item, null)}
-                          aria-label="N/A — no impact on scores"
+                          aria-label="N/A, no impact on scores"
                         />
                       </div>
                     </div>
