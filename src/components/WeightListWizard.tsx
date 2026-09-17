@@ -221,7 +221,7 @@ export default function WeightListWizard({
         <div className="weight-wizard__rows">
           <WizardRow
             title="Pick from a preset"
-            description="2.5 kg or 5 kg increments, or a machine stack."
+            description="2.5 kg or 2 kg increments."
             onClick={() => go("presets")}
           />
           <WizardRow
