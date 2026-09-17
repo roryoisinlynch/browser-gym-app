@@ -11,7 +11,6 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
 import type {
   ExerciseTemplate,
   MuscleGroup,
@@ -31,9 +30,68 @@ import {
 } from "../repositories/programRepository";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
+import MuscleGroupPicker from "../components/MuscleGroupPicker";
 import "./ConfigSessionDetailPage.css";
 
-// ── Draggable exercise row ────────────────────────────────────────────────────
+// ── Section label with a "?" tooltip ──────────────────────────────────────────
+
+interface InfoLabelProps {
+  label: string;
+  children: React.ReactNode;
+}
+
+function InfoLabel({ label, children }: InfoLabelProps) {
+  const [open, setOpen] = useState(false);
+  const rowRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (!rowRef.current?.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  return (
+    <div className="config-session-detail__label-row" ref={rowRef}>
+      <p className="config-session-detail__section-label">{label}</p>
+      <button
+        type="button"
+        className="config-session-detail__info-btn"
+        aria-expanded={open}
+        aria-label={`About ${label.toLowerCase()}`}
+        onClick={() => setOpen((v) => !v)}
+      >?</button>
+      {open && <div className="config-session-detail__info-tooltip">{children}</div>}
+    </div>
+  );
+}
+
+// ── Exercise row ──────────────────────────────────────────────────────────────
+
+function exerciseWeightLabel(exerciseTemplate: ExerciseTemplate): string {
+  if (exerciseTemplate.weightMode === "bodyweight") return "BW reps";
+  return exerciseTemplate.prescribedWeight != null
+    ? `${exerciseTemplate.prescribedWeight}kg`
+    : "AMRAP";
+}
+
+// Shared by the row and its DragOverlay copy so the two are identical.
+function ExerciseCardBody({ exerciseTemplate }: { exerciseTemplate: ExerciseTemplate }) {
+  return (
+    <>
+      <span className="config-session-detail__exercise-name">
+        {exerciseTemplate.exerciseName}
+      </span>
+      <span className="config-session-detail__exercise-right">
+        <span className="config-session-detail__exercise-weight">
+          {exerciseWeightLabel(exerciseTemplate)}
+        </span>
+        <span className="config-session-detail__exercise-chevron">›</span>
+      </span>
+    </>
+  );
+}
 
 interface DraggableExerciseRowProps {
   exerciseTemplate: ExerciseTemplate;
@@ -41,68 +99,56 @@ interface DraggableExerciseRowProps {
   onNavigate: () => void;
 }
 
+// The row stays put while it is dragged; the DragOverlay copy is what moves.
 function DraggableExerciseRow({
   exerciseTemplate,
   stmg,
   onNavigate,
 }: DraggableExerciseRowProps) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: exerciseTemplate.id,
     data: { fromStmgId: stmg.id, exerciseTemplate },
   });
 
-  const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
-
   return (
-    <button
+    <div
       ref={setNodeRef}
-      type="button"
       className={`config-session-detail__exercise-row${isDragging ? " config-session-detail__exercise-row--dragging" : ""}`}
-      style={style}
-      onClick={onNavigate}
-      {...attributes}
     >
       <span
         className="config-session-detail__drag-handle"
+        {...attributes}
         {...listeners}
-        onClick={(e) => e.stopPropagation()}
-        aria-label="Drag to move to another muscle group"
+        aria-label={`Drag ${exerciseTemplate.exerciseName} to another muscle group`}
       >
         ⠿
       </span>
-      <div className="config-session-detail__exercise-info">
-        <span className="config-session-detail__exercise-name">
-          {exerciseTemplate.exerciseName}
-        </span>
-      </div>
-      <div className="config-session-detail__exercise-right">
-        <span className="config-session-detail__reps">
-          {exerciseTemplate.weightMode === "bodyweight"
-            ? "BW reps"
-            : exerciseTemplate.prescribedWeight != null
-            ? `${exerciseTemplate.prescribedWeight}kg`
-            : "AMRAP"}
-        </span>
-        <span className="config-session-detail__exercise-chevron">›</span>
-      </div>
-    </button>
+      <button
+        type="button"
+        className="config-session-detail__exercise-card"
+        onClick={onNavigate}
+      >
+        <ExerciseCardBody exerciseTemplate={exerciseTemplate} />
+      </button>
+    </div>
   );
 }
 
-// ── Droppable section body ────────────────────────────────────────────────────
+// ── Droppable muscle group ────────────────────────────────────────────────────
 
-interface DroppableSectionBodyProps {
+interface DroppableGroupProps {
   stmgId: string;
-  isEmpty: boolean;
   children: React.ReactNode;
 }
 
-function DroppableSectionBody({ stmgId, isEmpty, children }: DroppableSectionBodyProps) {
+// The whole group is the drop target, header and add button included, so an
+// exercise can be dropped anywhere on the group it is moving to.
+function DroppableGroup({ stmgId, children }: DroppableGroupProps) {
   const { setNodeRef, isOver } = useDroppable({ id: stmgId });
   return (
     <div
       ref={setNodeRef}
-      className={`config-session-detail__exercise-list${isOver ? " config-session-detail__exercise-list--over" : ""}${isEmpty ? " config-session-detail__exercise-list--empty" : ""}`}
+      className={`config-session-detail__group${isOver ? " config-session-detail__group--over" : ""}`}
     >
       {children}
     </div>
@@ -127,16 +173,15 @@ export default function ConfigSessionDetailPage() {
   const [sections, setSections] = useState<SessionTemplateGroupWithExercises[]>([]);
   const [allMuscleGroups, setAllMuscleGroups] = useState<MuscleGroup[]>([]);
 
-  // Add-section form state
-  const [showAddSection, setShowAddSection] = useState(false);
-  const [selectedMuscleGroupId, setSelectedMuscleGroupId] = useState("");
-  const [newMuscleGroupName, setNewMuscleGroupName] = useState("");
+  // Add muscle group sub-screen
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Delete confirm
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Target session length field state
   const [targetMinutesInput, setTargetMinutesInput] = useState("");
-  const [targetTooltipOpen, setTargetTooltipOpen] = useState(false);
-  const targetTooltipRef = useRef<HTMLDivElement | null>(null);
 
   // Drag overlay state
   const [activeExerciseTemplate, setActiveExerciseTemplate] =
@@ -174,16 +219,6 @@ export default function ConfigSessionDetailPage() {
     loadData();
   }, [sessionTemplateId]);
 
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (!targetTooltipRef.current?.contains(e.target as Node)) {
-        setTargetTooltipOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
   async function handleSaveTargetMinutes() {
     if (!sessionTemplate) return;
     const parsed = parseTargetMinutes(targetMinutesInput);
@@ -196,26 +231,25 @@ export default function ConfigSessionDetailPage() {
     await loadData();
   }
 
-  async function handleAddSection() {
-    if (!sessionTemplateId) return;
+  // `pick` is an existing muscle group's id, or the name of one to create.
+  async function handleAddSection(pick: string | { newName: string }) {
+    if (!sessionTemplateId || isSaving) return;
 
     setIsSaving(true);
     try {
-      let muscleGroupId = selectedMuscleGroupId;
+      let muscleGroupId: string;
 
-      if (selectedMuscleGroupId === "__new__") {
-        const trimmed = newMuscleGroupName.trim();
-        if (!trimmed) return;
+      if (typeof pick === "string") {
+        muscleGroupId = pick;
+      } else {
         const newMG: MuscleGroup = {
           id: crypto.randomUUID(),
-          name: trimmed,
+          name: pick.newName,
           order: allMuscleGroups.length + 1,
         };
         await saveMuscleGroup(newMG);
         muscleGroupId = newMG.id;
       }
-
-      if (!muscleGroupId) return;
 
       const newStmg: SessionTemplateMuscleGroup = {
         id: crypto.randomUUID(),
@@ -225,9 +259,7 @@ export default function ConfigSessionDetailPage() {
         targetWorkingSets: 3,
       };
       await saveSessionTemplateMuscleGroup(newStmg);
-      setShowAddSection(false);
-      setSelectedMuscleGroupId("");
-      setNewMuscleGroupName("");
+      setPickerOpen(false);
       await loadData();
     } finally {
       setIsSaving(false);
@@ -244,11 +276,8 @@ export default function ConfigSessionDetailPage() {
   }
 
   async function handleDeleteSection(stmgId: string) {
-    const confirmed = window.confirm(
-      "Remove this muscle group section and all its exercises?"
-    );
-    if (!confirmed) return;
     await deleteSessionTemplateMuscleGroupById(stmgId);
+    setConfirmDeleteId(null);
     await loadData();
   }
 
@@ -275,6 +304,11 @@ export default function ConfigSessionDetailPage() {
 
   if (!sessionTemplate) return null;
 
+  const totalSets = sections.reduce(
+    (sum, s) => sum + s.sessionTemplateMuscleGroup.targetWorkingSets,
+    0
+  );
+
   return (
     <main className="config-session-detail-page">
       <TopBar
@@ -283,36 +317,15 @@ export default function ConfigSessionDetailPage() {
         backLabel="Program"
       />
       <section className="config-session-detail-shell">
-        <header className="config-session-detail-header">
-          <p className="config-session-detail-eyebrow">Session</p>
-          <h1 className="config-session-detail-title">{sessionTemplate.name}</h1>
-          <p className="config-session-detail-intro">
-            Add as many exercises as you like to each muscle group, more than you would
-            typically do in a single session. You don't need to do every exercise listed;
-            the volume target is driven by the set count at the top of each muscle group,
-            not by the number of exercises. A larger exercise list simply gives you more
-            variety to pick from each time you train.
-          </p>
-        </header>
 
+        {/* Target session length */}
         <div className="config-session-detail__section">
-          <div className="config-session-detail__label-row" ref={targetTooltipRef}>
-            <p className="config-session-detail__field-label">Target session length</p>
-            <button
-              type="button"
-              className="config-session-detail__info-btn"
-              aria-expanded={targetTooltipOpen}
-              onClick={() => setTargetTooltipOpen((v) => !v)}
-            >?</button>
-            {targetTooltipOpen && (
-              <div className="config-session-detail__info-tooltip">
-                <strong>Target session length</strong> is optional and can be
-                left blank. It does not affect session, week, or season scores.
-                During a session it shows a progress bar indicating how closely
-                you are tracking your ideal session duration.
-              </div>
-            )}
-          </div>
+          <InfoLabel label="Target session length">
+            <strong>Target session length</strong> is optional and can be
+            left blank. It does not affect session, week, or season scores.
+            During a session it shows a progress bar indicating how closely
+            you are tracking your ideal session duration.
+          </InfoLabel>
           <div className="config-session-detail__target-minutes-row">
             <input
               className="config-session-detail__input config-session-detail__target-minutes-input"
@@ -335,10 +348,6 @@ export default function ConfigSessionDetailPage() {
         {(() => {
           const warnings: string[] = [];
 
-          const totalSets = sections.reduce(
-            (sum, s) => sum + s.sessionTemplateMuscleGroup.targetWorkingSets,
-            0
-          );
           if (sections.length > 0 && totalSets < 5) {
             warnings.push(
               "There are fewer than 5 target working sets (this should typically be around 15)"
@@ -375,182 +384,184 @@ export default function ConfigSessionDetailPage() {
           if (warnings.length === 0) return null;
 
           return (
-            <div className="config-session-detail__warnings">
-              <p className="config-session-detail__warnings-title">
-                {warnings.length} {warnings.length === 1 ? "warning" : "warnings"}
-              </p>
-              <ul className="config-session-detail__warnings-list">
-                {warnings.map((w, i) => (
-                  <li key={i}>{w}</li>
-                ))}
-              </ul>
+            <div className="config-session-detail__section">
+              <div className="config-session-detail__warnings">
+                <p className="config-session-detail__warnings-title">
+                  {warnings.length} {warnings.length === 1 ? "warning" : "warnings"}
+                </p>
+                <ul className="config-session-detail__warnings-list">
+                  {warnings.map((w, i) => (
+                    <li key={i}>{w}</li>
+                  ))}
+                </ul>
+              </div>
             </div>
           );
         })()}
 
-        <DndContext
-          sensors={sensors}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          {sections.map((section) => {
-            const stmg = section.sessionTemplateMuscleGroup;
-            return (
-              <div key={stmg.id} className="config-session-detail__section">
-                <div className="config-session-detail__section-header">
-                  <p className="config-session-detail__section-name">
-                    {section.muscleGroup.name}
-                  </p>
-                  <div className="config-session-detail__target-stepper">
+        {/* Muscle groups */}
+        <div className="config-session-detail__section">
+          <InfoLabel label="Muscle groups">
+            Add as many exercises as you like to each muscle group, more than you would
+            typically do in a single session. You don't need to do every exercise listed;
+            the volume target is driven by the set count next to each muscle group, not
+            by the number of exercises. A larger exercise list simply gives you more
+            variety to pick from each time you train.
+          </InfoLabel>
+          <p className="config-session-detail__hint">
+            {sections.length === 0
+              ? "No muscle groups yet."
+              : `Target working sets: ${totalSets}`}
+          </p>
+
+          <DndContext
+            sensors={sensors}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="config-session-detail__group-list">
+              {sections.map((section) => {
+                const stmg = section.sessionTemplateMuscleGroup;
+                const confirming = confirmDeleteId === stmg.id;
+                const exerciseCount = section.exercises.length;
+                return (
+                  <DroppableGroup key={stmg.id} stmgId={stmg.id}>
+                    <div className="config-session-detail__group-header">
+                      <p className="config-session-detail__group-name">
+                        {section.muscleGroup.name}
+                      </p>
+                      {confirming ? (
+                        <div className="config-session-detail__delete-confirm">
+                          <button
+                            type="button"
+                            className="config-session-detail__delete-confirm-yes"
+                            onClick={() => handleDeleteSection(stmg.id)}
+                          >
+                            Remove
+                          </button>
+                          <button
+                            type="button"
+                            className="config-session-detail__delete-confirm-no"
+                            onClick={() => setConfirmDeleteId(null)}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="config-session-detail__stepper">
+                            <button
+                              type="button"
+                              className="config-session-detail__stepper-btn"
+                              onClick={() => handleUpdateTarget(stmg.id, -1)}
+                              disabled={stmg.targetWorkingSets <= 1}
+                              aria-label={`Decrease ${section.muscleGroup.name} target sets`}
+                            >
+                              −
+                            </button>
+                            <span className="config-session-detail__stepper-value">
+                              {stmg.targetWorkingSets}
+                            </span>
+                            <button
+                              type="button"
+                              className="config-session-detail__stepper-btn"
+                              onClick={() => handleUpdateTarget(stmg.id, 1)}
+                              aria-label={`Increase ${section.muscleGroup.name} target sets`}
+                            >
+                              +
+                            </button>
+                            <span className="config-session-detail__stepper-label">sets</span>
+                          </div>
+                          <button
+                            type="button"
+                            className="config-session-detail__delete-btn"
+                            onClick={() => setConfirmDeleteId(stmg.id)}
+                            aria-label={`Remove ${section.muscleGroup.name}`}
+                          >
+                            ✕
+                          </button>
+                        </>
+                      )}
+                    </div>
+
+                    {confirming && exerciseCount > 0 && (
+                      <p className="config-session-detail__delete-note">
+                        This also removes its {exerciseCount}{" "}
+                        {exerciseCount === 1 ? "exercise" : "exercises"}.
+                      </p>
+                    )}
+
+                    <div className="config-session-detail__exercise-list">
+                      {exerciseCount === 0 ? (
+                        <p className="config-session-detail__empty">No exercises yet.</p>
+                      ) : (
+                        section.exercises.map(({ exerciseTemplate }) => (
+                          <DraggableExerciseRow
+                            key={exerciseTemplate.id}
+                            exerciseTemplate={exerciseTemplate}
+                            stmg={stmg}
+                            onNavigate={() =>
+                              navigate(
+                                `/config/exercises/${exerciseTemplate.id}?stmgId=${stmg.id}&muscleGroupId=${stmg.muscleGroupId}`
+                              )
+                            }
+                          />
+                        ))
+                      )}
+                    </div>
+
                     <button
                       type="button"
-                      className="config-session-detail__target-btn"
-                      onClick={() => handleUpdateTarget(stmg.id, -1)}
-                      disabled={stmg.targetWorkingSets <= 1}
-                      aria-label="Decrease target sets"
+                      className="config-session-detail__add-btn"
+                      onClick={() =>
+                        navigate(
+                          `/config/exercises/new?stmgId=${stmg.id}&muscleGroupId=${stmg.muscleGroupId}`
+                        )
+                      }
                     >
-                      −
+                      + Add exercise
                     </button>
-                    <span className="config-session-detail__target-value">
-                      {stmg.targetWorkingSets}
-                    </span>
-                    <button
-                      type="button"
-                      className="config-session-detail__target-btn"
-                      onClick={() => handleUpdateTarget(stmg.id, 1)}
-                      aria-label="Increase target sets"
-                    >
-                      +
-                    </button>
-                    <span className="config-session-detail__target-label">sets</span>
-                  </div>
-                  <button
-                    type="button"
-                    className="config-session-detail__section-delete"
-                    onClick={() => handleDeleteSection(stmg.id)}
-                    aria-label={`Remove ${section.muscleGroup.name} section`}
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                <DroppableSectionBody stmgId={stmg.id} isEmpty={section.exercises.length === 0}>
-                  {section.exercises.length === 0 ? (
-                    <p className="config-session-detail__empty">No exercises yet.</p>
-                  ) : (
-                    section.exercises.map(({ exerciseTemplate }) => (
-                      <DraggableExerciseRow
-                        key={exerciseTemplate.id}
-                        exerciseTemplate={exerciseTemplate}
-                        stmg={stmg}
-                        onNavigate={() =>
-                          navigate(
-                            `/config/exercises/${exerciseTemplate.id}?stmgId=${stmg.id}&muscleGroupId=${stmg.muscleGroupId}`
-                          )
-                        }
-                      />
-                    ))
-                  )}
-                </DroppableSectionBody>
-
-                <button
-                  type="button"
-                  className="config-session-detail__add-exercise-btn"
-                  onClick={() =>
-                    navigate(
-                      `/config/exercises/new?stmgId=${stmg.id}&muscleGroupId=${stmg.muscleGroupId}`
-                    )
-                  }
-                >
-                  + Add exercise
-                </button>
-              </div>
-            );
-          })}
-
-          <DragOverlay>
-            {activeExerciseTemplate ? (
-              <div className="config-session-detail__exercise-row config-session-detail__exercise-row--overlay">
-                <span className="config-session-detail__drag-handle" aria-hidden>
-                  ⠿
-                </span>
-                <div className="config-session-detail__exercise-info">
-                  <span className="config-session-detail__exercise-name">
-                    {activeExerciseTemplate.exerciseName}
-                  </span>
-                </div>
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-
-        {showAddSection ? (
-          <div className="config-session-detail__add-section-form">
-            <p className="config-session-detail__add-section-title">
-              Add muscle group section
-            </p>
-            <select
-              className="config-session-detail__select"
-              value={selectedMuscleGroupId}
-              onChange={(e) => setSelectedMuscleGroupId(e.target.value)}
-            >
-              <option value="">Select muscle group…</option>
-              {allMuscleGroups.map((mg) => (
-                <option key={mg.id} value={mg.id}>
-                  {mg.name}
-                </option>
-              ))}
-              <option value="__new__">+ Create new</option>
-            </select>
-
-            {selectedMuscleGroupId === "__new__" && (
-              <input
-                className="config-session-detail__input"
-                placeholder="Muscle group name"
-                value={newMuscleGroupName}
-                onChange={(e) => setNewMuscleGroupName(e.target.value)}
-              />
-            )}
-
-            <div className="config-session-detail__add-section-actions">
-              <button
-                type="button"
-                className="config-session-detail__btn config-session-detail__btn--secondary"
-                onClick={() => {
-                  setShowAddSection(false);
-                  setSelectedMuscleGroupId("");
-                  setNewMuscleGroupName("");
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="config-session-detail__btn config-session-detail__btn--primary"
-                disabled={
-                  isSaving ||
-                  !selectedMuscleGroupId ||
-                  (selectedMuscleGroupId === "__new__" && !newMuscleGroupName.trim())
-                }
-                onClick={handleAddSection}
-              >
-                Add section
-              </button>
+                  </DroppableGroup>
+                );
+              })}
             </div>
-          </div>
-        ) : (
-          <div className="config-session-detail__footer">
-            <button
-              type="button"
-              className="config-session-detail__btn config-session-detail__btn--ghost"
-              onClick={() => setShowAddSection(true)}
-            >
-              + Add muscle group section
-            </button>
-          </div>
-        )}
+
+            <DragOverlay>
+              {activeExerciseTemplate ? (
+                <div className="config-session-detail__exercise-row config-session-detail__exercise-row--overlay">
+                  <span className="config-session-detail__drag-handle" aria-hidden>
+                    ⠿
+                  </span>
+                  <div className="config-session-detail__exercise-card">
+                    <ExerciseCardBody exerciseTemplate={activeExerciseTemplate} />
+                  </div>
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+
+          <button
+            type="button"
+            className="config-session-detail__add-btn config-session-detail__add-btn--group"
+            onClick={() => setPickerOpen(true)}
+          >
+            + Add muscle group
+          </button>
+        </div>
+
       </section>
       <BottomNav activeTab="program" />
+
+      {pickerOpen && (
+        <MuscleGroupPicker
+          muscleGroups={allMuscleGroups}
+          inSessionIds={new Set(sections.map((s) => s.sessionTemplateMuscleGroup.muscleGroupId))}
+          busy={isSaving}
+          onSelect={(muscleGroupId) => handleAddSection(muscleGroupId)}
+          onCreate={(newName) => handleAddSection({ newName })}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
     </main>
   );
 }
