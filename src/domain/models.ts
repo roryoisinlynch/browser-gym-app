@@ -9,9 +9,9 @@ export type SeasonStatus = InstanceStatus | "cancelled";
  * - "increment": even increments of weightIncrement with no upper bound;
  *   candidates are step multiples below the e1RM. Written by the wizard's
  *   increment presets and custom step.
- * - "explicit_list": a fixed list in availableWeights (a preset stack, a
- *   filled range, or a typed list). An empty list means the exercise is
- *   not configured yet; sessions run AMRAP until it is.
+ * - "explicit_list": a fixed list in availableWeights (a filled range or a
+ *   typed list). An empty list means the exercise is not configured yet;
+ *   sessions run AMRAP until it is.
  */
 export type WeightMode = "increment" | "explicit_list" | "bodyweight";
 export type WeekItemType = "session" | "rest";
