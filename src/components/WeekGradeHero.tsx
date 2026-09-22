@@ -1,5 +1,6 @@
 import { emojiForRating } from "../services/weekMetrics";
 import type { EmojiRating } from "../services/weekMetrics";
+import EmojiGlyph from "./EmojiGlyph";
 import ScoreBlock from "./ScoreBlock";
 import useInView from "../hooks/useInView";
 import "./WeekGradeHero.css";
@@ -46,7 +47,7 @@ export default function WeekGradeHero({
         className={`wk-hero__emoji wk-hero__emoji--${ratingTone(emojiRating)}`}
         aria-label={endedEarly ? "Week ended early" : `Week rating ${emojiRating}`}
       >
-        {emojiForRating(emojiRating)}
+        <EmojiGlyph emoji={emojiForRating(emojiRating)} />
       </span>
 
       <div className="wk-hero__scores">

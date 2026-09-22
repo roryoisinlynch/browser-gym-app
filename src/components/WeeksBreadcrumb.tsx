@@ -1,5 +1,6 @@
 import { emojiForRating } from "../services/weekMetrics";
 import type { EmojiRating } from "../services/weekMetrics";
+import EmojiGlyph from "./EmojiGlyph";
 import "./WeeksBreadcrumb.css";
 
 export interface BreadcrumbWeek {
@@ -38,7 +39,11 @@ export default function WeeksBreadcrumb({ weeks, showLabel = true }: WeeksBreadc
                     : "Not yet completed"
                 }
               >
-                {week.emojiRating != null ? emojiForRating(week.emojiRating) : "○"}
+                {week.emojiRating != null ? (
+                  <EmojiGlyph emoji={emojiForRating(week.emojiRating)} />
+                ) : (
+                  "○"
+                )}
               </span>
             </div>
           </div>

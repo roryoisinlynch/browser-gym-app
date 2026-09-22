@@ -17,8 +17,14 @@
   line-height: 1;
 }
 
+/* A 1em square holding the artwork, so the icon's box is exactly the picture
+   and the size variants below set both. */
 .medal__icon {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
   line-height: 1;
 }
 

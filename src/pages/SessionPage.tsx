@@ -12,6 +12,7 @@ import {
   stopSessionInstance,
 } from "../repositories/programRepository";
 import BottomNav from "../components/BottomNav";
+import EmojiGlyph from "../components/EmojiGlyph";
 import PageLoader from "../components/PageLoader";
 import SessionTimeBar from "../components/SessionTimeBar";
 import TopBar from "../components/TopBar";
@@ -625,7 +626,7 @@ export default function SessionPage() {
                         className="intensity-dot intensity-dot--hit"
                         aria-hidden="true"
                       >
-                        🎯
+                        <EmojiGlyph emoji="🎯" />
                       </span>
                     ) : (
                       <span
@@ -821,7 +822,10 @@ export default function SessionPage() {
                                           {targetLabel}
                                           {dartCount > 0 && (
                                             <span className="exercise-card__darts" aria-label={`${dartCount} sets met intensity target`}>
-                                              {" "}{"🎯".repeat(dartCount)}
+                                              {" "}
+                                              {Array.from({ length: dartCount }, (_, i) => (
+                                                <EmojiGlyph key={i} emoji="🎯" />
+                                              ))}
                                             </span>
                                           )}
                                         </span>

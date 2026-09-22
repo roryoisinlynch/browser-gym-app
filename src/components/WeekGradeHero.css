@@ -8,14 +8,10 @@
   padding: 8px 0;
 }
 
-/* The emoji stands as tall as the three blocks beside it: its glyph fills the
-   full em box, so font-size is the rendered height.
-   The explicit box is doing real work. This font gives an emoji an advance of
-   about 1.375em while the glyph itself only inks 1em, so the natural layout box
-   would hand a third of the row to empty space. Pinning the box to the ink and
-   centring the glyph inside it reclaims that width for the scores, and keeps
-   the circle clear of them — a circle is widest across its middle, which is
-   exactly where the bars sit. */
+/* The face stands as tall as the three blocks beside it: the artwork fills a
+   1em square, so font-size is the rendered height. The box runs a hair wider
+   than the picture so the circle stays clear of the scores — a circle is widest
+   across its middle, which is exactly where the bars sit. */
 .wk-hero__emoji {
   font-size: 10.5rem;
   line-height: 1;
@@ -26,8 +22,8 @@
   height: 1em;
 }
 
-/* Emoji are colour glyphs, so text-shadow does nothing useful on them;
-   drop-shadow works on the rendered bitmap instead. */
+/* The face is an image, so text-shadow does nothing to it; drop-shadow works
+   on the rendered pixels instead. */
 .wk-hero__emoji--green {
   filter: drop-shadow(0 0 16px rgba(107, 203, 119, 0.45));
 }

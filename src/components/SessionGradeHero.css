@@ -8,28 +8,20 @@
   padding: 8px 0;
 }
 
-/* Half the week's 10.5rem emoji, by design: the session is the quietest report
-   in the chain.
-   The explicit box is doing the same work it does there. This font gives an
-   emoji an advance of about 1.375em while the glyph itself only inks 1em, so the
-   natural layout box would hand a third of the row to empty space. Pinning the
-   box to the ink and centring the glyph inside it reclaims that width for the
-   scores, and keeps the medal clear of them.
+/* Half the week's 10.5rem face, by design: the session is the quietest report
+   in the chain. Medal.css already makes the icon a 1em square; this widens the
+   box a hair, as the week does, so the medal's disc stays clear of the scores
+   either side.
    Three classes because .medal--lg .medal__icon matches at two, and which of the
    two stylesheets loads last isn't ours to decide. */
 .sgh-hero__medal .medal .medal__icon {
   font-size: 5.25rem;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 1.04em;
-  height: 1em;
 }
 
-/* Emoji are colour glyphs, so text-shadow does nothing useful on them;
-   drop-shadow works on the rendered bitmap instead. A tighter blur than the
-   week's 16px, to suit a glyph half the size. */
+/* The medal is an image, so text-shadow does nothing to it; drop-shadow works
+   on the rendered pixels instead. A tighter blur than the week's 16px, to suit
+   a picture half the size. */
 .sgh-hero__medal--green {
   filter: drop-shadow(0 0 10px rgba(107, 203, 119, 0.45));
 }

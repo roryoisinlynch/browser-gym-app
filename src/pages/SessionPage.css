@@ -513,7 +513,13 @@
   letter-spacing: 0.01em;
 }
 
+/* One dart per set that met the target. Text darts spaced themselves by their
+   advance width; the artwork is an exact 1em square, so the gap is explicit. */
 .exercise-card__darts {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  vertical-align: -0.15em;
   font-size: 0.72rem;
   line-height: 1;
 }

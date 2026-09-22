@@ -1,0 +1,12 @@
+/* Sized by the font-size around it, like the text glyph it stands in for.
+   Inline-block with a slight drop so it sits on a text baseline the way a
+   glyph would. A flex parent blockifies it, so the heroes, medals and
+   intensity dots get an exact 1em square. */
+img.emoji-glyph {
+  width: 1em;
+  height: 1em;
+  display: inline-block;
+  vertical-align: -0.15em;
+  user-select: none;
+  -webkit-user-drag: none;
+}

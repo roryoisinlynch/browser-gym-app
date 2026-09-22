@@ -50,6 +50,7 @@ import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import PageLoader from "../components/PageLoader";
 import Reveal from "../components/Reveal";
+import EmojiGlyph from "../components/EmojiGlyph";
 import { emojiForRating } from "../services/weekMetrics";
 import { gradeColor } from "../services/seasonMetrics";
 import { getYearInReviewState, hasAnyReviewData } from "../services/yearInReview";
@@ -836,7 +837,7 @@ function AchievementsShelf({ individuals, buckets }: AchievementsShelfProps) {
               .filter(Boolean)
               .join(" ")}
           >
-            {item.icon}
+            <EmojiGlyph emoji={item.icon} />
           </span>
           <span className="dashboard-achievement__date">{item.displayDate}</span>
         </div>
@@ -854,7 +855,7 @@ function AchievementsShelf({ individuals, buckets }: AchievementsShelfProps) {
               .filter(Boolean)
               .join(" ")}
           >
-            {bucket.icon}
+            <EmojiGlyph emoji={bucket.icon} />
             <span className="dashboard-achievement__count">×{bucket.count}</span>
           </span>
           <span className="dashboard-achievement__date">{bucket.label}</span>
@@ -1628,7 +1629,7 @@ export default function DashboardPage() {
                 data.gradeColor ? `dashboard-recent-card__grade--${data.gradeColor}` : "",
               ].filter(Boolean).join(" ")}
             >
-              {data.grade}
+              <EmojiGlyph emoji={data.grade} />
             </span>
           ) : null}
         </div>

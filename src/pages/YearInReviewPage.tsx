@@ -10,6 +10,7 @@ import {
 } from "../services/yearInReview";
 import { formatDuration } from "../services/sessionMetrics";
 import useCountUp from "../hooks/useCountUp";
+import EmojiGlyph from "../components/EmojiGlyph";
 import "./YearInReviewPage.css";
 
 const numberFormat = new Intl.NumberFormat("en-GB");
@@ -885,9 +886,21 @@ function PosterSlide({
     cells.push({ label: "Debuts", value: formatInt(stats.debutExercises.length) });
   }
 
-  const medalParts: string[] = [];
-  if (stats.goldSessionCount > 0) medalParts.push(`🥇 ×${stats.goldSessionCount}`);
-  if (stats.perfectWeekCount > 0) medalParts.push(`🤩 ×${stats.perfectWeekCount}`);
+  const medalParts: React.ReactNode[] = [];
+  if (stats.goldSessionCount > 0) {
+    medalParts.push(
+      <>
+        <EmojiGlyph emoji="🥇" label="Gold sessions" /> ×{stats.goldSessionCount}
+      </>,
+    );
+  }
+  if (stats.perfectWeekCount > 0) {
+    medalParts.push(
+      <>
+        <EmojiGlyph emoji="🤩" label="Perfect weeks" /> ×{stats.perfectWeekCount}
+      </>,
+    );
+  }
   if (stats.aSeasonCount > 0) medalParts.push(`A ×${stats.aSeasonCount}`);
 
   return (
@@ -907,7 +920,12 @@ function PosterSlide({
       </div>
       {medalParts.length > 0 && (
         <p className="yir-medal-line yir-reveal yir-reveal--4">
-          {medalParts.join(" · ")}
+          {medalParts.map((part, i) => (
+            <span key={i}>
+              {i > 0 && " · "}
+              {part}
+            </span>
+          ))}
         </p>
       )}
       <p className="yir-sub yir-reveal yir-reveal--4">That was {stats.reviewYear}.</p>
