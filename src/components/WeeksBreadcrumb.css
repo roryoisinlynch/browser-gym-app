@@ -45,9 +45,16 @@
   flex: 0 0 auto;
 }
 
+/* A 1em square, so the artwork and the ○ of an unfinished week share one
+   footprint. */
 .weeks-breadcrumb__emoji {
   font-size: 1.5rem;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
 }
 
 .weeks-breadcrumb__emoji--ended-early {

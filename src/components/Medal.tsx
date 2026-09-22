@@ -1,4 +1,5 @@
 import type { RagStatus } from "../services/sessionMetrics";
+import EmojiGlyph from "./EmojiGlyph";
 import "./Medal.css";
 
 export type { RagStatus };
@@ -33,11 +34,11 @@ export default function Medal({
         <span className="medal__placeholder" aria-label="Session not completed" />
       ) : status === "skipped" ? (
         <span className="medal__icon" aria-label="Session skipped">
-          🏳️
+          <EmojiGlyph emoji="🏳️" />
         </span>
       ) : (
         <span className="medal__icon" aria-label={`Session score: ${LABEL_BY_STATUS[status]}`}>
-          {MEDAL_BY_STATUS[status]}
+          <EmojiGlyph emoji={MEDAL_BY_STATUS[status]} />
         </span>
       )}
     </div>
