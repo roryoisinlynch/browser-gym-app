@@ -9,6 +9,13 @@
   color: var(--text-strong);
 }
 
+.absence-wizard__text {
+  margin: 8px 0 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
 .absence-wizard__detail {
   margin: 8px 0 20px;
   font-size: 0.84rem;

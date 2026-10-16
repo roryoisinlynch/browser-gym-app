@@ -102,8 +102,15 @@ export default function AbsenceReasonWizard({
       {step === "intro" && (
         <div className="absence-wizard">
           <p className="absence-wizard__lead">
-            It looks like you haven't been training for a while. Would you like
-            to select a reason?
+            It has been a while since you logged any training data.
+          </p>
+          <p className="absence-wizard__text">
+            If you'd like, you can track the reason for this break here.
+          </p>
+          <p className="absence-wizard__text">
+            Tracking the reason here allows you to see your long-term patterns and
+            most common reasons for training breaks when you review your previous
+            years of training data.
           </p>
           <p className="absence-wizard__detail">
             No training from {formatAbsenceRange(absence.startDate, absence.endDate)},{" "}
