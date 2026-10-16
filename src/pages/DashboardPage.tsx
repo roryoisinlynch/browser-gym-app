@@ -54,6 +54,9 @@ import EmojiGlyph from "../components/EmojiGlyph";
 import { emojiForRating } from "../services/weekMetrics";
 import { gradeColor } from "../services/seasonMetrics";
 import { getYearInReviewState, hasAnyReviewData } from "../services/yearInReview";
+import type { Absence } from "../services/absences";
+import { loadAbsences } from "../services/absences";
+import { isAbsenceTrackingEnabled } from "../repositories/absenceRepository";
 import "./DashboardPage.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -907,6 +910,8 @@ export default function DashboardPage() {
   // achievements shelf below it waits its turn rather than racing the PRs.
   const [achievementsGate, setAchievementsGate] = useState(false);
   const [pendingHeuristicDays, setPendingHeuristicDays] = useState(0);
+  // Absences with no reason yet, newest first. Empty until loaded.
+  const [unaccountedAbsences, setUnaccountedAbsences] = useState<Absence[]>([]);
   const [heuristicCompare, setHeuristicCompare] = useState<{
     current: HeuristicSeasonAggregate;
     previous: HeuristicSeasonAggregate;
@@ -1053,6 +1058,21 @@ export default function DashboardPage() {
     getLastCompletedWeekInstance().then((w) => setHasSettledWeek(w != null));
   }, []);
 
+  // Absences without a reason, for the up-next card. Own effect so a slow
+  // load never blocks loadBase or the reveal barrier below.
+  useEffect(() => {
+    let cancel = false;
+    async function loadAbsenceCta() {
+      if (!(await isAbsenceTrackingEnabled())) return;
+      const all = await loadAbsences();
+      if (!cancel) setUnaccountedAbsences(all.filter((a) => a.reason == null));
+    }
+    loadAbsenceCta().catch((error) => console.error("Failed to load absences:", error));
+    return () => {
+      cancel = true;
+    };
+  }, []);
+
   useEffect(() => {
     async function loadHeuristics() {
       if (!(await isHeuristicsEnabled())) return;
@@ -1150,9 +1170,10 @@ export default function DashboardPage() {
   }, [prEvents, recentPrCount]);
 
   // Cards that yield priority to a higher-priority secondary CTA (exercise
-  // needing weight, then heuristics, in that order). Sessions in active/today
-  // states never yield — only states where the user is between sessions or
-  // their overdue card has already been deprioritised by a completion today.
+  // needing weight, then absences without a reason, then heuristics, in that
+  // order). Sessions in active/today states never yield — only states where
+  // the user is between sessions or their overdue card has already been
+  // deprioritised by a completion today.
   const yieldsToSecondaryCta =
     upNext.type === "rest_day" ||
     upNext.type === "upcoming" ||
@@ -1160,8 +1181,13 @@ export default function DashboardPage() {
     (upNext.type === "overdue_session" && upNext.sessionCompletedToday);
 
   const showExerciseNeedsWeight = exerciseNeedingWeight != null && yieldsToSecondaryCta;
+  const showAbsenceUpNext =
+    !showExerciseNeedsWeight && unaccountedAbsences.length > 0 && yieldsToSecondaryCta;
   const showHeuristicsUpNext =
-    !showExerciseNeedsWeight && pendingHeuristicDays > 0 && yieldsToSecondaryCta;
+    !showExerciseNeedsWeight &&
+    !showAbsenceUpNext &&
+    pendingHeuristicDays > 0 &&
+    yieldsToSecondaryCta;
 
   function renderExerciseNeedsWeightCard() {
     if (!exerciseNeedingWeight) return null;
@@ -1186,6 +1212,35 @@ export default function DashboardPage() {
           <p className="dashboard-up-next__sub">{exerciseName} · {sessionName}</p>
         </div>
         <span className="dashboard-up-next__cta dashboard-up-next__cta--heuristics">Configure →</span>
+      </div>
+    );
+  }
+
+  function renderAbsenceUpNextCard(pill: string, trailing?: string) {
+    const n = unaccountedAbsences.length;
+    // Newest first, so the single-absence line describes the latest gap.
+    const latest = unaccountedAbsences[0];
+    const summary =
+      n === 1
+        ? `${formatDayCount(latest.dayCount)} without training, no reason given`
+        : `${n} absences without a reason`;
+    return (
+      <div
+        className="dashboard-up-next dashboard-up-next--heuristics dashboard-up-next--with-cta"
+        role="button"
+        tabIndex={0}
+        onClick={() => navigate("/absences")}
+        onKeyDown={(e) => e.key === "Enter" && navigate("/absences")}
+      >
+        <div className="dashboard-up-next__content">
+          <span className="dashboard-up-next__pill dashboard-up-next__pill--heuristics">{pill}</span>
+          <p className="dashboard-up-next__heading">Time away from training</p>
+          <p className="dashboard-up-next__sub">
+            {summary}
+            {trailing ? ` · ${trailing}` : ""}
+          </p>
+        </div>
+        <span className="dashboard-up-next__cta dashboard-up-next__cta--heuristics">Review absences →</span>
       </div>
     );
   }
@@ -1236,6 +1291,9 @@ export default function DashboardPage() {
       case "overdue_session":
         if (showExerciseNeedsWeight) {
           return renderExerciseNeedsWeightCard();
+        }
+        if (showAbsenceUpNext) {
+          return renderAbsenceUpNextCard("Up next");
         }
         if (showHeuristicsUpNext) {
           return (
@@ -1299,6 +1357,9 @@ export default function DashboardPage() {
         if (showExerciseNeedsWeight) {
           return renderExerciseNeedsWeightCard();
         }
+        if (showAbsenceUpNext) {
+          return renderAbsenceUpNextCard("Rest day");
+        }
         if (showHeuristicsUpNext) {
           return (
             <div
@@ -1339,6 +1400,14 @@ export default function DashboardPage() {
         if (showExerciseNeedsWeight) {
           return renderExerciseNeedsWeightCard();
         }
+        if (showAbsenceUpNext) {
+          return renderAbsenceUpNextCard(
+            "Time away",
+            upNext.daysUntil === 1
+              ? "Next session tomorrow"
+              : `Next session in ${upNext.daysUntil} days`
+          );
+        }
         if (showHeuristicsUpNext) {
           return (
             <div
@@ -1375,6 +1444,9 @@ export default function DashboardPage() {
       case "week_complete":
         if (showExerciseNeedsWeight) {
           return renderExerciseNeedsWeightCard();
+        }
+        if (showAbsenceUpNext) {
+          return renderAbsenceUpNextCard("Week complete");
         }
         if (showHeuristicsUpNext) {
           return (

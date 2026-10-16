@@ -1,5 +1,5 @@
 const DB_NAME = "browser-gym-app";
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 
 export const STORE_NAMES = {
   muscleGroups: "muscleGroups",
@@ -21,7 +21,9 @@ export const STORE_NAMES = {
   meta: "meta",
   importedSets: "importedSets",
   heuristicQuestions: "heuristicQuestions",
-  heuristicEntries: "heuristicEntries"
+  heuristicEntries: "heuristicEntries",
+  absences: "absences",
+  absenceReasons: "absenceReasons"
 } as const;
 
 export type StoreName = (typeof STORE_NAMES)[keyof typeof STORE_NAMES];
@@ -260,6 +262,14 @@ export function openDatabase(): Promise<IDBDatabase> {
         store.createIndex("byQuestionAndDate", ["questionId", "date"], {
           unique: true,
         });
+      }
+
+      if (!db.objectStoreNames.contains(STORE_NAMES.absences)) {
+        db.createObjectStore(STORE_NAMES.absences, { keyPath: "id" });
+      }
+
+      if (!db.objectStoreNames.contains(STORE_NAMES.absenceReasons)) {
+        db.createObjectStore(STORE_NAMES.absenceReasons, { keyPath: "id" });
       }
     };
 

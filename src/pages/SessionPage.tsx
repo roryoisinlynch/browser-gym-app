@@ -420,7 +420,11 @@ export default function SessionPage() {
       setErrorMessage(null);
 
       await stopSessionInstance(sessionView.sessionInstance.id);
-      navigate(`/session/${sessionView.sessionInstance.id}/summary`);
+      // The flag lets the summary page ask about an absence this session
+      // ended; a report opened later from the dashboard never asks.
+      navigate(`/session/${sessionView.sessionInstance.id}/summary`, {
+        state: { justFinished: true },
+      });
     } catch (error) {
       console.error("Could not finish session.", error);
       setErrorMessage("Could not finish session.");

@@ -22,6 +22,7 @@ import HeuristicsPage from "./pages/HeuristicsPage";
 import HeuristicsQuestionsPage from "./pages/HeuristicsQuestionsPage";
 import SharePage from "./pages/SharePage";
 import YearInReviewPage from "./pages/YearInReviewPage";
+import AbsencesPage from "./pages/AbsencesPage";
 
 export default function App() {
   return (
@@ -51,6 +52,7 @@ export default function App() {
         <Route path="/heuristics/questions" element={<HeuristicsQuestionsPage />} />
         <Route path="/share" element={<SharePage />} />
         <Route path="/year-in-review" element={<YearInReviewPage />} />
+        <Route path="/absences" element={<AbsencesPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
