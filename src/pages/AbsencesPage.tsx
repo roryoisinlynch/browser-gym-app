@@ -75,7 +75,7 @@ export default function AbsencesPage() {
                   {formatAbsenceRange(a.startDate, a.endDate)}
                 </span>
                 <span className="absences-row__desc">
-                  {formatDayCount(a.dayCount)} · {a.reason ?? "No reason yet"}
+                  {formatDayCount(a.dayCount)} · {a.reason ?? "Awaiting categorization"}
                 </span>
               </span>
               <span className="absences-row__chevron">›</span>

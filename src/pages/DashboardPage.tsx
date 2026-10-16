@@ -1222,8 +1222,8 @@ export default function DashboardPage() {
     const latest = unaccountedAbsences[0];
     const summary =
       n === 1
-        ? `${formatDayCount(latest.dayCount)} without training, no reason given`
-        : `${n} absences without a reason`;
+        ? `${formatDayCount(latest.dayCount)} without training, awaiting categorization`
+        : `${n} absences awaiting categorization`;
     return (
       <div
         className="dashboard-up-next dashboard-up-next--heuristics dashboard-up-next--with-cta"
