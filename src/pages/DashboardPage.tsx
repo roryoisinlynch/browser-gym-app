@@ -2,7 +2,6 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { SeasonInstance, SessionInstance, WeekInstance } from "../domain/models";
 import type {
-  ExerciseNeedingWeight,
   ExerciseSessionDataPoint,
   PREvent,
   WeekInstanceItemView,
@@ -12,7 +11,6 @@ import {
   getAllSeasonInstances,
   getAllTimePREvents,
   getCanonicalWeekTemplateForSeason,
-  findExerciseNeedingWeight,
   getExerciseSessionHistory,
   getLastCompletedSessionInstance,
   getLastCompletedWeekInstance,
@@ -918,8 +916,6 @@ export default function DashboardPage() {
     movers: { increase: HeuristicMover | null; decrease: HeuristicMover | null };
     series: { current: HeuristicDayPoint[]; previous: HeuristicDayPoint[] };
   } | null>(null);
-  const [exerciseNeedingWeight, setExerciseNeedingWeight] =
-    useState<ExerciseNeedingWeight | null>(null);
   const [yearReviewYear, setYearReviewYear] = useState<number | null>(null);
   const recentTooltipRef = useRef<HTMLDivElement | null>(null);
 
@@ -983,10 +979,6 @@ export default function DashboardPage() {
             setRecentDays(data);
             setRecentDaysLoading(false);
           }
-        });
-
-        findExerciseNeedingWeight(activeSeason.id).then((ex) => {
-          if (!cancelled.current) setExerciseNeedingWeight(ex);
         });
       } else {
         setRecentDaysLoading(false);
@@ -1169,52 +1161,20 @@ export default function DashboardPage() {
     if (prEvents !== null && recentPrCount === 0) setAchievementsGate(true);
   }, [prEvents, recentPrCount]);
 
-  // Cards that yield priority to a higher-priority secondary CTA (exercise
-  // needing weight, then absences without a reason, then heuristics, in that
-  // order). Sessions in active/today states never yield — only states where
-  // the user is between sessions or their overdue card has already been
-  // deprioritised by a completion today.
+  // Cards that yield priority to a higher-priority secondary CTA (absences
+  // awaiting categorization, then heuristics, in that order). Sessions in
+  // active/today states never yield — only states where the user is between
+  // sessions or their overdue card has already been deprioritised by a
+  // completion today.
   const yieldsToSecondaryCta =
     upNext.type === "rest_day" ||
     upNext.type === "upcoming" ||
     upNext.type === "week_complete" ||
     (upNext.type === "overdue_session" && upNext.sessionCompletedToday);
 
-  const showExerciseNeedsWeight = exerciseNeedingWeight != null && yieldsToSecondaryCta;
-  const showAbsenceUpNext =
-    !showExerciseNeedsWeight && unaccountedAbsences.length > 0 && yieldsToSecondaryCta;
+  const showAbsenceUpNext = unaccountedAbsences.length > 0 && yieldsToSecondaryCta;
   const showHeuristicsUpNext =
-    !showExerciseNeedsWeight &&
-    !showAbsenceUpNext &&
-    pendingHeuristicDays > 0 &&
-    yieldsToSecondaryCta;
-
-  function renderExerciseNeedsWeightCard() {
-    if (!exerciseNeedingWeight) return null;
-    const { exerciseTemplateId, exerciseName, sessionName, hasAvailableWeights } =
-      exerciseNeedingWeight;
-    const target = `/config/exercises/${exerciseTemplateId}?returnTo=${encodeURIComponent("/")}${
-      hasAvailableWeights ? "&open=working-weight" : "&open=weights"
-    }`;
-    return (
-      <div
-        className="dashboard-up-next dashboard-up-next--heuristics dashboard-up-next--with-cta"
-        role="button"
-        tabIndex={0}
-        onClick={() => navigate(target)}
-        onKeyDown={(e) => e.key === "Enter" && navigate(target)}
-      >
-        <div className="dashboard-up-next__content">
-          <span className="dashboard-up-next__pill dashboard-up-next__pill--heuristics">Up next</span>
-          <p className="dashboard-up-next__heading">
-            {hasAvailableWeights ? "Set working weight" : "Configure available weights"}
-          </p>
-          <p className="dashboard-up-next__sub">{exerciseName} · {sessionName}</p>
-        </div>
-        <span className="dashboard-up-next__cta dashboard-up-next__cta--heuristics">Configure →</span>
-      </div>
-    );
-  }
+    !showAbsenceUpNext && pendingHeuristicDays > 0 && yieldsToSecondaryCta;
 
   function renderAbsenceUpNextCard(pill: string, trailing?: string) {
     const n = unaccountedAbsences.length;
@@ -1289,9 +1249,6 @@ export default function DashboardPage() {
         );
 
       case "overdue_session":
-        if (showExerciseNeedsWeight) {
-          return renderExerciseNeedsWeightCard();
-        }
         if (showAbsenceUpNext) {
           return renderAbsenceUpNextCard("Up next");
         }
@@ -1354,9 +1311,6 @@ export default function DashboardPage() {
         );
 
       case "rest_day":
-        if (showExerciseNeedsWeight) {
-          return renderExerciseNeedsWeightCard();
-        }
         if (showAbsenceUpNext) {
           return renderAbsenceUpNextCard("Rest day");
         }
@@ -1397,9 +1351,6 @@ export default function DashboardPage() {
         );
 
       case "upcoming":
-        if (showExerciseNeedsWeight) {
-          return renderExerciseNeedsWeightCard();
-        }
         if (showAbsenceUpNext) {
           return renderAbsenceUpNextCard(
             "Time away",
@@ -1442,9 +1393,6 @@ export default function DashboardPage() {
         );
 
       case "week_complete":
-        if (showExerciseNeedsWeight) {
-          return renderExerciseNeedsWeightCard();
-        }
         if (showAbsenceUpNext) {
           return renderAbsenceUpNextCard("Week complete");
         }
