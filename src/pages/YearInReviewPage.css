@@ -189,10 +189,6 @@
 
 .yir-display--year {
   font-size: 6rem;
-  background: linear-gradient(160deg, var(--accent) 20%, var(--accent-strong) 55%, #7a8d2e 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
 }
 
 .yir-display__unit {
@@ -283,11 +279,6 @@
 }
 
 /* ── Cover ── */
-
-.yir-barbell {
-  width: 220px;
-  height: 40px;
-}
 
 .yir-cover-scope {
   display: flex;
@@ -1154,12 +1145,6 @@
   .yir-hint {
     animation: yir-hint-pulse 2.2s ease-in-out 1.2s infinite;
     opacity: 0.55;
-  }
-
-  .yir-barbell__path {
-    stroke-dasharray: 1;
-    stroke-dashoffset: 1;
-    animation: yir-draw 900ms ease-out 250ms forwards;
   }
 
   /* Left-to-right sweep, staggered per week column; a per-cell pop would be
