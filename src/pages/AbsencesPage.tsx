@@ -95,8 +95,8 @@ export default function AbsencesPage() {
             No gaps of {ABSENCE_MIN_DAYS} days or more between your sessions.
           </p>
         )}
-        {renderGroup("Without a reason", withoutReason)}
-        {renderGroup("With a reason", withReason)}
+        {renderGroup("Awaiting categorization", withoutReason)}
+        {renderGroup("Categorized", withReason)}
       </section>
       <BottomNav activeTab="settings" />
 

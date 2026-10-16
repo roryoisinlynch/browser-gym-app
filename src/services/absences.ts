@@ -21,7 +21,6 @@ export const ABSENCE_MIN_DAYS = 7;
 export const BUILT_IN_ABSENCE_REASONS = [
   "Sickness",
   "Injury",
-  "Planned break",
   "Work",
   "Trained off-app",
   "Holiday",
