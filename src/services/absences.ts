@@ -21,11 +21,13 @@ export const ABSENCE_MIN_DAYS = 7;
 export const BUILT_IN_ABSENCE_REASONS = [
   "Sickness",
   "Injury",
-  "Planned break",
   "Work",
   "Trained off-app",
   "Holiday",
 ] as const;
+
+/** Reason the absences screen can apply to every uncategorized absence at once. */
+export const UNKNOWN_ABSENCE_REASON = "Unknown";
 
 /** A run of idle days bounded by training on both sides. Derived, never stored. */
 export interface AbsenceSpan {

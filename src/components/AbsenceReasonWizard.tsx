@@ -34,14 +34,21 @@ interface AbsenceReasonWizardProps {
 function WizardRow({
   title,
   description,
+  accent = false,
   onClick,
 }: {
   title: string;
   description: string;
+  /** Lime-tinted, for the one row that is the quickest way off the screen. */
+  accent?: boolean;
   onClick: () => void;
 }) {
   return (
-    <button type="button" className="absence-wizard__row" onClick={onClick}>
+    <button
+      type="button"
+      className={`absence-wizard__row${accent ? " absence-wizard__row--accent" : ""}`}
+      onClick={onClick}
+    >
       <span className="absence-wizard__row-body">
         <span className="absence-wizard__row-title">{title}</span>
         <span className="absence-wizard__row-desc">{description}</span>
@@ -53,7 +60,7 @@ function WizardRow({
 
 /**
  * Picks a reason for an absence. After a session it opens on an intro step
- * that explains the gap and offers the choices; from the absences list it
+ * that explains the gap and lists the reasons; from the absences list it
  * opens straight on the list of reasons.
  */
 export default function AbsenceReasonWizard({
@@ -79,10 +86,11 @@ export default function AbsenceReasonWizard({
     if (step === "new") inputRef.current?.focus();
   }, [step]);
 
+  // The only step past the first is "new", reached from the intro's list in
+  // prompt mode and from the list step in pick mode.
   function back() {
     if (step === firstStep) onDismiss();
-    else if (step === "new") setStep("list");
-    else setStep("intro");
+    else setStep(firstStep);
   }
 
   function handleCreate() {
@@ -97,32 +105,70 @@ export default function AbsenceReasonWizard({
     else onCreate(label);
   }
 
+  // The reasons as the muscle group picker's hairline rows, ending with its
+  // lime "+ New reason" row. Shown on the intro step after a session and as
+  // the whole list step when picking from the absences screen.
+  function renderReasonList() {
+    return (
+      <>
+        <div className="muscle-group-picker__list">
+          {reasons.map((reason) => {
+            const selected = currentReason != null && reason === currentReason;
+            return (
+              <button
+                key={reason}
+                type="button"
+                className={`muscle-group-picker__option${
+                  selected ? " muscle-group-picker__option--selected" : ""
+                }`}
+                aria-pressed={selected}
+                disabled={busy}
+                onClick={() => onChoose(reason)}
+              >
+                <span className="muscle-group-picker__option-name">{reason}</span>
+                {selected && (
+                  <span className="muscle-group-picker__note">Current</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          className="muscle-group-picker__new-btn"
+          onClick={() => setStep("new")}
+        >
+          + New reason
+        </button>
+      </>
+    );
+  }
+
   return (
     <SubScreen title={TITLES[step]} onBack={back}>
       {step === "intro" && (
         <div className="absence-wizard">
           <p className="absence-wizard__lead">
-            It looks like you haven't been training for a while. Would you like
-            to select a reason?
+            It has been a while since you logged any training data.
+          </p>
+          <p className="absence-wizard__text">
+            If you'd like, you can track the reason for this break here.
+          </p>
+          <p className="absence-wizard__text">
+            Tracking the reason here allows you to see your long-term patterns and
+            most common reasons for training breaks when you review your previous
+            years of training data.
           </p>
           <p className="absence-wizard__detail">
             No training from {formatAbsenceRange(absence.startDate, absence.endDate)},{" "}
             {formatDayCount(absence.dayCount)}.
           </p>
+          {renderReasonList()}
           <div className="absence-wizard__rows">
-            <WizardRow
-              title="Choose a reason"
-              description="Pick from the list"
-              onClick={() => setStep("list")}
-            />
-            <WizardRow
-              title="Add a reason"
-              description="Write your own"
-              onClick={() => setStep("new")}
-            />
             <WizardRow
               title="Not now"
               description="You can add one later from the Dashboard"
+              accent
               onClick={onDismiss}
             />
             {onDisable && (
@@ -136,39 +182,7 @@ export default function AbsenceReasonWizard({
         </div>
       )}
 
-      {step === "list" && (
-        <>
-          <div className="muscle-group-picker__list">
-            {reasons.map((reason) => {
-              const selected = currentReason != null && reason === currentReason;
-              return (
-                <button
-                  key={reason}
-                  type="button"
-                  className={`muscle-group-picker__option${
-                    selected ? " muscle-group-picker__option--selected" : ""
-                  }`}
-                  aria-pressed={selected}
-                  disabled={busy}
-                  onClick={() => onChoose(reason)}
-                >
-                  <span className="muscle-group-picker__option-name">{reason}</span>
-                  {selected && (
-                    <span className="muscle-group-picker__note">Current</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          <button
-            type="button"
-            className="muscle-group-picker__new-btn"
-            onClick={() => setStep("new")}
-          >
-            + New reason
-          </button>
-        </>
-      )}
+      {step === "list" && renderReasonList()}
 
       {step === "new" && (
         <>

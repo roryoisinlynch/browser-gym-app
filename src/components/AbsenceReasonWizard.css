@@ -1,12 +1,21 @@
-/* Intro step of the absence prompt: a lead line, the gap, then card rows in
-   the weight wizard's row style. The list and new-reason steps reuse the
-   muscle group picker's hairline rows, input and primary button. */
+/* Intro step of the absence prompt: three lines, the gap, the reasons in the
+   muscle group picker's hairline-row style with its lime "+ New reason" row,
+   then card rows in the weight wizard's row style for "Not now" and "Don't
+   ask again". The list and new-reason steps reuse the same picker rows, input
+   and primary button. */
 
 .absence-wizard__lead {
   margin: 8px 0 0;
   font-size: 0.92rem;
   line-height: 1.5;
   color: var(--text-strong);
+}
+
+.absence-wizard__text {
+  margin: 8px 0 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--text-muted);
 }
 
 .absence-wizard__detail {
@@ -20,6 +29,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-top: 8px;
 }
 
 .absence-wizard__row {
@@ -71,4 +81,20 @@
   color: var(--text-soft);
   line-height: 1;
   flex-shrink: 0;
+}
+
+/* "Not now": the quickest way off the screen, in the app's lime-tinted
+   primary-button treatment (see .muscle-group-picker__add). */
+.absence-wizard__row--accent {
+  border-color: rgba(216, 240, 106, 0.32);
+  background: rgba(216, 240, 106, 0.1);
+}
+
+.absence-wizard__row--accent:hover {
+  background: rgba(216, 240, 106, 0.18);
+}
+
+.absence-wizard__row--accent .absence-wizard__row-title,
+.absence-wizard__row--accent .absence-wizard__row-chevron {
+  color: var(--accent);
 }
