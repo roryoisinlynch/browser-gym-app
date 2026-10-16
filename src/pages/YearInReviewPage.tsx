@@ -133,22 +133,7 @@ function CoverSlide({ stats }: { stats: YearInReviewStats }) {
       <p className="yir-display yir-display--year yir-reveal yir-reveal--2">
         {stats.reviewYear}
       </p>
-      <svg
-        className="yir-barbell yir-reveal yir-reveal--3"
-        viewBox="0 0 220 40"
-        aria-hidden="true"
-      >
-        <path
-          className="yir-barbell__path"
-          pathLength={1}
-          d="M6 20 H50 M50 8 V32 M62 4 V36 M62 20 H158 M158 4 V36 M170 8 V32 M170 20 H214"
-          fill="none"
-          stroke="var(--accent)"
-          strokeWidth="5"
-          strokeLinecap="round"
-        />
-      </svg>
-      <div className="yir-sub yir-cover-scope yir-reveal yir-reveal--4">
+      <div className="yir-sub yir-cover-scope yir-reveal yir-reveal--3">
         {coverScopeParagraphs(stats).map((paragraph) => (
           <p key={paragraph} className="yir-cover-scope__line">
             {paragraph}
