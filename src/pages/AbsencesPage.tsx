@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
@@ -6,6 +6,7 @@ import AbsenceReasonWizard from "../components/AbsenceReasonWizard";
 import type { Absence } from "../services/absences";
 import {
   ABSENCE_MIN_DAYS,
+  UNKNOWN_ABSENCE_REASON,
   addAbsenceReason,
   formatAbsenceRange,
   listAbsenceReasons,
@@ -57,7 +58,24 @@ export default function AbsencesPage() {
   const withoutReason = absences?.filter((a) => a.reason == null) ?? [];
   const withReason = absences?.filter((a) => a.reason != null) ?? [];
 
-  function renderGroup(label: string, items: Absence[]) {
+  // One tap for the user who does not want to go through the backlog: every
+  // absence still awaiting a reason gets "Unknown". Each can be changed later.
+  async function markAllUnknown() {
+    if (busy || withoutReason.length === 0) return;
+    setBusy(true);
+    try {
+      for (const a of withoutReason) {
+        await setAbsenceReason(a, UNKNOWN_ABSENCE_REASON);
+      }
+      await load();
+    } catch (error) {
+      console.error("Failed to mark absences as unknown:", error);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function renderGroup(label: string, items: Absence[], action?: ReactNode) {
     if (items.length === 0) return null;
     return (
       <div className="absences-group">
@@ -82,6 +100,7 @@ export default function AbsencesPage() {
             </button>
           ))}
         </div>
+        {action}
       </div>
     );
   }
@@ -95,7 +114,18 @@ export default function AbsencesPage() {
             No gaps of {ABSENCE_MIN_DAYS} days or more between your sessions.
           </p>
         )}
-        {renderGroup("Awaiting categorization", withoutReason)}
+        {renderGroup(
+          "Awaiting categorization",
+          withoutReason,
+          <button
+            type="button"
+            className="absences-bulk"
+            disabled={busy}
+            onClick={() => void markAllUnknown()}
+          >
+            Categorize all as Unknown
+          </button>
+        )}
         {renderGroup("Categorized", withReason)}
       </section>
       <BottomNav activeTab="settings" />

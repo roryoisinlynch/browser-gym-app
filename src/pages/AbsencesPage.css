@@ -86,3 +86,31 @@
   line-height: 1.6;
   color: var(--text-muted);
 }
+
+/* Bulk action under the awaiting group, in the lime text-row style of the
+   picker's "+ New reason". */
+.absences-bulk {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.86rem;
+  font-weight: 700;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+
+.absences-bulk:active:not(:disabled) {
+  opacity: 0.6;
+}
+
+.absences-bulk:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
