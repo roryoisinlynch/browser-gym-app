@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { SessionInstanceView, SessionMilestone, SessionPR } from "../repositories/programRepository";
 import {
   getSessionInstanceView,
@@ -22,6 +22,19 @@ import TopBar from "../components/TopBar";
 import BottomNav from "../components/BottomNav";
 import PageLoader from "../components/PageLoader";
 import MilestoneCelebration from "../components/MilestoneCelebration";
+import AbsenceReasonWizard from "../components/AbsenceReasonWizard";
+import type { Absence } from "../services/absences";
+import {
+  addAbsenceReason,
+  findAbsenceEndedBy,
+  listAbsenceReasons,
+  markAbsencePrompted,
+  setAbsenceReason,
+} from "../services/absences";
+import {
+  isAbsenceTrackingEnabled,
+  setAbsenceTrackingEnabled,
+} from "../repositories/absenceRepository";
 import useInView from "../hooks/useInView";
 import "../styles/summary.css";
 
@@ -88,6 +101,12 @@ function RevealSection({
 export default function SessionSummaryPage() {
   const { sessionInstanceId } = useParams<{ sessionInstanceId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Only the arrival straight from Finish may ask about an absence. The same
+  // page opens for old reports from the dashboard, which must never prompt
+  // for a gap that predates the feature.
+  const justFinished =
+    (location.state as { justFinished?: boolean } | null)?.justFinished === true;
 
   const [sessionView, setSessionView] = useState<SessionInstanceView | null>(null);
   const [sessionDuration, setSessionDuration] = useState<number | null>(null);
@@ -95,6 +114,10 @@ export default function SessionSummaryPage() {
   const [prs, setPrs] = useState<SessionPR[]>([]);
   const [milestones, setMilestones] = useState<SessionMilestone[]>([]);
   const [celebrationDone, setCelebrationDone] = useState(false);
+  const [absenceToPrompt, setAbsenceToPrompt] = useState<Absence | null>(null);
+  const [absenceReasons, setAbsenceReasons] = useState<string[]>([]);
+  const [absenceDone, setAbsenceDone] = useState(false);
+  const [absenceBusy, setAbsenceBusy] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loaderDone, setLoaderDone] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -160,6 +183,23 @@ export default function SessionSummaryPage() {
         setBreadcrumbSessions(breadcrumbItems);
         setPrs(await getSessionPRs(sessionInstanceId));
         setMilestones(await getSessionMilestones(sessionInstanceId));
+
+        if (justFinished) {
+          // Own try/catch: a failure here must not replace the report with
+          // the error state. Resolved before the loader releases, so the
+          // prompt decision is known by the time the report could show.
+          try {
+            if (await isAbsenceTrackingEnabled()) {
+              const absence = await findAbsenceEndedBy(view.sessionInstance);
+              if (absence && absence.promptedAt == null && absence.reason == null) {
+                setAbsenceReasons(await listAbsenceReasons());
+                setAbsenceToPrompt(absence);
+              }
+            }
+          } catch (error) {
+            console.error("Failed to check for an absence:", error);
+          }
+        }
       } catch (error) {
         console.error("Failed to load session summary:", error);
         setErrorMessage("Could not load session summary.");
@@ -169,7 +209,21 @@ export default function SessionSummaryPage() {
     }
 
     load();
-  }, [sessionInstanceId]);
+  }, [sessionInstanceId, justFinished]);
+
+  // Every way out of the prompt marks the gap as prompted, so it shows once.
+  async function finishAbsencePrompt(action: (absence: Absence) => Promise<void>) {
+    if (!absenceToPrompt || absenceBusy) return;
+    setAbsenceBusy(true);
+    try {
+      await action(absenceToPrompt);
+    } catch (error) {
+      console.error("Failed to save the absence:", error);
+    } finally {
+      setAbsenceBusy(false);
+      setAbsenceDone(true);
+    }
+  }
 
   const metrics = useMemo(
     () =>
@@ -228,6 +282,35 @@ export default function SessionSummaryPage() {
           <MilestoneCelebration
             milestones={milestones}
             onDismiss={() => setCelebrationDone(true)}
+          />
+        ) : absenceToPrompt && !absenceDone ? (
+          // The absence prompt takes the celebration's place in the chain, so
+          // the report still mounts only once the user has reached it.
+          <AbsenceReasonWizard
+            absence={absenceToPrompt}
+            mode="prompt"
+            reasons={absenceReasons}
+            busy={absenceBusy}
+            onChoose={(reason) =>
+              void finishAbsencePrompt(async (absence) => {
+                await setAbsenceReason(absence, reason);
+                await markAbsencePrompted(absence);
+              })
+            }
+            onCreate={(label) =>
+              void finishAbsencePrompt(async (absence) => {
+                const reason = await addAbsenceReason(label);
+                await setAbsenceReason(absence, reason);
+                await markAbsencePrompted(absence);
+              })
+            }
+            onDismiss={() => void finishAbsencePrompt((absence) => markAbsencePrompted(absence))}
+            onDisable={() =>
+              void finishAbsencePrompt(async (absence) => {
+                await markAbsencePrompted(absence);
+                await setAbsenceTrackingEnabled(false);
+              })
+            }
           />
         ) : (() => {
           const sv = sessionView!;

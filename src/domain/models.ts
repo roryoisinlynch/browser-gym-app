@@ -377,3 +377,26 @@ export interface HeuristicEntry {
   date: string;
   value: number | null;
 }
+
+/**
+ * The user's annotation of an absence (a run of 7+ idle days between
+ * training). Absences themselves are derived from activity dates; this is
+ * keyed by the gap's first idle day so it rejoins the same gap each time.
+ */
+export interface AbsenceRecord {
+  id: ID;
+  startDate: string;
+  endDate: string;
+  /** Reason label, built-in or user-added. Null until one is chosen. */
+  reason: string | null;
+  /** When the post-session prompt was shown for this gap; it shows once. */
+  promptedAt: string | null;
+  updatedAt: string;
+}
+
+/** A user-added absence reason. The built-in ones live in code. */
+export interface AbsenceReason {
+  id: ID;
+  label: string;
+  createdAt: string;
+}

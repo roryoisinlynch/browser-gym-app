@@ -18,6 +18,7 @@ import {
 import { calculateEstimatedOneRepMax } from "./setAnalysis";
 import { percentileOrNull } from "./heuristicsScale";
 import { loadAllImportedSets } from "./importedSetStore";
+import { isoFromDayNumber, localDateOf, utcDayNumber } from "./dateKeys";
 
 // ─── Review window / review year ─────────────────────────────────────────────
 
@@ -276,20 +277,8 @@ export interface YearInReviewStats {
   hasMinimumData: boolean;
 }
 
-/** Local calendar date "YYYY-MM-DD" for an ISO datetime, same rule as sessionCompletedDate. */
-function localDateOf(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
 function normalizeName(name: string): string {
   return name.trim().toLowerCase();
-}
-
-/** UTC day count for a local "YYYY-MM-DD" date, so DST shifts can't skew gaps. */
-function utcDayNumber(date: string): number {
-  const [y, m, d] = date.split("-").map(Number);
-  return Math.floor(Date.UTC(y, m - 1, d) / 86400000);
 }
 
 /**
@@ -328,12 +317,6 @@ function longestConsecutiveRun(sortedWeekIndexes: number[]): WeekRun | null {
     }
   }
   return best;
-}
-
-/** "YYYY-MM-DD" for a UTC day number (inverse of utcDayNumber). */
-function isoFromDayNumber(dayNumber: number): string {
-  const d = new Date(dayNumber * 86400000);
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 }
 
 /** Monday-to-Sunday calendar range of a run of Monday-aligned week indexes. */

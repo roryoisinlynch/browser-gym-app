@@ -6,6 +6,10 @@ import {
   setHeuristicsEnabled,
   seedDefaultQuestions,
 } from "../repositories/heuristicsRepository";
+import {
+  isAbsenceTrackingEnabled,
+  setAbsenceTrackingEnabled,
+} from "../repositories/absenceRepository";
 import { getReviewableYears } from "../services/yearInReview";
 import BottomNav from "../components/BottomNav";
 import TopBar from "../components/TopBar";
@@ -14,6 +18,7 @@ import "./SettingsPage.css";
 export default function SettingsPage() {
   const navigate = useNavigate();
   const [heuristicsOn, setHeuristicsOn] = useState(false);
+  const [absencesOn, setAbsencesOn] = useState(true);
   // Null until the hidden gesture unlocks the preview; then the years worth
   // previewing (most recent first).
   const [previewYears, setPreviewYears] = useState<number[] | null>(null);
@@ -21,6 +26,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     isHeuristicsEnabled().then(setHeuristicsOn);
+    isAbsenceTrackingEnabled().then(setAbsencesOn);
   }, []);
 
   async function handleToggleHeuristics() {
@@ -28,6 +34,12 @@ export default function SettingsPage() {
     await setHeuristicsEnabled(next);
     if (next) await seedDefaultQuestions();
     setHeuristicsOn(next);
+  }
+
+  async function handleToggleAbsences() {
+    const next = !absencesOn;
+    await setAbsenceTrackingEnabled(next);
+    setAbsencesOn(next);
   }
 
   // Hidden entry to the Year in Review preview deck, so the feature can be
@@ -98,6 +110,44 @@ export default function SettingsPage() {
                 <span className="settings-nav-card__chevron">›</span>
               </button>
             )}
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <p className="settings-section-label">Absences</p>
+          <div className="settings-card-list">
+            <div className="settings-nav-card settings-nav-card--toggle">
+              <div className="settings-nav-card__body">
+                <span className="settings-nav-card__title">Track absences</span>
+                <span className="settings-nav-card__desc">
+                  Ask for a reason after 7 or more days without training
+                </span>
+              </div>
+              <button
+                type="button"
+                className={`settings-toggle${absencesOn ? " settings-toggle--on" : ""}`}
+                onClick={handleToggleAbsences}
+                role="switch"
+                aria-checked={absencesOn}
+                aria-label="Track absences"
+              >
+                <span className="settings-toggle__knob" />
+              </button>
+            </div>
+
+            <button
+              type="button"
+              className="settings-nav-card"
+              onClick={() => navigate("/absences")}
+            >
+              <div className="settings-nav-card__body">
+                <span className="settings-nav-card__title">View absences</span>
+                <span className="settings-nav-card__desc">
+                  Gaps of 7 days or more and their reasons
+                </span>
+              </div>
+              <span className="settings-nav-card__chevron">›</span>
+            </button>
           </div>
         </div>
 
